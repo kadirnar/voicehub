@@ -13,6 +13,7 @@ sys.path.insert(0, str(REPOSITORY_ROOT))
 sys.path.insert(0, str(SCRIPTS_ROOT))
 
 from documentation_references import OPTIMIZATION_GUIDES, OptimizationGuide, Reference  # noqa: E402
+
 from voicehub.optimization import OPTIMIZATION_PASSES  # noqa: E402
 
 PAGE_DIR = REPOSITORY_ROOT / "docs" / "optimizations"
@@ -51,8 +52,7 @@ def render_page(guide: OptimizationGuide) -> str:
         "No dedicated upstream research paper is published for this integration.")
     github = _reference_links(guide.github)
     implementation = (
-        _implementation_link(guide.implementation)
-        if guide.implementation is not None else
+        _implementation_link(guide.implementation) if guide.implementation is not None else
         "No VoiceHub pass implementation; use the external source project directly.")
     return f'''---
 description: Usage, support boundaries, paper, and source links for {guide.title}.
@@ -134,8 +134,8 @@ def render_navigation(guides: tuple[OptimizationGuide, ...]) -> str:
     for group in tuple(dict.fromkeys(guide.group for guide in guides)):
         lines.append(f"      - {group}:")
         lines.extend(
-            f'          - "{guide.title}": optimizations/{guide.slug}.md'
-            for guide in guides if guide.group == group)
+            f'          - "{guide.title}": optimizations/{guide.slug}.md' for guide in guides
+            if guide.group == group)
     lines.append(NAVIGATION_END)
     return "\n".join(lines)
 
@@ -144,8 +144,7 @@ def render_site_config(guides: tuple[OptimizationGuide, ...]) -> str:
     """Replace the generated optimization navigation block."""
     source = SITE_CONFIG_PATH.read_text(encoding="utf-8")
     if source.count(NAVIGATION_START) != 1 or source.count(NAVIGATION_END) != 1:
-        raise RuntimeError(
-            "mkdocs.yml must contain exactly one generated optimization navigation block")
+        raise RuntimeError("mkdocs.yml must contain exactly one generated optimization navigation block")
     prefix, remainder = source.split(NAVIGATION_START, 1)
     _, suffix = remainder.split(NAVIGATION_END, 1)
     return f"{prefix}{render_navigation(guides)}{suffix}"
@@ -160,8 +159,7 @@ def _validate_contract(guides: tuple[OptimizationGuide, ...]) -> None:
     if documented != registered:
         missing = sorted(registered - documented)
         unknown = sorted(documented - registered)
-        raise RuntimeError(
-            f"Optimization reference coverage mismatch: missing={missing}, unknown={unknown}")
+        raise RuntimeError(f"Optimization reference coverage mismatch: missing={missing}, unknown={unknown}")
     for guide in guides:
         if not guide.github:
             raise RuntimeError(f"{guide.slug} must link at least one upstream GitHub repository")

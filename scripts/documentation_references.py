@@ -59,6 +59,9 @@ PYANNOTE_PAPER = _paper("pyannote.audio: neural building blocks for speaker diar
 SPEECHBRAIN_PAPER = _paper("SpeechBrain: A General-Purpose Speech Toolkit", "2106.04624")
 FUNASR_PAPER = _paper("FunASR: A Fundamental End-to-End Speech Recognition Toolkit", "2305.11013")
 
+# Keep the URL-heavy declarative catalog stable and readable. Automated YAPF
+# wrapping makes these records harder to review and can produce Flake8 E251.
+# yapf: disable
 
 MODEL_REFERENCES = {
     # Text to speech.
@@ -386,7 +389,7 @@ cmake --build build --target audiocpp_cli -j 8''',
         related_guide="../guides/optional-backends.md",
     ),
 )
-
+# yapf: enable
 
 __all__ = [
     "MODEL_REFERENCES",

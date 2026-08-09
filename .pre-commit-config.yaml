@@ -67,4 +67,4 @@ repos:
     rev: v1.7.8
     hooks:
       - id: docformatter
-        exclude: '^(?:scripts/(?:generate_model_(?:notebooks|pages)|scaffold_model)|tests/test_model_scaffold)\.py$'
+        exclude: '^(?:scripts/(?:documentation_references|generate_(?:model_(?:notebooks|pages)|optimization_pages)|scaffold_model)|tests/test_model_scaffold)\.py$'
