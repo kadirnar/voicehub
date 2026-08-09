@@ -29,12 +29,9 @@ SITE_CONFIG_PATH = REPOSITORY_ROOT / "mkdocs.yml"
 GENERATOR_PATH = "scripts/generate_model_pages.py"
 COLAB_ROOT = ("https://colab.research.google.com/github/kadirnar/voicehub/"
               "blob/main/notebooks/models")
-NAVIGATION_START = "          # BEGIN GENERATED MODEL GUIDE NAVIGATION"
-NAVIGATION_END = "          # END GENERATED MODEL GUIDE NAVIGATION"
-AUTO_CLASSES_NAVIGATION_ENTRY = "          - Auto Classes: models/providers/index.md"
-MODEL_GUIDES_NAVIGATION_SECTION = "      - Models:\n"
-FULL_API_NAVIGATION_ENTRY = "      - Full API reference: reference/api.md"
-CONTRIBUTE_NAVIGATION_SECTION = "          - Contribute:\n"
+NAVIGATION_START = "      # BEGIN GENERATED MODEL GUIDE NAVIGATION"
+NAVIGATION_END = "      # END GENERATED MODEL GUIDE NAVIGATION"
+MODEL_LIST_NAVIGATION_ENTRY = "      - Model list: models/providers/index.md"
 MODEL_PAGE_SECTIONS = (
     "Usage",
     "Overview",
@@ -598,92 +595,23 @@ def render_index(specs) -> str:
     """Render the generated provider-guide index."""
     lines = [
         "---",
-        "description: Auto configuration, processing, task dispatch, and discovery for every registered VoiceHub model.",
+        "description: Browse every registered VoiceHub TTS, ASR, and VAD model.",
         "---",
         "",
-        "# Auto Classes",
+        "# Model list",
         "",
-        "Auto classes choose a registered configuration, processor, or task-specific model",
-        "from a checkpoint and its canonical `model_type`. They keep discovery lazy, so",
-        "listing the registry or reading this page does not import a model runtime.",
-        "",
-        "## Choose an Auto class",
-        "",
-        "| Workflow | Public class | Normalized output |",
-        "| --- | --- | --- |",
-        "| Text to speech | `AutoModelForTextToSpeech` | `TTSOutput` |",
-        "| Automatic speech recognition | `AutoModelForSpeechRecognition` | `ASROutput` |",
-        "| Voice activity detection | `AutoModelForVoiceActivityDetection` | `VADOutput` |",
-        "",
-        "Use `AutoModel` only when the checkpoint configuration already identifies its task.",
-        "Prefer a task-specific class when the expected output contract is known.",
-        "",
-        "## AutoConfig",
-        "",
-        "`AutoConfig` resolves the registered configuration class without constructing the",
-        "model. A local `config.json` may provide `model_type`; raw checkpoint files require",
-        "the explicit canonical identifier.",
+        "Choose a model name to open its dedicated usage, paper, GitHub, training,",
+        "and optimization page. Registry discovery stays lazy and imports no model runtime.",
         "",
         "```python",
-        "from voicehub import AutoConfig",
+        "from voicehub import list_model_specs",
         "",
-        "config = AutoConfig.from_pretrained(",
-        "    \"microsoft/speecht5_tts\",",
-        "    model_type=\"speecht5\",",
-        ")",
-        "print(config.model_type)",
+        "for model in list_model_specs():",
+        "    print(model.task.value, model.display_name, model.model_type)",
         "```",
         "",
-        "## AutoProcessor",
-        "",
-        "`AutoProcessor` builds the processor paired with the registered model configuration",
-        "without allocating the model itself.",
-        "",
-        "```python",
-        "from voicehub import AutoProcessor",
-        "",
-        "processor = AutoProcessor.from_pretrained(",
-        "    \"microsoft/speecht5_tts\",",
-        "    model_type=\"speecht5\",",
-        ")",
-        "```",
-        "",
-        "## Task-specific AutoModel classes",
-        "",
-        "The task-specific factories preserve one output and failure contract across every",
-        "registered TTS, ASR, or VAD integration.",
-        "",
-        "```python",
-        "from voicehub import (",
-        "    AutoModelForSpeechRecognition,",
-        "    AutoModelForTextToSpeech,",
-        "    AutoModelForVoiceActivityDetection,",
-        ")",
-        "",
-        "for auto_class in (",
-        "    AutoModelForTextToSpeech,",
-        "    AutoModelForSpeechRecognition,",
-        "    AutoModelForVoiceActivityDetection,",
-        "):",
-        "    for spec in auto_class.available_models():",
-        "        print(spec.display_name, spec.model_type)",
-        "",
-        "model = AutoModelForTextToSpeech.from_pretrained(",
-        "    \"microsoft/speecht5_tts\",",
-        "    model_type=\"speecht5\",",
-        "    device=\"cpu\",",
-        "    lazy_load=True,",
-        ")",
-        "```",
-        "",
-        "Extensions register through the same auto-class contract. Follow the",
-        "[model contribution workflow](../../project/adding-a-model.md) so configuration,",
-        "runtime, provenance, tests, optimization support, and documentation stay complete.",
-        "",
-        "## Registered models",
-        "",
-        "Every entry below has one generated guide with the same nine required sections.",
-        "Hub-backed models also link to a dedicated Colab notebook.",
+        "Use the [training matrix](../training-support.md) and",
+        "[optimization catalog](../../optimizations/index.md) for compact comparisons.",
         "",
         f"Generated by `{GENERATOR_PATH}` from lazy registry metadata.",
         "",
@@ -694,7 +622,7 @@ def render_index(specs) -> str:
             key=lambda spec: (spec.display_name.casefold(), spec.model_type),
         )
         lines.extend((
-            f"### {TASK_LABELS[task]}",
+            f"## {TASK_LABELS[task]}",
             "",
             "<div class=\"vh-model-catalog\" markdown>",
             "",
@@ -723,56 +651,24 @@ def render_navigation(specs) -> str:
             (spec for spec in specs if spec.task.value == task),
             key=lambda spec: (spec.display_name.casefold(), spec.model_type),
         )
-        lines.append(f"          - {TASK_LABELS[task]}:")
+        lines.append(f"      - {TASK_LABELS[task]}:")
         lines.extend(
-            f'              - "{spec.display_name}": models/providers/{spec.model_type}.md'
+            f'          - "{spec.display_name}": models/providers/{spec.model_type}.md'
             for spec in task_specs)
     lines.append(NAVIGATION_END)
     return "\n".join(lines)
 
 
 def render_site_config(specs) -> str:
-    """Render model guides in the public Models navigation hierarchy."""
+    """Replace the generated model list in the public Models section."""
     source = SITE_CONFIG_PATH.read_text(encoding="utf-8")
     if source.count(NAVIGATION_START) != 1 or source.count(NAVIGATION_END) != 1:
         raise RuntimeError("mkdocs.yml must contain exactly one generated model navigation block")
     prefix, remainder = source.split(NAVIGATION_START, 1)
     _, suffix = remainder.split(NAVIGATION_END, 1)
-    if prefix.endswith(MODEL_GUIDES_NAVIGATION_SECTION):
-        prefix = prefix[:-len(MODEL_GUIDES_NAVIGATION_SECTION)]
-    suffix = suffix.removeprefix("\n")
-    source = f"{prefix}{suffix}"
-
-    base_prefix, base_remainder = source.split("  - Base classes:\n", 1)
-    base_navigation, following_navigation = base_remainder.split("  - Inference:\n", 1)
-    base_navigation = base_navigation.replace(f"{AUTO_CLASSES_NAVIGATION_ENTRY}\n", "", 1)
-    base_navigation = base_navigation.replace("      - Models:\n\n", "      - Models:\n", 1)
-    if base_navigation.count(CONTRIBUTE_NAVIGATION_SECTION) != 1:
-        raise RuntimeError("mkdocs.yml must contain exactly one model contribution section")
-    base_navigation = base_navigation.replace(
-        CONTRIBUTE_NAVIGATION_SECTION,
-        f"{render_navigation(specs)}\n{CONTRIBUTE_NAVIGATION_SECTION}",
-        1,
-    )
-    source = (f"{base_prefix}  - Base classes:\n{base_navigation}"
-              f"  - Inference:\n{following_navigation}")
-
-    api_prefix, api_remainder = source.split("  - API:\n", 1)
-    api_navigation, plugins = api_remainder.split("\nplugins:", 1)
-    if AUTO_CLASSES_NAVIGATION_ENTRY not in api_navigation:
-        main_classes = "      - Main Classes:\n"
-        if api_navigation.count(main_classes) != 1:
-            raise RuntimeError("mkdocs.yml must contain exactly one API Main Classes section")
-        api_navigation = api_navigation.replace(
-            main_classes,
-            f"{main_classes}{AUTO_CLASSES_NAVIGATION_ENTRY}\n",
-            1,
-        )
-    if api_navigation.count(FULL_API_NAVIGATION_ENTRY) != 1:
-        raise RuntimeError("mkdocs.yml must contain exactly one Full API reference entry")
-    rendered = f"{api_prefix}  - API:\n{api_navigation}\nplugins:{plugins}"
-    if rendered.count(AUTO_CLASSES_NAVIGATION_ENTRY) != 1:
-        raise RuntimeError("Auto Classes must appear exactly once under API Main Classes")
+    rendered = f"{prefix}{render_navigation(specs)}{suffix}"
+    if rendered.count(MODEL_LIST_NAVIGATION_ENTRY) != 1:
+        raise RuntimeError("Model list must appear exactly once under Models")
     return rendered
 
 
