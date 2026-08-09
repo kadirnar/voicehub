@@ -27,7 +27,7 @@ GGUF, quantized, fused, or inference-pruned artifact trainable.
 ## Install
 
 ```bash
-python -m pip install "voicehub[training]"
+python -m pip install "voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
 The extra adds dataset, evaluation, and reporting tools. Built-in inference

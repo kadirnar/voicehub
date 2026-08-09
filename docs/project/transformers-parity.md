@@ -3979,3 +3979,21 @@ brand mark remains multicolor, but decorative brand gradients no longer define
 the documentation shell. The protected untracked `uv.lock` remained unchanged
 at SHA-256
 `48f7d98d6eab756580348b081e8fc891d3a5dd2847433e41766b3b45854a70b1`.
+
+## 2026-08-09 model-guide reference refresh
+
+The model documentation comparison was refreshed against Transformers `main`
+commit `e8ea728a3eeeb903e77c7d1bd29267c80a1be71f` on 2026-08-09. The retrieved
+SHA-256 digests are:
+
+| Upstream source | SHA-256 |
+| --- | --- |
+| `docs/source/en/_toctree.yml` | `9081408c4dc6b97cdcfb940f49868cddd51bd565aa56400f88d12a111dd485ea` |
+| `docs/source/en/model_doc/auto.md` | `557f5836c0722fef6a484c46805dfab0eb69a387b028a914b132350edf09f167` |
+| `docs/source/en/model_doc/speecht5.md` | `71bba8a2921cf637383fb8d6f2fd66df9cd95deb59118b9f49e1362485c27eb5` |
+
+VoiceHub keeps one generated page per registry model under `API → Models`.
+The pages retain the current Auto-class and model-detail structure while using
+short speech-specific contracts, runnable code, source links, and
+checkpoint-evidence boundaries. Installation examples now use the repository
+source instead of assuming a package-index release.

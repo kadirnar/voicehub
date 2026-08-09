@@ -691,6 +691,19 @@ body.vh-optimization-page .md-typeset h1 {
   color: var(--vh-model-accent);
 }
 
+.md-sidebar--primary a.md-nav__link.vh-model-link {
+  display: flex;
+  width: calc(100% + 0.45rem);
+  box-sizing: border-box;
+  margin-inline: -0.45rem 0;
+  padding: 0.3rem 0.45rem;
+  border-radius: 0.45rem;
+}
+
+.md-sidebar--primary a.md-nav__link.vh-model-link:not(.md-nav__link--active):is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--vh-model-accent) 9%, transparent);
+}
+
 .md-typeset .vh-model-catalog tbody td:first-child code {
   border: 1px solid color-mix(in srgb, var(--vh-model-accent) 24%, transparent);
   border-radius: 0.35rem;

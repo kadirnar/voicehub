@@ -19,8 +19,8 @@ supplied as local paths.
 ## Choose a model
 
 Start from the capability you need, then inspect the exact checkpoint and
-conditioning contract before loading weights. Every entry below is available
-after `python -m pip install voicehub`.
+conditioning contract before loading weights. Install the current VoiceHub
+source first.
 
 | Model type | Good fit |
 | --- | --- |

@@ -18,7 +18,7 @@ graph and objective.
 Install the training dependencies only when they are needed:
 
 ```bash
-python -m pip install "voicehub[training]"
+python -m pip install "voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
 The main package already contains every built-in inference runtime. The

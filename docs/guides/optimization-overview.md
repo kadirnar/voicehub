@@ -74,6 +74,10 @@ VoiceHub currently has no registry-wide public quantization pass. Quantized
 checkpoint formats and provider-local loaders therefore remain model-specific
 and are not advertised as universal optimization support.
 
+HQQ, GemLite, and audio.cpp have a concise
+[source-install guide](optional-backends.md). They remain opt-in until a model
+meets the public pass lifecycle and evidence contract.
+
 Parallelism is a training or serving topology, not a reversible model pass.
 Continuous batching belongs to a serving scheduler, not the model-mutation
 lifecycle. Both stay outside this registry until they have a model-independent
@@ -83,6 +87,8 @@ public contract and complete coverage.
 
 - Follow the [TTS optimization workflow](tts-optimization.md) for fair
   performance and quality comparisons.
+- Review [optional source backends](optional-backends.md) for HQQ, GemLite, and
+  audio.cpp boundaries.
 - Use the [codec guide](codec-optimization.md) for operation-level kernel
   selection.
 - Use the [diffusion guide](diffusion-optimization.md) for approximate cache

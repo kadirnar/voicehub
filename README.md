@@ -1,50 +1,33 @@
-<h2 align="center">Unified Inference, Training, and Optimization for TTS, ASR, and VAD</h2>
+<h2 align="center">Unified speech inference, training, and optimization</h2>
 
 <div align="center">
   <img width="100%" alt="Abstract sound waves representing VoiceHub's unified speech toolkit" src="https://raw.githubusercontent.com/kadirnar/voicehub/main/assets/readme-hero.png">
 </div>
 
-## Install
+VoiceHub provides one API for text-to-speech (TTS), speech recognition (ASR),
+and voice activity detection (VAD). It supports Python 3.10–3.12.
 
-VoiceHub supports Python 3.10 through 3.12.
-
-```bash
-python -m pip install voicehub
-```
-
-For fine-tuning:
+## Install from source
 
 ```bash
-python -m pip install "voicehub[training]"
+git clone https://github.com/kadirnar/voicehub.git
+cd voicehub
+python -m pip install .
 ```
 
-GPU users should install the correct PyTorch build for their machine first.
-See the [installation guide](https://kadirnar.github.io/voicehub/getting-started/installation/).
-
-Verify the package without downloading a checkpoint:
+Install the training tools only when needed:
 
 ```bash
-python -c "import voicehub; print(voicehub.__version__, len(voicehub.list_model_specs()))"
+python -m pip install ".[training]"
 ```
+
+Install the correct PyTorch build for your hardware first. See the
+[installation guide](https://kadirnar.github.io/voicehub/getting-started/installation/).
 
 ## TTS
 
-Use a long sample and verify the generated duration. Speaking rate varies by
-model, so duration must be checked from the waveform rather than assumed from
-word count.
-
 ```python
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
-
-text = (
-    "Welcome to VoiceHub. This sample is intentionally long enough for a "
-    "meaningful speech test. It checks pronunciation, pacing, sentence "
-    "transitions, and sustained audio quality while the speaker explains a "
-    "simple workflow for reliable text to speech inference. During this "
-    "longer passage, listen for stable volume, natural pauses, clear word "
-    "endings, and consistent tone from the opening sentence through the "
-    "final measurement."
-)
 
 tts_model = AutoModelForTextToSpeech.from_pretrained(
     "parler-tts/parler-tts-mini-v1",
@@ -52,39 +35,26 @@ tts_model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
 )
 output = tts_model.generate(
-    text,
-    description="A clear speaker talks at a natural, relaxed pace.",
-    generation_config=TTSGenerationConfig(
-        seed=42,
-        output_file="tts-sample.wav",
-    ),
+    "VoiceHub uses one predictable speech model API.",
+    generation_config=TTSGenerationConfig(output_file="speech.wav", seed=42),
 )
-
-samples = (
-    output.audio.shape[-1] if hasattr(output.audio, "shape") else len(output.audio)
-)
-duration = samples / output.sample_rate
-if duration < 10:
-    raise RuntimeError(f"Expected at least 10 seconds, generated {duration:.2f}")
-print(output.file_path, f"{duration:.2f}s")
+print(output.file_path, output.sample_rate)
 ```
 
-Model-specific conditioning fields such as speaker references, voices, or
-descriptions are listed in the
-[TTS model matrix](https://kadirnar.github.io/voicehub/models/tts-capabilities/).
+Model-specific inputs are listed in the
+[TTS matrix](https://kadirnar.github.io/voicehub/models/tts-capabilities/).
 
 ## ASR
 
 ```python
 from voicehub import AutoModelForSpeechRecognition
 
-asr_model = AutoModelForSpeechRecognition.from_pretrained(
+model = AutoModelForSpeechRecognition.from_pretrained(
     "Qwen/Qwen3-ASR-0.6B",
     model_type="asr_qwen3",
     device="cuda",
 )
-output = asr_model.transcribe("speech.wav", language="English")
-print(output.text)
+print(model.transcribe("speech.wav", language="English").text)
 ```
 
 ## VAD
@@ -92,21 +62,16 @@ print(output.text)
 ```python
 from voicehub import AutoModelForVoiceActivityDetection
 
-vad_model = AutoModelForVoiceActivityDetection.from_pretrained(
-    model_type="vad_silero",
-)
-output = vad_model.detect("speech.wav", threshold=0.55)
+model = AutoModelForVoiceActivityDetection.from_pretrained(model_type="vad_silero")
+output = model.detect("speech.wav", threshold=0.55)
 for segment in output.segments:
     print(segment.start, segment.end)
 ```
 
 See the [ASR and VAD matrix](https://kadirnar.github.io/voicehub/models/asr-vad-support/)
-for checkpoints, inputs, outputs, and training boundaries.
+for checkpoints and supported inputs.
 
-## Optimize TTS
-
-Start with eager inference, then benchmark one change at a time on the same
-text, seed, warm-up count, and device.
+## Optimize
 
 ```python
 from voicehub import TTSOptimizationConfig
@@ -121,18 +86,12 @@ result = tts_model.optimize(
 print(result.manifest())
 ```
 
-The optimization result records what was applied and what stayed on the
-quality-preserving fallback. Do not publish speed or memory percentages from
-configuration alone; measure them on the target hardware. Use the
+Benchmark on the target hardware. Start with the
 [optimization guide](https://kadirnar.github.io/voicehub/guides/tts-optimization/),
-[TTS model benchmarks](https://kadirnar.github.io/voicehub/guides/tts-model-benchmarks/),
-and [current RTX 4090 speech results](https://kadirnar.github.io/voicehub/guides/rtx-4090-speech-benchmarks/)
-for reproducible comparisons.
+[model benchmarks](https://kadirnar.github.io/voicehub/guides/tts-model-benchmarks/),
+and [RTX 4090 results](https://kadirnar.github.io/voicehub/guides/rtx-4090-speech-benchmarks/).
 
-## Fine-tune
-
-Every trainable integration advertises its exact objective and data contract.
-Check support before loading weights:
+## Train
 
 ```python
 from voicehub import get_training_spec
@@ -141,63 +100,37 @@ spec = get_training_spec("dia")
 print(spec.support.value, spec.family_name)
 ```
 
-Then begin with a one-step smoke run. The
-[training guide](https://kadirnar.github.io/voicehub/guides/training/) and
-[training matrix](https://kadirnar.github.io/voicehub/models/training-support/)
-show the required dataset fields, frozen components, checkpoint type, and
-export path. The
-[data guide](https://kadirnar.github.io/voicehub/guides/data-preparation/)
-and [ASR/VAD data guide](https://kadirnar.github.io/voicehub/guides/speech-data/)
-cover manifests and leakage-safe splits.
+Use the [training guide](https://kadirnar.github.io/voicehub/guides/training/),
+[training matrix](https://kadirnar.github.io/voicehub/models/training-support/),
+and [data guide](https://kadirnar.github.io/voicehub/guides/data-preparation/).
 
-## Notebooks
+## Models and notebooks
 
-The notebooks use a short, top-to-bottom workflow: install, configure, run,
-and inspect.
+Each registered model has a dedicated page in the left sidebar:
+[model guides](https://kadirnar.github.io/voicehub/models/providers/).
+See the [notebook guide](https://kadirnar.github.io/voicehub/guides/notebook/)
+for hardware notes and opt-in execution flags.
 
 | Notebook                    | GitHub                                                                                  | Colab                                                                                                        |
 | --------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | TTS, ASR, and VAD inference | [View](https://github.com/kadirnar/voicehub/blob/main/notebooks/inference.ipynb)        | [Run](https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/inference.ipynb)        |
 | Data preparation            | [View](https://github.com/kadirnar/voicehub/blob/main/notebooks/data_preparation.ipynb) | [Run](https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/data_preparation.ipynb) |
 | Fine-tuning                 | [View](https://github.com/kadirnar/voicehub/blob/main/notebooks/training.ipynb)         | [Run](https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/training.ipynb)         |
-| Dia end-to-end workflow     | [View](https://github.com/kadirnar/voicehub/blob/main/notebooks/tts_workflow.ipynb)     | [Run](https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/tts_workflow.ipynb)     |
-
-For a dedicated inference page for each Hub-backed model, open the
-[Hugging Face model notebook gallery](https://github.com/kadirnar/voicehub/blob/main/notebooks/models/README.md).
-
-Read the [notebook guide](https://kadirnar.github.io/voicehub/guides/notebook/)
-for expected hardware and opt-in execution flags.
-
-## Documentation
-
-- [Quickstart](https://kadirnar.github.io/voicehub/getting-started/quickstart/)
-- [Pipeline](https://kadirnar.github.io/voicehub/guides/inference/)
-- [Speech recognition](https://kadirnar.github.io/voicehub/guides/speech-recognition/)
-- [Voice activity detection](https://kadirnar.github.io/voicehub/guides/voice-activity-detection/)
-- [Model guides](https://kadirnar.github.io/voicehub/models/providers/)
-- [Model catalog](https://kadirnar.github.io/voicehub/models/)
-- [Architecture](https://kadirnar.github.io/voicehub/concepts/architecture/)
-- [Add a model](https://kadirnar.github.io/voicehub/project/adding-a-model/)
-- [Add an optimization](https://kadirnar.github.io/voicehub/project/adding-an-optimization/)
-- [API reference](https://kadirnar.github.io/voicehub/reference/api/)
+| Dia workflow                | [View](https://github.com/kadirnar/voicehub/blob/main/notebooks/tts_workflow.ipynb)     | [Run](https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/tts_workflow.ipynb)     |
 
 ## Development
 
 ```bash
-git clone https://github.com/kadirnar/voicehub.git
-cd voicehub
-python -m pip install -e ".[test,training]"
+python -m pip install -e ".[test,training,docs]"
 python -m pytest
 python scripts/check_distribution.py
 ```
 
-`check_distribution.py` builds the wheel and source distribution, installs
-the wheel, sdist, and editable checkout in separate environments, and checks
-lazy import plus required package data. It skips PyTorch downloads by default;
-pass `--with-dependencies` on a release machine for full dependency installs.
+Useful docs: [Pipeline](https://kadirnar.github.io/voicehub/guides/inference/),
+[architecture](https://kadirnar.github.io/voicehub/concepts/architecture/),
+[add a model](https://kadirnar.github.io/voicehub/project/adding-a-model/), and
+[API reference](https://kadirnar.github.io/voicehub/reference/api/).
 
 ## License
 
-VoiceHub is licensed under Apache-2.0. Vendored components retain their own
-license notices in their package directories. Checkpoint licenses are
-separate from source-code licenses and must be reviewed before use.
+VoiceHub is Apache-2.0. Check each checkpoint's separate license before use.

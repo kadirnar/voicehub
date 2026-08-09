@@ -84,13 +84,13 @@ Safetensors artifact for inference, training, export, and reload.
 Install every ASR and VAD inference provider at once:
 
 ```bash
-python -m pip install voicehub
+python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
 Add the separate shared trainer and Weights & Biases reporting bundle:
 
 ```bash
-python -m pip install "voicehub[training]"
+python -m pip install "voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
 This does not make every inference algorithm trainable. VoiceHub-native
