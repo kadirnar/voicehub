@@ -1,25 +1,18 @@
 ---
-description: Install VoiceHub with uv, pip, conda, or an editable checkout and configure model caching.
+description: Install VoiceHub from source and configure model caching.
 ---
 
 # Installation
 
-VoiceHub works with PyTorch. It supports Python 3.10 through 3.12 and requires
-PyTorch 2.8. The default package contains the built-in TTS, ASR, and VAD code;
-model checkpoints are resolved separately when they are needed.
-
-The development documentation may describe behavior newer than the package
-currently published on PyPI. Check the
-[release-readiness report](../project/release-readiness.md) before validating a
-release candidate.
+VoiceHub supports Python 3.10 through 3.12 and PyTorch 2.8. Install VoiceHub
+from source while package-index installation is unavailable. Check the
+[release-readiness report](../project/release-readiness.md) before a release.
 
 ## Virtual environment
 
-[uv](https://docs.astral.sh/uv/) is a fast Python package and project manager.
-It creates isolated environments by default and can replace the environment
-and package-management commands used by `pip`. Install uv using its
-[official instructions](https://docs.astral.sh/uv/getting-started/installation/),
-then create an environment for VoiceHub:
+[uv](https://docs.astral.sh/uv/) manages environments and packages. Follow its
+[installation instructions](https://docs.astral.sh/uv/getting-started/installation/),
+then create an environment:
 
 ```bash
 uv venv .venv
@@ -32,37 +25,34 @@ On Windows PowerShell, activate the same environment with:
 .venv\Scripts\Activate.ps1
 ```
 
-If you prefer `pip`, create the environment with `python -m venv .venv` and
-replace `uv pip install` below with `python -m pip install`.
+With `pip`, create the environment with `python -m venv .venv` and replace
+`uv pip install` with `python -m pip install`.
 
 ## Python
 
-Install the published package:
+Install the current source:
 
 ```bash
-uv pip install voicehub
+uv pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
-Add dataset, evaluation, and reporting dependencies only when you need
-fine-tuning:
+Add training dependencies only when needed:
 
 ```bash
-uv pip install "voicehub[training]"
+uv pip install "voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
-VoiceHub's package constraint selects PyTorch 2.8. For a hardware-specific
-build, choose the matching command from the
-[PyTorch installer](https://pytorch.org/get-started/locally/) before installing
-VoiceHub. A CPU-only environment can use:
+Choose a hardware-specific command from the
+[PyTorch installer](https://pytorch.org/get-started/locally/) first. A CPU-only
+environment can use:
 
 ```bash
 uv pip install "torch>=2.8,<2.9" \
   --index-url https://download.pytorch.org/whl/cpu
-uv pip install voicehub
+uv pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
-Verify lightweight discovery without downloading a checkpoint or importing
-PyTorch:
+Verify discovery without downloading a checkpoint or importing PyTorch:
 
 ```python
 import sys
@@ -75,8 +65,7 @@ print("Registered models:", len(models))
 print("PyTorch imported during discovery:", "torch" in sys.modules)
 ```
 
-Inspect accelerator availability separately because model memory and precision
-requirements are checkpoint-specific:
+Check the accelerator separately:
 
 ```bash
 python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
@@ -84,13 +73,13 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 
 ### Source install
 
-Installing from source provides the current `main` branch rather than the
-published package. It is useful for testing unreleased fixes, but the branch
-can change between installs. Pin a commit instead of `main` for a reproducible
-environment.
+Clone the repository when you want a local source tree. Pin a commit instead
+of `main` for a reproducible environment.
 
 ```bash
-uv pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
+git clone https://github.com/kadirnar/voicehub.git
+cd voicehub
+uv pip install .
 ```
 
 Confirm the installed version and dependency-light registry:
@@ -101,8 +90,7 @@ python -c "import voicehub; print(voicehub.__version__, len(voicehub.list_model_
 
 ### Editable install
 
-An editable install links the environment to a local checkout. Source edits
-are immediately visible without reinstalling the package.
+An editable install exposes local edits immediately:
 
 ```bash
 git clone https://github.com/kadirnar/voicehub.git
@@ -110,7 +98,7 @@ cd voicehub
 uv pip install -e ".[test,training,docs]"
 ```
 
-Keep the checkout while using the editable environment. Update it explicitly:
+Update the checkout explicitly:
 
 ```bash
 cd voicehub
@@ -120,18 +108,14 @@ git pull
 ## conda
 
 [conda](https://docs.conda.io/projects/conda/en/stable/) can own the Python
-environment while uv or pip installs VoiceHub inside it. This workflow does
-not assume a separately published `conda-forge::voicehub` package.
+environment while uv installs VoiceHub from source:
 
 ```bash
 conda create -n voicehub python=3.12 -y
 conda activate voicehub
 python -m pip install uv
-uv pip install voicehub
+uv pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
-
-Use the source-install command instead of the last line when validating the
-current development branch.
 
 ## Set up
 

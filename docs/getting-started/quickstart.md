@@ -24,7 +24,7 @@ manager and keep using the same environment for the rest of the guide.
     ```bash
     uv venv .venv
     source .venv/bin/activate
-    uv pip install voicehub
+    uv pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
     ```
 
 === "pip"
@@ -32,7 +32,7 @@ manager and keep using the same environment for the rest of the guide.
     ```bash
     python -m venv .venv
     source .venv/bin/activate
-    python -m pip install voicehub
+    python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
     ```
 
 Windows PowerShell users activate the environment with

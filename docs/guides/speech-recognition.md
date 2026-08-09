@@ -12,7 +12,7 @@ languages, timestamps, decoding, licenses, and training boundaries.
 ## Install
 
 ```bash
-python -m pip install voicehub
+python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
 No ASR-specific inference extra is required. Checkpoints load only when a
@@ -135,7 +135,7 @@ selected integration explicitly overrides that contract.
 Install training tools:
 
 ```bash
-python -m pip install "voicehub[training]"
+python -m pip install "voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
 Start with one step on a speaker-disjoint split:

@@ -7,13 +7,10 @@ description: Public API, checkpoint, training, and optimization guide for the as
 ## Usage
 
 ```bash
-python -m pip install voicehub
+python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
-1. Install VoiceHub and the provider extra shown above.
-2. Choose a checkpoint that matches this integration.
-3. Place a supported recording at `speech.wav`.
-4. Transcribe it and inspect both the full text and timed segments.
+Install from source, then choose a compatible checkpoint. Place a supported recording at `speech.wav` and inspect the transcript.
 
 ```python
 from voicehub import AutoModelForSpeechRecognition
@@ -30,16 +27,12 @@ for segment in output.segments:
     print(segment.start, segment.end, segment.text)
 ```
 
-Use only authorized recordings for reference voice, transcription, detection,
-or evaluation. The example selects a concrete device; verify checkpoint-specific
-hardware needs and pin an immutable revision before production use.
+Use authorized recordings. Verify hardware needs and pin a revision in production.
 
 ## Overview
 
-OpenAIWhisper uses the canonical model type `asr_openai_whisper` and is a
-VoiceHub **automatic speech recognition** integration. This page is
-generated from the model registry and its executable data and training
-contracts, so the documented support stays aligned with code. [Open the `asr_openai_whisper` Colab notebook](https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_openai_whisper.ipynb).
+`asr_openai_whisper` is a VoiceHub **automatic speech recognition**
+integration. This page is generated from its registry contract. [Open the `asr_openai_whisper` Colab notebook](https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_openai_whisper.ipynb).
 
 | Property | Value |
 | --- | --- |
@@ -62,8 +55,7 @@ contracts, so the documented support stays aligned with code. [Open the `asr_ope
 
 ## Configuration
 
-Load the registered configuration without constructing the model. The canonical
-key remains serializable even though the page uses a presentation label.
+Load configuration without constructing the model:
 
 ```python
 from voicehub import AutoConfig
@@ -80,8 +72,7 @@ print(config.model_type)
 
 ## Processing
 
-`AutoProcessor` resolves the processor declared by the registered model. Creating
-the processor does not allocate model weights.
+Create the registered processor without allocating model weights:
 
 ```python
 from voicehub import AutoProcessor
@@ -93,13 +84,9 @@ processor = AutoProcessor.from_pretrained(
 print(type(processor).__name__)
 ```
 
-Processor behavior remains model-owned when text normalization, audio loading,
-feature extraction, or reference speech requires provider-specific semantics.
-
 ## Inference
 
-The Usage example returns `ASROutput` through `AutoModelForSpeechRecognition`. Inputs are validated
-against the task and data contracts below before model-specific execution.
+The Usage example returns `ASROutput` through `AutoModelForSpeechRecognition`.
 
 ### Input and output contract
 
@@ -115,17 +102,12 @@ against the task and data contracts below before model-specific execution.
 | `raw-audio` | `audio` | text / transcription / transcript | Source | at most one: text / transcription / transcript |
 | `whisper-model-ready` | `input_features`, `labels` | — | Prepared | — |
 
-OpenAI Whisper-compatible records trained through the native Whisper graph. Follow the [shared data workflow](../../guides/speech-data.md) for
-manifest loading, audio validation, leakage-safe splits, and model-owned
-preprocessing.
+OpenAI Whisper-compatible records trained through the native Whisper graph. See the [data workflow](../../guides/speech-data.md).
 
 ## Training and optimization
 
-All public optimizations enter this model through the shared
-`BaseSpeechModel` lifecycle. Use `available_optimization_passes()` to discover
-the public pass registry, then apply, inspect, serialize, or restore a plan
-through the common model API. Application remains fail-closed when the active
-runtime or hardware cannot satisfy a pass.
+Use `available_optimization_passes()` to discover reversible public passes.
+Unsupported runtime or hardware fails closed before mutation.
 
 ### Training contract
 
@@ -142,10 +124,8 @@ runtime or hardware cannot satisfy a pass.
 | --- | --- | --- | --- | --- |
 | `speech_recognition` | objective | `model` | — | `loss` |
 
-The integration accepts its declared source or prepared contract directly. Call `model.validate_training_support()` before constructing a
-trainer. Follow the [shared training workflow](../../guides/training.md) for a
-one-step smoke test, validation, checkpoint resume, optimization, and portable
-export.
+The integration accepts its declared source or prepared contract directly. Call `model.validate_training_support()` first, then follow the
+[training workflow](../../guides/training.md).
 
 ## Checkpoints, provenance, license, and limitations
 
@@ -163,24 +143,19 @@ export.
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
 
-The default checkpoint identifies the expected family, not every compatible
-variant. Confirm the selected checkpoint's revision, access terms, provenance,
-and license before downloading or redistributing it.
+Confirm the checkpoint revision, access terms, provenance, and license.
 
 ### Limitations
 
 - No integration-specific checkpoint limitation is registered. Verify the selected checkpoint revision and its documented runtime requirements.
-- The Usage example selects `cuda`; validate memory, precision,
-  and optional dependency requirements on the target system.
+- Validate memory, precision, and optional dependencies on the target system.
 - Public optimizations fail closed when the runtime or hardware cannot satisfy
   their validation contract; an unavailable pass is not reported as applied.
-- Contract tests do not substitute for released-checkpoint evidence. Consult the
-  linked release record before treating a checkpoint path as verified.
+- Contract tests do not replace the linked released-checkpoint evidence.
 
 ## Public API
 
-The stable configuration and model facades keep source inspection local while
-the task auto class owns pretrained loading and normalized output behavior.
+Use the stable configuration, processor, and task-model facades below.
 
 ### `OpenAIWhisperConfig`
 
@@ -204,8 +179,6 @@ AutoModelForSpeechRecognition.from_pretrained(
 )
 ```
 
-The loader returns `OpenAIWhisperForSpeechRecognition` through the shared task-specific factory.
-
 ```python
 from voicehub import get_model_spec
 
@@ -224,8 +197,5 @@ print(spec.display_name, spec.task.value)
 | Training contract | `get_training_spec('asr_openai_whisper')` |
 | Optimization lifecycle | `available_optimization_passes`, `apply_optimization_plan`, `optimization_manifest`, `restore_optimization_plan` |
 
-Related shared documentation:
-
-- [All model guides](index.md)
-- [Shared inference guides](../../guides/index.md)
-- [Model and training support matrices](../training-support.md)
+See [all model guides](index.md), [inference](../../guides/index.md), and the
+[training matrix](../training-support.md).

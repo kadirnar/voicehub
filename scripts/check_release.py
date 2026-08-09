@@ -125,8 +125,10 @@ def validate_documentation_version(version: str, repository_root: Path = REPOSIT
 
     readme = (repository_root / "README.md").read_text(encoding="utf-8")
     readme_contract = (
-        "Unified Inference, Training, and Optimization for TTS, ASR, and VAD",
-        "VoiceHub supports Python 3.10 through 3.12.",
+        "Unified speech inference, training, and optimization",
+        "It supports Python 3.10–3.12.",
+        "git clone https://github.com/kadirnar/voicehub.git",
+        "python -m pip install .",
     )
     missing_contract = [fragment for fragment in readme_contract if fragment not in readme]
     if missing_contract:

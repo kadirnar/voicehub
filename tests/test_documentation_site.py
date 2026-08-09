@@ -45,6 +45,7 @@ QUICKSTART_PATH = DOCS_ROOT / "getting-started" / "quickstart.md"
 INFERENCE_GUIDE_PATH = DOCS_ROOT / "guides" / "inference.md"
 TRAINER_OVERVIEW_PATH = DOCS_ROOT / "guides" / "trainer.md"
 OPTIMIZATION_OVERVIEW_PATH = DOCS_ROOT / "guides" / "optimization-overview.md"
+OPTIONAL_BACKENDS_PATH = DOCS_ROOT / "guides" / "optional-backends.md"
 MODEL_API_PATH = DOCS_ROOT / "reference" / "models.md"
 NOTEBOOK_GALLERY_PATH = DOCS_ROOT / "guides" / "notebook.md"
 README_PATH = REPOSITORY_ROOT / "README.md"
@@ -318,8 +319,16 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertEqual(sections, MODEL_PAGE_SECTIONS)
                 self.assertLessEqual(
                     len(source.splitlines()),
-                    255,
+                    225,
                     f"{path.name} should link shared workflows instead of repeating them.",
+                )
+                self.assertIn(
+                    'git+https://github.com/kadirnar/voicehub.git@main',
+                    source,
+                )
+                self.assertNotIn(
+                    "linked release record before treating a checkpoint path as verified",
+                    source,
                 )
                 self.assertIn(spec.task.value.replace("-", " "), source.lower())
                 self.assertIn(spec.training.support.value, source)
@@ -803,9 +812,10 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertNotIn('=== "', source)
         for fragment in (
                 "uv venv .venv",
-                "uv pip install voicehub",
-                'uv pip install "voicehub[training]"',
                 "uv pip install \"voicehub @ git+https://github.com/kadirnar/voicehub.git@main\"",
+                "uv pip install \"voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main\"",
+                "git clone https://github.com/kadirnar/voicehub.git",
+                "uv pip install .",
                 "uv pip install -e \".[test,training,docs]\"",
                 "conda create -n voicehub python=3.12",
                 "HF_HUB_CACHE",
@@ -824,6 +834,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         ):
             self.assertIn(fragment, source)
         self.assertNotIn("conda install conda-forge::voicehub", source)
+        self.assertNotIn("uv pip install voicehub", source)
 
         examples = PYTHON_BLOCK.findall(source)
         self.assertGreaterEqual(len(examples), 2)
@@ -903,7 +914,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 continue
             required_labels.add(label)
 
-        self.assertEqual(len(required_labels), 57)
+        self.assertEqual(len(required_labels), 58)
         for locale in LOCALIZED_HOME_LOCALES:
             with self.subTest(locale=locale):
                 locale_block = config.split(f"        - locale: {locale}\n", 1)[1]
@@ -1006,6 +1017,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 ".md-typeset .vh-model-catalog tbody td:first-child code",
                 ".md-typeset code.vh-optimization-term",
                 ".md-nav__link.vh-model-link",
+                ".md-sidebar--primary a.md-nav__link.vh-model-link",
                 ".md-nav__link.vh-optimization-link",
                 "body.vh-optimization-page .md-typeset h1",
         ):
@@ -1020,6 +1032,13 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "initializeSemanticHighlights();",
         ):
             self.assertIn(fragment, script)
+
+        model_link_rule = stylesheet.split(
+            ".md-sidebar--primary a.md-nav__link.vh-model-link {",
+            1,
+        )[1].split("}", 1)[0]
+        self.assertIn("width: calc(100% + 0.45rem);", model_link_rule)
+        self.assertIn("padding: 0.3rem 0.45rem;", model_link_rule)
 
     def test_theme_uses_reference_neutral_surfaces_with_voicehub_accents(self):
         stylesheet = STYLESHEET_PATH.read_text(encoding="utf-8")
@@ -1330,6 +1349,27 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 '"optimization_interaction_cases"',
         ):
             self.assertIn(fragment, checker)
+
+    def test_optional_backends_are_source_pinned_and_fail_closed(self):
+        source = OPTIONAL_BACKENDS_PATH.read_text(encoding="utf-8")
+        config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "- Optional source backends: guides/optional-backends.md",
+            config,
+        )
+        for fragment in (
+                "dropbox/hqq.git@d88a488ec8aa2d58362ef2038a52bca862db2e74",
+                "dropbox/gemlite.git@3dc52c3115fee49a09d00fd9e470ef6396885949",
+                "git checkout 748c5e28f6a7228b8f38ad7142ca97d29584544b",
+                "not a Python optimization pass",
+                "does not report them as applied public passes",
+                "real-checkpoint evidence",
+        ):
+            self.assertIn(fragment, source)
+
+        self.assertNotIn("pip install hqq\n", source)
+        self.assertNotIn("pip install gemlite\n", source)
 
     def test_model_contribution_matches_current_modular_transformers_contract(self):
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")

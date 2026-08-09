@@ -101,27 +101,29 @@ def _checkpoint(spec) -> tuple[str, str]:
 
 
 def _install_command(spec) -> str:
-    extra = f",{spec.install_extra}" if spec.install_extra else ""
-    return f'python -m pip install "voicehub[{extra.lstrip(",")}]"' if extra else "python -m pip install voicehub"
+    extra = f"[{spec.install_extra}]" if spec.install_extra else ""
+    return (
+        f'python -m pip install "voicehub{extra} @ '
+        'git+https://github.com/kadirnar/voicehub.git@main"')
 
 
 def _inference_code(spec) -> str:
     checkpoint, _ = _checkpoint(spec)
     if spec.task.value == "text-to-speech":
         options = TTS_GENERATION_OPTIONS.get(spec.model_type, ())
-        rendered = "\n".join(f"    {line}" for line in options)
-        if rendered:
-            rendered += "\n"
-        reference_setup = ""
+        generation_kwargs = "{}"
+        if options:
+            rendered = "\n".join(f"    {line}" for line in options)
+            generation_kwargs = f"{{\n{rendered}\n}}"
+        reference_setup = "\n"
         if any("REFERENCE_" in line for line in options):
             reference_setup = '''
 REFERENCE_AUDIO = Path("reference.wav")
 REFERENCE_TEXT = "This transcript must exactly match the authorized reference audio."
+
 '''
         return f'''from pathlib import Path
-{reference_setup}
-
-from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+{reference_setup}from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
 
 model = AutoModelForTextToSpeech.from_pretrained(
     {checkpoint!r},
@@ -129,8 +131,7 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {{
-{rendered}}}
+generation_kwargs = {generation_kwargs}
 output = model.generate(
     "VoiceHub keeps model integrations consistent and easy to extend.",
     generation_config=TTSGenerationConfig(
@@ -167,30 +168,18 @@ for segment in output.segments:
 
 
 def _inference_notes(spec) -> str:
-    notes = [
-        "1. Install VoiceHub and the provider extra shown above.",
-        "2. Choose a checkpoint that matches this integration.",
-    ]
+    notes = ["Install from source, then choose a compatible checkpoint."]
     if spec.task.value == "text-to-speech":
         if spec.model_type in TTS_GENERATION_OPTIONS:
-            notes.append(
-                "3. Provide an authorized `reference.wav` and an exact reference "
-                "transcript when the example requests them.")
+            notes.append("Provide an authorized `reference.wav` and its exact transcript when requested.")
         else:
-            notes.append("3. Set the input text and generation options for your use case.")
-        notes.append("4. Generate audio and inspect the returned sample rate and metadata.")
+            notes.append("Set the text and generation options, then inspect the returned audio.")
     elif spec.task.value == "automatic-speech-recognition":
-        notes.extend((
-            "3. Place a supported recording at `speech.wav`.",
-            "4. Transcribe it and inspect both the full text and timed segments.",
-        ))
+        notes.append("Place a supported recording at `speech.wav` and inspect the transcript.")
     else:
-        notes.extend((
-            "3. Place a supported recording at `speech.wav`.",
-            "4. Run detection and tune the threshold against labeled validation audio.",
-        ))
+        notes.append("Place a recording at `speech.wav`; tune the threshold on labeled audio.")
     checkpoint_note = checkpoint_documentation(spec).note
-    rendered = "\n".join(notes)
+    rendered = " ".join(notes)
     if checkpoint_note:
         rendered += f"\n\nCheckpoint note: {checkpoint_note}"
     return rendered
@@ -326,9 +315,7 @@ def _dataset_section(spec) -> str:
 | --- | --- | --- | --- | --- |
 {chr(10).join(rows)}
 
-{_cell(dataset.description)} Follow the [shared data workflow]({guide}) for
-manifest loading, audio validation, leakage-safe splits, and model-owned
-preprocessing.'''
+{_cell(dataset.description)} See the [data workflow]({guide}).'''
 
     required = tuple(dict.fromkeys(name for phase in training.phases for name in phase.required_inputs))
     fields = _code_list(required) if required else "—"
@@ -340,9 +327,8 @@ preprocessing.'''
 | Label boundary | {boundary} |
 | Required training inputs | {fields} |
 
-Use authorized audio and preserve annotation provenance. Follow the
-[ASR and VAD data workflow](../../guides/speech-data.md) for supported audio
-forms, timestamp labels, frame targets, leakage-safe splits, and evaluation.'''
+Use authorized audio and preserve annotation provenance. See the
+[ASR and VAD data workflow](../../guides/speech-data.md).'''
 
 
 def _phase_rows(training) -> str:
@@ -376,11 +362,8 @@ def _training_section(spec) -> str:
     if not training.support.is_trainable:
         return f'''{summary}
 
-This integration is intentionally **inference-only**. VoiceHub has no verified
-gradient-bearing graph, loss, and reloadable training artifact for it. Do not
-attach a generic loss to inference output. Choose a trainable model from the
-[training matrix](../training-support.md), or contribute a tested training
-adapter and data contract.'''
+This integration is **inference-only**. Choose a verified model from the
+[training matrix](../training-support.md).'''
 
     qualifier = {
         "native": "The integration accepts its declared source or prepared contract directly.",
@@ -389,10 +372,8 @@ adapter and data contract.'''
     }[training.support.value]
     return f'''{summary}
 
-{qualifier} Call `model.validate_training_support()` before constructing a
-trainer. Follow the [shared training workflow](../../guides/training.md) for a
-one-step smoke test, validation, checkpoint resume, optimization, and portable
-export.'''
+{qualifier} Call `model.validate_training_support()` first, then follow the
+[training workflow](../../guides/training.md).'''
 
 
 def render_page(spec) -> str:
@@ -453,16 +434,12 @@ description: Public API, checkpoint, training, and optimization guide for the {s
 {_inference_code(spec)}
 ```
 
-Use only authorized recordings for reference voice, transcription, detection,
-or evaluation. The example selects a concrete device; verify checkpoint-specific
-hardware needs and pin an immutable revision before production use.
+Use authorized recordings. Verify hardware needs and pin a revision in production.
 
 ## Overview
 
-{spec.display_name} uses the canonical model type `{spec.model_type}` and is a
-VoiceHub **{TASK_LABELS[spec.task.value].lower()}** integration. This page is
-generated from the model registry and its executable data and training
-contracts, so the documented support stays aligned with code.{notebook}
+`{spec.model_type}` is a VoiceHub **{TASK_LABELS[spec.task.value].lower()}**
+integration. This page is generated from its registry contract.{notebook}
 
 | Property | Value |
 | --- | --- |
@@ -480,8 +457,7 @@ contracts, so the documented support stays aligned with code.{notebook}
 
 ## Configuration
 
-Load the registered configuration without constructing the model. The canonical
-key remains serializable even though the page uses a presentation label.
+Load configuration without constructing the model:
 
 ```python
 from voicehub import AutoConfig
@@ -498,20 +474,15 @@ print(config.model_type)
 
 ## Processing
 
-`AutoProcessor` resolves the processor declared by the registered model. Creating
-the processor does not allocate model weights.
+Create the registered processor without allocating model weights:
 
 ```python
 {_processor_code(spec)}
 ```
 
-Processor behavior remains model-owned when text normalization, audio loading,
-feature extraction, or reference speech requires provider-specific semantics.
-
 ## Inference
 
-The Usage example returns `{output}` through `{factory}`. Inputs are validated
-against the task and data contracts below before model-specific execution.
+The Usage example returns `{output}` through `{factory}`.
 
 ### Input and output contract
 
@@ -519,11 +490,8 @@ against the task and data contracts below before model-specific execution.
 
 ## Training and optimization
 
-All public optimizations enter this model through the shared
-`BaseSpeechModel` lifecycle. Use `available_optimization_passes()` to discover
-the public pass registry, then apply, inspect, serialize, or restore a plan
-through the common model API. Application remains fail-closed when the active
-runtime or hardware cannot satisfy a pass.
+Use `available_optimization_passes()` to discover reversible public passes.
+Unsupported runtime or hardware fails closed before mutation.
 
 ### Training contract
 
@@ -545,24 +513,19 @@ runtime or hardware cannot satisfy a pass.
 
 {license_text}
 
-The default checkpoint identifies the expected family, not every compatible
-variant. Confirm the selected checkpoint's revision, access terms, provenance,
-and license before downloading or redistributing it.
+Confirm the checkpoint revision, access terms, provenance, and license.
 
 ### Limitations
 
 - {checkpoint_note}
-- The Usage example selects `{_example_device(spec)}`; validate memory, precision,
-  and optional dependency requirements on the target system.
+- Validate memory, precision, and optional dependencies on the target system.
 - Public optimizations fail closed when the runtime or hardware cannot satisfy
   their validation contract; an unavailable pass is not reported as applied.
-- Contract tests do not substitute for released-checkpoint evidence. Consult the
-  linked release record before treating a checkpoint path as verified.
+- Contract tests do not replace the linked released-checkpoint evidence.
 
 ## Public API
 
-The stable configuration and model facades keep source inspection local while
-the task auto class owns pretrained loading and normalized output behavior.
+Use the stable configuration, processor, and task-model facades below.
 
 ### `{spec.config_class}`
 
@@ -586,8 +549,6 @@ the task auto class owns pretrained loading and normalized output behavior.
 )
 ```
 
-The loader returns `{spec.class_name}` through the shared task-specific factory.
-
 ```python
 from voicehub import get_model_spec
 
@@ -606,11 +567,8 @@ print(spec.display_name, spec.task.value)
 | Training contract | `get_training_spec({spec.model_type!r})` |
 | Optimization lifecycle | `available_optimization_passes`, `apply_optimization_plan`, `optimization_manifest`, `restore_optimization_plan` |
 
-Related shared documentation:
-
-- [All model guides](index.md)
-- [Shared inference guides](../../guides/index.md)
-- [Model and training support matrices](../training-support.md)
+See [all model guides](index.md), [inference](../../guides/index.md), and the
+[training matrix](../training-support.md).
 '''
 
 

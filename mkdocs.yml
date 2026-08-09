@@ -84,6 +84,7 @@ nav:
       - Model support: models/training-support.md
   - Quantization and optimization:
       - Overview: guides/optimization-overview.md
+      - Optional source backends: guides/optional-backends.md
       - TTS optimization workflow: guides/tts-optimization.md
       - Codec optimization: guides/codec-optimization.md
       - Diffusion and flow optimization: guides/diffusion-optimization.md
@@ -203,6 +204,7 @@ plugins:
             Base classes: Temel sınıflar
             Inference: Çıkarım
             Quantization and optimization: Kuantizasyon ve optimizasyon
+            Optional source backends: İsteğe bağlı kaynak arka uçları
             Ecosystem integrations: Ekosistem entegrasyonları
             Resources: Kaynaklar
             API: API
@@ -268,6 +270,7 @@ plugins:
             Base classes: Clases base
             Inference: Inferencia
             Quantization and optimization: Cuantización y optimización
+            Optional source backends: Backends de código fuente opcionales
             Ecosystem integrations: Integraciones del ecosistema
             Resources: Recursos
             API: API
@@ -333,6 +336,7 @@ plugins:
             Base classes: Classes de base
             Inference: Inférence
             Quantization and optimization: Quantification et optimisation
+            Optional source backends: Backends source facultatifs
             Ecosystem integrations: Intégrations de l’écosystème
             Resources: Ressources
             API: API
@@ -398,6 +402,7 @@ plugins:
             Base classes: Basisklassen
             Inference: Inferenz
             Quantization and optimization: Quantisierung und Optimierung
+            Optional source backends: Optionale Quellcode-Backends
             Ecosystem integrations: Ökosystem-Integrationen
             Resources: Ressourcen
             API: API
@@ -463,6 +468,7 @@ plugins:
             Base classes: Classes base
             Inference: Inferência
             Quantization and optimization: Quantização e otimização
+            Optional source backends: Backends de código-fonte opcionais
             Ecosystem integrations: Integrações do ecossistema
             Resources: Recursos
             API: API
@@ -528,6 +534,7 @@ plugins:
             Base classes: 基础类
             Inference: 推理
             Quantization and optimization: 量化和优化
+            Optional source backends: 可选源码后端
             Ecosystem integrations: 生态系统集成
             Resources: 资源
             API: API
@@ -593,6 +600,7 @@ plugins:
             Base classes: 基底クラス
             Inference: 推論
             Quantization and optimization: 量子化と最適化
+            Optional source backends: オプションのソースバックエンド
             Ecosystem integrations: エコシステム連携
             Resources: リソース
             API: API
@@ -658,6 +666,7 @@ plugins:
             Base classes: 기본 클래스
             Inference: 추론
             Quantization and optimization: 양자화 및 최적화
+            Optional source backends: 선택적 소스 백엔드
             Ecosystem integrations: 생태계 통합
             Resources: 리소스
             API: API
@@ -723,6 +732,7 @@ plugins:
             Base classes: Базовые классы
             Inference: Инференс
             Quantization and optimization: Квантизация и оптимизация
+            Optional source backends: Необязательные исходные бэкенды
             Ecosystem integrations: Интеграции экосистемы
             Resources: Ресурсы
             API: API
@@ -788,6 +798,7 @@ plugins:
             Base classes: الفئات الأساسية
             Inference: الاستدلال
             Quantization and optimization: التكميم والتحسين
+            Optional source backends: واجهات خلفية مصدرية اختيارية
             Ecosystem integrations: تكاملات المنظومة
             Resources: الموارد
             API: API

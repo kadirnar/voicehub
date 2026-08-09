@@ -12,7 +12,7 @@ checkpoint, streaming, score, and fine-tuning support.
 ## Install
 
 ```bash
-python -m pip install voicehub
+python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
 No VAD-specific inference extra is required.

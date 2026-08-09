@@ -15,7 +15,7 @@ The default package installs every built-in inference runtime. Add the
 independent `training` extra for fine-tuning:
 
 ```bash
-python -m pip install "voicehub[training]"
+python -m pip install "voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main"
 ```
 
 !!! note "Training support is model and checkpoint specific"

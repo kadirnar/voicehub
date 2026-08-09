@@ -281,6 +281,7 @@ OPTIMIZATION_PASS_NAMES = (
 )
 OPTIMIZATION_NEXT_STEP_TARGETS = (
     "/guides/tts-optimization/",
+    "/guides/optional-backends/",
     "/guides/codec-optimization/",
     "/guides/diffusion-optimization/",
     "/reference/api/#optimization",
@@ -455,7 +456,7 @@ REPRESENTATIVE_PAGE_ACTIONS = {
     OPTIMIZATION_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/guides/optimization-overview.md",
         "previous": ("/models/training-support/", "Previous: Model support"),
-        "next": ("/guides/tts-optimization/", "Next: TTS optimization workflow"),
+        "next": ("/guides/optional-backends/", "Next: Optional source backends"),
     },
     CONTRIBUTION_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/project/adding-a-model.md",
@@ -1323,6 +1324,16 @@ def _assert_close(case: str, field: str, actual: float, expected: float) -> None
         raise DocumentationVisualError(f"{case}: {field} is {actual:.3f}px, expected {expected:.3f}px.")
 
 
+def _rectangle_contains(parent: dict[str, float], child: dict[str, float]) -> bool:
+    """Allow the same subpixel tolerance used by the geometry assertions."""
+    tolerance = 0.75
+    return (
+        child["x"] >= parent["x"] - tolerance and
+        child["x"] + child["width"] <= parent["x"] + parent["width"] + tolerance and
+        child["y"] >= parent["y"] - tolerance and
+        child["y"] + child["height"] <= parent["y"] + parent["height"] + tolerance)
+
+
 def _validate_accessibility(axe: Axe, page: Page, case: str) -> str:
     response = axe.run(page).response
     violations = response.get("violations", [])
@@ -1488,9 +1499,7 @@ def _validate_case(
             source_children += ("sourceFacts", )
         for child_name in source_children:
             child = state[child_name]
-            if (child["x"] < source["x"] or child["x"] + child["width"] > source["x"] + source["width"] or
-                    child["y"] < source["y"] or
-                    child["y"] + child["height"] > source["y"] + source["height"]):
+            if not _rectangle_contains(source, child):
                 raise DocumentationVisualError(
                     f"{case}: {child_name} escapes the repository control: "
                     f"child={child!r}, source={source!r}.")
@@ -1696,8 +1705,8 @@ def _validate_installation_state(page: Page, case: str) -> None:
             f"{case}: Installation next action is "
             f"{(state['nextTarget'], state['nextLabel'])!r}.")
     for marker in (
-            "uv pip install voicehub",
-            "voicehub[training]",
+            "voicehub @ git+https://github.com/kadirnar/voicehub.git@main",
+            "voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main",
             "torch>=2.8,<2.9",
             "without downloading a checkpoint or importing PyTorch",
             "Pin a commit instead of main",
@@ -2159,8 +2168,8 @@ def _validate_optimization_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: Optimization previous footer destination is "
             f"path={state['previousPath']!r}, text={state['previousText']!r}.")
-    if (state["nextPath"] != "/guides/tts-optimization/" or
-            "TTS optimization workflow" not in state["nextText"]):
+    if (state["nextPath"] != "/guides/optional-backends/" or
+            "Optional source backends" not in state["nextText"]):
         raise DocumentationVisualError(
             f"{case}: Optimization next footer destination is "
             f"path={state['nextPath']!r}, text={state['nextText']!r}.")
