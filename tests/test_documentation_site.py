@@ -69,13 +69,9 @@ PUBLIC_SITE_URL = "https://kadirnar.github.io/voicehub/"
 LOCALIZED_HOME_LOCALES = ("ar", "de", "es", "fr", "ja", "ko", "pt", "ru", "tr", "zh")
 TOP_LEVEL_NAVIGATION = (
     "Get started",
-    "Base classes",
-    "Inference",
-    "Training",
-    "Quantization and optimization",
-    "Ecosystem integrations",
-    "Resources",
-    "API",
+    "Models",
+    "Train",
+    "Optimize",
 )
 GUIDE_PATHS = (
     DOCS_ROOT / "getting-started" / "quickstart.md",
@@ -106,50 +102,29 @@ NAVIGATION_PATHS = (
     "index.md",
     "getting-started/installation.md",
     "getting-started/quickstart.md",
-    "guides/index.md",
     "guides/inference.md",
-    "guides/speech-recognition.md",
-    "guides/voice-activity-detection.md",
     "guides/data-preparation.md",
-    "guides/speech-data.md",
     "guides/trainer.md",
     "guides/training.md",
     "guides/optimization-overview.md",
     "optimizations/index.md",
     "optimizations/compile.md",
     "optimizations/hqq.md",
-    "guides/rtx-5090-tts-benchmarks.md",
-    "guides/notebook.md",
-    "models/index.md",
     "models/providers/index.md",
-    "models/tts-capabilities.md",
-    "models/asr-vad-support.md",
     "models/training-support.md",
-    "concepts/architecture.md",
-    "concepts/trainer.md",
     "project/adding-a-model.md",
-    "project/adding-speech-provider.md",
-    "project/adding-an-optimization.md",
-    "project/transformers-parity.md",
-    "project/translations.md",
-    "project/model-audit.md",
     "reference/models.md",
-    "reference/public-api.md",
-    "reference/api.md",
 )
 PUBLIC_ROUTES = (
-    "guides/inference/",
-    "guides/speech-recognition/",
-    "guides/voice-activity-detection/",
-    "guides/data-preparation/",
-    "guides/speech-data/",
+    "getting-started/installation/",
+    "getting-started/quickstart/",
     "guides/training/",
-    "guides/rtx-5090-tts-benchmarks/",
-    "guides/notebook/",
+    "models/tts-capabilities/",
     "models/asr-vad-support/",
     "models/training-support/",
     "models/providers/",
     "optimizations/",
+    "reference/api/",
 )
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 HTML_HREF = re.compile(r"""href=["']([^"']+)["']""")
@@ -401,7 +376,7 @@ class DocumentationSiteTests(unittest.TestCase):
         self.assertIn("- Automatic speech recognition:", config)
         self.assertIn("- Voice activity detection:", config)
 
-    def test_model_index_matches_transformers_auto_classes_contract(self):
+    def test_model_index_lists_every_registered_model(self):
         from voicehub import list_model_specs
 
         specs = tuple(list_model_specs(task=None))
@@ -410,33 +385,22 @@ class DocumentationSiteTests(unittest.TestCase):
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
 
         headings = (
-            "# Auto Classes",
-            "## Choose an Auto class",
-            "## AutoConfig",
-            "## AutoProcessor",
-            "## Task-specific AutoModel classes",
-            "## Registered models",
-            "### Text to speech",
-            "### Automatic speech recognition",
-            "### Voice activity detection",
+            "# Model list",
+            "## Text to speech",
+            "## Automatic speech recognition",
+            "## Voice activity detection",
         )
         positions = tuple(index.index(heading) for heading in headings)
         self.assertEqual(positions, tuple(sorted(positions)))
         for fragment in (
-                "from voicehub import (",
-                "AutoConfig",
-                "AutoModelForSpeechRecognition",
-                "AutoModelForTextToSpeech",
-                "AutoModelForVoiceActivityDetection",
-                "AutoProcessor",
-                ".available_models()",
-                "from_pretrained(",
-                "same nine required sections",
+                "from voicehub import list_model_specs",
+                "for model in list_model_specs():",
+                "model.display_name",
+                "training matrix",
+                "optimization catalog",
         ):
             self.assertIn(fragment, index)
-        self.assertNotIn("same eight required sections", index)
-        self.assertNotIn("same six required sections", index)
-        self.assertIn("- Auto Classes: models/providers/index.md", config)
+        self.assertIn("- Model list: models/providers/index.md", config)
         for example_index, example in enumerate(PYTHON_BLOCK.findall(index), start=1):
             ast.parse(
                 textwrap.dedent(example),
@@ -820,45 +784,31 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             headings,
             (
                 "# Installation",
-                "## Virtual environment",
-                "## Python",
-                "### Source install",
-                "### Editable install",
-                "## conda",
-                "## Set up",
-                "### Cache directory",
-                "### Offline mode",
+                "## Create an environment",
+                "## Install",
+                "### Editable checkout",
+                "## Verify",
+                "## Cache and offline mode",
             ),
         )
-        self.assertNotIn('=== "', source)
         for fragment in (
-                "uv venv .venv",
-                "uv pip install \"voicehub @ git+https://github.com/kadirnar/voicehub.git@main\"",
-                "uv pip install \"voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main\"",
+                '=== "Linux"',
+                '=== "macOS"',
+                '=== "Windows"',
+                ".venv\\Scripts\\Activate.ps1",
+                "python -m pip install \"voicehub @ git+https://github.com/kadirnar/voicehub.git@main\"",
+                "python -m pip install \"voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main\"",
                 "git clone https://github.com/kadirnar/voicehub.git",
-                "uv pip install .",
-                "uv pip install -e \".[test,training,docs]\"",
-                "conda create -n voicehub python=3.12",
-                "HF_HUB_CACHE",
-                "HUGGINGFACE_HUB_CACHE",
-                "HF_HOME",
-                "XDG_CACHE_HOME",
+                "python -m pip install -e \".[test,training,docs]\"",
                 "VOICEHUB_OFFLINE=1",
                 "local_files_only=True",
-                "../project/release-readiness.md",
-                "https://docs.astral.sh/uv/",
-                "https://docs.astral.sh/uv/getting-started/installation/",
                 "https://pytorch.org/get-started/locally/",
-                "https://docs.conda.io/projects/conda/en/stable/",
-                "[quickstart](quickstart.md)",
-                "[model catalog](../models/index.md)",
         ):
             self.assertIn(fragment, source)
-        self.assertNotIn("conda install conda-forge::voicehub", source)
-        self.assertNotIn("uv pip install voicehub", source)
+        self.assertEqual(source.count('=== "'), 6)
 
         examples = PYTHON_BLOCK.findall(source)
-        self.assertGreaterEqual(len(examples), 2)
+        self.assertEqual(len(examples), 1)
         for example_index, example in enumerate(examples, start=1):
             ast.parse(
                 textwrap.dedent(example),
@@ -880,7 +830,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         ):
             self.assertIn(fragment, checker)
 
-    def test_navigation_uses_transformers_information_architecture(self):
+    def test_navigation_uses_the_compact_product_architecture(self):
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
         navigation = config.split("nav:\n", 1)[1].split("\nplugins:", 1)[0]
         labels = tuple(
@@ -900,16 +850,16 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn("index.md", get_started)
         self.assertIn("getting-started/installation.md", get_started)
         self.assertIn("getting-started/quickstart.md", get_started)
-        self.assertNotIn("models/providers/index.md", sections["Base classes"])
-        self.assertIn("models/providers/index.md", sections["API"])
-        self.assertIn("guides/inference.md", sections["Inference"])
-        self.assertIn("guides/trainer.md", sections["Training"])
-        self.assertIn("guides/training.md", sections["Training"])
-        self.assertIn("guides/tts-optimization.md", sections["Quantization and optimization"])
-        self.assertIn("guides/notebook.md", sections["Ecosystem integrations"])
-        self.assertIn("project/adding-a-model.md", sections["Base classes"])
-        self.assertNotIn("project/adding-a-model.md", sections["Resources"])
-        self.assertIn("reference/api.md", sections["API"])
+        self.assertIn("guides/inference.md", get_started)
+        self.assertIn("models/providers/index.md", sections["Models"])
+        self.assertIn("reference/models.md", sections["Models"])
+        self.assertIn("project/adding-a-model.md", sections["Models"])
+        self.assertIn("guides/trainer.md", sections["Train"])
+        self.assertIn("guides/training.md", sections["Train"])
+        self.assertIn("models/training-support.md", sections["Train"])
+        self.assertIn("guides/optimization-overview.md", sections["Optimize"])
+        self.assertIn("optimizations/index.md", sections["Optimize"])
+        self.assertNotIn("models/xtts2.md", navigation)
 
         stale_labels = ("Home", "Quick Start", "API Reference", "Contributing")
         for locale in LOCALIZED_HOME_LOCALES:
@@ -935,7 +885,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 continue
             required_labels.add(label)
 
-        self.assertEqual(len(required_labels), 69)
+        self.assertLessEqual(len(required_labels), 30)
         for locale in LOCALIZED_HOME_LOCALES:
             with self.subTest(locale=locale):
                 locale_block = config.split(f"        - locale: {locale}\n", 1)[1]
@@ -950,35 +900,24 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         from voicehub import list_model_specs
 
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
-        base_navigation = config.split("  - Base classes:\n", 1)[1].split(
-            "  - Inference:\n",
+        models_navigation = config.split("  - Models:\n", 1)[1].split(
+            "  - Train:\n",
             1,
         )[0]
-        api_navigation = config.split("  - API:\n", 1)[1].split("\nplugins:", 1)[0]
-        main_classes = api_navigation.split("      - Main Classes:\n", 1)[1].split(
-            "      - Full API reference:",
+        model_guides = models_navigation.split(
+            "      # BEGIN GENERATED MODEL GUIDE NAVIGATION",
             1,
-        )[0]
-        model_guides = base_navigation.split(
-            "          # BEGIN GENERATED MODEL GUIDE NAVIGATION",
-            1,
-        )[1].split("          # END GENERATED MODEL GUIDE NAVIGATION", 1)[0]
+        )[1].split("      # END GENERATED MODEL GUIDE NAVIGATION", 1)[0]
 
-        self.assertIn("- Auto Classes: models/providers/index.md", main_classes)
-        self.assertIn("- Models: reference/models.md", main_classes)
-        self.assertIn("- Public exports: reference/public-api.md", main_classes)
-        self.assertNotIn("BEGIN GENERATED MODEL GUIDE NAVIGATION", api_navigation)
-        self.assertNotIn("      - Models:\n", api_navigation)
+        self.assertIn("- Model list: models/providers/index.md", models_navigation)
+        self.assertIn("- Models API: reference/models.md", models_navigation)
+        self.assertIn("- Add a model: project/adding-a-model.md", models_navigation)
         self.assertIn("- Text to speech:", model_guides)
         self.assertIn("- Automatic speech recognition:", model_guides)
         self.assertIn("- Voice activity detection:", model_guides)
         self.assertLess(
-            base_navigation.index("          - Catalogs and support:"),
-            base_navigation.index("          # BEGIN GENERATED MODEL GUIDE NAVIGATION"),
-        )
-        self.assertLess(
-            base_navigation.index("          # END GENERATED MODEL GUIDE NAVIGATION"),
-            base_navigation.index("          - Contribute:"),
+            models_navigation.index("- Model list:"),
+            models_navigation.index("# BEGIN GENERATED MODEL GUIDE NAVIGATION"),
         )
 
         for spec in list_model_specs(task=None):
@@ -989,11 +928,11 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         dom_checker = DOCUMENTATION_DOM_CHECK_PATH.read_text(encoding="utf-8")
         self.assertIn(
-            'expanded_branches=("API", "Main Classes")',
+            'expanded_branches=("Models", )',
             dom_checker,
         )
         self.assertIn(
-            'expanded_branches=("Base classes", "Models", "Text to speech")',
+            'expanded_branches=("Models", "Text to speech")',
             dom_checker,
         )
 
@@ -1129,29 +1068,14 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
     def test_model_api_reference_matches_transformers_contract(self):
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
-        api_navigation = config.split("  - API:\n", 1)[1].split("\nplugins:", 1)[0]
-        self.assertIn("- Main Classes:", api_navigation)
-        self.assertIn("- Models: reference/models.md", api_navigation)
-        self.assertIn("- Public exports: reference/public-api.md", api_navigation)
-        self.assertIn("- Full API reference: reference/api.md", api_navigation)
-        self.assertLess(
-            api_navigation.index("- Models: reference/models.md"),
-            api_navigation.index("- Public exports: reference/public-api.md"),
-        )
-        self.assertLess(
-            api_navigation.index("- Public exports: reference/public-api.md"),
-            api_navigation.index("- Full API reference: reference/api.md"),
-        )
+        models_navigation = config.split("  - Models:\n", 1)[1].split("  - Train:\n", 1)[0]
+        self.assertIn("- Models API: reference/models.md", models_navigation)
         self.assertEqual(config.count("reference/models.md"), 1)
-        self.assertEqual(config.count("reference/public-api.md"), 1)
-        self.assertEqual(config.count("reference/api.md"), 1)
         for locale in LOCALIZED_HOME_LOCALES:
             with self.subTest(locale=locale):
                 locale_block = config.split(f"        - locale: {locale}\n", 1)[1]
                 locale_block = locale_block.split("        - locale:", 1)[0]
-                self.assertRegex(locale_block, r"(?m)^            Main Classes:")
-                self.assertRegex(locale_block, r"(?m)^            Full API reference:")
-                self.assertRegex(locale_block, r"(?m)^            Public exports:")
+                self.assertRegex(locale_block, r"(?m)^            Models API:")
 
         source = MODEL_API_PATH.read_text(encoding="utf-8")
         normalized_source = " ".join(source.split())
@@ -1243,8 +1167,8 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
     def test_trainer_overview_matches_transformers_representative_contract(self):
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
-        training_navigation = config.split("  - Training:\n", 1)[1].split(
-            "  - Quantization and optimization:\n",
+        training_navigation = config.split("  - Train:\n", 1)[1].split(
+            "  - Optimize:\n",
             1,
         )[0]
         overview_entry = "- Trainer overview: guides/trainer.md"
@@ -1300,11 +1224,11 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
         optimization_navigation = config.split(
-            "  - Quantization and optimization:\n",
+            "  - Optimize:\n",
             1,
-        )[1].split("  - Ecosystem integrations:\n", 1)[0]
+        )[1].split("\nplugins:", 1)[0]
         overview_entry = "- Overview: guides/optimization-overview.md"
-        workflow_entry = "- TTS optimization workflow: guides/tts-optimization.md"
+        workflow_entry = "- Optimization catalog: optimizations/index.md"
         self.assertIn(overview_entry, optimization_navigation)
         self.assertIn(workflow_entry, optimization_navigation)
         self.assertLess(
@@ -1312,7 +1236,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             optimization_navigation.index(workflow_entry),
         )
         self.assertEqual(config.count("guides/optimization-overview.md"), 1)
-        self.assertEqual(config.count("guides/tts-optimization.md"), 1)
+        self.assertEqual(config.count("optimizations/index.md"), 1)
 
         source = OPTIMIZATION_OVERVIEW_PATH.read_text(encoding="utf-8")
         normalized_source = " ".join(source.split())
@@ -1422,17 +1346,18 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         files = generator["generated_files"]()
         self.assertEqual(generator["check_generated_files"](files), ())
-        self.assertIn("- Optimization passes:", config)
-        self.assertIn("- Optional source backends:", config)
+        self.assertNotIn("- Optimization passes:", config.split("nav:\n", 1)[1].split("\nplugins:", 1)[0])
+        self.assertNotIn(
+            "- Optional source backends:",
+            config.split("nav:\n", 1)[1].split("\nplugins:", 1)[0])
 
     def test_optional_backends_are_source_pinned_and_fail_closed(self):
         source = OPTIONAL_BACKENDS_PATH.read_text(encoding="utf-8")
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
 
-        self.assertIn(
-            "- Optional source backends: guides/optional-backends.md",
-            config,
-        )
+        self.assertIn('- "HQQ": optimizations/hqq.md', config)
+        self.assertIn('- "GemLite": optimizations/gemlite.md', config)
+        self.assertIn('- "audio.cpp": optimizations/audio-cpp.md', config)
         for fragment in (
                 "dropbox/hqq.git@d88a488ec8aa2d58362ef2038a52bca862db2e74",
                 "dropbox/gemlite.git@3dc52c3115fee49a09d00fd9e470ef6396885949",
@@ -1448,29 +1373,12 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
     def test_model_contribution_matches_current_modular_transformers_contract(self):
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
-        base_navigation = config.split("  - Base classes:\n", 1)[1].split(
-            "  - Inference:\n",
+        models_navigation = config.split("  - Models:\n", 1)[1].split(
+            "  - Train:\n",
             1,
         )[0]
-        resources_navigation = config.split("  - Resources:\n", 1)[1].split(
-            "  - API:",
-            1,
-        )[0]
-        contribute_entry = "- Contribute:"
         add_model_entry = "- Add a model: project/adding-a-model.md"
-        speech_provider_entry = "- Add an ASR or VAD provider: project/adding-speech-provider.md"
-        optimization_entry = "- Add an optimization: project/adding-an-optimization.md"
-        for entry in (
-                contribute_entry,
-                add_model_entry,
-                speech_provider_entry,
-                optimization_entry,
-        ):
-            self.assertIn(entry, base_navigation)
-        self.assertLess(base_navigation.index(add_model_entry), base_navigation.index(speech_provider_entry))
-        self.assertLess(
-            base_navigation.index(speech_provider_entry), base_navigation.index(optimization_entry))
-        self.assertNotIn("project/adding-a-model.md", resources_navigation)
+        self.assertIn(add_model_entry, models_navigation)
         self.assertNotIn("- Add a TTS model:", config)
         self.assertEqual(config.count("project/adding-a-model.md"), 1)
 
@@ -1478,7 +1386,6 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             with self.subTest(locale=locale):
                 locale_block = config.split(f"        - locale: {locale}\n", 1)[1]
                 locale_block = locale_block.split("        - locale:", 1)[0]
-                self.assertRegex(locale_block, r"(?m)^            Contribute:")
                 self.assertRegex(locale_block, r"(?m)^            Add a model:")
 
         source = ADDING_MODEL_PATH.read_text(encoding="utf-8")
@@ -1541,7 +1448,6 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             (
                 "# Quickstart",
                 "## Set up",
-                "## Agent skills",
                 "## Pretrained models",
                 "## Pipeline",
                 "## Trainer",
@@ -1556,31 +1462,30 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         ):
             self.assertIn(outcome, introduction)
         for fragment in (
-                '=== "uv"',
-                '=== "pip"',
-                '=== "Codex"',
-                '=== "Other agents"',
+                '=== "Linux"',
+                '=== "macOS"',
+                '=== "Windows"',
                 '=== "Text to speech"',
                 '=== "Automatic speech recognition"',
                 '=== "Voice activity detection"',
-                ".ai/skills/add-or-validate-speech-model/SKILL.md",
                 "from voicehub import pipeline",
                 'task="text-to-speech"',
                 'task="automatic-speech-recognition"',
                 'task="voice-activity-detection"',
                 "!!! tip",
                 "[Installation](installation.md)",
-                "https://github.com/kadirnar/voicehub/blob/main/.ai/skills/",
                 "[Pipeline guide](../guides/inference.md)",
                 "[training guide](../guides/training.md)",
-                "[Quantization and optimization](../guides/optimization-overview.md)",
+                "[Model list](../models/providers/index.md)",
+                "[Train](../guides/trainer.md)",
+                "[Optimize](../guides/optimization-overview.md)",
         ):
             self.assertIn(fragment, quickstart)
-        self.assertEqual(quickstart.count('=== "'), 7)
+        self.assertEqual(quickstart.count('=== "'), 6)
         self.assertEqual(quickstart.count("!!! tip"), 2)
 
         examples = PYTHON_BLOCK.findall(quickstart)
-        self.assertGreaterEqual(len(examples), 7)
+        self.assertGreaterEqual(len(examples), 6)
         for example_index, example in enumerate(examples, start=1):
             ast.parse(
                 textwrap.dedent(example),
@@ -1695,7 +1600,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn("[Pipeline guide](inference.md)", guide_index)
         self.assertNotIn("[TTS inference guide](inference.md)", guide_index)
         self.assertIn(
-            "[Pipeline](https://kadirnar.github.io/voicehub/guides/inference/)",
+            "[model list](https://kadirnar.github.io/voicehub/models/providers/)",
             README_PATH.read_text(encoding="utf-8"),
         )
 
@@ -2261,9 +2166,9 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "_validate_viewport_summary",
                 "_validate_viewport_palette_summary",
                 '"cases": 60',
-                '"keyboard_cases": 348',
+                '"keyboard_cases": 330',
                 '"screenshot_cases": 60',
-                'totals.get("focus_steps", 0) < 4500',
+                'totals.get("focus_steps", 0) < 4200',
                 "if result.returncode:",
         ):
             self.assertIn(fragment, shard_checker)
@@ -2380,7 +2285,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         aggregate = namespace["_aggregate_summaries"](summaries)
         self.assertEqual(aggregate["totals"]["cases"], 60)
-        self.assertEqual(aggregate["totals"]["keyboard_cases"], 348)
+        self.assertEqual(aggregate["totals"]["keyboard_cases"], 330)
         self.assertEqual(aggregate["totals"]["viewports"], 3)
 
         incomplete = {viewport: dict(summary) for viewport, summary in summaries.items()}
@@ -2658,7 +2563,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "_validate_root_branch_activation",
                 "_validate_mobile_drawer_activation",
                 'page.keyboard.press("Tab")',
-                '"branch:Base classes"',
+                '"branch:Models"',
                 '"header:drawer"',
                 '"keyboard_cases"',
                 '"focus_steps"',
@@ -2761,15 +2666,10 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         checker = DOCUMENTATION_VISUAL_CHECK_PATH.read_text(encoding="utf-8")
         for fragment in (
                 "SPEECHT5_NESTED_BRANCH_STATES = (",
-                '(("Base classes", "Models"), True)',
-                '(("Base classes", "Models", "Catalogs and support"), False)',
-                '(("Base classes", "Models", "Text to speech"), True)',
-                '(("Base classes", "Models", "Text to speech", "SpeechT5"), False)',
-                '(("Base classes", "Models", "Automatic speech recognition"), False)',
-                '(("Base classes", "Models", "Voice activity detection"), False)',
-                '(("Base classes", "Models", "Contribute"), False)',
-                '(("Base classes", "Preprocessors"), False)',
-                '(("Base classes", "Architecture"), False)',
+                '(("Models", "Text to speech"), True)',
+                '(("Models", "Text to speech", "SpeechT5"), False)',
+                '(("Models", "Automatic speech recognition"), False)',
+                '(("Models", "Voice activity detection"), False)',
                 "NESTED_BRANCH_ACTIVATION_METHOD_BY_PALETTE = {",
                 "def _validate_nested_branch_activation(",
                 "nested_branch_activation_cases = 0",
@@ -3336,7 +3236,6 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         )
 
     def test_every_notebook_is_linked_from_each_gallery(self):
-        readme = README_PATH.read_text(encoding="utf-8")
         notebooks_readme = NOTEBOOKS_README_PATH.read_text(encoding="utf-8")
         docs_gallery = NOTEBOOK_GALLERY_PATH.read_text(encoding="utf-8")
 
@@ -3348,8 +3247,6 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "kadirnar/voicehub/blob/main/"
                 f"notebooks/{filename}")
             with self.subTest(notebook=filename):
-                self.assertIn(github_url, readme)
-                self.assertIn(colab_url, readme)
                 self.assertIn(f"]({filename})", notebooks_readme)
                 self.assertIn(colab_url, notebooks_readme)
                 self.assertIn(github_url, docs_gallery)
@@ -3358,14 +3255,17 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
     def test_model_pages_cover_every_registry_entry(self):
         from voicehub import AutoInferenceModel, list_model_specs
 
-        catalog = (DOCS_ROOT / "models" / "index.md").read_text(encoding="utf-8")
+        catalog = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
         tts_matrix = (DOCS_ROOT / "models" / "tts-capabilities.md").read_text(encoding="utf-8", )
         speech_matrix = (DOCS_ROOT / "models" / "asr-vad-support.md").read_text(encoding="utf-8", )
         training_matrix = (DOCS_ROOT / "models" / "training-support.md").read_text(encoding="utf-8")
 
         for model_spec in AutoInferenceModel.available_models():
             with self.subTest(model_type=model_spec.model_type):
-                self.assertIn(f"| `{model_spec.model_type}` |", catalog)
+                self.assertIn(
+                    f"| [`{model_spec.display_name}`]({model_spec.model_type}.md) |",
+                    catalog,
+                )
                 self.assertEqual(
                     tts_matrix.count(f"| `{model_spec.model_type}` |"),
                     1,
@@ -3443,7 +3343,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
     def test_readme_python_examples_compile(self):
         examples = PYTHON_BLOCK.findall(README_PATH.read_text(encoding="utf-8"))
-        self.assertGreaterEqual(len(examples), 5)
+        self.assertEqual(len(examples), 3)
         for index, source in enumerate(examples, start=1):
             ast.parse(
                 textwrap.dedent(source),

@@ -129,13 +129,9 @@ def render_index(guides: tuple[OptimizationGuide, ...]) -> str:
 
 
 def render_navigation(guides: tuple[OptimizationGuide, ...]) -> str:
-    """Render grouped, clickable optimization links in the left sidebar."""
+    """Render a flat list of clickable optimization links in the sidebar."""
     lines = [NAVIGATION_START, "      - Optimization catalog: optimizations/index.md"]
-    for group in tuple(dict.fromkeys(guide.group for guide in guides)):
-        lines.append(f"      - {group}:")
-        lines.extend(
-            f'          - "{guide.title}": optimizations/{guide.slug}.md' for guide in guides
-            if guide.group == group)
+    lines.extend(f'      - "{guide.title}": optimizations/{guide.slug}.md' for guide in guides)
     lines.append(NAVIGATION_END)
     return "\n".join(lines)
 

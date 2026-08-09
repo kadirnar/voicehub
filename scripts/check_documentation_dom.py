@@ -13,13 +13,9 @@ from pathlib import Path
 
 TOP_LEVEL_NAVIGATION = (
     "Get started",
-    "Base classes",
-    "Inference",
-    "Training",
-    "Quantization and optimization",
-    "Ecosystem integrations",
-    "Resources",
-    "API",
+    "Models",
+    "Train",
+    "Optimize",
 )
 
 
@@ -53,52 +49,49 @@ REPRESENTATIVE_ROUTES = {
     RouteExpectation(
         title="Pipeline",
         active_link="Pipeline",
-        expanded_branches=("Inference", "Pipeline API"),
+        expanded_branches=("Get started", ),
     ),
     "models/providers/index.html":
     RouteExpectation(
-        title="Auto Classes",
-        active_link="Auto Classes",
-        expanded_branches=("API", "Main Classes"),
+        title="Model list",
+        active_link="Model list",
+        expanded_branches=("Models", ),
     ),
     "models/providers/speecht5/index.html":
     RouteExpectation(
         title="SpeechT5",
         active_link="SpeechT5",
-        expanded_branches=("Base classes", "Models", "Text to speech"),
+        expanded_branches=("Models", "Text to speech"),
     ),
     "guides/trainer/index.html":
     RouteExpectation(
         title="Trainer",
         active_link="Trainer overview",
-        expanded_branches=("Training", "Get started"),
+        expanded_branches=("Train", ),
     ),
     "guides/optimization-overview/index.html":
     RouteExpectation(
         title="Optimization overview",
         active_link="Overview",
-        expanded_branches=("Quantization and optimization", ),
+        expanded_branches=("Optimize", ),
     ),
     "optimizations/compile/index.html":
     RouteExpectation(
         title="Torch compile",
         active_link="Torch compile",
-        expanded_branches=(
-            "Quantization and optimization",
-            "Optimization passes",
-        ),
+        expanded_branches=("Optimize", ),
     ),
     "project/adding-a-model/index.html":
     RouteExpectation(
         title="Add a model",
         active_link="Add a model",
-        expanded_branches=("Base classes", "Models", "Contribute"),
+        expanded_branches=("Models", ),
     ),
     "reference/models/index.html":
     RouteExpectation(
         title="Models",
-        active_link="Models",
-        expanded_branches=("API", "Main Classes"),
+        active_link="Models API",
+        expanded_branches=("Models", ),
     ),
 }
 

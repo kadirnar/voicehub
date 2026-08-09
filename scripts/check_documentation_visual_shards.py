@@ -32,7 +32,7 @@ EXPECTED_TOTALS = {
     "installation_page_interaction_cases": 6,
     "interactive_accessibility_cases": 30,
     "keyboard_activation_cases": 2,
-    "keyboard_cases": 348,
+    "keyboard_cases": 330,
     "language_activation_cases": 40,
     "language_interaction_accessibility_cases": 40,
     "language_keyboard_activation_cases": 20,
@@ -41,10 +41,10 @@ EXPECTED_TOTALS = {
     "model_api_interaction_cases": 6,
     "model_index_cases": 6,
     "model_index_interaction_cases": 6,
-    "nested_branch_activation_cases": 36,
-    "nested_branch_interaction_accessibility_cases": 36,
-    "nested_branch_keyboard_activation_cases": 18,
-    "nested_branch_pointer_activation_cases": 18,
+    "nested_branch_activation_cases": 16,
+    "nested_branch_interaction_accessibility_cases": 16,
+    "nested_branch_keyboard_activation_cases": 8,
+    "nested_branch_pointer_activation_cases": 8,
     "optimization_cases": 6,
     "optimization_interaction_cases": 6,
     "page_action_back_to_top_activations": 60,
@@ -59,10 +59,10 @@ EXPECTED_TOTALS = {
     "quickstart_cases": 6,
     "quickstart_interaction_cases": 6,
     "quickstart_page_interaction_cases": 6,
-    "root_branch_activation_cases": 32,
-    "root_branch_interaction_accessibility_cases": 32,
-    "root_branch_keyboard_activation_cases": 16,
-    "root_branch_pointer_activation_cases": 16,
+    "root_branch_activation_cases": 16,
+    "root_branch_interaction_accessibility_cases": 16,
+    "root_branch_keyboard_activation_cases": 8,
+    "root_branch_pointer_activation_cases": 8,
     "search_activation_cases": 60,
     "search_interaction_accessibility_cases": 60,
     "search_keyboard_activation_cases": 40,
@@ -126,14 +126,14 @@ NON_MOBILE_SPECIFIC_EXPECTATIONS = {
     "language_interaction_accessibility_cases": 20,
     "language_keyboard_activation_cases": 10,
     "language_pointer_activation_cases": 10,
-    "nested_branch_activation_cases": 18,
-    "nested_branch_interaction_accessibility_cases": 18,
-    "nested_branch_keyboard_activation_cases": 9,
-    "nested_branch_pointer_activation_cases": 9,
-    "root_branch_activation_cases": 16,
-    "root_branch_interaction_accessibility_cases": 16,
-    "root_branch_keyboard_activation_cases": 8,
-    "root_branch_pointer_activation_cases": 8,
+    "nested_branch_activation_cases": 8,
+    "nested_branch_interaction_accessibility_cases": 8,
+    "nested_branch_keyboard_activation_cases": 4,
+    "nested_branch_pointer_activation_cases": 4,
+    "root_branch_activation_cases": 8,
+    "root_branch_interaction_accessibility_cases": 8,
+    "root_branch_keyboard_activation_cases": 4,
+    "root_branch_pointer_activation_cases": 4,
     "search_keyboard_activation_cases": 20,
     "search_pointer_activation_cases": 0,
     "source_activation_cases": 20,
@@ -148,7 +148,7 @@ NON_MOBILE_SPECIFIC_EXPECTATIONS = {
 VIEWPORT_SPECIFIC_EXPECTATIONS = {
     "desktop": {
         **NON_MOBILE_SPECIFIC_EXPECTATIONS,
-        "keyboard_cases": 151,
+        "keyboard_cases": 142,
         "toc_activation_cases": 40,
         "toc_interaction_accessibility_cases": 40,
         "toc_keyboard_activation_cases": 20,
@@ -156,7 +156,7 @@ VIEWPORT_SPECIFIC_EXPECTATIONS = {
     },
     "tablet": {
         **NON_MOBILE_SPECIFIC_EXPECTATIONS,
-        "keyboard_cases": 131,
+        "keyboard_cases": 122,
         "toc_activation_cases": 0,
         "toc_interaction_accessibility_cases": 0,
         "toc_keyboard_activation_cases": 0,
@@ -194,9 +194,9 @@ VIEWPORT_SPECIFIC_EXPECTATIONS = {
     },
 }
 MINIMUM_FOCUS_STEPS_BY_VIEWPORT = {
-    "desktop": 1700,
-    "tablet": 1550,
-    "mobile": 1250,
+    "desktop": 1550,
+    "tablet": 1400,
+    "mobile": 1150,
 }
 PALETTE_METHOD_CASE_FIELDS = (
     ("language_keyboard_activation_cases", "language_pointer_activation_cases"),
@@ -234,16 +234,16 @@ KEYBOARD_CASE_FIELDS = (
 )
 MINIMUM_FOCUS_STEPS_BY_VIEWPORT_PALETTE = {
     "desktop": {
-        "default": 850,
-        "slate": 850,
-    },
-    "tablet": {
         "default": 775,
         "slate": 775,
     },
+    "tablet": {
+        "default": 700,
+        "slate": 700,
+    },
     "mobile": {
-        "default": 626,
-        "slate": 624,
+        "default": 575,
+        "slate": 575,
     },
 }
 
@@ -353,7 +353,7 @@ def _aggregate_summaries(summaries: dict[str, dict[str, Any]]) -> dict[str, Any]
     }
     if mismatches:
         raise DocumentationVisualShardError(f"Aggregated visual contract coverage differs: {mismatches!r}.")
-    if totals.get("focus_steps", 0) < 4500:
+    if totals.get("focus_steps", 0) < 4200:
         raise DocumentationVisualShardError(
             f"Aggregated native focus coverage is unexpectedly low: {totals.get('focus_steps')!r}.")
 

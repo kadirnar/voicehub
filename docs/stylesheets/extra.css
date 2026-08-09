@@ -10,7 +10,7 @@
   --vh-line: #e5e7eb;
   --vh-active-bg: #111827;
   --vh-active-text: #ffffff;
-  --vh-model-accent: #047857;
+  --vh-model-accent: #4b5563;
   --vh-optimization-accent: #7e22ce;
   --vh-tabs-surface: rgba(255, 255, 255, 0.98);
   --vh-tabs-text: #4b5563;
@@ -48,7 +48,7 @@
   --vh-line: #252c3a;
   --vh-active-bg: #1a2233;
   --vh-active-text: #ffffff;
-  --vh-model-accent: #5eead4;
+  --vh-model-accent: #cbd5e1;
   --vh-optimization-accent: #f0abfc;
   --vh-tabs-surface: rgba(11, 15, 25, 0.98);
   --vh-tabs-text: #cbd5e1;
@@ -688,7 +688,7 @@ body.vh-optimization-page .md-typeset h1 {
 .md-typeset .vh-model-catalog tbody td:first-child code,
 .md-typeset .vh-language-support code,
 .md-nav__link.vh-model-link {
-  color: var(--vh-model-accent);
+  color: var(--vh-muted);
 }
 
 .md-sidebar--primary a.md-nav__link.vh-model-link {
@@ -701,7 +701,7 @@ body.vh-optimization-page .md-typeset h1 {
 }
 
 .md-sidebar--primary a.md-nav__link.vh-model-link:not(.md-nav__link--active):is(:hover, :focus-visible) {
-  background: color-mix(in srgb, var(--vh-model-accent) 9%, transparent);
+  background: var(--vh-surface-soft);
 }
 
 .md-typeset .vh-model-catalog tbody td:first-child code {

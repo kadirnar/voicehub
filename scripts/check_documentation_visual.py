@@ -168,39 +168,22 @@ KEYBOARD_ROUTE = PIPELINE_ROUTE
 INSTALLATION_ROUTE = "getting-started/installation/index.html"
 INSTALLATION_HEADINGS = (
     ("H1", "Installation"),
-    ("H2", "Virtual environment"),
-    ("H2", "Python"),
-    ("H3", "Source install"),
-    ("H3", "Editable install"),
-    ("H2", "conda"),
-    ("H2", "Set up"),
-    ("H3", "Cache directory"),
-    ("H3", "Offline mode"),
+    ("H2", "Create an environment"),
+    ("H2", "Install"),
+    ("H3", "Editable checkout"),
+    ("H2", "Verify"),
+    ("H2", "Cache and offline mode"),
 )
-INSTALLATION_EXTERNAL_TARGETS = (
-    "https://docs.astral.sh/uv/",
-    "https://docs.astral.sh/uv/getting-started/installation/",
-    "https://pytorch.org/get-started/locally/",
-    "https://docs.conda.io/projects/conda/en/stable/",
-)
-INSTALLATION_INTERNAL_TARGETS = (
-    "/project/release-readiness/",
-    "/getting-started/quickstart/",
-    "/models/",
-)
+INSTALLATION_EXTERNAL_TARGETS = ("https://pytorch.org/get-started/locally/", )
+INSTALLATION_INTERNAL_TARGETS = ()
 MODEL_INDEX_ROUTE = "models/providers/index.html"
 MODEL_INDEX_HEADINGS = (
-    ("H1", "Auto Classes"),
-    ("H2", "Choose an Auto class"),
-    ("H2", "AutoConfig"),
-    ("H2", "AutoProcessor"),
-    ("H2", "Task-specific AutoModel classes"),
-    ("H2", "Registered models"),
-    ("H3", "Text to speech"),
-    ("H3", "Automatic speech recognition"),
-    ("H3", "Voice activity detection"),
+    ("H1", "Model list"),
+    ("H2", "Text to speech"),
+    ("H2", "Automatic speech recognition"),
+    ("H2", "Voice activity detection"),
 )
-MODEL_INDEX_TABLE_ROWS = (3, 34, 23, 11)
+MODEL_INDEX_TABLE_ROWS = (34, 23, 11)
 SPEECHT5_ROUTE = "models/providers/speecht5/index.html"
 SPEECHT5_HEADINGS = (
     ("H1", "SpeechT5"),
@@ -225,35 +208,24 @@ QUICKSTART_ROUTE = "getting-started/quickstart/index.html"
 QUICKSTART_HEADINGS = (
     ("H1", "Quickstart"),
     ("H2", "Set up"),
-    ("H2", "Agent skills"),
     ("H2", "Pretrained models"),
     ("H2", "Pipeline"),
     ("H2", "Trainer"),
     ("H2", "Next steps"),
 )
 QUICKSTART_TAB_LABELS = (
-    ("uv", "pip"),
-    ("Codex", "Other agents"),
+    ("Linux", "macOS", "Windows"),
     ("Text to speech", "Automatic speech recognition", "Voice activity detection"),
 )
-QUICKSTART_EXTERNAL_TARGETS = (
-    "https://github.com/kadirnar/voicehub/blob/main/.ai/skills/"
-    "add-or-validate-speech-model/SKILL.md",
-    "https://github.com/kadirnar/voicehub/blob/main/.ai/skills/"
-    "match-transformers-docs/SKILL.md",
-    "https://github.com/kadirnar/voicehub/blob/main/.ai/skills/"
-    "prepare-release-evidence/SKILL.md",
-)
+QUICKSTART_EXTERNAL_TARGETS = ()
 QUICKSTART_INTERNAL_TARGETS = (
     "/getting-started/installation/",
     "/getting-started/quickstart/#trainer",
     "/guides/inference/",
     "/guides/training/",
-    "/concepts/architecture/",
-    "/guides/inference/",
+    "/models/providers/",
     "/guides/trainer/",
     "/guides/optimization-overview/",
-    "/guides/notebook/",
 )
 TRAINER_ROUTE = "guides/trainer/index.html"
 TRAINER_HEADINGS = (
@@ -358,19 +330,13 @@ TABLET_KEYBOARD_FOCUS_PREFIX = (
 )
 KEYBOARD_FOCUS_PREFIX = DESKTOP_KEYBOARD_FOCUS_PREFIX + (
     "branch:Get started",
-    "branch:Base classes",
-    "branch:Inference",
     "primary:Overview",
-    "branch:Pipeline API",
+    "primary:Installation",
+    "primary:Quickstart",
     "primary:Pipeline",
-    "primary:Speech recognition",
-    "primary:Voice activity detection",
-    "branch:Serving",
-    "branch:Training",
-    "branch:Quantization and optimization",
-    "branch:Ecosystem integrations",
-    "branch:Resources",
-    "branch:API",
+    "branch:Models",
+    "branch:Train",
+    "branch:Optimize",
     "toc:Tasks",
     "toc:Text to speech",
     "toc:Automatic speech recognition",
@@ -390,15 +356,10 @@ ROOT_BRANCH_ACTIVATION_METHOD_BY_PALETTE = {
     "slate": "pointer",
 }
 SPEECHT5_NESTED_BRANCH_STATES = (
-    (("Base classes", "Models"), True),
-    (("Base classes", "Models", "Catalogs and support"), False),
-    (("Base classes", "Models", "Text to speech"), True),
-    (("Base classes", "Models", "Text to speech", "SpeechT5"), False),
-    (("Base classes", "Models", "Automatic speech recognition"), False),
-    (("Base classes", "Models", "Voice activity detection"), False),
-    (("Base classes", "Models", "Contribute"), False),
-    (("Base classes", "Preprocessors"), False),
-    (("Base classes", "Architecture"), False),
+    (("Models", "Text to speech"), True),
+    (("Models", "Text to speech", "SpeechT5"), False),
+    (("Models", "Automatic speech recognition"), False),
+    (("Models", "Voice activity detection"), False),
 )
 NESTED_BRANCH_ACTIVATION_METHOD_BY_PALETTE = {
     "default": "keyboard",
@@ -440,17 +401,17 @@ REPRESENTATIVE_PAGE_ACTIONS = {
     QUICKSTART_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/getting-started/quickstart.md",
         "previous": ("/getting-started/installation/", "Previous: Installation"),
-        "next": ("/models/", "Next: TTS model catalog"),
+        "next": ("/guides/inference/", "Next: Pipeline"),
     },
     PIPELINE_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/guides/inference.md",
-        "previous": ("/guides/", "Previous: Overview"),
-        "next": ("/guides/speech-recognition/", "Next: Speech recognition"),
+        "previous": ("/getting-started/quickstart/", "Previous: Quickstart"),
+        "next": ("/models/providers/", "Next: Model list"),
     },
     MODEL_INDEX_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/models/providers/index.md",
-        "previous": ("/project/model-audit/", "Previous: Model audit"),
-        "next": ("/reference/models/", "Next: Models"),
+        "previous": ("/guides/inference/", "Previous: Pipeline"),
+        "next": ("/models/providers/bark/", "Next: Bark"),
     },
     SPEECHT5_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/models/providers/speecht5.md",
@@ -459,23 +420,23 @@ REPRESENTATIVE_PAGE_ACTIONS = {
     },
     TRAINER_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/guides/trainer.md",
-        "previous": ("/guides/llm-serving/", "Previous: LLM TTS serving"),
+        "previous": ("/project/adding-a-model/", "Previous: Add a model"),
         "next": ("/guides/training/", "Next: Fine-tuning"),
     },
     OPTIMIZATION_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/guides/optimization-overview.md",
-        "previous": ("/models/training-support/", "Previous: Model support"),
-        "next": ("/guides/optional-backends/", "Next: Optional source backends"),
+        "previous": ("/guides/data-preparation/", "Previous: Data preparation"),
+        "next": ("/optimizations/", "Next: Optimization catalog"),
     },
     CONTRIBUTION_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/project/adding-a-model.md",
-        "previous": ("/models/providers/vad_webrtc/", "Previous: WebRTCVAD"),
-        "next": ("/project/adding-speech-provider/", "Next: Add an ASR or VAD provider"),
+        "previous": ("/reference/models/", "Previous: Models API"),
+        "next": ("/guides/trainer/", "Next: Trainer overview"),
     },
     MODEL_API_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/reference/models.md",
-        "previous": ("/models/providers/", "Previous: Auto Classes"),
-        "next": ("/reference/public-api/", "Next: Public exports"),
+        "previous": ("/models/providers/vad_webrtc/", "Previous: WebRTCVAD"),
+        "next": ("/project/adding-a-model/", "Next: Add a model"),
     },
 }
 PAGE_ACTION_METHOD_BY_PALETTE = {
@@ -951,7 +912,7 @@ def _validate_root_branch_activation(
             }""")
 
     initial = branch_state()
-    expected_initial_expanded = branch_label == "Inference"
+    expected_initial_expanded = branch_label == "Get started"
     if initial["activeLinks"] != ["Pipeline"]:
         raise DocumentationVisualError(
             f"{case}: initial active links are {initial['activeLinks']!r}, expected ['Pipeline'].")
@@ -1083,8 +1044,7 @@ def _validate_nested_branch_activation(
         })""")
     expected_paths = tuple(path for path, _ in SPEECHT5_NESTED_BRANCH_STATES)
     model_paths = tuple(
-        tuple(item["path"]) for item in inventory
-        if item["path"][:1] == ["Base classes"] and len(item["path"]) > 1)
+        tuple(item["path"]) for item in inventory if item["path"][:1] == ["Models"] and len(item["path"]) > 1)
     if model_paths != expected_paths:
         raise DocumentationVisualError(
             f"{case}: model nested branch inventory is {model_paths!r}, expected {expected_paths!r}.")
@@ -1647,6 +1607,7 @@ def _validate_installation_state(page: Page, case: str) -> None:
           const normalize = value => value?.trim().replace(/¶$/, "").trim() || "";
           const contentLinks = Array.from(content?.querySelectorAll("a[href]") || [])
             .filter(link => !link.closest("pre") &&
+              !link.closest(".tabbed-labels") &&
               !link.classList.contains("headerlink") &&
               !link.classList.contains("md-content__button") &&
               !link.closest(".md-source-file"));
@@ -1687,14 +1648,14 @@ def _validate_installation_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: Installation table of contents is {state['toc']!r}, "
             f"expected {expected_toc!r}.")
-    if state["tabbedSets"]:
+    if state["tabbedSets"] != 2:
         raise DocumentationVisualError(
-            f"{case}: Installation exposes {state['tabbedSets']} stale content tab set(s).")
-    if (state["codeBlocks"], state["codeCopyButtons"], state["pageCopyButtons"]) != (15, 15, 1):
+            f"{case}: Installation exposes {state['tabbedSets']} platform tab set(s); expected 2.")
+    if (state["codeBlocks"], state["codeCopyButtons"], state["pageCopyButtons"]) != (12, 12, 1):
         raise DocumentationVisualError(
             f"{case}: Installation copy inventory is codeBlocks={state['codeBlocks']}, "
             f"codeCopyButtons={state['codeCopyButtons']}, "
-            f"pageCopyButtons={state['pageCopyButtons']}; expected 15, 15, and 1.")
+            f"pageCopyButtons={state['pageCopyButtons']}; expected 12, 12, and 1.")
     if tuple(state["externalTargets"]) != INSTALLATION_EXTERNAL_TARGETS:
         raise DocumentationVisualError(
             f"{case}: Installation external targets are {state['externalTargets']!r}, "
@@ -1717,19 +1678,11 @@ def _validate_installation_state(page: Page, case: str) -> None:
     for marker in (
             "voicehub @ git+https://github.com/kadirnar/voicehub.git@main",
             "voicehub[training] @ git+https://github.com/kadirnar/voicehub.git@main",
-            "torch>=2.8,<2.9",
-            "without downloading a checkpoint or importing PyTorch",
-            "Pin a commit instead of main",
-            "conda create -n voicehub python=3.12",
-            "HF_HUB_CACHE",
-            "HUGGINGFACE_HUB_CACHE",
-            "HF_HOME",
-            "XDG_CACHE_HOME",
-            "HF_HUB_OFFLINE=1",
             "VOICEHUB_OFFLINE=1",
             "local_files_only=True",
-            "FileNotFoundError",
-            "Do not report an offline model path as verified",
+            "Linux",
+            "macOS",
+            "Windows",
     ):
         if marker not in state["text"]:
             raise DocumentationVisualError(f"{case}: rendered Installation content is missing {marker!r}.")
@@ -1780,7 +1733,7 @@ def _validate_pipeline_state(page: Page, case: str) -> None:
 
 
 def _validate_code_copy(page: Page, case: str, key: str, *, wait_for_idle: bool = False) -> None:
-    button = page.locator(".md-content__inner button.md-clipboard").first
+    button = page.locator(".md-content__inner button.md-clipboard:visible").first
     if button.count() != 1:
         raise DocumentationVisualError(f"{case}: page has no first code-copy button.")
     expected = button.locator("xpath=preceding-sibling::pre[1]/code").text_content()
@@ -1853,7 +1806,7 @@ def _validate_model_index_state(page: Page, case: str) -> None:
           const content = document.querySelector(".md-content__inner");
           const normalize = value => value?.trim().replace(/¶$/, "").trim() || "";
           const tables = Array.from(content?.querySelectorAll("table") || []);
-          const providerLinks = tables.slice(1).flatMap(table =>
+          const providerLinks = tables.flatMap(table =>
             Array.from(table.querySelectorAll("tbody tr td:first-child a[href]"))
           );
           return {
@@ -1882,10 +1835,10 @@ def _validate_model_index_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: model-index table rows are {state['tableRows']!r}, "
             f"expected {MODEL_INDEX_TABLE_ROWS!r}.")
-    if state["codeBlocks"] != 3 or state["codeCopyButtons"] != 3:
+    if state["codeBlocks"] != 1 or state["codeCopyButtons"] != 1:
         raise DocumentationVisualError(
             f"{case}: model-index code inventory is codeBlocks={state['codeBlocks']}, "
-            f"copyButtons={state['codeCopyButtons']}; expected 3 and 3.")
+            f"copyButtons={state['codeCopyButtons']}; expected 1 and 1.")
     labels = state["providerLabels"]
     hrefs = state["providerHrefs"]
     if len(labels) != 68 or len(set(hrefs)) != 68:
@@ -1897,14 +1850,10 @@ def _validate_model_index_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: model-index labels are not uppercase-first: {invalid_labels!r}.")
     for marker in (
-            "AutoConfig",
-            "AutoProcessor",
-            "AutoModelForTextToSpeech",
-            "AutoModelForSpeechRecognition",
-            "AutoModelForVoiceActivityDetection",
-            "available_models()",
-            "lazy_load=True",
-            "same nine required sections",
+            "dedicated usage, paper, GitHub, training",
+            "list_model_specs()",
+            "training matrix",
+            "optimization catalog",
     ):
         if marker not in state["text"]:
             raise DocumentationVisualError(f"{case}: rendered model index is missing {marker!r}.")
@@ -2177,12 +2126,12 @@ def _validate_optimization_state(page: Page, case: str) -> None:
             f"expected {OPTIMIZATION_NEXT_STEP_TARGETS!r}.")
     if not state["editHref"].endswith("/docs/guides/optimization-overview.md"):
         raise DocumentationVisualError(f"{case}: Optimization edit target is {state['editHref']!r}.")
-    if (state["previousPath"] != "/models/training-support/" or "Model support" not in state["previousText"]):
+    if (state["previousPath"] != "/guides/data-preparation/" or
+            "Data preparation" not in state["previousText"]):
         raise DocumentationVisualError(
             f"{case}: Optimization previous footer destination is "
             f"path={state['previousPath']!r}, text={state['previousText']!r}.")
-    if (state["nextPath"] != "/guides/optional-backends/" or
-            "Optional source backends" not in state["nextText"]):
+    if state["nextPath"] != "/optimizations/" or "Optimization catalog" not in state["nextText"]:
         raise DocumentationVisualError(
             f"{case}: Optimization next footer destination is "
             f"path={state['nextPath']!r}, text={state['nextText']!r}.")
@@ -2269,12 +2218,11 @@ def _validate_contribution_state(page: Page, case: str) -> None:
             f"expected {CONTRIBUTION_FINAL_TARGETS!r}.")
     if not state["editHref"].endswith("/docs/project/adding-a-model.md"):
         raise DocumentationVisualError(f"{case}: Contribution edit target is {state['editHref']!r}.")
-    if state["previousPath"] != "/models/providers/vad_webrtc/" or "WebRTCVAD" not in state["previousText"]:
+    if state["previousPath"] != "/reference/models/" or "Models API" not in state["previousText"]:
         raise DocumentationVisualError(
             f"{case}: Contribution previous footer destination is "
             f"path={state['previousPath']!r}, text={state['previousText']!r}.")
-    if (state["nextPath"] != "/project/adding-speech-provider/" or
-            "Add an ASR or VAD provider" not in state["nextText"]):
+    if state["nextPath"] != "/guides/trainer/" or "Trainer overview" not in state["nextText"]:
         raise DocumentationVisualError(
             f"{case}: Contribution next footer destination is "
             f"path={state['nextPath']!r}, text={state['nextText']!r}.")
@@ -2369,11 +2317,11 @@ def _validate_model_api_state(page: Page, case: str) -> None:
             f"expected {MODEL_API_INTERNAL_TARGETS!r}.")
     if not state["editHref"].endswith("/docs/reference/models.md"):
         raise DocumentationVisualError(f"{case}: Models API edit target is {state['editHref']!r}.")
-    if state["previousPath"] != "/models/providers/" or "Auto Classes" not in state["previousText"]:
+    if (state["previousPath"] != "/models/providers/vad_webrtc/" or "WebRTCVAD" not in state["previousText"]):
         raise DocumentationVisualError(
             f"{case}: Models API previous footer destination is "
             f"path={state['previousPath']!r}, text={state['previousText']!r}.")
-    if (state["nextPath"] != "/reference/public-api/" or "Public exports" not in state["nextText"]):
+    if state["nextPath"] != "/project/adding-a-model/" or "Add a model" not in state["nextText"]:
         raise DocumentationVisualError(
             f"{case}: Models API next footer destination is "
             f"path={state['nextPath']!r}, text={state['nextText']!r}.")
@@ -2486,12 +2434,12 @@ def _validate_quickstart_state(page: Page, case: str) -> None:
             raise DocumentationVisualError(
                 f"{case}: Quickstart tab set {index} starts in invalid state {tab!r}.")
     if (state["tips"], tuple(state["tableRows"]), state["codeBlocks"], state["codeCopyButtons"],
-            state["pageCopyButtons"]) != (2, (3, ), 12, 12, 1):
+            state["pageCopyButtons"]) != (2, (3, ), 11, 11, 1):
         raise DocumentationVisualError(
             f"{case}: Quickstart component inventory is "
             f"tips={state['tips']}, tableRows={state['tableRows']}, "
             f"codeBlocks={state['codeBlocks']}, codeCopyButtons={state['codeCopyButtons']}, "
-            f"pageCopyButtons={state['pageCopyButtons']}; expected 2, [3], 12, 12, and 1.")
+            f"pageCopyButtons={state['pageCopyButtons']}; expected 2, [3], 11, 11, and 1.")
     if tuple(state["externalTargets"]) != QUICKSTART_EXTERNAL_TARGETS:
         raise DocumentationVisualError(
             f"{case}: Quickstart external targets are {state['externalTargets']!r}, "
@@ -2508,12 +2456,11 @@ def _validate_quickstart_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: Quickstart previous action is "
             f"{(state['previousTarget'], state['previousLabel'])!r}.")
-    if (state["nextTarget"], state["nextLabel"]) != ("/models/", "Next: TTS model catalog"):
+    if (state["nextTarget"], state["nextLabel"]) != ("/guides/inference/", "Next: Pipeline"):
         raise DocumentationVisualError(
             f"{case}: Quickstart next action is "
             f"{(state['nextTarget'], state['nextLabel'])!r}.")
     for marker in (
-            "add-or-validate-speech-model/SKILL.md",
             "VoiceHubConfig",
             "PreTrainedSpeechModel",
             "pipeline()",

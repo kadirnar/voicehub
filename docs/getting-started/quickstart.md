@@ -16,61 +16,36 @@ This quickstart shows you how to:
 
 ## Set up
 
-Create an isolated environment and install VoiceHub. Choose one package
-manager and keep using the same environment for the rest of the guide.
+Choose your platform. Each option creates an isolated environment and installs
+VoiceHub from source.
 
-=== "uv"
-
-    ```bash
-    uv venv .venv
-    source .venv/bin/activate
-    uv pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-    ```
-
-=== "pip"
+=== "Linux"
 
     ```bash
-    python -m venv .venv
+    python3 -m venv .venv
     source .venv/bin/activate
     python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
     ```
 
-Windows PowerShell users activate the environment with
-`.venv\Scripts\Activate.ps1`. Install the correct PyTorch build before
-VoiceHub when the selected checkpoint requires CUDA or another accelerator.
-The [Installation](installation.md) guide covers source, editable, cache, and
-offline workflows.
+=== "macOS"
 
-## Agent skills
-
-The source repository includes focused instructions that help coding agents
-follow VoiceHub's model, documentation, and release contracts. They are
-available in a Git checkout; they are not runtime features of the wheel and do
-not authorize commits, publication, or other external changes.
-
-=== "Codex"
-
-    ```text
-    Read .ai/AGENTS.md, .ai/GOAL.md, and .ai/LOOP.md.
-    Use .ai/skills/add-or-validate-speech-model/SKILL.md to audit one model integration.
-    Preserve uv.lock and report every inaccessible checkpoint as unverified.
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
     ```
 
-=== "Other agents"
+=== "Windows"
 
-    ```text
-    Follow the canonical instructions under .ai/.
-    Select the matching SKILL.md before changing model, documentation, or release contracts.
-    Run the focused regression first and never count skipped hardware checks as passes.
+    ```powershell
+    py -3.12 -m venv .venv
+    .venv\Scripts\Activate.ps1
+    python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
     ```
 
-Start with the repository's
-[model-integration skill](https://github.com/kadirnar/voicehub/blob/main/.ai/skills/add-or-validate-speech-model/SKILL.md)
-for model work. The
-[documentation-parity skill](https://github.com/kadirnar/voicehub/blob/main/.ai/skills/match-transformers-docs/SKILL.md)
-and
-[release-evidence skill](https://github.com/kadirnar/voicehub/blob/main/.ai/skills/prepare-release-evidence/SKILL.md)
-cover their corresponding quality gates.
+Install the correct PyTorch build before VoiceHub when a checkpoint requires
+an accelerator. The [Installation](installation.md) guide covers editable,
+cache, and offline workflows.
 
 ## Pretrained models
 
@@ -220,13 +195,7 @@ boundaries required before calling `Trainer.train()`.
 
 ## Next steps
 
-- [Base classes](../concepts/architecture.md): trace configuration,
-  processing, registry, model, output, and serialization contracts.
-- [Pipeline](../guides/inference.md): build reproducible TTS, ASR, and VAD
-  requests.
-- [Trainer](../guides/trainer.md): understand the shared training
-  orchestration boundary.
-- [Quantization and optimization](../guides/optimization-overview.md): inspect
-  registry-wide support before applying a public pass.
-- [Resources](../guides/notebook.md): run short workflows and generated model
-  notebooks.
+- [Model list](../models/providers/index.md): choose a TTS, ASR, or VAD model.
+- [Train](../guides/trainer.md): check training support and orchestration.
+- [Optimize](../guides/optimization-overview.md): apply supported optimization
+  passes.

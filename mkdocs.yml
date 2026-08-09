@@ -52,149 +52,104 @@ nav:
       - Overview: index.md
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
-  - Base classes:
-      - Models:
-          - Catalogs and support:
-              - TTS model catalog: models/index.md
-              - TTS capabilities: models/tts-capabilities.md
-              - ASR and VAD support: models/asr-vad-support.md
-              - XTTS v2 native DVAE: models/xtts2.md
-          # BEGIN GENERATED MODEL GUIDE NAVIGATION
-          - Text to speech:
-              - "Bark": models/providers/bark.md
-              - "Chatterbox": models/providers/chatterbox.md
-              - "ConversationTTS": models/providers/conversationtts.md
-              - "CosyVoice": models/providers/cosyvoice.md
-              - "CSM": models/providers/csm.md
-              - "Dia": models/providers/dia.md
-              - "EchoTTS": models/providers/echo.md
-              - "F5TTS": models/providers/f5tts.md
-              - "FishTTS": models/providers/fishtts.md
-              - "GPTSoVITS": models/providers/gptsovits.md
-              - "HiggsTTS": models/providers/higgstts.md
-              - "InflectTTS": models/providers/inflecttts.md
-              - "IrodoriTTS": models/providers/irodoritts.md
-              - "Kokoro": models/providers/kokoro.md
-              - "Llasa": models/providers/llasa.md
-              - "MeloTTS": models/providers/melotts.md
-              - "MossTTS": models/providers/mosstts.md
-              - "NeuTTS": models/providers/neutts.md
-              - "OmniVoice": models/providers/omnivoice.md
-              - "OpenVoice": models/providers/openvoice.md
-              - "OrpheusTTS": models/providers/orpheustts.md
-              - "OuteTTS": models/providers/outetts.md
-              - "ParlerTTS": models/providers/parlertts.md
-              - "Qwen3TTS": models/providers/qwen3tts.md
-              - "SpeechT5": models/providers/speecht5.md
-              - "StyleTTS2": models/providers/styletts2.md
-              - "Supertonic": models/providers/supertonic.md
-              - "VibeVoice": models/providers/vibevoice.md
-              - "Vits": models/providers/vits.md
-              - "VoxCPM": models/providers/voxcpm.md
-              - "Vui": models/providers/vui.md
-              - "XTTS": models/providers/xtts.md
-              - "Zonos": models/providers/zonos.md
-              - "Zonos2": models/providers/zonos2.md
-          - Automatic speech recognition:
-              - "Cohere": models/providers/asr_cohere.md
-              - "ESPnetASR": models/providers/asr_espnet.md
-              - "FasterWhisper": models/providers/asr_faster_whisper.md
-              - "FunASR": models/providers/asr_funasr.md
-              - "GraniteSpeech": models/providers/asr_granite_speech.md
-              - "Hubert": models/providers/asr_hubert.md
-              - "MedASR": models/providers/asr_medasr.md
-              - "Moonshine": models/providers/asr_moonshine.md
-              - "NeMoASR": models/providers/asr_nemo.md
-              - "Nemotron": models/providers/asr_nemotron.md
-              - "OpenAIWhisper": models/providers/asr_openai_whisper.md
-              - "ParakeetTDT": models/providers/asr_parakeet_tdt.md
-              - "Qwen3ASR": models/providers/asr_qwen3.md
-              - "SeamlessM4Tv2": models/providers/asr_seamless_m4t_v2.md
-              - "SpeechBrainASR": models/providers/asr_speechbrain.md
-              - "Tiron": models/providers/asr_tiron.md
-              - "TransformersASR": models/providers/asr_transformers.md
-              - "VibeVoice": models/providers/asr_vibevoice.md
-              - "Wav2Vec2": models/providers/asr_wav2vec2.md
-              - "WavLM": models/providers/asr_wavlm.md
-              - "WeNetASR": models/providers/asr_wenet.md
-              - "Whisper": models/providers/asr_whisper.md
-              - "WhisperX": models/providers/asr_whisperx.md
-          - Voice activity detection:
-              - "AuditokVAD": models/providers/vad_auditok.md
-              - "FunASRVAD": models/providers/vad_funasr.md
-              - "NeMoVAD": models/providers/vad_nemo.md
-              - "PyannoteBrouhahaVAD": models/providers/vad_pyannote_brouhaha.md
-              - "PyannoteSegmentationVAD": models/providers/vad_pyannote_segmentation.md
-              - "PyannoteVAD": models/providers/vad_pyannote.md
-              - "SherpaONNXVAD": models/providers/vad_sherpa_onnx.md
-              - "SileroVAD": models/providers/vad_silero.md
-              - "SpeechBrainVAD": models/providers/vad_speechbrain.md
-              - "TransformersVAD": models/providers/vad_transformers.md
-              - "WebRTCVAD": models/providers/vad_webrtc.md
-          # END GENERATED MODEL GUIDE NAVIGATION
-          - Contribute:
-              - Add a model: project/adding-a-model.md
-              - Add an ASR or VAD provider: project/adding-speech-provider.md
-              - Add an optimization: project/adding-an-optimization.md
-      - Preprocessors:
-          - Data preparation: guides/data-preparation.md
-          - ASR and VAD data: guides/speech-data.md
-      - Architecture:
-          - Library architecture: concepts/architecture.md
-          - Trainer architecture: concepts/trainer.md
-  - Inference:
-      - Overview: guides/index.md
-      - Pipeline API:
-          - Pipeline: guides/inference.md
-          - Speech recognition: guides/speech-recognition.md
-          - Voice activity detection: guides/voice-activity-detection.md
-      - Serving:
-          - LLM TTS serving: guides/llm-serving.md
-  - Training:
-      - Get started:
-          - Trainer overview: guides/trainer.md
-          - Fine-tuning: guides/training.md
-      - Model support: models/training-support.md
-  - Quantization and optimization:
+      - Pipeline: guides/inference.md
+  - Models:
+      - Model list: models/providers/index.md
+      # BEGIN GENERATED MODEL GUIDE NAVIGATION
+      - Text to speech:
+          - "Bark": models/providers/bark.md
+          - "Chatterbox": models/providers/chatterbox.md
+          - "ConversationTTS": models/providers/conversationtts.md
+          - "CosyVoice": models/providers/cosyvoice.md
+          - "CSM": models/providers/csm.md
+          - "Dia": models/providers/dia.md
+          - "EchoTTS": models/providers/echo.md
+          - "F5TTS": models/providers/f5tts.md
+          - "FishTTS": models/providers/fishtts.md
+          - "GPTSoVITS": models/providers/gptsovits.md
+          - "HiggsTTS": models/providers/higgstts.md
+          - "InflectTTS": models/providers/inflecttts.md
+          - "IrodoriTTS": models/providers/irodoritts.md
+          - "Kokoro": models/providers/kokoro.md
+          - "Llasa": models/providers/llasa.md
+          - "MeloTTS": models/providers/melotts.md
+          - "MossTTS": models/providers/mosstts.md
+          - "NeuTTS": models/providers/neutts.md
+          - "OmniVoice": models/providers/omnivoice.md
+          - "OpenVoice": models/providers/openvoice.md
+          - "OrpheusTTS": models/providers/orpheustts.md
+          - "OuteTTS": models/providers/outetts.md
+          - "ParlerTTS": models/providers/parlertts.md
+          - "Qwen3TTS": models/providers/qwen3tts.md
+          - "SpeechT5": models/providers/speecht5.md
+          - "StyleTTS2": models/providers/styletts2.md
+          - "Supertonic": models/providers/supertonic.md
+          - "VibeVoice": models/providers/vibevoice.md
+          - "Vits": models/providers/vits.md
+          - "VoxCPM": models/providers/voxcpm.md
+          - "Vui": models/providers/vui.md
+          - "XTTS": models/providers/xtts.md
+          - "Zonos": models/providers/zonos.md
+          - "Zonos2": models/providers/zonos2.md
+      - Automatic speech recognition:
+          - "Cohere": models/providers/asr_cohere.md
+          - "ESPnetASR": models/providers/asr_espnet.md
+          - "FasterWhisper": models/providers/asr_faster_whisper.md
+          - "FunASR": models/providers/asr_funasr.md
+          - "GraniteSpeech": models/providers/asr_granite_speech.md
+          - "Hubert": models/providers/asr_hubert.md
+          - "MedASR": models/providers/asr_medasr.md
+          - "Moonshine": models/providers/asr_moonshine.md
+          - "NeMoASR": models/providers/asr_nemo.md
+          - "Nemotron": models/providers/asr_nemotron.md
+          - "OpenAIWhisper": models/providers/asr_openai_whisper.md
+          - "ParakeetTDT": models/providers/asr_parakeet_tdt.md
+          - "Qwen3ASR": models/providers/asr_qwen3.md
+          - "SeamlessM4Tv2": models/providers/asr_seamless_m4t_v2.md
+          - "SpeechBrainASR": models/providers/asr_speechbrain.md
+          - "Tiron": models/providers/asr_tiron.md
+          - "TransformersASR": models/providers/asr_transformers.md
+          - "VibeVoice": models/providers/asr_vibevoice.md
+          - "Wav2Vec2": models/providers/asr_wav2vec2.md
+          - "WavLM": models/providers/asr_wavlm.md
+          - "WeNetASR": models/providers/asr_wenet.md
+          - "Whisper": models/providers/asr_whisper.md
+          - "WhisperX": models/providers/asr_whisperx.md
+      - Voice activity detection:
+          - "AuditokVAD": models/providers/vad_auditok.md
+          - "FunASRVAD": models/providers/vad_funasr.md
+          - "NeMoVAD": models/providers/vad_nemo.md
+          - "PyannoteBrouhahaVAD": models/providers/vad_pyannote_brouhaha.md
+          - "PyannoteSegmentationVAD": models/providers/vad_pyannote_segmentation.md
+          - "PyannoteVAD": models/providers/vad_pyannote.md
+          - "SherpaONNXVAD": models/providers/vad_sherpa_onnx.md
+          - "SileroVAD": models/providers/vad_silero.md
+          - "SpeechBrainVAD": models/providers/vad_speechbrain.md
+          - "TransformersVAD": models/providers/vad_transformers.md
+          - "WebRTCVAD": models/providers/vad_webrtc.md
+      # END GENERATED MODEL GUIDE NAVIGATION
+      - Models API: reference/models.md
+      - Add a model: project/adding-a-model.md
+  - Train:
+      - Trainer overview: guides/trainer.md
+      - Fine-tuning: guides/training.md
+      - Training support: models/training-support.md
+      - Data preparation: guides/data-preparation.md
+  - Optimize:
       - Overview: guides/optimization-overview.md
-      - Optional source backends: guides/optional-backends.md
-      - TTS optimization workflow: guides/tts-optimization.md
-      - Codec optimization: guides/codec-optimization.md
-      - Diffusion and flow optimization: guides/diffusion-optimization.md
-      - VITS-family optimization: guides/vits-optimization.md
       # BEGIN GENERATED OPTIMIZATION GUIDE NAVIGATION
       - Optimization catalog: optimizations/index.md
-      - Optimization passes:
-          - "Torch compile": optimizations/compile.md
-          - "FlashAttention-4": optimizations/flash-attention-4.md
-          - "Custom kernels": optimizations/custom-kernels.md
-          - "Codec kernels": optimizations/codec-kernels.md
-          - "Diffusion cache": optimizations/diffusion-cache.md
-          - "Diffusion sampling": optimizations/diffusion-sampling.md
-      - Optional source backends:
-          - "HQQ": optimizations/hqq.md
-          - "GemLite": optimizations/gemlite.md
-          - "audio.cpp": optimizations/audio-cpp.md
+      - "Torch compile": optimizations/compile.md
+      - "FlashAttention-4": optimizations/flash-attention-4.md
+      - "Custom kernels": optimizations/custom-kernels.md
+      - "Codec kernels": optimizations/codec-kernels.md
+      - "Diffusion cache": optimizations/diffusion-cache.md
+      - "Diffusion sampling": optimizations/diffusion-sampling.md
+      - "HQQ": optimizations/hqq.md
+      - "GemLite": optimizations/gemlite.md
+      - "audio.cpp": optimizations/audio-cpp.md
       # END GENERATED OPTIMIZATION GUIDE NAVIGATION
-  - Ecosystem integrations:
-      - Notebooks with examples: guides/notebook.md
-  - Resources:
-      - Benchmarks:
-          - TTS model benchmarks: guides/tts-model-benchmarks.md
-          - RTX 4090 speech benchmarks: guides/rtx-4090-speech-benchmarks.md
-          - RTX 5090 TTS benchmarks: guides/rtx-5090-tts-benchmarks.md
-      - Project:
-          - Roadmap: project/roadmap.md
-          - Release readiness: project/release-readiness.md
-          - Transformers parity: project/transformers-parity.md
-          - Translations: project/translations.md
-          - Model audit: project/model-audit.md
-  - API:
-      - Main Classes:
-          - Auto Classes: models/providers/index.md
-          - Models: reference/models.md
-          - Public exports: reference/public-api.md
-      - Full API reference: reference/api.md
+      - TTS model benchmarks: guides/tts-model-benchmarks.md
 
 plugins:
   - search:
@@ -214,6 +169,11 @@ plugins:
           build: true
           nav_translations:
             Get started: Hızlı Başlangıç
+            Model list: Model listesi
+            Models API: Model API'si
+            Train: Eğitim
+            Training support: Eğitim desteği
+            Optimize: Optimize et
             Base classes: Temel sınıflar
             Inference: Çıkarım
             Quantization and optimization: Kuantizasyon ve optimizasyon
@@ -264,7 +224,6 @@ plugins:
             Auto Classes: Otomatik sınıflar
             Automatic speech recognition: Otomatik konuşma tanıma
             Benchmarks: Karşılaştırmalar
-            Catalogs and support: Kataloglar ve destek
             Codec optimization: Kodek optimizasyonu
             Diffusion and flow optimization: Difüzyon ve akış optimizasyonu
             Fine-tuning: İnce ayar
@@ -285,12 +244,16 @@ plugins:
             Trainer overview: Eğiticiye genel bakış
             Transformers parity: Transformers eşdeğerliği
             VITS-family optimization: VITS ailesi optimizasyonu
-            XTTS v2 native DVAE: XTTS v2 yerel DVAE
         - locale: es
           name: Español
           build: true
           nav_translations:
             Get started: Inicio rápido
+            Model list: Lista de modelos
+            Models API: API de modelos
+            Train: Entrenar
+            Training support: Compatibilidad de entrenamiento
+            Optimize: Optimizar
             Base classes: Clases base
             Inference: Inferencia
             Quantization and optimization: Cuantización y optimización
@@ -341,7 +304,6 @@ plugins:
             Auto Classes: Clases automáticas
             Automatic speech recognition: Reconocimiento automático del habla
             Benchmarks: Pruebas de rendimiento
-            Catalogs and support: Catálogos y compatibilidad
             Codec optimization: Optimización de códecs
             Diffusion and flow optimization: Optimización de difusión y flujo
             Fine-tuning: Ajuste fino
@@ -362,12 +324,16 @@ plugins:
             Trainer overview: Descripción general del entrenador
             Transformers parity: Paridad con Transformers
             VITS-family optimization: Optimización de la familia VITS
-            XTTS v2 native DVAE: DVAE nativo de XTTS v2
         - locale: fr
           name: Français
           build: true
           nav_translations:
             Get started: Démarrage rapide
+            Model list: Liste des modèles
+            Models API: API des modèles
+            Train: Entraîner
+            Training support: Prise en charge de l'entraînement
+            Optimize: Optimiser
             Base classes: Classes de base
             Inference: Inférence
             Quantization and optimization: Quantification et optimisation
@@ -418,7 +384,6 @@ plugins:
             Auto Classes: Classes automatiques
             Automatic speech recognition: Reconnaissance automatique de la parole
             Benchmarks: Bancs d’essai
-            Catalogs and support: Catalogues et prise en charge
             Codec optimization: Optimisation des codecs
             Diffusion and flow optimization: Optimisation de la diffusion et du flux
             Fine-tuning: Ajustement fin
@@ -439,12 +404,16 @@ plugins:
             Trainer overview: Vue d’ensemble de l’entraîneur
             Transformers parity: Parité avec Transformers
             VITS-family optimization: Optimisation de la famille VITS
-            XTTS v2 native DVAE: DVAE natif de XTTS v2
         - locale: de
           name: Deutsch
           build: true
           nav_translations:
             Get started: Schnellstart
+            Model list: Modellliste
+            Models API: Modell-API
+            Train: Trainieren
+            Training support: Trainingsunterstützung
+            Optimize: Optimieren
             Base classes: Basisklassen
             Inference: Inferenz
             Quantization and optimization: Quantisierung und Optimierung
@@ -495,7 +464,6 @@ plugins:
             Auto Classes: Auto-Klassen
             Automatic speech recognition: Automatische Spracherkennung
             Benchmarks: Benchmarks
-            Catalogs and support: Kataloge und Unterstützung
             Codec optimization: Codec-Optimierung
             Diffusion and flow optimization: Diffusions- und Flussoptimierung
             Fine-tuning: Feinabstimmung
@@ -516,12 +484,16 @@ plugins:
             Trainer overview: Trainer-Überblick
             Transformers parity: Transformers-Parität
             VITS-family optimization: Optimierung der VITS-Familie
-            XTTS v2 native DVAE: Native DVAE von XTTS v2
         - locale: pt
           name: Português
           build: true
           nav_translations:
             Get started: Início rápido
+            Model list: Lista de modelos
+            Models API: API de modelos
+            Train: Treinar
+            Training support: Suporte ao treinamento
+            Optimize: Otimizar
             Base classes: Classes base
             Inference: Inferência
             Quantization and optimization: Quantização e otimização
@@ -572,7 +544,6 @@ plugins:
             Auto Classes: Classes automáticas
             Automatic speech recognition: Reconhecimento automático de fala
             Benchmarks: Benchmarks
-            Catalogs and support: Catálogos e suporte
             Codec optimization: Otimização de codecs
             Diffusion and flow optimization: Otimização de difusão e fluxo
             Fine-tuning: Ajuste fino
@@ -593,12 +564,16 @@ plugins:
             Trainer overview: Visão geral do treinador
             Transformers parity: Paridade com Transformers
             VITS-family optimization: Otimização da família VITS
-            XTTS v2 native DVAE: DVAE nativo do XTTS v2
         - locale: zh
           name: 简体中文
           build: true
           nav_translations:
             Get started: 快速开始
+            Model list: 模型列表
+            Models API: 模型 API
+            Train: 训练
+            Training support: 训练支持
+            Optimize: 优化
             Base classes: 基础类
             Inference: 推理
             Quantization and optimization: 量化和优化
@@ -649,7 +624,6 @@ plugins:
             Auto Classes: 自动类
             Automatic speech recognition: 自动语音识别
             Benchmarks: 基准测试
-            Catalogs and support: 目录与支持
             Codec optimization: 编解码器优化
             Diffusion and flow optimization: 扩散与流优化
             Fine-tuning: 微调
@@ -670,12 +644,16 @@ plugins:
             Trainer overview: 训练器概览
             Transformers parity: Transformers 对齐
             VITS-family optimization: VITS 系列优化
-            XTTS v2 native DVAE: XTTS v2 原生 DVAE
         - locale: ja
           name: 日本語
           build: true
           nav_translations:
             Get started: クイックスタート
+            Model list: モデル一覧
+            Models API: モデル API
+            Train: 学習
+            Training support: 学習サポート
+            Optimize: 最適化
             Base classes: 基底クラス
             Inference: 推論
             Quantization and optimization: 量子化と最適化
@@ -726,7 +704,6 @@ plugins:
             Auto Classes: Auto クラス
             Automatic speech recognition: 自動音声認識
             Benchmarks: ベンチマーク
-            Catalogs and support: カタログとサポート
             Codec optimization: コーデック最適化
             Diffusion and flow optimization: 拡散・フロー最適化
             Fine-tuning: ファインチューニング
@@ -747,12 +724,16 @@ plugins:
             Trainer overview: トレーナー概要
             Transformers parity: Transformers との整合性
             VITS-family optimization: VITS ファミリー最適化
-            XTTS v2 native DVAE: XTTS v2 ネイティブ DVAE
         - locale: ko
           name: 한국어
           build: true
           nav_translations:
             Get started: 빠른 시작
+            Model list: 모델 목록
+            Models API: 모델 API
+            Train: 학습
+            Training support: 학습 지원
+            Optimize: 최적화
             Base classes: 기본 클래스
             Inference: 추론
             Quantization and optimization: 양자화 및 최적화
@@ -803,7 +784,6 @@ plugins:
             Auto Classes: 자동 클래스
             Automatic speech recognition: 자동 음성 인식
             Benchmarks: 벤치마크
-            Catalogs and support: 카탈로그 및 지원
             Codec optimization: 코덱 최적화
             Diffusion and flow optimization: 확산 및 플로 최적화
             Fine-tuning: 미세 조정
@@ -824,12 +804,16 @@ plugins:
             Trainer overview: 트레이너 개요
             Transformers parity: Transformers 동등성
             VITS-family optimization: VITS 계열 최적화
-            XTTS v2 native DVAE: XTTS v2 네이티브 DVAE
         - locale: ru
           name: Русский
           build: true
           nav_translations:
             Get started: Быстрый старт
+            Model list: Список моделей
+            Models API: API моделей
+            Train: Обучение
+            Training support: Поддержка обучения
+            Optimize: Оптимизация
             Base classes: Базовые классы
             Inference: Инференс
             Quantization and optimization: Квантизация и оптимизация
@@ -880,7 +864,6 @@ plugins:
             Auto Classes: Автоматические классы
             Automatic speech recognition: Автоматическое распознавание речи
             Benchmarks: Тесты производительности
-            Catalogs and support: Каталоги и поддержка
             Codec optimization: Оптимизация кодеков
             Diffusion and flow optimization: Оптимизация диффузии и потока
             Fine-tuning: Тонкая настройка
@@ -901,12 +884,16 @@ plugins:
             Trainer overview: Обзор тренера
             Transformers parity: Паритет с Transformers
             VITS-family optimization: Оптимизация семейства VITS
-            XTTS v2 native DVAE: Нативный DVAE XTTS v2
         - locale: ar
           name: العربية
           build: true
           nav_translations:
             Get started: البدء السريع
+            Model list: قائمة النماذج
+            Models API: واجهة نماذج API
+            Train: التدريب
+            Training support: دعم التدريب
+            Optimize: التحسين
             Base classes: الفئات الأساسية
             Inference: الاستدلال
             Quantization and optimization: التكميم والتحسين
@@ -957,7 +944,6 @@ plugins:
             Auto Classes: الفئات التلقائية
             Automatic speech recognition: التعرّف التلقائي على الكلام
             Benchmarks: الاختبارات المعيارية
-            Catalogs and support: الكتالوجات والدعم
             Codec optimization: تحسين برامج الترميز
             Diffusion and flow optimization: تحسين الانتشار والتدفق
             Fine-tuning: الضبط الدقيق
@@ -978,7 +964,6 @@ plugins:
             Trainer overview: نظرة عامة على المدرّب
             Transformers parity: التكافؤ مع Transformers
             VITS-family optimization: تحسين عائلة VITS
-            XTTS v2 native DVAE: DVAE أصلي لـ XTTS v2
 
 markdown_extensions:
   - admonition
