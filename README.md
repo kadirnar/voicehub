@@ -72,8 +72,9 @@ result = model.optimize(
 print(result.manifest())
 ```
 
-Start with the [optimization catalog](https://kadirnar.github.io/voicehub/optimizations/)
-and benchmark on the target hardware.
+Use the [optimization catalog](https://kadirnar.github.io/voicehub/optimizations/)
+and [TTS benchmark evidence](https://kadirnar.github.io/voicehub/guides/tts-model-benchmarks/)
+on the target hardware.
 
 ## Documentation
 
