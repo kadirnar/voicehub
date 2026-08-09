@@ -9,10 +9,12 @@ and voice activity detection (VAD). It supports Python 3.10–3.12.
 
 ## Install
 
-Install VoiceHub directly from its source repository:
+Clone the source repository and install the library:
 
 ```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
+git clone https://github.com/kadirnar/voicehub.git
+cd voicehub
+python -m pip install .
 ```
 
 Install the correct [PyTorch build](https://pytorch.org/get-started/locally/)
