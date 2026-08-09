@@ -52,7 +52,7 @@ nav:
       - Overview: index.md
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
-      - Pipeline: guides/inference.md
+      - Inference: guides/inference.md
   - Models:
       - Model list: models/providers/index.md
       # BEGIN GENERATED MODEL GUIDE NAVIGATION
@@ -203,7 +203,6 @@ plugins:
             Quickstart: İlk ses üretimi
             Guides: Rehberler
             Overview: Genel Bakış
-            Pipeline: İşlem hattı
             Speech recognition: Konuşma tanıma
             Voice activity detection: Ses etkinliği algılama
             Data preparation: Veri hazırlama
@@ -285,7 +284,6 @@ plugins:
             Quickstart: Primera generación
             Guides: Guías
             Overview: Descripción general
-            Pipeline: Pipeline
             Speech recognition: Reconocimiento de voz
             Voice activity detection: Detección de actividad de voz
             Data preparation: Preparación de datos
@@ -367,7 +365,6 @@ plugins:
             Quickstart: Première génération
             Guides: Guides
             Overview: Vue d’ensemble
-            Pipeline: Pipeline
             Speech recognition: Reconnaissance vocale
             Voice activity detection: Détection d’activité vocale
             Data preparation: Préparation des données
@@ -449,7 +446,6 @@ plugins:
             Quickstart: Erste Generierung
             Guides: Anleitungen
             Overview: Überblick
-            Pipeline: Pipeline
             Speech recognition: Spracherkennung
             Voice activity detection: Sprachaktivitätserkennung
             Data preparation: Datenvorbereitung
@@ -531,7 +527,6 @@ plugins:
             Quickstart: Primeira geração
             Guides: Guias
             Overview: Visão geral
-            Pipeline: Pipeline
             Speech recognition: Reconhecimento de fala
             Voice activity detection: Detecção de atividade de voz
             Data preparation: Preparação de dados
@@ -613,7 +608,6 @@ plugins:
             Quickstart: 首次生成
             Guides: 指南
             Overview: 概览
-            Pipeline: 流水线
             Speech recognition: 语音识别
             Voice activity detection: 语音活动检测
             Data preparation: 数据准备
@@ -695,7 +689,6 @@ plugins:
             Quickstart: 最初の生成
             Guides: ガイド
             Overview: 概要
-            Pipeline: パイプライン
             Speech recognition: 音声認識
             Voice activity detection: 音声区間検出
             Data preparation: データ準備
@@ -777,7 +770,6 @@ plugins:
             Quickstart: 첫 음성 생성
             Guides: 가이드
             Overview: 개요
-            Pipeline: 파이프라인
             Speech recognition: 음성 인식
             Voice activity detection: 음성 활동 감지
             Data preparation: 데이터 준비
@@ -859,7 +851,6 @@ plugins:
             Quickstart: Первый синтез
             Guides: Руководства
             Overview: Обзор
-            Pipeline: Пайплайн
             Speech recognition: Распознавание речи
             Voice activity detection: Детекция речевой активности
             Data preparation: Подготовка данных
@@ -941,7 +932,6 @@ plugins:
             Quickstart: أول توليد صوتي
             Guides: الأدلة
             Overview: نظرة عامة
-            Pipeline: مسار المعالجة
             Speech recognition: التعرّف على الكلام
             Voice activity detection: اكتشاف النشاط الصوتي
             Data preparation: إعداد البيانات

@@ -744,7 +744,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         )
         self.assertEqual(source.count("-   **"), 13)
         for fragment in (
-                "[Pipeline](guides/inference.md)",
+                "[Inference](guides/inference.md)",
                 "[Trainer](guides/trainer.md)",
                 "[generate](reference/api.md#generation)",
                 "!!! tip",
@@ -1456,7 +1456,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "# Quickstart",
                 "## Set up",
                 "## Pretrained models",
-                "## Pipeline",
+                "## Inference",
                 "## Trainer",
                 "## Next steps",
             ),
@@ -1481,7 +1481,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 'task="voice-activity-detection"',
                 "!!! tip",
                 "[Installation](installation.md)",
-                "[Pipeline guide](../guides/inference.md)",
+                "[Inference guide](../guides/inference.md)",
                 "[training guide](../guides/training.md)",
                 "[Model list](../models/providers/index.md)",
                 "[Train](../guides/trainer.md)",
@@ -1537,7 +1537,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         quickstart_interaction = checker.split(
             "if relative_path == QUICKSTART_ROUTE:",
             3,
-        )[3].split("if relative_path == PIPELINE_ROUTE:", 1)[0]
+        )[3].split("if relative_path == INFERENCE_ROUTE:", 1)[0]
         self.assertIn('page.reload(wait_until="networkidle")', quickstart_interaction)
         self.assertIn("_reset_quickstart_tabs(page)", quickstart_interaction)
 
@@ -1597,14 +1597,14 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn('.md-content__button.vh-copy-page[aria-busy="true"]', stylesheet)
         self.assertIn("- javascripts/page-actions.js", config)
 
-    def test_pipeline_guide_matches_transformers_representative_contract(self):
+    def test_inference_guide_matches_transformers_representative_contract(self):
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
-        self.assertIn("- Pipeline: guides/inference.md", config)
+        self.assertIn("- Inference: guides/inference.md", config)
         self.assertNotIn("- TTS inference: guides/inference.md", config)
-        self.assertEqual(config.count("            Pipeline:"), len(LOCALIZED_HOME_LOCALES))
+        self.assertEqual(config.count("            Inference:"), len(LOCALIZED_HOME_LOCALES))
 
         guide_index = (DOCS_ROOT / "guides" / "index.md").read_text(encoding="utf-8")
-        self.assertIn("[Pipeline guide](inference.md)", guide_index)
+        self.assertIn("[Inference guide](inference.md)", guide_index)
         self.assertNotIn("[TTS inference guide](inference.md)", guide_index)
         self.assertIn(
             "[model list](https://kadirnar.github.io/voicehub/models/providers/)",
@@ -1613,7 +1613,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         guide = INFERENCE_GUIDE_PATH.read_text(encoding="utf-8")
         headings = (
-            "# Pipeline",
+            "# Inference",
             "## Tasks",
             "### Text to speech",
             "### Automatic speech recognition",
@@ -1645,12 +1645,12 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         checker = DOCUMENTATION_VISUAL_CHECK_PATH.read_text(encoding="utf-8")
         for fragment in (
-                "PIPELINE_ROUTE",
-                "PIPELINE_HEADINGS",
-                "def _validate_pipeline_state(",
-                "def _validate_pipeline_code_copy(",
-                '"pipeline_cases"',
-                '"pipeline_interaction_cases"',
+                "INFERENCE_ROUTE",
+                "INFERENCE_HEADINGS",
+                "def _validate_inference_state(",
+                "def _validate_inference_code_copy(",
+                '"inference_cases"',
+                '"inference_interaction_cases"',
         ):
             self.assertIn(fragment, checker)
 
@@ -2098,6 +2098,15 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertNotIn("label.click()", primary_navigation)
         self.assertIn("initializePrimaryNavigationControl();", script)
 
+        for fragment in (
+                "> :is(label, button).md-nav__link--active {",
+                "+ a.md-nav__link--active {",
+                "background: var(--vh-active-bg);",
+                "color: var(--vh-active-text);",
+                "display: none;",
+        ):
+            self.assertIn(fragment, stylesheet)
+
     def test_rendered_representative_navigation_has_a_ci_contract(self):
         self.assertTrue(DOCUMENTATION_DOM_CHECK_PATH.is_file())
         checker = DOCUMENTATION_DOM_CHECK_PATH.read_text(encoding="utf-8")
@@ -2155,6 +2164,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 '".md-sidebar--primary"',
                 '".md-sidebar--secondary"',
                 '"a.md-nav__link--active"',
+                '"visibleActiveLabels"',
                 '"overflow"',
                 '"--viewport"',
                 '"--palette"',
@@ -2660,7 +2670,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "document.activeElement === button",
                 'page.keyboard.press("Enter")',
                 "button.click()",
-                '"Pipeline"',
+                '"Inference"',
                 "location.pathname",
                 "document.body.dataset.mdColorScheme",
                 'getComputedStyle(panel).display',

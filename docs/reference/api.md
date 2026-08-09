@@ -317,7 +317,7 @@ Task aliases are normalized by `SpeechTask.coerce()`. A registry-owned model
 must match the requested task and implement its callable contract:
 `generate()` for TTS, `transcribe()` for ASR, or `detect()` for VAD.
 `Pipeline.processor`, `.device`, and `.model_type` expose the wrapped model's
-declared values. See the [Pipeline guide](../guides/inference.md) for complete
+declared values. See the [Inference guide](../guides/inference.md) for complete
 workflows and the explicit batching boundary.
 
 ## Model factories
