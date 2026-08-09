@@ -85,7 +85,7 @@ rather than on its first inference request.
     Skip to [Trainer](#trainer) when you already have a model, dataset,
     processor, and collator for a supported differentiable training path.
 
-## Pipeline
+## Inference
 
 `pipeline()` is the shortest task-aware inference API. It selects the correct
 Auto model, preserves the model's normalized output type, and accepts either a
@@ -163,7 +163,7 @@ checkpoint source or an already constructed model.
 
 !!! tip
 
-    The [Pipeline guide](../guides/inference.md) covers batching boundaries,
+    The [Inference guide](../guides/inference.md) covers batching boundaries,
     task parameters, chunking, streaming, large inputs, save/reload, and
     failure behavior.
 

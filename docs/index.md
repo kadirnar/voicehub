@@ -76,7 +76,7 @@ codecs, datasets, and generated audio may have separate terms.
 VoiceHub provides the shared lifecycle needed for inference and training with
 pretrained speech models. Its main entry points are:
 
-- [Pipeline](guides/inference.md): discover a TTS, ASR, or VAD integration,
+- [Inference](guides/inference.md): discover a TTS, ASR, or VAD integration,
   load its checkpoint, and receive a normalized task output.
 - [Trainer](guides/trainer.md): validate training support before delegating to
   an integration's native objective, checkpoint, and evaluation boundaries.

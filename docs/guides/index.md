@@ -49,7 +49,7 @@ and training examples plus the complete Dia lifecycle.
 
 ## Inference
 
-Use the [Pipeline guide](inference.md) to:
+Use the [Inference guide](inference.md) to:
 
 - select TTS, ASR, or VAD through one task-aware entry point;
 - load Hub checkpoints, local artifacts, or configured model objects;

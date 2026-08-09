@@ -54,6 +54,28 @@ def render_page(guide: OptimizationGuide) -> str:
     implementation = (
         _implementation_link(guide.implementation) if guide.implementation is not None else
         "No VoiceHub pass implementation; use the external source project directly.")
+    boundary = (
+        "Unsupported model, backend, transport, or checkpoint combinations fail before a request.\n"
+        "The external server is a serving topology, not an applied VoiceHub optimization pass."
+        if guide.group == "Serving backends" else
+        "Unsupported explicit configurations must fail before mutation. A pass that\n"
+        "does not match a model reports `not-applicable`; it is not an acceleration.")
+    verification = (
+        "Compare native and external serving with the same checkpoint, input, seed, and output\n"
+        "settings. Record latency, memory, audio quality, and both exact source revisions."
+        if guide.group == "Serving backends" else
+        "Compare the eager and optimized paths with the same checkpoint, input, seed,\n"
+        "warm-up, device, and dtype. Record latency, memory, output quality, the exact\n"
+        "source revision, and the optimization manifest.")
+    source_install = ""
+    if guide.source_install is not None:
+        source_install = f'''Install the engine from source in a separate environment:
+
+```bash
+{guide.source_install}
+```
+
+'''
     return f'''---
 description: Usage, support boundaries, paper, and source links for {guide.title}.
 ---
@@ -64,7 +86,7 @@ description: Usage, support boundaries, paper, and source links for {guide.title
 
 ## Use
 
-```{_code_language(guide)}
+{source_install}```{_code_language(guide)}
 {guide.usage}
 ```
 
@@ -77,8 +99,7 @@ description: Usage, support boundaries, paper, and source links for {guide.title
 | Runtime | {guide.devices} |
 {pass_rows}
 
-Unsupported explicit configurations must fail before mutation. A pass that
-does not match a model reports `not-applicable`; it is not an acceleration.
+{boundary}
 
 ## Paper and GitHub
 
@@ -88,9 +109,7 @@ does not match a model reports `not-applicable`; it is not an acceleration.
 
 ## Verify
 
-Compare the eager and optimized paths with the same checkpoint, input, seed,
-warm-up, device, and dtype. Record latency, memory, output quality, the exact
-source revision, and the optimization manifest.
+{verification}
 
 See the [related workflow]({guide.related_guide}) and
 [optimization API](../reference/api.md#optimization).
@@ -159,6 +178,8 @@ def _validate_contract(guides: tuple[OptimizationGuide, ...]) -> None:
     for guide in guides:
         if not guide.github:
             raise RuntimeError(f"{guide.slug} must link at least one upstream GitHub repository")
+        if guide.source_install is not None and not guide.source_install.startswith("git clone "):
+            raise RuntimeError(f"{guide.slug} source installation must start with a Git checkout")
         if guide.registry_name is not None and not all((
                 guide.pass_id,
                 guide.pass_version,

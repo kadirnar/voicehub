@@ -44,6 +44,7 @@ class OptimizationGuide:
     pass_id: str | None = None
     pass_version: str | None = None
     related_guide: str = "../guides/optimization-overview.md"
+    source_install: str | None = None
 
 
 def _github(title: str, repository: str) -> Reference:
@@ -387,6 +388,79 @@ cmake --build build --target audiocpp_cli -j 8''',
         github=(_github("audio.cpp", "0xShug0/audio.cpp"), ),
         papers=(),
         related_guide="../guides/optional-backends.md",
+    ),
+    OptimizationGuide(
+        slug="vllm",
+        title="vLLM",
+        group="Serving backends",
+        summary="Serve verified LLM-based TTS models through an isolated vLLM or vLLM-Omni HTTP process.",
+        availability="Built-in VoiceHub HTTP client; the capability registry controls verified model pairs",
+        fidelity="Backend and checkpoint dependent; unsupported pairs fail without native fallback",
+        devices="External Linux engine; hardware support follows vLLM and vLLM-Omni",
+        usage='''from voicehub import AutoModelForTextToSpeech
+
+model = AutoModelForTextToSpeech.from_pretrained(
+    "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    model_type="qwen3tts",
+    llm_backend="vllm",
+    llm_backend_config={"endpoint": "http://127.0.0.1:8091"},
+)
+audio = model.generate("Hello from vLLM.")''',
+        github=(
+            _github("vLLM", "vllm-project/vllm"),
+            _github("vLLM-Omni", "vllm-project/vllm-omni"),
+        ),
+        papers=(
+            _paper("Efficient Memory Management for Large Language Model Serving with PagedAttention", "2309.06180"),
+            _paper("vLLM-Omni: Fully Disaggregated Serving for Any-to-Any Multimodal Models", "2602.02204"),
+        ),
+        implementation="voicehub/llm_serving/backends.py",
+        related_guide="../guides/llm-serving.md",
+        source_install='''git clone https://github.com/vllm-project/vllm.git
+cd vllm
+git checkout 568afb3a13806beb53bb2e6bd518269357b237c0
+python -m pip install --editable .
+
+cd ..
+git clone https://github.com/vllm-project/vllm-omni.git
+cd vllm-omni
+git checkout a4ea67a21b20054dacc6e83952f9bd407e8ee4e7
+python -m pip install --editable .''',
+    ),
+    OptimizationGuide(
+        slug="sglang",
+        title="SGLang",
+        group="Serving backends",
+        summary="Serve verified LLM-based TTS models through an isolated SGLang or SGLang-Omni HTTP process.",
+        availability="Built-in VoiceHub HTTP client; the capability registry controls verified model pairs",
+        fidelity="Backend and checkpoint dependent; unsupported pairs fail without native fallback",
+        devices="External Linux engine; hardware support follows SGLang and SGLang-Omni",
+        usage='''from voicehub import AutoModelForTextToSpeech
+
+model = AutoModelForTextToSpeech.from_pretrained(
+    "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+    model_type="qwen3tts",
+    llm_backend="sglang",
+    llm_backend_config={"endpoint": "http://127.0.0.1:8000"},
+)
+audio = model.generate("Hello from SGLang.")''',
+        github=(
+            _github("SGLang", "sgl-project/sglang"),
+            _github("SGLang-Omni", "sgl-project/sglang-omni"),
+        ),
+        papers=(_paper("SGLang: Efficient Execution of Structured Language Model Programs", "2312.07104"), ),
+        implementation="voicehub/llm_serving/backends.py",
+        related_guide="../guides/llm-serving.md",
+        source_install='''git clone https://github.com/sgl-project/sglang.git
+cd sglang
+git checkout d21f3c3a10606ba3c7bf43f981496da0a7d620cd
+python -m pip install --editable "python[all]"
+
+cd ..
+git clone https://github.com/sgl-project/sglang-omni.git
+cd sglang-omni
+git checkout 76ad450616a696cc4a49777d387c1b22270f2382
+python -m pip install --editable .''',
     ),
 )
 # yapf: enable

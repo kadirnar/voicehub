@@ -147,9 +147,9 @@ HOME_BADGE_TARGETS = (
     "https://github.com/kadirnar/voicehub/blob/main/pyproject.toml",
     "https://github.com/kadirnar/voicehub/blob/main/LICENSE",
 )
-PIPELINE_ROUTE = "guides/inference/index.html"
-PIPELINE_HEADINGS = (
-    ("H1", "Pipeline"),
+INFERENCE_ROUTE = "guides/inference/index.html"
+INFERENCE_HEADINGS = (
+    ("H1", "Inference"),
     ("H2", "Tasks"),
     ("H3", "Text to speech"),
     ("H3", "Automatic speech recognition"),
@@ -164,7 +164,7 @@ PIPELINE_HEADINGS = (
     ("H2", "Save and reload"),
     ("H2", "Troubleshooting"),
 )
-KEYBOARD_ROUTE = PIPELINE_ROUTE
+KEYBOARD_ROUTE = INFERENCE_ROUTE
 INSTALLATION_ROUTE = "getting-started/installation/index.html"
 INSTALLATION_HEADINGS = (
     ("H1", "Installation"),
@@ -209,7 +209,7 @@ QUICKSTART_HEADINGS = (
     ("H1", "Quickstart"),
     ("H2", "Set up"),
     ("H2", "Pretrained models"),
-    ("H2", "Pipeline"),
+    ("H2", "Inference"),
     ("H2", "Trainer"),
     ("H2", "Next steps"),
 )
@@ -333,7 +333,7 @@ KEYBOARD_FOCUS_PREFIX = DESKTOP_KEYBOARD_FOCUS_PREFIX + (
     "primary:Overview",
     "primary:Installation",
     "primary:Quickstart",
-    "primary:Pipeline",
+    "primary:Inference",
     "branch:Models",
     "branch:Train",
     "branch:Optimize",
@@ -401,16 +401,16 @@ REPRESENTATIVE_PAGE_ACTIONS = {
     QUICKSTART_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/getting-started/quickstart.md",
         "previous": ("/getting-started/installation/", "Previous: Installation"),
-        "next": ("/guides/inference/", "Next: Pipeline"),
+        "next": ("/guides/inference/", "Next: Inference"),
     },
-    PIPELINE_ROUTE: {
+    INFERENCE_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/guides/inference.md",
         "previous": ("/getting-started/quickstart/", "Previous: Quickstart"),
         "next": ("/models/providers/", "Next: Model list"),
     },
     MODEL_INDEX_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/models/providers/index.md",
-        "previous": ("/guides/inference/", "Previous: Pipeline"),
+        "previous": ("/guides/inference/", "Previous: Inference"),
         "next": ("/models/providers/bark/", "Next: Bark"),
     },
     SPEECHT5_ROUTE: {
@@ -688,6 +688,9 @@ def _rendered_state(page: Page) -> dict[str, Any]:
             active: Array.from(primary?.querySelectorAll(
               "a.md-nav__link--active"
             ) || []).map(link => link.textContent.trim()),
+            visibleActiveLabels: Array.from(primary?.querySelectorAll(
+              ".md-nav__item--active > .md-nav__link--active"
+            ) || []).filter(visible).map(item => item.textContent.trim()),
             checkedBranches,
             roots: Array.from(primary?.querySelectorAll(
               "nav.md-nav--primary > ul.md-nav__list > li.md-nav__item > " +
@@ -913,9 +916,9 @@ def _validate_root_branch_activation(
 
     initial = branch_state()
     expected_initial_expanded = branch_label == "Get started"
-    if initial["activeLinks"] != ["Pipeline"]:
+    if initial["activeLinks"] != ["Inference"]:
         raise DocumentationVisualError(
-            f"{case}: initial active links are {initial['activeLinks']!r}, expected ['Pipeline'].")
+            f"{case}: initial active links are {initial['activeLinks']!r}, expected ['Inference'].")
     if initial["checked"] is not expected_initial_expanded:
         raise DocumentationVisualError(
             f"{case}: initial checked state is {initial['checked']!r}, "
@@ -972,7 +975,7 @@ def _validate_root_branch_activation(
     expected_target_display = "block" if target_expanded else "none"
     if (target["checked"] is not target_expanded or target["expanded"] != str(target_expanded).lower() or
             target["panelDisplay"] != expected_target_display or not target["focused"] or
-            target["activeLinks"] != ["Pipeline"] or not target["visible"] or not target["withinViewport"] or
+            target["activeLinks"] != ["Inference"] or not target["visible"] or not target["withinViewport"] or
             target["path"] != initial["path"] or target["palette"] != initial["palette"]):
         raise DocumentationVisualError(f"{case}: invalid activated root branch state: {target!r}.")
     for field in ("x", "width", "height"):
@@ -1000,7 +1003,7 @@ def _validate_root_branch_activation(
     if (restored["checked"] is not expected_initial_expanded or
             restored["expanded"] != str(expected_initial_expanded).lower() or
             restored["panelDisplay"] != expected_initial_display or not restored["focused"] or
-            restored["activeLinks"] != ["Pipeline"] or not restored["visible"] or
+            restored["activeLinks"] != ["Inference"] or not restored["visible"] or
             not restored["withinViewport"] or restored["path"] != initial["path"] or
             restored["palette"] != initial["palette"]):
         raise DocumentationVisualError(f"{case}: invalid restored root branch state: {restored!r}.")
@@ -1409,6 +1412,10 @@ def _validate_case(
         raise DocumentationVisualError(
             f"{case}: active links are {state['active']!r}, "
             f"expected {[route_expectation.active_link]!r}.")
+    if state["visibleActiveLabels"] != [route_expectation.active_link]:
+        raise DocumentationVisualError(
+            f"{case}: visible active labels are {state['visibleActiveLabels']!r}, "
+            f"expected one {[route_expectation.active_link]!r}.")
     if tuple(state["checkedBranches"]) != route_expectation.expanded_branches:
         raise DocumentationVisualError(
             f"{case}: checked branches are {state['checkedBranches']!r}, "
@@ -1546,7 +1553,7 @@ def _validate_home_state(page: Page, case: str) -> None:
     if tuple(state["toc"]) != expected_toc:
         raise DocumentationVisualError(
             f"{case}: Home table of contents is {state['toc']!r}, expected {expected_toc!r}.")
-    if tuple(state["featureLabels"]) != ("Pipeline", "Trainer", "generate"):
+    if tuple(state["featureLabels"]) != ("Inference", "Trainer", "generate"):
         raise DocumentationVisualError(f"{case}: Home feature labels are {state['featureLabels']!r}.")
     if tuple(state["featureTargets"]) != HOME_FEATURE_TARGETS:
         raise DocumentationVisualError(
@@ -1688,7 +1695,7 @@ def _validate_installation_state(page: Page, case: str) -> None:
             raise DocumentationVisualError(f"{case}: rendered Installation content is missing {marker!r}.")
 
 
-def _validate_pipeline_state(page: Page, case: str) -> None:
+def _validate_inference_state(page: Page, case: str) -> None:
     state = page.evaluate(
         r"""() => {
           const content = document.querySelector(".md-content__inner");
@@ -1706,17 +1713,17 @@ def _validate_pipeline_state(page: Page, case: str) -> None:
           };
         }""")
     headings = tuple(tuple(value) for value in state["headings"])
-    if headings != PIPELINE_HEADINGS:
+    if headings != INFERENCE_HEADINGS:
         raise DocumentationVisualError(
-            f"{case}: Pipeline headings are {headings!r}, expected {PIPELINE_HEADINGS!r}.")
-    expected_toc = tuple(label for _, label in PIPELINE_HEADINGS[1:])
+            f"{case}: Inference headings are {headings!r}, expected {INFERENCE_HEADINGS!r}.")
+    expected_toc = tuple(label for _, label in INFERENCE_HEADINGS[1:])
     if tuple(state["toc"]) != expected_toc:
         raise DocumentationVisualError(
-            f"{case}: Pipeline table of contents is {state['toc']!r}, "
+            f"{case}: Inference table of contents is {state['toc']!r}, "
             f"expected {expected_toc!r}.")
     if state["tables"] != 1 or state["codeBlocks"] != 6 or state["copyButtons"] != 6:
         raise DocumentationVisualError(
-            f"{case}: Pipeline component inventory is tables={state['tables']}, "
+            f"{case}: Inference component inventory is tables={state['tables']}, "
             f"codeBlocks={state['codeBlocks']}, copyButtons={state['copyButtons']}; "
             "expected 1 table, 6 code blocks, and 6 copy buttons.")
     for marker in (
@@ -1729,7 +1736,7 @@ def _validate_pipeline_state(page: Page, case: str) -> None:
             "list_model_specs(task=...)",
     ):
         if marker not in state["text"]:
-            raise DocumentationVisualError(f"{case}: rendered Pipeline content is missing {marker!r}.")
+            raise DocumentationVisualError(f"{case}: rendered Inference content is missing {marker!r}.")
 
 
 def _validate_code_copy(page: Page, case: str, key: str, *, wait_for_idle: bool = False) -> None:
@@ -1792,8 +1799,8 @@ def _validate_code_copy(page: Page, case: str, key: str, *, wait_for_idle: bool 
             raise DocumentationVisualError(f"{case}: code-copy idle state moved focus.")
 
 
-def _validate_pipeline_code_copy(page: Page, case: str, key: str) -> None:
-    _validate_code_copy(page, f"{case} / Pipeline code copy", key)
+def _validate_inference_code_copy(page: Page, case: str, key: str) -> None:
+    _validate_code_copy(page, f"{case} / Inference code copy", key)
 
 
 def _validate_installation_code_copy(page: Page, case: str, key: str) -> None:
@@ -2456,7 +2463,7 @@ def _validate_quickstart_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: Quickstart previous action is "
             f"{(state['previousTarget'], state['previousLabel'])!r}.")
-    if (state["nextTarget"], state["nextLabel"]) != ("/guides/inference/", "Next: Pipeline"):
+    if (state["nextTarget"], state["nextLabel"]) != ("/guides/inference/", "Next: Inference"):
         raise DocumentationVisualError(
             f"{case}: Quickstart next action is "
             f"{(state['nextTarget'], state['nextLabel'])!r}.")
@@ -3550,8 +3557,8 @@ def validate_site(
     installation_page_interaction_cases = 0
     model_index_cases = 0
     model_index_interaction_cases = 0
-    pipeline_cases = 0
-    pipeline_interaction_cases = 0
+    inference_cases = 0
+    inference_interaction_cases = 0
     quickstart_cases = 0
     quickstart_interaction_cases = 0
     quickstart_page_interaction_cases = 0
@@ -3652,9 +3659,9 @@ def validate_site(
                             if relative_path == MODEL_INDEX_ROUTE:
                                 _validate_model_index_state(page, case)
                                 model_index_cases += 1
-                            if relative_path == PIPELINE_ROUTE:
-                                _validate_pipeline_state(page, case)
-                                pipeline_cases += 1
+                            if relative_path == INFERENCE_ROUTE:
+                                _validate_inference_state(page, case)
+                                inference_cases += 1
                             if relative_path == QUICKSTART_ROUTE:
                                 _validate_quickstart_state(page, case)
                                 quickstart_cases += 1
@@ -3768,9 +3775,9 @@ def validate_site(
                                             f"{case}: Axe engine changed from {axe_core!r} "
                                             f"to {case_axe_core!r}.")
                                     quickstart_page_interaction_cases += 1
-                                if relative_path == PIPELINE_ROUTE:
+                                if relative_path == INFERENCE_ROUTE:
                                     key = "Enter" if palette == "default" else "Space"
-                                    _validate_pipeline_code_copy(page, case, key)
+                                    _validate_inference_code_copy(page, case, key)
                                     case_axe_core = _validate_accessibility(
                                         axe,
                                         page,
@@ -3780,7 +3787,7 @@ def validate_site(
                                         raise DocumentationVisualError(
                                             f"{case}: Axe engine changed from {axe_core!r} "
                                             f"to {case_axe_core!r}.")
-                                    pipeline_interaction_cases += 1
+                                    inference_interaction_cases += 1
                                 if relative_path == MODEL_INDEX_ROUTE:
                                     key = "Enter" if palette == "default" else "Space"
                                     _validate_model_index_page_copy(page, case, key)
@@ -4221,7 +4228,7 @@ def validate_site(
         contribution_interaction_cases + focus_cycle_cases + home_interaction_cases +
         installation_code_interaction_cases + installation_page_interaction_cases +
         keyboard_activation_cases + language_keyboard_activation_cases + model_api_interaction_cases +
-        model_index_interaction_cases + optimization_interaction_cases + pipeline_interaction_cases +
+        model_index_interaction_cases + optimization_interaction_cases + inference_interaction_cases +
         quickstart_interaction_cases + quickstart_page_interaction_cases + search_keyboard_activation_cases +
         speecht5_interaction_cases + theme_keyboard_activation_cases + toc_keyboard_activation_cases +
         trainer_interaction_cases + version_keyboard_activation_cases + source_keyboard_activation_cases)
@@ -4266,8 +4273,8 @@ def validate_site(
         "page_action_keyboard_cases": page_action_keyboard_cases,
         "page_action_pointer_cases": page_action_pointer_cases,
         "palettes": len(selected_palette_names),
-        "pipeline_cases": pipeline_cases,
-        "pipeline_interaction_cases": pipeline_interaction_cases,
+        "inference_cases": inference_cases,
+        "inference_interaction_cases": inference_interaction_cases,
         "quickstart_cases": quickstart_cases,
         "quickstart_interaction_cases": quickstart_interaction_cases,
         "quickstart_page_interaction_cases": quickstart_page_interaction_cases,

@@ -4,6 +4,9 @@ description: Serve supported LLM-based TTS models through isolated vLLM, vLLM-Om
 
 # External LLM serving
 
+For the shortest setup, open the dedicated [vLLM](../optimizations/vllm.md)
+or [SGLang](../optimizations/sglang.md) page.
+
 VoiceHub can delegate the language-model portion of selected TTS models to
 vLLM or SGLang. Backend selection uses the same configuration-first pattern as
 the rest of the library:
@@ -29,8 +32,9 @@ not add one of their CUDA stacks to its environment.
 
 VoiceHub pins PyTorch 2.8 for its native runtime. Current engine releases own
 tightly coupled PyTorch, CUDA, Triton, FlashAttention, and compiler
-dependencies. For example, the current SGLang-Omni stack pins PyTorch 2.11,
-SGLang 0.5.12, CUDA 13 relay packages, and a narrow FlashAttention-4 range.
+dependencies. For example, the pinned SGLang-Omni source stack uses PyTorch
+2.11, SGLang 0.5.16, CUDA 13 relay packages, and FlashAttention-4 beta 18 or
+newer.
 The [SGLang-Omni installation guide](https://sgl-project.github.io/sglang-omni/get_started/installation.html)
 therefore recommends its prepared Docker image. vLLM and vLLM-Omni likewise
 select platform-specific compiled dependencies.

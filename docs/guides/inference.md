@@ -1,8 +1,8 @@
 ---
-description: Run TTS, ASR, and VAD through one task-aware VoiceHub pipeline.
+description: Run TTS, ASR, and VAD through one task-aware VoiceHub inference API.
 ---
 
-# Pipeline
+# Inference
 
 The `pipeline()` function is the shortest path from a speech task and checkpoint
 to a normalized VoiceHub output. It selects the task-specific auto factory,

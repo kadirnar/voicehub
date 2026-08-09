@@ -47,8 +47,8 @@ REPRESENTATIVE_ROUTES = {
     ),
     "guides/inference/index.html":
     RouteExpectation(
-        title="Pipeline",
-        active_link="Pipeline",
+        title="Inference",
+        active_link="Inference",
         expanded_branches=("Get started", ),
     ),
     "models/providers/index.html":
