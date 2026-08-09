@@ -885,7 +885,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 continue
             required_labels.add(label)
 
-        self.assertLessEqual(len(required_labels), 30)
+        self.assertLessEqual(len(required_labels), 31)
         for locale in LOCALIZED_HOME_LOCALES:
             with self.subTest(locale=locale):
                 locale_block = config.split(f"        - locale: {locale}\n", 1)[1]
@@ -1303,7 +1303,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             set(OPTIMIZATION_PAGE_DIR.glob("*.md")),
             {*expected_paths, OPTIMIZATION_PAGE_INDEX_PATH},
         )
-        self.assertEqual(len(guides), 9)
+        self.assertEqual(len(guides), 11)
         self.assertEqual(
             {guide.registry_name
              for guide in guides if guide.registry_name},
@@ -1343,6 +1343,9 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                     self.assertIn(f"`{guide.registry_name}`", source)
                     self.assertIn(guide.pass_id, source)
                     self.assertIn("restore_optimization_plan", source)
+                if guide.source_install:
+                    self.assertIn(guide.source_install, source)
+                    self.assertIn("separate environment", source)
 
         files = generator["generated_files"]()
         self.assertEqual(generator["check_generated_files"](files), ())
@@ -1358,6 +1361,8 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn('- "HQQ": optimizations/hqq.md', config)
         self.assertIn('- "GemLite": optimizations/gemlite.md', config)
         self.assertIn('- "audio.cpp": optimizations/audio-cpp.md', config)
+        self.assertIn('- "vLLM": optimizations/vllm.md', config)
+        self.assertIn('- "SGLang": optimizations/sglang.md', config)
         for fragment in (
                 "dropbox/hqq.git@d88a488ec8aa2d58362ef2038a52bca862db2e74",
                 "dropbox/gemlite.git@3dc52c3115fee49a09d00fd9e470ef6396885949",
@@ -1365,6 +1370,8 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "not a Python optimization pass",
                 "does not report them as applied public passes",
                 "real-checkpoint evidence",
+                "list_llm_backend_support",
+                "does not silently fall back",
         ):
             self.assertIn(fragment, source)
 

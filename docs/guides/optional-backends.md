@@ -38,6 +38,22 @@ cmake --build build --target audiocpp_cli -j 8
 Keep conversion, checkpoint compatibility, and runtime output checks outside
 VoiceHub until an adapter implements the full optimization lifecycle.
 
+## vLLM and SGLang
+
+[vLLM](../optimizations/vllm.md) and
+[SGLang](../optimizations/sglang.md) run as separate HTTP servers. Their
+CUDA and PyTorch stacks stay outside the VoiceHub environment.
+
+```python
+from voicehub.llm_serving import list_llm_backend_support
+
+for support in list_llm_backend_support():
+    print(support.model_type, support.backend.value)
+```
+
+Use only a listed model/backend pair. VoiceHub does not silently fall back to
+native inference.
+
 ## Validation
 
 Before publishing a backend result, record the model, checkpoint revision,

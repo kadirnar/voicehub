@@ -148,6 +148,8 @@ nav:
       - "HQQ": optimizations/hqq.md
       - "GemLite": optimizations/gemlite.md
       - "audio.cpp": optimizations/audio-cpp.md
+      - "vLLM": optimizations/vllm.md
+      - "SGLang": optimizations/sglang.md
       # END GENERATED OPTIMIZATION GUIDE NAVIGATION
       - TTS model benchmarks: guides/tts-model-benchmarks.md
 
@@ -189,6 +191,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: Ekosistem entegrasyonları
             Resources: Kaynaklar
             API: API
@@ -269,6 +273,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: Integraciones del ecosistema
             Resources: Recursos
             API: API
@@ -349,6 +355,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: Intégrations de l’écosystème
             Resources: Ressources
             API: API
@@ -429,6 +437,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: Ökosystem-Integrationen
             Resources: Ressourcen
             API: API
@@ -509,6 +519,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: Integrações do ecossistema
             Resources: Recursos
             API: API
@@ -589,6 +601,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: 生态系统集成
             Resources: 资源
             API: API
@@ -669,6 +683,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: エコシステム連携
             Resources: リソース
             API: API
@@ -749,6 +765,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: 생태계 통합
             Resources: 리소스
             API: API
@@ -829,6 +847,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: Интеграции экосистемы
             Resources: Ресурсы
             API: API
@@ -909,6 +929,8 @@ plugins:
             HQQ: HQQ
             GemLite: GemLite
             audio.cpp: audio.cpp
+            vLLM: vLLM
+            SGLang: SGLang
             Ecosystem integrations: تكاملات المنظومة
             Resources: الموارد
             API: API
