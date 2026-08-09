@@ -137,7 +137,6 @@ nav:
       - Data preparation: guides/data-preparation.md
   - Optimize:
       - Overview: guides/optimization-overview.md
-      - TTS model benchmarks: guides/tts-model-benchmarks.md
       # BEGIN GENERATED OPTIMIZATION GUIDE NAVIGATION
       - Optimization catalog: optimizations/index.md
       - "Torch compile": optimizations/compile.md
@@ -150,6 +149,7 @@ nav:
       - "GemLite": optimizations/gemlite.md
       - "audio.cpp": optimizations/audio-cpp.md
       # END GENERATED OPTIMIZATION GUIDE NAVIGATION
+      - TTS model benchmarks: guides/tts-model-benchmarks.md
 
 plugins:
   - search:
