@@ -55,6 +55,12 @@ These are output-language prompts supported by the audited S2T checkpoint.
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [Seamless: Multilingual Expressive and Streaming Speech Translation](https://arxiv.org/abs/2312.05187)
+- **Upstream GitHub:** [Seamless Communication](https://github.com/facebookresearch/seamless_communication)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling_asr_seamless_m4t_v2.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

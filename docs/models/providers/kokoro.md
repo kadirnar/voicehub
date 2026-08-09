@@ -61,6 +61,12 @@ integration. This page is generated from its registry contract. [Open the `kokor
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Kokoro](https://github.com/hexgrad/kokoro)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/modeling_kokoro.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

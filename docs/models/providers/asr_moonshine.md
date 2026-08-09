@@ -53,6 +53,12 @@ integration. This page is generated from its registry contract. [Open the `asr_m
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [Moonshine: Speech Recognition for Live Transcription and Voice Commands](https://arxiv.org/abs/2410.15608)
+- **Upstream GitHub:** [Moonshine](https://github.com/moonshine-ai/moonshine)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/modeling_asr_moonshine.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

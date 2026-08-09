@@ -66,6 +66,12 @@ integration. This page is generated from its registry contract. [Open the `openv
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [OpenVoice: Versatile Instant Voice Cloning](https://arxiv.org/abs/2312.01479)
+- **Upstream GitHub:** [OpenVoice](https://github.com/myshell-ai/OpenVoice)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/modeling_openvoice.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

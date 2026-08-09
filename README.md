@@ -88,6 +88,7 @@ print(result.manifest())
 
 Benchmark on the target hardware. Start with the
 [optimization guide](https://kadirnar.github.io/voicehub/guides/tts-optimization/),
+[optimization catalog](https://kadirnar.github.io/voicehub/optimizations/),
 [model benchmarks](https://kadirnar.github.io/voicehub/guides/tts-model-benchmarks/),
 and [RTX 4090 results](https://kadirnar.github.io/voicehub/guides/rtx-4090-speech-benchmarks/).
 

@@ -79,7 +79,7 @@ provider entry.
 | Step | Owned files or generated artifacts |
 | --- | --- |
 | 1. Create the package | `voicehub/models/<model_type>/`; optional `voicehub/architectures/<model_type>/` |
-| 2. Record provenance and license | `source/SOURCE.json`, `source/THIRD_PARTY_LICENSE`, and any required `NOTICE` or `COPYING` file |
+| 2. Record provenance and license | `source/SOURCE.json`, `source/THIRD_PARTY_LICENSE`, `scripts/documentation_references.py`, and any required `NOTICE` or `COPYING` file |
 | 3. Define the config | `configuration_<model_type>.py` |
 | 4. Implement the task wrapper | `modeling_<model_type>.py`, `runtime.py`, and model-local processing or conversion modules |
 | 5. Register once | `model-integration.json` and `registration.py`; legacy central fragments only while migrating an existing declaration |
@@ -133,6 +133,11 @@ adapting code. `SOURCE.json` must identify the model type, upstream URL,
 revision, license, checkpoint revision, and the exact verified scope. Copy the
 authoritative license text into `THIRD_PARTY_LICENSE`; do not paraphrase or
 invent license terms.
+
+Add the model's official GitHub repository and dedicated primary paper to
+`MODEL_REFERENCES` in `scripts/documentation_references.py`. Use an empty paper
+tuple when upstream has not published one; do not substitute an unrelated
+architecture paper.
 
 ```json
 {

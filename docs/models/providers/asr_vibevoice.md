@@ -48,6 +48,12 @@ integration. This page is generated from its registry contract. [Open the `asr_v
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [VibeVoice](https://github.com/microsoft/VibeVoice)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/modeling_asr_vibevoice.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

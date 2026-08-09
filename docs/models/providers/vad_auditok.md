@@ -47,6 +47,12 @@ integration. This page is generated from its registry contract.
 
 The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [auditok](https://github.com/amsehili/auditok)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling_vad_auditok.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

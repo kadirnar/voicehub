@@ -56,6 +56,12 @@ integration. This page is generated from its registry contract. [Open the `dia` 
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Dia](https://github.com/nari-labs/dia)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/modeling_dia.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

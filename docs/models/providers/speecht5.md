@@ -61,6 +61,12 @@ integration. This page is generated from its registry contract. [Open the `speec
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [SpeechT5: Unified-Modal Encoder-Decoder Pre-Training for Spoken Language Processing](https://arxiv.org/abs/2110.07205)
+- **Upstream GitHub:** [SpeechT5](https://github.com/microsoft/SpeechT5)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling_speecht5.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

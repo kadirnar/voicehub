@@ -61,6 +61,12 @@ integration. This page is generated from its registry contract. [Open the `super
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Supertonic](https://github.com/supertone-inc/supertonic)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/supertonic/modeling_supertonic.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

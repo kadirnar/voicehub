@@ -47,6 +47,12 @@ integration. This page is generated from its registry contract. [Open the `vad_s
 
 The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Silero VAD](https://github.com/snakers4/silero-vad)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/modeling_vad_silero.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

@@ -53,6 +53,12 @@ integration. This page is generated from its registry contract. [Open the `asr_f
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [Robust Speech Recognition via Large-Scale Weak Supervision](https://arxiv.org/abs/2212.04356)
+- **Upstream GitHub:** [faster-whisper](https://github.com/SYSTRAN/faster-whisper)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_native/faster_whisper.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

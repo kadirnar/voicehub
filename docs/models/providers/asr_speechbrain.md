@@ -53,6 +53,12 @@ integration. This page is generated from its registry contract. [Open the `asr_s
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [SpeechBrain: A General-Purpose Speech Toolkit](https://arxiv.org/abs/2106.04624)
+- **Upstream GitHub:** [SpeechBrain](https://github.com/speechbrain/speechbrain)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_native/speechbrain.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

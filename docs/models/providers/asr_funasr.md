@@ -48,6 +48,12 @@ integration. This page is generated from its registry contract. [Open the `asr_f
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** [FunASR: A Fundamental End-to-End Speech Recognition Toolkit](https://arxiv.org/abs/2305.11013)
+- **Upstream GitHub:** [FunASR](https://github.com/modelscope/FunASR)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_native/funasr.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

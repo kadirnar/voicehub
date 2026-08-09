@@ -53,6 +53,12 @@ integration. This page is generated from its registry contract. [Open the `asr_e
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [ESPnet: End-to-End Speech Processing Toolkit](https://arxiv.org/abs/1804.00015)
+- **Upstream GitHub:** [ESPnet](https://github.com/espnet/espnet)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_native/espnet.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

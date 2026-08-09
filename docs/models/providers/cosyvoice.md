@@ -69,6 +69,12 @@ The registered family also documents 18 Chinese dialect variants.
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [CosyVoice: Multi-Lingual Large Voice Generation Model](https://arxiv.org/abs/2407.05407)
+- **Upstream GitHub:** [CosyVoice](https://github.com/FunAudioLLM/CosyVoice)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling_cosyvoice.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

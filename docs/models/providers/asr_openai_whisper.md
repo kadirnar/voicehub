@@ -53,6 +53,12 @@ integration. This page is generated from its registry contract. [Open the `asr_o
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [Robust Speech Recognition via Large-Scale Weak Supervision](https://arxiv.org/abs/2212.04356)
+- **Upstream GitHub:** [Whisper](https://github.com/openai/whisper)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_native/openai_whisper.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

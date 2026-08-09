@@ -65,7 +65,7 @@ REPRESENTATIVE_ROUTES = {
     RouteExpectation(
         title="SpeechT5",
         active_link="SpeechT5",
-        expanded_branches=("API", "Models", "Text to speech"),
+        expanded_branches=("Base classes", "Models", "Text to speech"),
     ),
     "guides/trainer/index.html":
     RouteExpectation(
@@ -78,6 +78,15 @@ REPRESENTATIVE_ROUTES = {
         title="Optimization overview",
         active_link="Overview",
         expanded_branches=("Quantization and optimization", ),
+    ),
+    "optimizations/compile/index.html":
+    RouteExpectation(
+        title="Torch compile",
+        active_link="Torch compile",
+        expanded_branches=(
+            "Quantization and optimization",
+            "Optimization passes",
+        ),
     ),
     "project/adding-a-model/index.html":
     RouteExpectation(

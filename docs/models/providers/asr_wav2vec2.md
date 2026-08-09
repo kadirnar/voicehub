@@ -48,6 +48,12 @@ integration. This page is generated from its registry contract. [Open the `asr_w
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** [wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations](https://arxiv.org/abs/2006.11477)
+- **Upstream GitHub:** [fairseq](https://github.com/facebookresearch/fairseq)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/modeling_asr_wav2vec2.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

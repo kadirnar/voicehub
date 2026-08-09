@@ -59,55 +59,6 @@ nav:
               - TTS capabilities: models/tts-capabilities.md
               - ASR and VAD support: models/asr-vad-support.md
               - XTTS v2 native DVAE: models/xtts2.md
-          - Contribute:
-              - Add a model: project/adding-a-model.md
-              - Add an ASR or VAD provider: project/adding-speech-provider.md
-              - Add an optimization: project/adding-an-optimization.md
-      - Preprocessors:
-          - Data preparation: guides/data-preparation.md
-          - ASR and VAD data: guides/speech-data.md
-      - Architecture:
-          - Library architecture: concepts/architecture.md
-          - Trainer architecture: concepts/trainer.md
-  - Inference:
-      - Overview: guides/index.md
-      - Pipeline API:
-          - Pipeline: guides/inference.md
-          - Speech recognition: guides/speech-recognition.md
-          - Voice activity detection: guides/voice-activity-detection.md
-      - Serving:
-          - LLM TTS serving: guides/llm-serving.md
-  - Training:
-      - Get started:
-          - Trainer overview: guides/trainer.md
-          - Fine-tuning: guides/training.md
-      - Model support: models/training-support.md
-  - Quantization and optimization:
-      - Overview: guides/optimization-overview.md
-      - Optional source backends: guides/optional-backends.md
-      - TTS optimization workflow: guides/tts-optimization.md
-      - Codec optimization: guides/codec-optimization.md
-      - Diffusion and flow optimization: guides/diffusion-optimization.md
-      - VITS-family optimization: guides/vits-optimization.md
-  - Ecosystem integrations:
-      - Notebooks with examples: guides/notebook.md
-  - Resources:
-      - Benchmarks:
-          - TTS model benchmarks: guides/tts-model-benchmarks.md
-          - RTX 4090 speech benchmarks: guides/rtx-4090-speech-benchmarks.md
-          - RTX 5090 TTS benchmarks: guides/rtx-5090-tts-benchmarks.md
-      - Project:
-          - Roadmap: project/roadmap.md
-          - Release readiness: project/release-readiness.md
-          - Transformers parity: project/transformers-parity.md
-          - Translations: project/translations.md
-          - Model audit: project/model-audit.md
-  - API:
-      - Main Classes:
-          - Auto Classes: models/providers/index.md
-          - Models: reference/models.md
-          - Public exports: reference/public-api.md
-      - Models:
           # BEGIN GENERATED MODEL GUIDE NAVIGATION
           - Text to speech:
               - "Bark": models/providers/bark.md
@@ -181,6 +132,68 @@ nav:
               - "TransformersVAD": models/providers/vad_transformers.md
               - "WebRTCVAD": models/providers/vad_webrtc.md
           # END GENERATED MODEL GUIDE NAVIGATION
+          - Contribute:
+              - Add a model: project/adding-a-model.md
+              - Add an ASR or VAD provider: project/adding-speech-provider.md
+              - Add an optimization: project/adding-an-optimization.md
+      - Preprocessors:
+          - Data preparation: guides/data-preparation.md
+          - ASR and VAD data: guides/speech-data.md
+      - Architecture:
+          - Library architecture: concepts/architecture.md
+          - Trainer architecture: concepts/trainer.md
+  - Inference:
+      - Overview: guides/index.md
+      - Pipeline API:
+          - Pipeline: guides/inference.md
+          - Speech recognition: guides/speech-recognition.md
+          - Voice activity detection: guides/voice-activity-detection.md
+      - Serving:
+          - LLM TTS serving: guides/llm-serving.md
+  - Training:
+      - Get started:
+          - Trainer overview: guides/trainer.md
+          - Fine-tuning: guides/training.md
+      - Model support: models/training-support.md
+  - Quantization and optimization:
+      - Overview: guides/optimization-overview.md
+      - Optional source backends: guides/optional-backends.md
+      - TTS optimization workflow: guides/tts-optimization.md
+      - Codec optimization: guides/codec-optimization.md
+      - Diffusion and flow optimization: guides/diffusion-optimization.md
+      - VITS-family optimization: guides/vits-optimization.md
+      # BEGIN GENERATED OPTIMIZATION GUIDE NAVIGATION
+      - Optimization catalog: optimizations/index.md
+      - Optimization passes:
+          - "Torch compile": optimizations/compile.md
+          - "FlashAttention-4": optimizations/flash-attention-4.md
+          - "Custom kernels": optimizations/custom-kernels.md
+          - "Codec kernels": optimizations/codec-kernels.md
+          - "Diffusion cache": optimizations/diffusion-cache.md
+          - "Diffusion sampling": optimizations/diffusion-sampling.md
+      - Optional source backends:
+          - "HQQ": optimizations/hqq.md
+          - "GemLite": optimizations/gemlite.md
+          - "audio.cpp": optimizations/audio-cpp.md
+      # END GENERATED OPTIMIZATION GUIDE NAVIGATION
+  - Ecosystem integrations:
+      - Notebooks with examples: guides/notebook.md
+  - Resources:
+      - Benchmarks:
+          - TTS model benchmarks: guides/tts-model-benchmarks.md
+          - RTX 4090 speech benchmarks: guides/rtx-4090-speech-benchmarks.md
+          - RTX 5090 TTS benchmarks: guides/rtx-5090-tts-benchmarks.md
+      - Project:
+          - Roadmap: project/roadmap.md
+          - Release readiness: project/release-readiness.md
+          - Transformers parity: project/transformers-parity.md
+          - Translations: project/translations.md
+          - Model audit: project/model-audit.md
+  - API:
+      - Main Classes:
+          - Auto Classes: models/providers/index.md
+          - Models: reference/models.md
+          - Public exports: reference/public-api.md
       - Full API reference: reference/api.md
 
 plugins:
@@ -205,6 +218,17 @@ plugins:
             Inference: Çıkarım
             Quantization and optimization: Kuantizasyon ve optimizasyon
             Optional source backends: İsteğe bağlı kaynak arka uçları
+            Optimization catalog: Optimizasyon kataloğu
+            Optimization passes: Optimizasyon geçişleri
+            Torch compile: Torch derleme
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: Özel çekirdekler
+            Codec kernels: Kodek çekirdekleri
+            Diffusion cache: Difüzyon önbelleği
+            Diffusion sampling: Difüzyon örnekleme
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: Ekosistem entegrasyonları
             Resources: Kaynaklar
             API: API
@@ -271,6 +295,17 @@ plugins:
             Inference: Inferencia
             Quantization and optimization: Cuantización y optimización
             Optional source backends: Backends de código fuente opcionales
+            Optimization catalog: Catálogo de optimización
+            Optimization passes: Pasos de optimización
+            Torch compile: Compilación de Torch
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: Kernels personalizados
+            Codec kernels: Kernels de códec
+            Diffusion cache: Caché de difusión
+            Diffusion sampling: Muestreo de difusión
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: Integraciones del ecosistema
             Resources: Recursos
             API: API
@@ -337,6 +372,17 @@ plugins:
             Inference: Inférence
             Quantization and optimization: Quantification et optimisation
             Optional source backends: Backends source facultatifs
+            Optimization catalog: Catalogue d'optimisation
+            Optimization passes: Passes d'optimisation
+            Torch compile: Compilation Torch
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: Noyaux personnalisés
+            Codec kernels: Noyaux de codec
+            Diffusion cache: Cache de diffusion
+            Diffusion sampling: Échantillonnage de diffusion
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: Intégrations de l’écosystème
             Resources: Ressources
             API: API
@@ -403,6 +449,17 @@ plugins:
             Inference: Inferenz
             Quantization and optimization: Quantisierung und Optimierung
             Optional source backends: Optionale Quellcode-Backends
+            Optimization catalog: Optimierungskatalog
+            Optimization passes: Optimierungspässe
+            Torch compile: Torch-Kompilierung
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: Benutzerdefinierte Kernel
+            Codec kernels: Codec-Kernel
+            Diffusion cache: Diffusionscache
+            Diffusion sampling: Diffusions-Sampling
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: Ökosystem-Integrationen
             Resources: Ressourcen
             API: API
@@ -469,6 +526,17 @@ plugins:
             Inference: Inferência
             Quantization and optimization: Quantização e otimização
             Optional source backends: Backends de código-fonte opcionais
+            Optimization catalog: Catálogo de otimização
+            Optimization passes: Passes de otimização
+            Torch compile: Compilação Torch
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: Kernels personalizados
+            Codec kernels: Kernels de codec
+            Diffusion cache: Cache de difusão
+            Diffusion sampling: Amostragem de difusão
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: Integrações do ecossistema
             Resources: Recursos
             API: API
@@ -535,6 +603,17 @@ plugins:
             Inference: 推理
             Quantization and optimization: 量化和优化
             Optional source backends: 可选源码后端
+            Optimization catalog: 优化目录
+            Optimization passes: 优化流程
+            Torch compile: Torch 编译
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: 自定义内核
+            Codec kernels: 编解码器内核
+            Diffusion cache: 扩散缓存
+            Diffusion sampling: 扩散采样
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: 生态系统集成
             Resources: 资源
             API: API
@@ -601,6 +680,17 @@ plugins:
             Inference: 推論
             Quantization and optimization: 量子化と最適化
             Optional source backends: オプションのソースバックエンド
+            Optimization catalog: 最適化カタログ
+            Optimization passes: 最適化パス
+            Torch compile: Torch コンパイル
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: カスタムカーネル
+            Codec kernels: コーデックカーネル
+            Diffusion cache: 拡散キャッシュ
+            Diffusion sampling: 拡散サンプリング
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: エコシステム連携
             Resources: リソース
             API: API
@@ -667,6 +757,17 @@ plugins:
             Inference: 추론
             Quantization and optimization: 양자화 및 최적화
             Optional source backends: 선택적 소스 백엔드
+            Optimization catalog: 최적화 카탈로그
+            Optimization passes: 최적화 패스
+            Torch compile: Torch 컴파일
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: 사용자 정의 커널
+            Codec kernels: 코덱 커널
+            Diffusion cache: 디퓨전 캐시
+            Diffusion sampling: 디퓨전 샘플링
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: 생태계 통합
             Resources: 리소스
             API: API
@@ -733,6 +834,17 @@ plugins:
             Inference: Инференс
             Quantization and optimization: Квантизация и оптимизация
             Optional source backends: Необязательные исходные бэкенды
+            Optimization catalog: Каталог оптимизаций
+            Optimization passes: Проходы оптимизации
+            Torch compile: Компиляция Torch
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: Пользовательские ядра
+            Codec kernels: Ядра кодеков
+            Diffusion cache: Кэш диффузии
+            Diffusion sampling: Сэмплирование диффузии
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: Интеграции экосистемы
             Resources: Ресурсы
             API: API
@@ -799,6 +911,17 @@ plugins:
             Inference: الاستدلال
             Quantization and optimization: التكميم والتحسين
             Optional source backends: واجهات خلفية مصدرية اختيارية
+            Optimization catalog: كتالوج التحسين
+            Optimization passes: تمريرات التحسين
+            Torch compile: تجميع Torch
+            FlashAttention-4: FlashAttention-4
+            Custom kernels: نوى مخصصة
+            Codec kernels: نوى الترميز
+            Diffusion cache: ذاكرة التخزين المؤقت للانتشار
+            Diffusion sampling: أخذ عينات الانتشار
+            HQQ: HQQ
+            GemLite: GemLite
+            audio.cpp: audio.cpp
             Ecosystem integrations: تكاملات المنظومة
             Resources: الموارد
             API: API

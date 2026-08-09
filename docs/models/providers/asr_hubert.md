@@ -48,6 +48,12 @@ integration. This page is generated from its registry contract. [Open the `asr_h
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** [HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction](https://arxiv.org/abs/2106.07447)
+- **Upstream GitHub:** [fairseq](https://github.com/facebookresearch/fairseq)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/modeling_asr_hubert.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

@@ -53,6 +53,12 @@ integration. This page is generated from its registry contract. [Open the `asr_c
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Transformers](https://github.com/huggingface/transformers)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_cohere/modeling_asr_cohere.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

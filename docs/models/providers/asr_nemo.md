@@ -53,6 +53,12 @@ integration. This page is generated from its registry contract.
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [NeMo: a toolkit for building AI applications using Neural Modules](https://arxiv.org/abs/1909.09577)
+- **Upstream GitHub:** [NVIDIA NeMo](https://github.com/NVIDIA/NeMo)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemo/__init__.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

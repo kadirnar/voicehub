@@ -61,6 +61,12 @@ integration. This page is generated from its registry contract. [Open the `qwen3
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [Qwen3-TTS Technical Report](https://arxiv.org/abs/2601.15621)
+- **Upstream GitHub:** [Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/modeling_qwen3tts.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

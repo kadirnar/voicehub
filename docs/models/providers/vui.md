@@ -61,6 +61,12 @@ integration. This page is generated from its registry contract.
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Vui](https://github.com/fluxions-ai/vui)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/modeling_vui.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

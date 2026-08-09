@@ -56,6 +56,12 @@ integration. This page is generated from its registry contract. [Open the `mosst
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [MOSS-TTS](https://github.com/OpenMOSS/MOSS-TTS)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/mosstts/modeling_mosstts.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

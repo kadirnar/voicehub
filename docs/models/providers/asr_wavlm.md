@@ -48,6 +48,12 @@ integration. This page is generated from its registry contract. [Open the `asr_w
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** [WavLM: Large-Scale Self-Supervised Pre-Training for Full Stack Speech Processing](https://arxiv.org/abs/2110.13900)
+- **Upstream GitHub:** [UniLM / WavLM](https://github.com/microsoft/unilm)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/modeling_asr_wavlm.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

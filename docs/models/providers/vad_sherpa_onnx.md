@@ -47,6 +47,12 @@ integration. This page is generated from its registry contract. [Open the `vad_s
 
 The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling_vad_sherpa_onnx.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

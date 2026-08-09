@@ -22,6 +22,7 @@ IMPLEMENTATION_STATUS = "replace-me"
 READY_STATUS = "ready"
 MODEL_PAGE_SECTIONS = (
     "Overview",
+    "Paper and GitHub",
     "Quickstart",
     "Supported tasks and capabilities",
     "Checkpoints, provenance, and license",
@@ -501,6 +502,12 @@ def _render_page(
 
         `{model_type}` is a scaffolded **{task.task}** integration. Do not merge or
         publish it while `IMPLEMENTATION_STATUS` is not `ready`.
+
+        ## Paper and GitHub
+
+        - **Paper:** No dedicated upstream research paper is declared by this scaffold.
+        - **Upstream GitHub:** [{source_url}]({source_url})
+        - **VoiceHub source:** `voicehub/models/{model_type}/`
 
         ## Quickstart
 

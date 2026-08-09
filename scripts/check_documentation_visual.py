@@ -15,7 +15,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from check_documentation_dom import REPRESENTATIVE_ROUTES, TOP_LEVEL_NAVIGATION
+from check_documentation_dom import REPRESENTATIVE_ROUTES as DOM_REPRESENTATIVE_ROUTES
+from check_documentation_dom import TOP_LEVEL_NAVIGATION
 
 try:
     from axe_playwright_python.sync_playwright import Axe
@@ -46,6 +47,10 @@ SCREENSHOT_SIGNATURE_WIDTH = 64
 SCREENSHOT_MAX_HAMMING_RATIO = 0.08
 SCREENSHOT_MAX_MEAN_CHANNEL_DELTA = 6.0
 SCREENSHOT_SCHEMA_VERSION = 1
+REPRESENTATIVE_ROUTES = {
+    route: expectation
+    for route, expectation in DOM_REPRESENTATIVE_ROUTES.items() if route != "optimizations/compile/index.html"
+}
 
 
 def _platform_screenshot_baselines_path() -> Path:
@@ -202,6 +207,7 @@ SPEECHT5_HEADINGS = (
     ("H2", "Usage"),
     ("H2", "Overview"),
     ("H3", "Language support"),
+    ("H2", "Paper and GitHub"),
     ("H2", "Configuration"),
     ("H2", "Processing"),
     ("H2", "Inference"),
@@ -384,12 +390,15 @@ ROOT_BRANCH_ACTIVATION_METHOD_BY_PALETTE = {
     "slate": "pointer",
 }
 SPEECHT5_NESTED_BRANCH_STATES = (
-    (("API", "Main Classes"), False),
-    (("API", "Models"), True),
-    (("API", "Models", "Text to speech"), True),
-    (("API", "Models", "Text to speech", "SpeechT5"), False),
-    (("API", "Models", "Automatic speech recognition"), False),
-    (("API", "Models", "Voice activity detection"), False),
+    (("Base classes", "Models"), True),
+    (("Base classes", "Models", "Catalogs and support"), False),
+    (("Base classes", "Models", "Text to speech"), True),
+    (("Base classes", "Models", "Text to speech", "SpeechT5"), False),
+    (("Base classes", "Models", "Automatic speech recognition"), False),
+    (("Base classes", "Models", "Voice activity detection"), False),
+    (("Base classes", "Models", "Contribute"), False),
+    (("Base classes", "Preprocessors"), False),
+    (("Base classes", "Architecture"), False),
 )
 NESTED_BRANCH_ACTIVATION_METHOD_BY_PALETTE = {
     "default": "keyboard",
@@ -460,7 +469,7 @@ REPRESENTATIVE_PAGE_ACTIONS = {
     },
     CONTRIBUTION_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/project/adding-a-model.md",
-        "previous": ("/models/xtts2/", "Previous: XTTS v2 native DVAE"),
+        "previous": ("/models/providers/vad_webrtc/", "Previous: WebRTCVAD"),
         "next": ("/project/adding-speech-provider/", "Next: Add an ASR or VAD provider"),
     },
     MODEL_API_ROUTE: {
@@ -1073,11 +1082,12 @@ def _validate_nested_branch_activation(
           return { checked: toggle?.checked, index, path };
         })""")
     expected_paths = tuple(path for path, _ in SPEECHT5_NESTED_BRANCH_STATES)
-    api_paths = tuple(
-        tuple(item["path"]) for item in inventory if item["path"][:1] == ["API"] and len(item["path"]) > 1)
-    if api_paths != expected_paths:
+    model_paths = tuple(
+        tuple(item["path"]) for item in inventory
+        if item["path"][:1] == ["Base classes"] and len(item["path"]) > 1)
+    if model_paths != expected_paths:
         raise DocumentationVisualError(
-            f"{case}: API nested branch inventory is {api_paths!r}, expected {expected_paths!r}.")
+            f"{case}: model nested branch inventory is {model_paths!r}, expected {expected_paths!r}.")
     matching = [item for item in inventory if tuple(item["path"]) == branch_path]
     if len(matching) != 1:
         raise DocumentationVisualError(
@@ -1894,7 +1904,7 @@ def _validate_model_index_state(page: Page, case: str) -> None:
             "AutoModelForVoiceActivityDetection",
             "available_models()",
             "lazy_load=True",
-            "same eight required sections",
+            "same nine required sections",
     ):
         if marker not in state["text"]:
             raise DocumentationVisualError(f"{case}: rendered model index is missing {marker!r}.")
@@ -2019,16 +2029,19 @@ def _validate_speecht5_state(page: Page, case: str) -> None:
         "voicehub/models/speecht5/modeling_speecht5.py",
     )
     hrefs = tuple(state["sourceHrefs"])
-    if len(hrefs) != len(expected_sources) or any(not any(href.endswith(expected) for href in hrefs)
-                                                  for expected in expected_sources):
+    if len(hrefs) != 3 or any(not any(href.endswith(expected) for href in hrefs)
+                              for expected in expected_sources):
         raise DocumentationVisualError(
-            f"{case}: SpeechT5 source links are {hrefs!r}, expected {expected_sources!r}.")
+            f"{case}: SpeechT5 source links are {hrefs!r}, expected three links covering "
+            f"{expected_sources!r}.")
     for marker in (
             "AutoModelForTextToSpeech",
             "AutoProcessor",
             "TTSOutput",
             "microsoft/speecht5_tts",
             "available_optimization_passes()",
+            "Paper:",
+            "Upstream GitHub:",
             "Real-checkpoint evidence",
             "Public optimizations fail closed",
     ):
@@ -2256,7 +2269,7 @@ def _validate_contribution_state(page: Page, case: str) -> None:
             f"expected {CONTRIBUTION_FINAL_TARGETS!r}.")
     if not state["editHref"].endswith("/docs/project/adding-a-model.md"):
         raise DocumentationVisualError(f"{case}: Contribution edit target is {state['editHref']!r}.")
-    if (state["previousPath"] != "/models/xtts2/" or "XTTS v2 native DVAE" not in state["previousText"]):
+    if state["previousPath"] != "/models/providers/vad_webrtc/" or "WebRTCVAD" not in state["previousText"]:
         raise DocumentationVisualError(
             f"{case}: Contribution previous footer destination is "
             f"path={state['previousPath']!r}, text={state['previousText']!r}.")

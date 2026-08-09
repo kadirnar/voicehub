@@ -25,12 +25,12 @@ passes, and the manifest records what was actually applied.
 
 | Technique | Public pass | Evidence boundary |
 | --- | --- | --- |
-| Compilation | `compile` | The concrete graph, mode, device, dtype, and fixed-seed evidence decide support. |
-| Attention backends | `flash-attention-4` | Requires a compatible attention surface and optional CUDA backend. |
-| General kernels | `custom-kernels` | Uses registered kernels only after runtime validation. |
-| Codec kernels | `codec-kernels` | Applies only to discovered codec operations and records each selected backend. |
-| Diffusion caching | `diffusion-cache` | Approximate reuse may change generated audio. |
-| Diffusion sampling | `diffusion-sampling` | Step, guidance, or solver changes may change generated audio. |
+| [Compilation](../optimizations/compile.md) | `compile` | The concrete graph, mode, device, dtype, and fixed-seed evidence decide support. |
+| [Attention backends](../optimizations/flash-attention-4.md) | `flash-attention-4` | Requires a compatible attention surface and optional CUDA backend. |
+| [General kernels](../optimizations/custom-kernels.md) | `custom-kernels` | Uses registered kernels only after runtime validation. |
+| [Codec kernels](../optimizations/codec-kernels.md) | `codec-kernels` | Applies only to discovered codec operations and records each selected backend. |
+| [Diffusion caching](../optimizations/diffusion-cache.md) | `diffusion-cache` | Approximate reuse may change generated audio. |
+| [Diffusion sampling](../optimizations/diffusion-sampling.md) | `diffusion-sampling` | Step, guidance, or solver changes may change generated audio. |
 
 ## Compilation
 
@@ -74,9 +74,10 @@ VoiceHub currently has no registry-wide public quantization pass. Quantized
 checkpoint formats and provider-local loaders therefore remain model-specific
 and are not advertised as universal optimization support.
 
-HQQ, GemLite, and audio.cpp have a concise
-[source-install guide](optional-backends.md). They remain opt-in until a model
-meets the public pass lifecycle and evidence contract.
+[HQQ](../optimizations/hqq.md), [GemLite](../optimizations/gemlite.md), and
+[audio.cpp](../optimizations/audio-cpp.md) have dedicated source-install pages.
+They remain opt-in until a model meets the public pass lifecycle and evidence
+contract.
 
 Parallelism is a training or serving topology, not a reversible model pass.
 Continuous batching belongs to a serving scheduler, not the model-mutation

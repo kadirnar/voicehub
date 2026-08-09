@@ -47,6 +47,12 @@ integration. This page is generated from its registry contract. [Open the `vad_n
 
 The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.
 
+## Paper and GitHub
+
+- **Paper:** [MarbleNet: Deep 1D Time-Channel Separable Convolutional Neural Network for VAD](https://arxiv.org/abs/2010.13886)
+- **Upstream GitHub:** [NVIDIA NeMo](https://github.com/NVIDIA/NeMo)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_nemo/modeling_vad_nemo.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

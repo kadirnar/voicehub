@@ -55,6 +55,12 @@ integration. This page is generated from its registry contract.
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [WeNet: Production Oriented Streaming and Non-Streaming End-to-End Speech Recognition Toolkit](https://arxiv.org/abs/2102.01547)
+- **Upstream GitHub:** [WeNet](https://github.com/wenet-e2e/wenet)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wenet/__init__.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

@@ -47,6 +47,12 @@ integration. This page is generated from its registry contract. [Open the `vad_p
 
 The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.
 
+## Paper and GitHub
+
+- **Paper:** [pyannote.audio: neural building blocks for speaker diarization](https://arxiv.org/abs/1911.01255)
+- **Upstream GitHub:** [pyannote.audio](https://github.com/pyannote/pyannote-audio)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/modeling_vad_pyannote_segmentation.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

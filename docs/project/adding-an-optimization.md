@@ -109,3 +109,20 @@ Test that:
 Use an isolated `OptimizationPassRegistry` in unit tests when global
 registration is unnecessary. See [Library architecture](../concepts/architecture.md)
 for transaction and lifecycle details.
+
+## Document the pass
+
+Add one `OptimizationGuide` entry to
+`scripts/documentation_references.py`. Include the official GitHub repository,
+the dedicated primary paper when one exists, the pass ID and version, and the
+VoiceHub implementation path. Use an empty paper tuple when upstream has not
+published a paper.
+
+```bash
+python scripts/generate_optimization_pages.py
+python scripts/generate_optimization_pages.py --check
+```
+
+The generator creates the dedicated page and left-sidebar link. Its coverage
+check fails when a registered public pass is missing or an unknown pass is
+documented as registered.

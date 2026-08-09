@@ -53,6 +53,12 @@ integration. This page is generated from its registry contract. [Open the `asr_w
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [WhisperX: Time-Accurate Speech Transcription of Long-Form Audio](https://arxiv.org/abs/2303.00747); [Robust Speech Recognition via Large-Scale Weak Supervision](https://arxiv.org/abs/2212.04356)
+- **Upstream GitHub:** [WhisperX](https://github.com/m-bain/whisperX)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_native/whisperx.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

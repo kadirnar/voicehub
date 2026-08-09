@@ -67,6 +67,12 @@ integration. This page is generated from its registry contract. [Open the `xtts`
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Coqui TTS](https://github.com/coqui-ai/TTS)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/modeling_xtts.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

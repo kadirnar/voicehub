@@ -67,6 +67,12 @@ integration. This page is generated from its registry contract.
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [F5-TTS: A Fairytaler that Fakes Fluent and Faithful Speech](https://arxiv.org/abs/2410.06885)
+- **Upstream GitHub:** [F5-TTS](https://github.com/SWivid/F5-TTS)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/modeling_f5tts.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

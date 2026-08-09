@@ -71,6 +71,12 @@ Korean and Cantonese support applies to V2 and later variants.
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/modeling_gptsovits.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

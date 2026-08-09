@@ -32,6 +32,9 @@ MODEL_NOTEBOOK_GENERATOR_PATH = REPOSITORY_ROOT / "scripts" / "generate_model_no
 MODEL_PAGE_DIR = DOCS_ROOT / "models" / "providers"
 MODEL_PAGE_INDEX_PATH = MODEL_PAGE_DIR / "index.md"
 MODEL_PAGE_GENERATOR_PATH = REPOSITORY_ROOT / "scripts" / "generate_model_pages.py"
+OPTIMIZATION_PAGE_DIR = DOCS_ROOT / "optimizations"
+OPTIMIZATION_PAGE_INDEX_PATH = OPTIMIZATION_PAGE_DIR / "index.md"
+OPTIMIZATION_PAGE_GENERATOR_PATH = (REPOSITORY_ROOT / "scripts" / "generate_optimization_pages.py")
 DOCUMENTATION_DOM_CHECK_PATH = REPOSITORY_ROOT / "scripts" / "check_documentation_dom.py"
 DOCUMENTATION_VISUAL_CHECK_PATH = REPOSITORY_ROOT / "scripts" / "check_documentation_visual.py"
 DOCUMENTATION_VISUAL_SHARD_CHECK_PATH = (REPOSITORY_ROOT / "scripts" / "check_documentation_visual_shards.py")
@@ -112,6 +115,9 @@ NAVIGATION_PATHS = (
     "guides/trainer.md",
     "guides/training.md",
     "guides/optimization-overview.md",
+    "optimizations/index.md",
+    "optimizations/compile.md",
+    "optimizations/hqq.md",
     "guides/rtx-5090-tts-benchmarks.md",
     "guides/notebook.md",
     "models/index.md",
@@ -143,6 +149,7 @@ PUBLIC_ROUTES = (
     "models/asr-vad-support/",
     "models/training-support/",
     "models/providers/",
+    "optimizations/",
 )
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 HTML_HREF = re.compile(r"""href=["']([^"']+)["']""")
@@ -150,12 +157,19 @@ PYTHON_BLOCK = re.compile(r"```python\n(.*?)```", re.DOTALL)
 MODEL_PAGE_SECTIONS = (
     "Usage",
     "Overview",
+    "Paper and GitHub",
     "Configuration",
     "Processing",
     "Inference",
     "Training and optimization",
     "Checkpoints, provenance, license, and limitations",
     "Public API",
+)
+OPTIMIZATION_PAGE_SECTIONS = (
+    "Use",
+    "Support",
+    "Paper and GitHub",
+    "Verify",
 )
 
 
@@ -299,7 +313,9 @@ class DocumentationSiteTests(unittest.TestCase):
         checkpoint_documentation = notebook_generator["checkpoint_documentation"]
         generator = runpy.run_path(str(MODEL_PAGE_GENERATOR_PATH))
         module_source_path = generator["_module_source_path"]
+        references = generator["MODEL_REFERENCES"]
         specs = tuple(list_model_specs(task=None))
+        self.assertEqual(set(references), {spec.model_type for spec in specs})
         expected_paths = {MODEL_PAGE_DIR / f"{spec.model_type}.md": spec for spec in specs}
         self.assertEqual(
             set(MODEL_PAGE_DIR.glob("*.md")),
@@ -319,7 +335,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertEqual(sections, MODEL_PAGE_SECTIONS)
                 self.assertLessEqual(
                     len(source.splitlines()),
-                    225,
+                    230,
                     f"{path.name} should link shared workflows instead of repeating them.",
                 )
                 self.assertIn(
@@ -335,6 +351,9 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertIn("Checkpoint status", source)
                 self.assertIn("Source provenance", source)
                 self.assertIn("available_optimization_passes", source)
+                self.assertIn("## Paper and GitHub", source)
+                self.assertIn("- **Paper:**", source)
+                self.assertIn(references[spec.model_type].github.url, source)
                 self.assertIn(spec.config_class, source)
                 for fragment in (
                         "### Limitations",
@@ -412,9 +431,10 @@ class DocumentationSiteTests(unittest.TestCase):
                 "AutoProcessor",
                 ".available_models()",
                 "from_pretrained(",
-                "same eight required sections",
+                "same nine required sections",
         ):
             self.assertIn(fragment, index)
+        self.assertNotIn("same eight required sections", index)
         self.assertNotIn("same six required sections", index)
         self.assertIn("- Auto Classes: models/providers/index.md", config)
         for example_index, example in enumerate(PYTHON_BLOCK.findall(index), start=1):
@@ -453,6 +473,7 @@ class DocumentationSiteTests(unittest.TestCase):
             "# SpeechT5",
             "## Usage",
             "## Overview",
+            "## Paper and GitHub",
             "## Configuration",
             "## Processing",
             "## Inference",
@@ -914,7 +935,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 continue
             required_labels.add(label)
 
-        self.assertEqual(len(required_labels), 58)
+        self.assertEqual(len(required_labels), 69)
         for locale in LOCALIZED_HOME_LOCALES:
             with self.subTest(locale=locale):
                 locale_block = config.split(f"        - locale: {locale}\n", 1)[1]
@@ -925,7 +946,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 }
                 self.assertEqual(required_labels - translated_labels, set())
 
-    def test_model_guides_follow_transformers_api_navigation_hierarchy(self):
+    def test_every_model_guide_is_listed_in_the_primary_models_navigation(self):
         from voicehub import list_model_specs
 
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
@@ -935,31 +956,29 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         )[0]
         api_navigation = config.split("  - API:\n", 1)[1].split("\nplugins:", 1)[0]
         main_classes = api_navigation.split("      - Main Classes:\n", 1)[1].split(
-            "      - Models:\n",
-            1,
-        )[0]
-        model_guides = api_navigation.split("      - Models:\n", 1)[1].split(
             "      - Full API reference:",
             1,
         )[0]
+        model_guides = base_navigation.split(
+            "          # BEGIN GENERATED MODEL GUIDE NAVIGATION",
+            1,
+        )[1].split("          # END GENERATED MODEL GUIDE NAVIGATION", 1)[0]
 
-        self.assertNotIn("models/providers/index.md", base_navigation)
-        self.assertNotIn("BEGIN GENERATED MODEL GUIDE NAVIGATION", base_navigation)
         self.assertIn("- Auto Classes: models/providers/index.md", main_classes)
         self.assertIn("- Models: reference/models.md", main_classes)
         self.assertIn("- Public exports: reference/public-api.md", main_classes)
-        self.assertIn("# BEGIN GENERATED MODEL GUIDE NAVIGATION", model_guides)
-        self.assertIn("# END GENERATED MODEL GUIDE NAVIGATION", model_guides)
+        self.assertNotIn("BEGIN GENERATED MODEL GUIDE NAVIGATION", api_navigation)
+        self.assertNotIn("      - Models:\n", api_navigation)
         self.assertIn("- Text to speech:", model_guides)
         self.assertIn("- Automatic speech recognition:", model_guides)
         self.assertIn("- Voice activity detection:", model_guides)
         self.assertLess(
-            api_navigation.index("      - Main Classes:"),
-            api_navigation.index("      - Models:"),
+            base_navigation.index("          - Catalogs and support:"),
+            base_navigation.index("          # BEGIN GENERATED MODEL GUIDE NAVIGATION"),
         )
         self.assertLess(
-            api_navigation.index("      - Models:"),
-            api_navigation.index("      - Full API reference:"),
+            base_navigation.index("          # END GENERATED MODEL GUIDE NAVIGATION"),
+            base_navigation.index("          - Contribute:"),
         )
 
         for spec in list_model_specs(task=None):
@@ -974,7 +993,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             dom_checker,
         )
         self.assertIn(
-            'expanded_branches=("API", "Models", "Text to speech")',
+            'expanded_branches=("Base classes", "Models", "Text to speech")',
             dom_checker,
         )
 
@@ -1349,6 +1368,62 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 '"optimization_interaction_cases"',
         ):
             self.assertIn(fragment, checker)
+
+    def test_every_optimization_has_a_generated_guide_and_sidebar_link(self):
+        from voicehub.optimization import OPTIMIZATION_PASSES
+
+        generator = runpy.run_path(str(OPTIMIZATION_PAGE_GENERATOR_PATH))
+        guides = tuple(generator["OPTIMIZATION_GUIDES"])
+        expected_paths = {OPTIMIZATION_PAGE_DIR / f"{guide.slug}.md": guide for guide in guides}
+        self.assertEqual(
+            set(OPTIMIZATION_PAGE_DIR.glob("*.md")),
+            {*expected_paths, OPTIMIZATION_PAGE_INDEX_PATH},
+        )
+        self.assertEqual(len(guides), 9)
+        self.assertEqual(
+            {guide.registry_name
+             for guide in guides if guide.registry_name},
+            set(OPTIMIZATION_PASSES.list()),
+        )
+
+        config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
+        index = OPTIMIZATION_PAGE_INDEX_PATH.read_text(encoding="utf-8")
+        for path, guide in expected_paths.items():
+            with self.subTest(optimization=guide.slug):
+                source = path.read_text(encoding="utf-8")
+                headings = tuple(
+                    line.removeprefix("## ") for line in source.splitlines() if line.startswith("## "))
+                self.assertEqual(headings, OPTIMIZATION_PAGE_SECTIONS)
+                self.assertLessEqual(len(source.splitlines()), 65)
+                self.assertIn("- **Paper:**", source)
+                self.assertIn("- **Upstream GitHub:**", source)
+                self.assertIn("- **VoiceHub source:**", source)
+                for reference in guide.github:
+                    self.assertIn(reference.url, source)
+                    self.assertTrue(reference.url.startswith("https://github.com/"))
+                if guide.papers:
+                    for reference in guide.papers:
+                        self.assertIn(reference.url, source)
+                else:
+                    self.assertIn(
+                        "No dedicated upstream research paper is published",
+                        source,
+                    )
+                self.assertIn(f"[{guide.title}]({path.name})", index)
+                self.assertEqual(
+                    config.count(f"optimizations/{path.name}"),
+                    1,
+                    f"{guide.slug} should appear once in the optimization sidebar",
+                )
+                if guide.registry_name:
+                    self.assertIn(f"`{guide.registry_name}`", source)
+                    self.assertIn(guide.pass_id, source)
+                    self.assertIn("restore_optimization_plan", source)
+
+        files = generator["generated_files"]()
+        self.assertEqual(generator["check_generated_files"](files), ())
+        self.assertIn("- Optimization passes:", config)
+        self.assertIn("- Optional source backends:", config)
 
     def test_optional_backends_are_source_pinned_and_fail_closed(self):
         source = OPTIONAL_BACKENDS_PATH.read_text(encoding="utf-8")
@@ -2186,7 +2261,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "_validate_viewport_summary",
                 "_validate_viewport_palette_summary",
                 '"cases": 60',
-                '"keyboard_cases": 342',
+                '"keyboard_cases": 348',
                 '"screenshot_cases": 60',
                 'totals.get("focus_steps", 0) < 4500',
                 "if result.returncode:",
@@ -2305,7 +2380,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         aggregate = namespace["_aggregate_summaries"](summaries)
         self.assertEqual(aggregate["totals"]["cases"], 60)
-        self.assertEqual(aggregate["totals"]["keyboard_cases"], 342)
+        self.assertEqual(aggregate["totals"]["keyboard_cases"], 348)
         self.assertEqual(aggregate["totals"]["viewports"], 3)
 
         incomplete = {viewport: dict(summary) for viewport, summary in summaries.items()}
@@ -2686,12 +2761,15 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         checker = DOCUMENTATION_VISUAL_CHECK_PATH.read_text(encoding="utf-8")
         for fragment in (
                 "SPEECHT5_NESTED_BRANCH_STATES = (",
-                '(("API", "Main Classes"), False)',
-                '(("API", "Models"), True)',
-                '(("API", "Models", "Text to speech"), True)',
-                '(("API", "Models", "Text to speech", "SpeechT5"), False)',
-                '(("API", "Models", "Automatic speech recognition"), False)',
-                '(("API", "Models", "Voice activity detection"), False)',
+                '(("Base classes", "Models"), True)',
+                '(("Base classes", "Models", "Catalogs and support"), False)',
+                '(("Base classes", "Models", "Text to speech"), True)',
+                '(("Base classes", "Models", "Text to speech", "SpeechT5"), False)',
+                '(("Base classes", "Models", "Automatic speech recognition"), False)',
+                '(("Base classes", "Models", "Voice activity detection"), False)',
+                '(("Base classes", "Models", "Contribute"), False)',
+                '(("Base classes", "Preprocessors"), False)',
+                '(("Base classes", "Architecture"), False)',
                 "NESTED_BRANCH_ACTIVATION_METHOD_BY_PALETTE = {",
                 "def _validate_nested_branch_activation(",
                 "nested_branch_activation_cases = 0",

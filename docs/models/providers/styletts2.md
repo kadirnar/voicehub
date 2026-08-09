@@ -61,6 +61,12 @@ integration. This page is generated from its registry contract.
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** [StyleTTS 2: Towards Human-Level Text-to-Speech through Style Diffusion](https://arxiv.org/abs/2306.07691)
+- **Upstream GitHub:** [StyleTTS 2](https://github.com/yl4579/StyleTTS2)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/modeling_styletts2.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

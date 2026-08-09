@@ -48,6 +48,12 @@ integration. This page is generated from its registry contract. [Open the `asr_t
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Tiron](https://github.com/TrelisResearch/tiron)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/modeling_asr_tiron.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

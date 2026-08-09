@@ -47,6 +47,12 @@ integration. This page is generated from its registry contract. [Open the `vad_f
 
 The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.
 
+## Paper and GitHub
+
+- **Paper:** [FunASR: A Fundamental End-to-End Speech Recognition Toolkit](https://arxiv.org/abs/2305.11013)
+- **Upstream GitHub:** [FunASR](https://github.com/modelscope/FunASR)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/modeling_vad_funasr.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

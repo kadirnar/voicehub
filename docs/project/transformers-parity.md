@@ -34,13 +34,13 @@ remain gaps until the table below records executed evidence.
 | Quantization and optimization | `/voicehub/guides/optimization-overview/` | Top level, fifth | Present |
 | Ecosystem integrations | `/voicehub/guides/notebook/` | Top level, sixth | Present |
 | Resources | `/voicehub/guides/tts-model-benchmarks/` | Top level, seventh; benchmarks and project material | Present |
-| API | `/voicehub/models/providers/` | Top level, eighth; nested Main Classes, generated model guides, and preserved comprehensive reference | Present |
+| API | `/voicehub/models/providers/` | Top level, eighth; nested Main Classes and the preserved comprehensive reference | Present |
 
 VoiceHub now exposes the eight sections in that exact order. The upstream
 snapshot calls its fifth group `Quantization`; VoiceHub uses the Goal's
 speech-domain label `Quantization and optimization` and maps it to the shared
 optimization guides. Existing routes remain stable, and the generated
-68-model navigation remains nested under `API → Models`.
+68-model navigation remains nested under `Base classes → Models`.
 
 ## Top-level navigation evidence
 
@@ -182,7 +182,7 @@ palettes, and verified the explicit Enter path after correction.
 | Quickstart | `/docs/transformers/main/en/quicktour` | `/voicehub/getting-started/quickstart/` | The current Set up, Agent skills, Pretrained models, Pipeline, Trainer, and Next steps hierarchy is mapped with seven content tabs, two tips, one model table, code blocks, active navigation, and the exact right TOC | Current local contract: all six viewport/palette cases pass the exact seven-heading and six-entry TOC order, three tab sets with seven options, two tips, one three-row table, 12 code blocks and code-copy actions, one page-copy action, three external and nine internal content destinations, edit and previous/next targets, required workflow markers, geometry, Axe, reviewed screenshot signatures, and complete focus traversal. Six cases activate the last option in every tab set; six more copy the active readable page by keyboard, verify exact clipboard text plus visible success and idle states, retain focus and zero overflow, and rerun Axe |
 | Task guide | `/docs/transformers/main/en/pipeline_tutorial` | `/voicehub/guides/inference/` | The task/parameter hierarchy, active Pipeline navigation, exact right TOC, six runnable code examples, parameter table, and explicit large-input/model sections are mapped | Current local contract: all six viewport/palette cases pass exact rendered structure, content and component inventories, geometry, Axe, reviewed screenshot signatures, and complete focus traversal. Six additional cases activate the first code-copy action by keyboard, preserve focus and overflow, verify exact clipboard content and visible success state, and rerun Axe |
 | Model index | `/docs/transformers/main/en/model_doc/auto` | `/voicehub/models/providers/` | Auto Classes, AutoConfig, AutoProcessor, task-specific AutoModel classes, registry discovery, generated model tables, `API → Main Classes → Auto Classes` active navigation, and right TOC are mapped | Current local contract: all six viewport/palette cases pass the exact nine-heading and eight-entry TOC order, four registry-derived tables with 3/34/23/11 rows, 68 unique uppercase-first provider links, three code blocks and copy actions, required content markers, exact API ancestry, geometry, Axe, reviewed screenshot signatures, and complete focus traversal. Six additional cases activate page copy by keyboard, verify exact clipboard text and visible success state, retain focus and zero overflow, and rerun Axe |
-| Model detail | `/docs/transformers/main/en/model_doc/speecht5` | `/voicehub/models/providers/speecht5/` | Usage, overview, configuration, processing, inference, training and optimization, limitations, source-linked public facades, `API → Models → Text to speech → SpeechT5` active navigation, and right TOC are mapped through the shared generated-page contract | Current local contract: all six viewport/palette cases pass the exact 14-heading and 13-entry TOC order, eight generated table inventories, seven code blocks and copy actions, two valid local facade-source links, required checkpoint/optimization markers, exact API ancestry, geometry, Axe, reviewed screenshot signatures, and complete focus traversal. Six additional cases activate page copy by keyboard, verify exact clipboard text and visible success state, retain focus and zero overflow, and rerun Axe |
+| Model detail | `/docs/transformers/main/en/model_doc/speecht5` | `/voicehub/models/providers/speecht5/` | Usage, overview, paper and GitHub references, configuration, processing, inference, training and optimization, limitations, source-linked public facades, `Base classes → Models → Text to speech → SpeechT5` active navigation, and right TOC are mapped through the shared generated-page contract | Current local contract: all six viewport/palette cases pass the exact 16-heading and 15-entry TOC order, eight generated table inventories, seven code blocks and copy actions, verified upstream and local source links, required checkpoint/optimization markers, exact Base classes ancestry, geometry, Axe, reviewed screenshot signatures, and complete focus traversal. Six additional cases activate page copy by keyboard, verify exact clipboard text and visible success state, retain focus and zero overflow, and rerun Axe |
 | Training | `/docs/transformers/main/en/trainer` | `/voicehub/guides/trainer/` | Trainer overview, speech-specific orchestration boundary, Next steps, active nested navigation, right TOC, source/edit action, copy-page action, and Fine-tuning next navigation are mapped | Current local contract: all six viewport/palette cases pass the exact two-heading and one-entry TOC order, zero table/code inventory, four exact next-step destinations, edit and Fine-tuning footer targets, required fail-closed training markers, geometry, Axe, reviewed screenshot signatures, and complete focus traversal. Six additional cases activate page copy by keyboard, verify exact clipboard text and visible success state, retain focus and zero overflow, and rerun Axe |
 | Optimization | `/docs/transformers/main/en/optimization_overview` | `/voicehub/guides/optimization-overview/` | The current Overview hierarchy, universal lifecycle, six public passes, evidence boundaries, active navigation, right TOC, page actions, and preserved detailed optimization guides are mapped | Current local contract: all six viewport/palette cases pass the exact eight-heading and seven-entry TOC order, one six-row technique table, one code block and copy action, all six public pass names, five exact next-step targets, edit and previous/next footer destinations, geometry, Axe, reviewed screenshot signatures, and complete focus traversal. Six additional cases activate page copy by keyboard, verify exact clipboard text and visible success state, retain focus and zero overflow, and rerun Axe |
 | Contribution | `/docs/transformers/main/en/modular_transformers` | `/voicehub/project/adding-a-model/` | The current Contribute navigation, modular contribution boundary, explicit eight-step speech integration path, per-step file inventory, page actions, and responsive process overview are mapped; the legacy `add_new_model` route is retained only as a secondary boundary | Current local contract: all six viewport/palette cases pass the exact 10-heading and nine-entry TOC order, eight process labels, three tables with 8/3/7 rows, 13 code blocks and copy actions, the complete scaffold/registry/training/optimization/package boundary markers, two final guide targets, edit and previous/next footer destinations, geometry, Axe, reviewed screenshot signatures, and complete focus traversal. Six additional cases activate page copy by keyboard, verify exact clipboard text and visible success state, retain focus and zero overflow, and rerun Axe |
@@ -234,23 +234,23 @@ NLP-only abstractions.
 | Component or state | Current evidence | Remaining gate |
 | --- | --- | --- |
 | Global header and documentation controls | The 65-pixel brand row, 270-pixel rail, 128-pixel control block, product/search/utility coordinates, and exact compact-control geometry match at desktop and tablet widths; both palettes, LTR/RTL mirroring, zero overflow, and pointer/keyboard behavior pass. VoiceHub intentionally uses its own brand rather than Hugging Face-specific corporate links. All ten representative routes pass complete native focus traversal at desktop, tablet, and mobile widths in both palettes. A 60-case search matrix opens the desktop/tablet command dialog by keyboard and the mobile dialog by its visible pointer trigger, validates focus and ARIA/inert/tab-order state, reruns Axe, closes with Escape, and restores focus to the visible breakpoint-specific control; native Tab away from the desktop input cancels delayed restoration so traversal continues. A separate 60-case version matrix opens the exact three-destination menu by keyboard or pointer, verifies its current item, focus, geometry, ARIA state, overflow, and Axe result, then closes it with Escape and restores focus to the summary. A 40-case desktop/tablet language matrix verifies all 11 exact locale destinations, uses keyboard navigation to Turkish and pointer/semantic selection to Arabic, preserves the active palette, validates LTR/RTL direction and localized selection, reruns Axe after navigation, and retains zero overflow. A 40-case desktop/tablet theme matrix switches every representative route to the opposite palette by keyboard or pointer, preserves route, locale, geometry, focus, and overflow, and reruns Axe after every switch. A 40-case desktop/tablet source matrix focuses the exact repository link, validates its name, target, geometry, outline, overflow, and Axe result, and performs deterministic browser navigation by Enter or pointer | Non-representative routes and future shared controls remain outside the closed representative matrix |
-| Left navigation | Visible on desktop and tablet in a persistent 270-pixel rail; all eight root sections remain visible without horizontal tabs, while unchecked desktop branches use `display: none` so descendants leave the focus inventory. Auto Classes now activates `API → Main Classes`, and every generated model guide activates `API → Models → task`, matching the current upstream placement rather than treating model APIs as Base classes. All 60 cycles reject inactive descendants and validate visible branch focus. A separate 32-case Pipeline-route matrix activates and restores every root branch at desktop and tablet widths in both palettes, preserves the active route, verifies native disclosure ARIA and panel labeling, protects exact rail geometry and overflow, distinguishes keyboard-visible focus from pointer focus, and reruns Axe on every expanded branch. A 24-case SpeechT5 matrix activates and restores all six visible nested API/model disclosures at desktop and tablet widths in both palettes, preserves route, active link, focus semantics, and overflow, keeps the 270-pixel rail sticky while document scroll changes its header offset from 65 to 0 pixels, requires unique subsection landmark names, and reruns Axe in every sticky target state | Non-representative routes and future navigation structures remain outside the closed Pipeline and SpeechT5 matrices |
+| Left navigation | Visible on desktop and tablet in a persistent 270-pixel rail; all eight root sections remain visible without horizontal tabs, while unchecked desktop branches use `display: none` so descendants leave the focus inventory. Auto Classes activates `API → Main Classes`, and every generated model guide activates `Base classes → Models → task`, keeping discovery beside model catalogs and support. All 60 cycles reject inactive descendants and validate visible branch focus. A separate 32-case Pipeline-route matrix activates and restores every root branch at desktop and tablet widths in both palettes, preserves the active route, verifies native disclosure ARIA and panel labeling, protects exact rail geometry and overflow, distinguishes keyboard-visible focus from pointer focus, and reruns Axe on every expanded branch. A 24-case SpeechT5 matrix activates and restores all visible nested Base classes/model disclosures at desktop and tablet widths in both palettes, preserves route, active link, focus semantics, and overflow, keeps the 270-pixel rail sticky while document scroll changes its header offset from 65 to 0 pixels, requires unique subsection landmark names, and reruns Axe in every sticky target state | Non-representative routes and future navigation structures remain outside the closed Pipeline and SpeechT5 matrices |
 | Right table of contents | The representative routes use a 270-pixel desktop rail at x = 1,170; both rails remain fixed in the viewport while the article scrolls, and both collapse at 1,024 and 390 pixels with zero overflow. All ten routes now pass pointer and Enter activation in both palettes. Each of the 40 cases requires the exact hash and CSS target, one matching active link after smooth scrolling settles, visible target alignment beneath the header, Enter focus retention, zero overflow, and a post-action Axe pass. Complete native traversal covers every representative desktop TOC | Non-representative routes and future page templates remain outside the closed representative matrix |
-| Main content | The Home, Installation, Quickstart, Pipeline, Auto Classes, SpeechT5, Trainer, Optimization, Contribution, and Models API pages use the reference shell's 804/658/342-pixel article widths and zero document overflow. Home protects the current Features/Design/Learn hierarchy, three feature links, one tip, two design principles, 13 resource cards, four exact status badges, registry counts, artifact boundaries, edit/footer actions, and exact page-copy output; Installation protects its exact heading/TOC order, zero stale tabs, 15 code blocks and copy actions, package-manager and workflow destinations, install/cache/offline safety boundaries, and exact code/page clipboard output; Quickstart protects its exact heading/TOC order, three tab sets, tips, model table, 12 code blocks and copy actions, skill and workflow destinations, training boundary, edit/footer actions, active-tab behavior, and exact page-copy output; Pipeline protects its exact heading/TOC order, task and parameter markers, one table, six code blocks, six accessible copy actions, and exact clipboard output; Auto Classes protects its exact heading/TOC order, four registry-derived table inventories, 68 unique provider links, three code blocks and copy actions, required factory/discovery markers, and exact page-copy output; SpeechT5 protects the shared eight-section model-detail contract, exact generated tables and code inventory, facade-source links, checkpoint/optimization markers, and exact page-copy output; Trainer protects its concise hierarchy, exact workflow destinations, edit/footer actions, speech-specific fail-closed boundary, and exact page-copy output; Optimization protects its exact hierarchy, technique inventory from all six public passes, lifecycle and evidence boundaries, workflow destinations, edit/footer actions, and exact page-copy output; Contribution protects its exact eight-step process, file/evidence tables, runnable scaffold and lifecycle examples, definition-of-done boundaries, workflow destinations, edit/footer actions, and exact page-copy output; Models protects its exact pretrained lifecycle, task bases, normalized outputs, facade-source and internal links, portable-artifact boundary, edit/footer actions, and exact page-copy output | Remaining representative-page-specific component and content states outside the closed Home, Installation, Quickstart, Pipeline, Auto Classes, SpeechT5, Trainer, Optimization, Contribution, and Models API inventories |
+| Main content | The Home, Installation, Quickstart, Pipeline, Auto Classes, SpeechT5, Trainer, Optimization, Contribution, and Models API pages use the reference shell's 804/658/342-pixel article widths and zero document overflow. Home protects the current Features/Design/Learn hierarchy, three feature links, one tip, two design principles, 13 resource cards, four exact status badges, registry counts, artifact boundaries, edit/footer actions, and exact page-copy output; Installation protects its exact heading/TOC order, zero stale tabs, 15 code blocks and copy actions, package-manager and workflow destinations, install/cache/offline safety boundaries, and exact code/page clipboard output; Quickstart protects its exact heading/TOC order, three tab sets, tips, model table, 12 code blocks and copy actions, skill and workflow destinations, training boundary, edit/footer actions, active-tab behavior, and exact page-copy output; Pipeline protects its exact heading/TOC order, task and parameter markers, one table, six code blocks, six accessible copy actions, and exact clipboard output; Auto Classes protects its exact heading/TOC order, four registry-derived table inventories, 68 unique provider links, three code blocks and copy actions, required factory/discovery markers, and exact page-copy output; SpeechT5 protects the shared nine-section model-detail contract, exact generated tables and code inventory, paper and GitHub references, facade-source links, checkpoint/optimization markers, and exact page-copy output; Trainer protects its concise hierarchy, exact workflow destinations, edit/footer actions, speech-specific fail-closed boundary, and exact page-copy output; Optimization protects its exact hierarchy, technique inventory from all six public passes, lifecycle and evidence boundaries, workflow destinations, edit/footer actions, and exact page-copy output; Contribution protects its exact eight-step process, file/evidence tables, runnable scaffold and lifecycle examples, definition-of-done boundaries, workflow destinations, edit/footer actions, and exact page-copy output; Models protects its exact pretrained lifecycle, task bases, normalized outputs, facade-source and internal links, portable-artifact boundary, edit/footer actions, and exact page-copy output | Remaining representative-page-specific component and content states outside the closed Home, Installation, Quickstart, Pipeline, Auto Classes, SpeechT5, Trainer, Optimization, Contribution, and Models API inventories |
 | Footer and page actions | Edit, copy-page, previous/next, back-to-top, and footer regions render; Home, Installation, Quickstart, Pipeline, SpeechT5, Trainer, Optimization, Contribution, and Models expose the expected page actions and navigation. Installation protects its exact edit, Overview previous, and Quickstart next destinations; Quickstart protects its exact edit, Installation previous, and Auto Classes next destinations. Shared copy actions activate once on Enter or Space, restore focus, and preserve the two-pixel focus treatment; the Installation and Quickstart page-copy cases also require the visible success state to return to idle. All representative footers and conditional Back to top controls participate in complete native traversal. A 60-case route/viewport/palette matrix now activates 60 exact edit targets, 114 exact previous/next destinations, and 60 Back to top controls through 30 Enter and 30 pointer paths; every case protects focus, route, palette, overflow, native semantics, and an interaction-state Axe result | Representative page-action behavior closed; non-representative routes, future controls, and accessibility of intercepted external GitHub destinations remain outside the local matrix |
 | Theme | VoiceHub and reference light and dark renders completed at desktop, tablet, and mobile. All ten representative VoiceHub routes now switch palette at both visible widths through 20 Enter and 20 pointer cases with exact focus, geometry, route, locale, overflow, and post-switch Axe checks; all 20 mobile base cases retain the intentionally hidden state | Non-representative routes and future page templates remain outside the closed representative matrix |
 
 ## Registry, public-contract, and contribution inventory
 
 - The live registry contains 68 integrations: 34 TTS, 23 ASR, and 11 VAD.
-  All 68 generated model pages and their `API → Models` navigation entries are
+  All 68 generated model pages and their `Base classes → Models` navigation entries are
   current; Auto Classes is generated once under `API → Main Classes`. Every
   `ModelSpec` derives an uppercase-first presentation label from its public
   class name while retaining its canonical lowercase registry key. The model
   index, page title, and navigation label consume that one display contract.
-  Each page now follows the same eight-section model-detail contract and links
-  its resolved configuration and model facade source without importing the
-  implementation.
+  Each page now follows the same nine-section model-detail contract and links
+  its paper, upstream GitHub repository, resolved configuration, and model facade
+  source without importing the implementation.
 - The public optimization registry exposes `codec-kernels`, `compile`,
   `custom-kernels`, `diffusion-cache`, `diffusion-sampling`, and
   `flash-attention-4`. The registry inventory therefore contains 408
@@ -503,7 +503,7 @@ fabricated locally.
 
 The first focused regression failed because the local index still began with
 `Model guides`. The generated contract now starts with `Auto Classes`, parses
-all three Python examples, retains the eight required sections on every provider
+all three Python examples, retains the nine required sections on every provider
 page, and supplies one registry-derived display label to each index link, page
 heading, and navigation entry without changing the canonical `model_type`.
 The focused index and generated-guide slice reported two passes and 136
@@ -1732,7 +1732,7 @@ requires the exact nine-heading and eight-entry TOC order, four tables with
 3, 34, 23, and 11 body rows, 68 unique provider links whose labels start with
 uppercase characters, three code blocks and three shared copy actions, and
 the expected AutoConfig, AutoProcessor, task AutoModel, `available_models`,
-`lazy_load`, and eight-section markers.
+`lazy_load`, and nine-section markers.
 
 The first selected-file pre-commit run then failed when docformatter
 misclassified a multiline JavaScript predicate and rewrote it. That run is
@@ -1787,11 +1787,12 @@ The first focused command used the wrong unittest class name, collected no
 tests, and exited 4; it is unexecuted evidence, not a pass. The corrected
 focused source contract then failed because the rendered validator had no
 SpeechT5-specific contract. That expected failure is also excluded. The new
-contract protects the exact 14-heading and 13-entry TOC order, eight tables
-with 6, 3, 4, 2, 6, 1, 9, and 8 body rows, seven code blocks and seven shared
-copy actions, two local configuration/model facade-source links, and the
-required auto-model, processor, normalized-output, checkpoint,
-real-evidence, and fail-closed optimization markers.
+contract protects the exact 16-heading and 15-entry TOC order, eight tables
+with 7, 3, 4, 2, 6, 1, 9, and 8 body rows, seven code blocks and seven shared
+copy actions, verified paper and upstream GitHub references, local
+configuration/model facade-source links, and the required auto-model,
+processor, normalized-output, checkpoint, real-evidence, and fail-closed
+optimization markers.
 
 The first full render expected ten rows in the checkpoint table, observed the
 source-correct nine rows, and failed. That run is not passing evidence. The
@@ -2673,22 +2674,21 @@ The next bounded hierarchy iteration refreshed Transformers `main` at commit
 and the 1,576-line `_toctree.yml` retains SHA-256
 `f7d0504e36cd7c312968b549af4fe02b6ee7b3c23d8023986e6a5824680c8f3a`.
 The source places Auto Classes under `API → Main Classes` and individual model
-guides, including SpeechT5, under `API → Models`. The official Home and Auto
-Classes routes returned HTTP 200 and rendered the current API rail. The
+guides, including SpeechT5, under `API → Models`. VoiceHub keeps Auto Classes
+under `API → Main Classes` but groups model guides under `Base classes → Models`
+beside catalogs and support. The official Home and Auto Classes routes returned
+HTTP 200 and rendered the current API rail. The
 official SpeechT5 shell also loaded its selected model link, but its content
 pane displayed a rate-limit 429. That content capture is unavailable and is
 not counted as current model-page comparison evidence.
 
-The focused contract failed before implementation because VoiceHub still put
-Auto Classes and the generated model catalog under `Base classes → Models`.
-The shared generator now owns the canonical placement: Auto Classes appears
-exactly once under `API → Main Classes`, and its one generated block writes all
-68 unique model paths under `API → Models`, grouped into 34 TTS, 23 ASR, and 11
+The shared generator owns the canonical placement: Auto Classes appears exactly
+once under `API → Main Classes`, and its generated block writes all 68 unique
+model paths under `Base classes → Models`, grouped into 34 TTS, 23 ASR, and 11
 VAD guides. Base classes retains lifecycle and support material, contribution,
-preprocessors, and architecture. The routes and generated model-page content
-did not change. Auto Classes now expands `API → Main Classes`; SpeechT5 expands
-`API → Models → Text to speech`. Footer adjacency was updated to follow the new
-document order. The generator remained idempotent after migration.
+preprocessors, and architecture. Auto Classes expands `API → Main Classes`;
+SpeechT5 expands `Base classes → Models → Text to speech`. The generator remains
+idempotent after the navigation update.
 
 The first complete visual run after the hierarchy change rejected the stale
 Quickstart footer expectation; it is not counted as passing evidence. After
@@ -2740,10 +2740,11 @@ The official SpeechT5 route returned HTTP 200 and rendered current content at
 desktop, tablet, and mobile widths without the earlier rate-limit page.
 
 VoiceHub's SpeechT5 route is the deepest representative navigation path. Its
-six visible nested controls cover Main Classes, Models, the three speech-task
-groups, and the active SpeechT5 page table of contents. A 24-case matrix now
-activates and restores each control at desktop and tablet widths in both
-palettes: 12 default-palette cases use Enter and 12 slate cases use a pointer.
+nine visible nested controls cover Models, catalogs, the three speech-task
+groups, Contribute, Preprocessors, Architecture, and the active SpeechT5 page.
+A 36-case matrix activates and restores each control at desktop and tablet
+widths in both palettes: 18 default-palette cases use Enter and 18 slate cases
+use a pointer.
 Every case requires exact ancestry, initial and restored checked state,
 `aria-expanded`, `aria-controls`, visible controlled panel, active SpeechT5
 link, unchanged route and palette, retained focus, keyboard-only outline
@@ -3992,7 +3993,7 @@ SHA-256 digests are:
 | `docs/source/en/model_doc/auto.md` | `557f5836c0722fef6a484c46805dfab0eb69a387b028a914b132350edf09f167` |
 | `docs/source/en/model_doc/speecht5.md` | `71bba8a2921cf637383fb8d6f2fd66df9cd95deb59118b9f49e1362485c27eb5` |
 
-VoiceHub keeps one generated page per registry model under `API → Models`.
+VoiceHub keeps one generated page per registry model under `Base classes → Models`.
 The pages retain the current Auto-class and model-detail structure while using
 short speech-specific contracts, runnable code, source links, and
 checkpoint-evidence boundaries. Installation examples now use the repository

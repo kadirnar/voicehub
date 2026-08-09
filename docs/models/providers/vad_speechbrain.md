@@ -47,6 +47,12 @@ integration. This page is generated from its registry contract. [Open the `vad_s
 
 The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.
 
+## Paper and GitHub
+
+- **Paper:** [SpeechBrain: A General-Purpose Speech Toolkit](https://arxiv.org/abs/2106.04624)
+- **Upstream GitHub:** [SpeechBrain](https://github.com/speechbrain/speechbrain)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_speechbrain/modeling_vad_speechbrain.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

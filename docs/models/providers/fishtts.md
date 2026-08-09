@@ -56,6 +56,12 @@ integration. This page is generated from its registry contract. [Open the `fisht
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** [Fish-Speech: Leveraging Large Language Models for Advanced Multilingual TTS](https://arxiv.org/abs/2411.01156)
+- **Upstream GitHub:** [Fish Speech](https://github.com/fishaudio/fish-speech)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/fishtts/modeling_fishtts.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

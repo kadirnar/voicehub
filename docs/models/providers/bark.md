@@ -61,6 +61,12 @@ integration. This page is generated from its registry contract. [Open the `bark`
 
 </details>
 
+## Paper and GitHub
+
+- **Paper:** No dedicated upstream research paper is published for this integration.
+- **Upstream GitHub:** [Bark](https://github.com/suno-ai/bark)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/modeling_bark.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

@@ -56,6 +56,12 @@ integration. This page is generated from its registry contract. [Open the `vits`
 
 VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
 
+## Paper and GitHub
+
+- **Paper:** [Conditional Variational Autoencoder with Adversarial Learning for End-to-End TTS](https://arxiv.org/abs/2106.06103)
+- **Upstream GitHub:** [VITS](https://github.com/jaywalnut310/vits)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vits/modeling_vits.py)
+
 ## Configuration
 
 Load configuration without constructing the model:

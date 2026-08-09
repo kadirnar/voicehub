@@ -32,7 +32,7 @@ EXPECTED_TOTALS = {
     "installation_page_interaction_cases": 6,
     "interactive_accessibility_cases": 30,
     "keyboard_activation_cases": 2,
-    "keyboard_cases": 342,
+    "keyboard_cases": 348,
     "language_activation_cases": 40,
     "language_interaction_accessibility_cases": 40,
     "language_keyboard_activation_cases": 20,
@@ -41,10 +41,10 @@ EXPECTED_TOTALS = {
     "model_api_interaction_cases": 6,
     "model_index_cases": 6,
     "model_index_interaction_cases": 6,
-    "nested_branch_activation_cases": 24,
-    "nested_branch_interaction_accessibility_cases": 24,
-    "nested_branch_keyboard_activation_cases": 12,
-    "nested_branch_pointer_activation_cases": 12,
+    "nested_branch_activation_cases": 36,
+    "nested_branch_interaction_accessibility_cases": 36,
+    "nested_branch_keyboard_activation_cases": 18,
+    "nested_branch_pointer_activation_cases": 18,
     "optimization_cases": 6,
     "optimization_interaction_cases": 6,
     "page_action_back_to_top_activations": 60,
@@ -126,10 +126,10 @@ NON_MOBILE_SPECIFIC_EXPECTATIONS = {
     "language_interaction_accessibility_cases": 20,
     "language_keyboard_activation_cases": 10,
     "language_pointer_activation_cases": 10,
-    "nested_branch_activation_cases": 12,
-    "nested_branch_interaction_accessibility_cases": 12,
-    "nested_branch_keyboard_activation_cases": 6,
-    "nested_branch_pointer_activation_cases": 6,
+    "nested_branch_activation_cases": 18,
+    "nested_branch_interaction_accessibility_cases": 18,
+    "nested_branch_keyboard_activation_cases": 9,
+    "nested_branch_pointer_activation_cases": 9,
     "root_branch_activation_cases": 16,
     "root_branch_interaction_accessibility_cases": 16,
     "root_branch_keyboard_activation_cases": 8,
@@ -148,7 +148,7 @@ NON_MOBILE_SPECIFIC_EXPECTATIONS = {
 VIEWPORT_SPECIFIC_EXPECTATIONS = {
     "desktop": {
         **NON_MOBILE_SPECIFIC_EXPECTATIONS,
-        "keyboard_cases": 148,
+        "keyboard_cases": 151,
         "toc_activation_cases": 40,
         "toc_interaction_accessibility_cases": 40,
         "toc_keyboard_activation_cases": 20,
@@ -156,7 +156,7 @@ VIEWPORT_SPECIFIC_EXPECTATIONS = {
     },
     "tablet": {
         **NON_MOBILE_SPECIFIC_EXPECTATIONS,
-        "keyboard_cases": 128,
+        "keyboard_cases": 131,
         "toc_activation_cases": 0,
         "toc_interaction_accessibility_cases": 0,
         "toc_keyboard_activation_cases": 0,
@@ -438,9 +438,12 @@ def _validate_viewport_summary(viewport: str, summary: dict[str, Any]) -> dict[s
 def _expected_viewport_palette_summary(viewport: str, palette: str) -> dict[str, int]:
     viewport_expected = _expected_viewport_summary(viewport)
     expected = {}
+    method_fields = {field for pair in PALETTE_METHOD_CASE_FIELDS for field in pair}
     for field, value in viewport_expected.items():
         if field == "viewports":
             expected[field] = value
+            continue
+        if field == "keyboard_cases" or field in method_fields:
             continue
         if value % len(PALETTE_NAMES):
             raise DocumentationVisualShardError(
