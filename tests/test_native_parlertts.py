@@ -500,6 +500,9 @@ class NativeParlerTTSGraphTests(unittest.TestCase):
             **native_config.to_dict(),
             feed_forward_proj="gated-gelu",
         )
+        # The released graph is pinned to eager T5 attention. Transformers
+        # 5.15 selects SDPA by default, so keep the audit backend explicit.
+        upstream_config._attn_implementation = "eager"
         upstream = T5EncoderModel(upstream_config).eval()
         native = NativeT5EncoderModel(native_config).eval()
         upstream_state = upstream.state_dict()
