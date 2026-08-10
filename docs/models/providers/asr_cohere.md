@@ -39,7 +39,7 @@ integration. This page is generated from its registry contract. [Open the `asr_c
 | Task | Automatic speech recognition |
 | Architecture | `cohere-asr` |
 | Runtime | `VoiceHub-native` |
-| Languages | 14 enumerated languages |
+| Languages | `ar`, `de`, `el`, `en`, `es`, `fr`, `it`, `ja`, `ko`, `nl`, `pl`, `pt`, `vi`, `zh` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `long-form`, `punctuation`, `gated-checkpoint`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
@@ -47,7 +47,7 @@ integration. This page is generated from its registry contract. [Open the `asr_c
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>14 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `ar`, `de`, `el`, `en`, `es`, `fr`, `it`, `ja`, `ko`, `nl`, `pl`, `pt`, `vi`, `zh`
 

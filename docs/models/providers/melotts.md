@@ -47,7 +47,7 @@ integration. This page is generated from its registry contract.
 | Task | Text to speech |
 | Architecture | `melotts` |
 | Runtime | `VoiceHub-native` |
-| Languages | 6 enumerated languages |
+| Languages | `en`, `fr`, `ja`, `es`, `zh`, `ko` |
 | Capabilities | `text-to-speech`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `preprocessed-training`, `explicit-linguistic-features` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
@@ -55,7 +55,7 @@ integration. This page is generated from its registry contract.
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>6 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `en`, `fr`, `ja`, `es`, `zh`, `ko`
 

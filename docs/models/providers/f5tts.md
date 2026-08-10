@@ -53,7 +53,7 @@ integration. This page is generated from its registry contract.
 | Task | Text to speech |
 | Architecture | `f5tts` |
 | Runtime | `VoiceHub-native` |
-| Languages | 2 enumerated languages |
+| Languages | `en`, `zh` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `fine-tuning`, `flow-matching`, `safetensors`, `voicehub-native`, `native-runtime` |
 | Reusable components | `vocos` |
 | Normalized output | `TTSOutput` |
@@ -61,7 +61,7 @@ integration. This page is generated from its registry contract.
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>2 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `en`, `zh`
 

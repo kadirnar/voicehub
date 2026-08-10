@@ -47,7 +47,7 @@ integration. This page is generated from its registry contract. [Open the `qwen3
 | Task | Text to speech |
 | Architecture | `qwen3-tts` |
 | Runtime | `VoiceHub-native` |
-| Languages | 10 enumerated languages |
+| Languages | `zh`, `en`, `ja`, `ko`, `de`, `fr`, `ru`, `pt`, `es`, `it` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `voice-design`, `multilingual`, `fine-tuning`, `lora-fine-tuning`, `default-checkpoint-inference-only`, `safetensors`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
@@ -55,7 +55,7 @@ integration. This page is generated from its registry contract. [Open the `qwen3
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>10 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `zh`, `en`, `ja`, `ko`, `de`, `fr`, `ru`, `pt`, `es`, `it`
 

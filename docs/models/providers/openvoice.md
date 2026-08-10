@@ -52,7 +52,7 @@ integration. This page is generated from its registry contract. [Open the `openv
 | Task | Text to speech |
 | Architecture | `openvoice-v2-converter` |
 | Runtime | `VoiceHub-native` |
-| Languages | 6 enumerated languages |
+| Languages | `en`, `es`, `fr`, `zh`, `ja`, `ko` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `paired-waveform-training`, `explicit-base-waveform` |
 | Reusable components | `wavmark` |
 | Normalized output | `TTSOutput` |
@@ -60,7 +60,7 @@ integration. This page is generated from its registry contract. [Open the `openv
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>6 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `en`, `es`, `fr`, `zh`, `ja`, `ko`
 

@@ -47,7 +47,7 @@ integration. This page is generated from its registry contract. [Open the `kokor
 | Task | Text to speech |
 | Architecture | `kokoro` |
 | Runtime | `VoiceHub-native` |
-| Languages | 9 enumerated languages |
+| Languages | `en-US`, `en-GB`, `es`, `fr`, `hi`, `it`, `pt-BR`, `ja`, `zh` |
 | Capabilities | `text-to-speech`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
@@ -55,7 +55,7 @@ integration. This page is generated from its registry contract. [Open the `kokor
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>9 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `en-US`, `en-GB`, `es`, `fr`, `hi`, `it`, `pt-BR`, `ja`, `zh`
 
