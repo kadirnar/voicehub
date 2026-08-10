@@ -928,6 +928,12 @@ body.vh-optimization-page .md-typeset h1 {
 
 .md-sidebar--primary .md-nav__item--active
   > :is(label, button).md-nav__link--active
+  .md-ellipsis {
+  color: inherit;
+}
+
+.md-sidebar--primary .md-nav__item--active
+  > :is(label, button).md-nav__link--active
   + a.md-nav__link--active {
   display: none;
 }

@@ -2111,9 +2111,11 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         for fragment in (
                 "> :is(label, button).md-nav__link--active {",
+                "> :is(label, button).md-nav__link--active\n  .md-ellipsis {",
                 "+ a.md-nav__link--active {",
                 "background: var(--vh-active-bg);",
                 "color: var(--vh-active-text);",
+                "color: inherit;",
                 "display: none;",
         ):
             self.assertIn(fragment, stylesheet)
