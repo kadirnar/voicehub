@@ -47,7 +47,7 @@ integration. This page is generated from its registry contract. [Open the `asr_m
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>1 documented language</summary>
+<summary>Supported language abbreviations</summary>
 
 `en`
 

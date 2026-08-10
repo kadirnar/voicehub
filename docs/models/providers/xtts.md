@@ -53,7 +53,7 @@ integration. This page is generated from its registry contract. [Open the `xtts`
 | Task | Text to speech |
 | Architecture | `xtts2` |
 | Runtime | `VoiceHub-native` |
-| Languages | 17 enumerated languages |
+| Languages | `en`, `es`, `fr`, `de`, `it`, `pt`, `pl`, `tr`, `ru`, `nl`, `cs`, `ar`, `zh-CN`, `hu`, `ko`, `ja`, `hi` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `preencoded-code-fine-tuning`, `gpt-fine-tuning`, `restricted-pickle-conversion` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
@@ -61,7 +61,7 @@ integration. This page is generated from its registry contract. [Open the `xtts`
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>17 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `en`, `es`, `fr`, `de`, `it`, `pt`, `pl`, `tr`, `ru`, `nl`, `cs`, `ar`, `zh-CN`, `hu`, `ko`, `ja`, `hi`
 

@@ -55,7 +55,7 @@ integration. This page is generated from its registry contract. [Open the `gptso
 | Task | Text to speech |
 | Architecture | `gptsovits` |
 | Runtime | `VoiceHub-native` |
-| Languages | 5 enumerated languages |
+| Languages | `zh`, `en`, `ja`, `ko`, `yue` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `preprocessed-training`, `gpt-sovits-v1`, `gpt-sovits-v2`, `gpt-sovits-v2-pro`, `gpt-sovits-v2-pro-plus`, `prepared-pro-speaker-conditioning`, `variant-aware-safetensors-export` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
@@ -63,7 +63,7 @@ integration. This page is generated from its registry contract. [Open the `gptso
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>5 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `zh`, `en`, `ja`, `ko`, `yue`
 

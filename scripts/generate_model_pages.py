@@ -67,9 +67,7 @@ def _code_list(values) -> str:
 def _language_summary(spec) -> str:
     support = model_language_support(spec)
     if support.kind == "enumerated":
-        if len(support.codes) == 1:
-            return f"`{support.codes[0]}`"
-        return f"{len(support.codes)} enumerated languages"
+        return _code_list(support.codes)
     if support.kind == "not-text-conditioned":
         return "Not text-language conditioned"
     return "Checkpoint-defined; not exhaustively enumerated"
@@ -81,7 +79,7 @@ def _language_details(spec) -> str:
         codes = _code_list(support.codes)
         note = f"\n\n{support.note}" if support.note else ""
         return f'''<details class="vh-language-support" markdown>
-<summary>{len(support.codes)} documented language{'s' if len(support.codes) != 1 else ''}</summary>
+<summary>Supported language abbreviations</summary>
 
 {codes}{note}
 

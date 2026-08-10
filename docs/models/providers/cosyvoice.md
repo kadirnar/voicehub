@@ -53,7 +53,7 @@ integration. This page is generated from its registry contract. [Open the `cosyv
 | Task | Text to speech |
 | Architecture | `cosyvoice-native` |
 | Runtime | `VoiceHub-native` |
-| Languages | 9 enumerated languages |
+| Languages | `zh`, `en`, `ja`, `ko`, `de`, `es`, `fr`, `it`, `ru` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `multilingual`, `fine-tuning`, `flow-matching`, `adversarial-vocoder-training`, `safetensors`, `voicehub-native`, `native-runtime`, `precomputed-speaker-embedding`, `preencoded-speech-token-fine-tuning` |
 | Reusable components | `conformer` |
 | Normalized output | `TTSOutput` |
@@ -61,7 +61,7 @@ integration. This page is generated from its registry contract. [Open the `cosyv
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>9 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `zh`, `en`, `ja`, `ko`, `de`, `es`, `fr`, `it`, `ru`
 

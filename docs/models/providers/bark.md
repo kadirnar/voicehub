@@ -47,7 +47,7 @@ integration. This page is generated from its registry contract. [Open the `bark`
 | Task | Text to speech |
 | Architecture | `bark` |
 | Runtime | `VoiceHub-native` |
-| Languages | 13 enumerated languages |
+| Languages | `de`, `en`, `es`, `fr`, `hi`, `it`, `ja`, `ko`, `pl`, `pt`, `ru`, `tr`, `zh` |
 | Capabilities | `text-to-speech`, `expressive-speech`, `voice-prompt`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime`, `preencoded-stage-training`, `restricted-pickle-conversion` |
 | Reusable components | `encodec` |
 | Normalized output | `TTSOutput` |
@@ -55,7 +55,7 @@ integration. This page is generated from its registry contract. [Open the `bark`
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>13 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `de`, `en`, `es`, `fr`, `hi`, `it`, `ja`, `ko`, `pl`, `pt`, `ru`, `tr`, `zh`
 

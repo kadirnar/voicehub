@@ -39,7 +39,7 @@ integration. This page is generated from its registry contract. [Open the `asr_s
 | Task | Automatic speech recognition |
 | Architecture | `seamless-m4t-v2-s2t` |
 | Runtime | `VoiceHub-native` |
-| Languages | 98 enumerated languages |
+| Languages | `afr`, `amh`, `arb`, `ary`, `arz`, `asm`, `azj`, `bel`, `ben`, `bos`, `bul`, `cat`, `ceb`, `ces`, `ckb`, `cmn`, `cmn_Hant`, `cym`, `dan`, `deu`, `ell`, `eng`, `est`, `eus`, `fin`, `fra`, `fuv`, `gaz`, `gle`, `glg`, `guj`, `heb`, `hin`, `hrv`, `hun`, `hye`, `ibo`, `ind`, `isl`, `ita`, `jav`, `jpn`, `kan`, `kat`, `kaz`, `khk`, `khm`, `kir`, `kor`, `lao`, `lit`, `lug`, `luo`, `lvs`, `mai`, `mal`, `mar`, `mkd`, `mlt`, `mni`, `mya`, `nld`, `nno`, `nob`, `npi`, `nya`, `ory`, `pan`, `pbt`, `pes`, `pol`, `por`, `ron`, `rus`, `sat`, `slk`, `slv`, `sna`, `snd`, `som`, `spa`, `srp`, `swe`, `swh`, `tam`, `tel`, `tgk`, `tgl`, `tha`, `tur`, `ukr`, `urd`, `uzn`, `vie`, `yor`, `yue`, `zlm`, `zul` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime`, `greedy-decoding`, `full-model-training` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
@@ -47,7 +47,7 @@ integration. This page is generated from its registry contract. [Open the `asr_s
 ### Language support
 
 <details class="vh-language-support" markdown>
-<summary>98 documented languages</summary>
+<summary>Supported language abbreviations</summary>
 
 `afr`, `amh`, `arb`, `ary`, `arz`, `asm`, `azj`, `bel`, `ben`, `bos`, `bul`, `cat`, `ceb`, `ces`, `ckb`, `cmn`, `cmn_Hant`, `cym`, `dan`, `deu`, `ell`, `eng`, `est`, `eus`, `fin`, `fra`, `fuv`, `gaz`, `gle`, `glg`, `guj`, `heb`, `hin`, `hrv`, `hun`, `hye`, `ibo`, `ind`, `isl`, `ita`, `jav`, `jpn`, `kan`, `kat`, `kaz`, `khk`, `khm`, `kir`, `kor`, `lao`, `lit`, `lug`, `luo`, `lvs`, `mai`, `mal`, `mar`, `mkd`, `mlt`, `mni`, `mya`, `nld`, `nno`, `nob`, `npi`, `nya`, `ory`, `pan`, `pbt`, `pes`, `pol`, `por`, `ron`, `rus`, `sat`, `slk`, `slv`, `sna`, `snd`, `som`, `spa`, `srp`, `swe`, `swh`, `tam`, `tel`, `tgk`, `tgl`, `tha`, `tur`, `ukr`, `urd`, `uzn`, `vie`, `yor`, `yue`, `zlm`, `zul`
 

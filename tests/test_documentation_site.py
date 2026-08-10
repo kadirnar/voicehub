@@ -943,6 +943,10 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         index = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
         self.assertEqual(index.count('<div class="vh-model-catalog" markdown>'), 3)
         self.assertEqual(index.count("| Model | Languages | Default checkpoint | Training | Notebook |"), 3)
+        count_only_language_summary = (
+            r"\b(?:(?:supports?|support for)\s+)?\d+\s+"
+            r"(?:(?:enumerated|documented|supported|verified)\s+)?languages?\b")
+        self.assertNotRegex(index, count_only_language_summary)
 
         for spec in list_model_specs(task=None):
             with self.subTest(model_type=spec.model_type):
@@ -951,11 +955,18 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 self.assertIn(f"# {spec.display_name} {{.vh-model-title}}", page)
                 self.assertIn("| Languages |", page)
                 self.assertIn("### Language support", page)
+                self.assertNotRegex(page, count_only_language_summary)
                 if support.kind == "enumerated":
                     self.assertTrue(support.codes)
+                    rendered_codes = ", ".join(f"`{code}`" for code in support.codes)
+                    self.assertIn(f"| Languages | {rendered_codes} |", page)
+                    index_row = next(
+                        line for line in index.splitlines() if f"]({spec.model_type}.md)" in line)
+                    self.assertIn(f"| {rendered_codes} |", index_row)
                     for code in support.codes:
                         self.assertIn(f"`{code}`", page)
                     self.assertIn('<details class="vh-language-support" markdown>', page)
+                    self.assertIn("<summary>Supported language abbreviations</summary>", page)
                 elif support.kind == "not-text-conditioned":
                     self.assertIs(spec.task, SpeechTask.VOICE_ACTIVITY_DETECTION)
                     self.assertIn("Not text-language conditioned", page)
