@@ -39,14 +39,19 @@ integration. This page is generated from its registry contract. [Open the `asr_v
 | Task | Automatic speech recognition |
 | Architecture | `vibevoice-asr` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en`, `zh`, `es`, `pt`, `de`, `ja`, `ko`, `fr`, `ru`, `id`, `sv`, `it`, `he`, `nl`, `pl`, `no`, `tr`, `th`, `ar`, `hu`, `ca`, `cs`, `da`, `fa`, `af`, `hi`, `fi`, `et`, `aa`, `el`, `ro`, `vi`, `bg`, `is`, `sl`, `sk`, `lt`, `sw`, `uk`, `kl`, `lv`, `hr`, `ne`, `sr`, `tl`, `yi`, `ms`, `ur`, `mn`, `hy`, `jv` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `speaker-attribution`, `timestamps`, `hotwords`, `long-form`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`, `zh`, `es`, `pt`, `de`, `ja`, `ko`, `fr`, `ru`, `id`, `sv`, `it`, `he`, `nl`, `pl`, `no`, `tr`, `th`, `ar`, `hu`, `ca`, `cs`, `da`, `fa`, `af`, `hi`, `fi`, `et`, `aa`, `el`, `ro`, `vi`, `bg`, `is`, `sl`, `sk`, `lt`, `sw`, `uk`, `kl`, `lv`, `hr`, `ne`, `sr`, `tl`, `yi`, `ms`, `ur`, `mn`, `hy`, `jv`
+
+</details>
 
 ## Paper and GitHub
 

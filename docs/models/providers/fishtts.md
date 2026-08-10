@@ -47,14 +47,19 @@ integration. This page is generated from its registry contract. [Open the `fisht
 | Task | Text to speech |
 | Architecture | `fish-s2` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `zh`, `en`, `ja`, `ko`, `es`, `pt`, `ar`, `ru`, `fr`, `de`, `sv`, `it`, `tr`, `no`, `nl`, `cy`, `eu`, `ca`, `da`, `gl`, `ta`, `hu`, `fi`, `pl`, `et`, `hi`, `la`, `ur`, `th`, `vi`, `jw`, `bn`, `yo`, `sl`, `cs`, `sw`, `nn`, `he`, `ms`, `uk`, `id`, `kk`, `bg`, `lv`, `my`, `tl`, `sk`, `ne`, `fa`, `af`, `el`, `bo`, `hr`, `ro`, `sn`, `mi`, `yi`, `am`, `be`, `km`, `is`, `az`, `sd`, `br`, `sq`, `ps`, `mn`, `ht`, `ml`, `sr`, `sa`, `te`, `ka`, `bs`, `pa`, `lt`, `kn`, `si`, `hy`, `mr`, `as`, `gu`, `fo` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `preprocessed-training`, `noncommercial` |
 | Reusable components | `dac` |
 | Normalized output | `TTSOutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`zh`, `en`, `ja`, `ko`, `es`, `pt`, `ar`, `ru`, `fr`, `de`, `sv`, `it`, `tr`, `no`, `nl`, `cy`, `eu`, `ca`, `da`, `gl`, `ta`, `hu`, `fi`, `pl`, `et`, `hi`, `la`, `ur`, `th`, `vi`, `jw`, `bn`, `yo`, `sl`, `cs`, `sw`, `nn`, `he`, `ms`, `uk`, `id`, `kk`, `bg`, `lv`, `my`, `tl`, `sk`, `ne`, `fa`, `af`, `el`, `bo`, `hr`, `ro`, `sn`, `mi`, `yi`, `am`, `be`, `km`, `is`, `az`, `sd`, `br`, `sq`, `ps`, `mn`, `ht`, `ml`, `sr`, `sa`, `te`, `ka`, `bs`, `pa`, `lt`, `kn`, `si`, `hy`, `mr`, `as`, `gu`, `fo`
+
+</details>
 
 ## Paper and GitHub
 

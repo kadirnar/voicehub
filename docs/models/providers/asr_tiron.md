@@ -39,14 +39,19 @@ integration. This page is generated from its registry contract. [Open the `asr_t
 | Task | Automatic speech recognition |
 | Architecture | `whisper` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en`, `zh` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `speaker-attribution`, `timestamps`, `safetensors`, `fine-tuning`, `constrained-decoding`, `voicehub-native` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`, `zh`
+
+</details>
 
 ## Paper and GitHub
 

@@ -65,7 +65,7 @@ integration. This page is generated from its registry contract. [Open the `cosyv
 
 `zh`, `en`, `ja`, `ko`, `de`, `es`, `fr`, `it`, `ru`
 
-The registered family also documents 18 Chinese dialect variants.
+The card additionally names Guangdong, Minnan, Sichuan, Dongbei, Shan3xi, Shan1xi, Shanghai, Tianjin, Shandong, Ningxia, and Gansu Chinese dialects or accents.
 
 </details>
 

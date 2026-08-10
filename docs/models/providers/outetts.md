@@ -47,14 +47,19 @@ integration. This page is generated from its registry contract. [Open the `outet
 | Task | Text to speech |
 | Architecture | `outetts` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en`, `ar`, `zh`, `nl`, `fr`, `de`, `it`, `ja`, `ko`, `lt`, `ru`, `es`, `pt`, `be`, `bn`, `ka`, `hu`, `lv`, `fa`, `pl`, `sw`, `ta`, `uk` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `preprocessed-training`, `speaker-profile-training` |
 | Reusable components | `dac` |
 | Normalized output | `TTSOutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`, `ar`, `zh`, `nl`, `fr`, `de`, `it`, `ja`, `ko`, `lt`, `ru`, `es`, `pt`, `be`, `bn`, `ka`, `hu`, `lv`, `fa`, `pl`, `sw`, `ta`, `uk`
+
+</details>
 
 ## Paper and GitHub
 

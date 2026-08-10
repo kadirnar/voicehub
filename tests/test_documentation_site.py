@@ -32,6 +32,7 @@ MODEL_NOTEBOOK_GENERATOR_PATH = REPOSITORY_ROOT / "scripts" / "generate_model_no
 MODEL_PAGE_DIR = DOCS_ROOT / "models" / "providers"
 MODEL_PAGE_INDEX_PATH = MODEL_PAGE_DIR / "index.md"
 MODEL_PAGE_GENERATOR_PATH = REPOSITORY_ROOT / "scripts" / "generate_model_pages.py"
+TTS_CAPABILITIES_PATH = DOCS_ROOT / "models" / "tts-capabilities.md"
 OPTIMIZATION_PAGE_DIR = DOCS_ROOT / "optimizations"
 OPTIMIZATION_PAGE_INDEX_PATH = OPTIMIZATION_PAGE_DIR / "index.md"
 OPTIMIZATION_PAGE_GENERATOR_PATH = (REPOSITORY_ROOT / "scripts" / "generate_optimization_pages.py")
@@ -944,9 +945,17 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertEqual(index.count('<div class="vh-model-catalog" markdown>'), 3)
         self.assertEqual(index.count("| Model | Languages | Default checkpoint | Training | Notebook |"), 3)
         count_only_language_summary = (
-            r"\b(?:(?:supports?|support for)\s+)?\d+\s+"
-            r"(?:(?:enumerated|documented|supported|verified)\s+)?languages?\b")
+            r"(?:\b(?:(?:supports?|support for)\s+)?\d+\s+"
+            r"(?:(?:enumerated|documented|supported|verified)\s+)?languages?\b|"
+            r"\b\d+\s+language (?:codes?|locales?|prompts?)\b)")
         self.assertNotRegex(index, count_only_language_summary)
+        self.assertNotIn("Checkpoint-defined; not exhaustively enumerated", index)
+
+        for path in (DOCS_ROOT / "models").glob("*.md"):
+            source = path.read_text(encoding="utf-8")
+            with self.subTest(model_document=path.name):
+                self.assertNotRegex(source, count_only_language_summary)
+                self.assertNotIn("checkpoint-defined", source.lower())
 
         for spec in list_model_specs(task=None):
             with self.subTest(model_type=spec.model_type):
@@ -956,7 +965,14 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 self.assertIn("| Languages |", page)
                 self.assertIn("### Language support", page)
                 self.assertNotRegex(page, count_only_language_summary)
-                if support.kind == "enumerated":
+                self.assertNotIn("Checkpoint-defined; not exhaustively enumerated", page)
+                if spec.task is SpeechTask.VOICE_ACTIVITY_DETECTION:
+                    self.assertEqual(support.kind, "not-text-conditioned")
+                    self.assertFalse(support.codes)
+                    self.assertIn("Not text-language conditioned", page)
+                    self.assertIn("does not select a spoken language", page)
+                else:
+                    self.assertEqual(support.kind, "enumerated")
                     self.assertTrue(support.codes)
                     rendered_codes = ", ".join(f"`{code}`" for code in support.codes)
                     self.assertIn(f"| Languages | {rendered_codes} |", page)
@@ -967,14 +983,36 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                         self.assertIn(f"`{code}`", page)
                     self.assertIn('<details class="vh-language-support" markdown>', page)
                     self.assertIn("<summary>Supported language abbreviations</summary>", page)
-                elif support.kind == "not-text-conditioned":
-                    self.assertIs(spec.task, SpeechTask.VOICE_ACTIVITY_DETECTION)
-                    self.assertIn("Not text-language conditioned", page)
-                    self.assertIn("does not select a spoken language", page)
-                else:
-                    self.assertFalse(support.codes)
-                    self.assertIn("Checkpoint-defined; not exhaustively enumerated", page)
-                    self.assertIn("does not claim one exhaustive language list", page)
+
+    def test_tts_capability_matrix_lists_every_language_abbreviation(self):
+        from voicehub import SpeechTask, list_model_specs
+        from voicehub.models.language_support import model_language_support
+
+        source = TTS_CAPABILITIES_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("checkpoint-defined", source.lower())
+        for spec in list_model_specs(task=SpeechTask.TEXT_TO_SPEECH):
+            with self.subTest(model_type=spec.model_type):
+                support = model_language_support(spec)
+                rendered_codes = ", ".join(support.codes)
+                row = next(
+                    line for line in source.splitlines() if line.startswith(f"| `{spec.model_type}` |"))
+                self.assertIn(f"| {rendered_codes} |", row)
+
+    def test_omnivoice_language_snapshot_matches_vendored_mapping(self):
+        from voicehub.architectures.omnivoice.languages import OMNIVOICE_LANGUAGE_CODES
+
+        source_path = (
+            REPOSITORY_ROOT / "voicehub" / "models" / "omnivoice" / "source" / "omnivoice" / "utils" /
+            "lang_map.py")
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        assignment = next(
+            node for node in tree.body if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "LANG_NAME_TO_ID" for target in node.targets))
+        language_name_to_id = ast.literal_eval(assignment.value)
+        self.assertEqual(
+            OMNIVOICE_LANGUAGE_CODES,
+            tuple(sorted(set(language_name_to_id.values()))),
+        )
 
     def test_model_and_optimization_highlights_use_semantic_routes(self):
         stylesheet = STYLESHEET_PATH.read_text(encoding="utf-8")

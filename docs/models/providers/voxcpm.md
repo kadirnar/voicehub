@@ -47,14 +47,19 @@ integration. This page is generated from its registry contract. [Open the `voxcp
 | Task | Text to speech |
 | Architecture | `voxcpm2` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `zh`, `en`, `ar`, `my`, `da`, `nl`, `fi`, `fr`, `de`, `el`, `he`, `hi`, `id`, `it`, `ja`, `km`, `ko`, `lo`, `ms`, `no`, `pl`, `pt`, `ru`, `es`, `sw`, `sv`, `tl`, `th`, `tr`, `vi` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `voice-design`, `audio-continuation`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`zh`, `en`, `ar`, `my`, `da`, `nl`, `fi`, `fr`, `de`, `el`, `he`, `hi`, `id`, `it`, `ja`, `km`, `ko`, `lo`, `ms`, `no`, `pl`, `pt`, `ru`, `es`, `sw`, `sv`, `tl`, `th`, `tr`, `vi`
+
+</details>
 
 ## Paper and GitHub
 

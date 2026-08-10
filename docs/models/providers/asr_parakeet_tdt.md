@@ -39,14 +39,19 @@ integration. This page is generated from its registry contract. [Open the `asr_p
 | Task | Automatic speech recognition |
 | Architecture | `parakeet-tdt` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en`, `es`, `fr`, `de`, `bg`, `hr`, `cs`, `da`, `nl`, `et`, `fi`, `el`, `hu`, `it`, `lv`, `lt`, `mt`, `pl`, `pt`, `ro`, `sk`, `sl`, `sv`, `ru`, `uk` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `timestamps`, `long-form`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`, `es`, `fr`, `de`, `bg`, `hr`, `cs`, `da`, `nl`, `et`, `fi`, `el`, `hu`, `it`, `lv`, `lt`, `mt`, `pl`, `pt`, `ro`, `sk`, `sl`, `sv`, `ru`, `uk`
+
+</details>
 
 ## Paper and GitHub
 

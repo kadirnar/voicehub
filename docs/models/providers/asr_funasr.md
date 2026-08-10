@@ -39,14 +39,19 @@ integration. This page is generated from its registry contract. [Open the `asr_f
 | Task | Automatic speech recognition |
 | Architecture | `sensevoice-small` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `zh`, `en`, `ja`, `ko`, `yue` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `timestamps`, `language-identification`, `emotion-recognition`, `audio-events`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`zh`, `en`, `ja`, `ko`, `yue`
+
+</details>
 
 ## Paper and GitHub
 

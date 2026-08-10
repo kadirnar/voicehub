@@ -47,14 +47,19 @@ integration. This page is generated from its registry contract. [Open the `mosst
 | Task | Text to speech |
 | Architecture | `moss-tts` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `zh`, `yue`, `en`, `ar`, `cs`, `da`, `de`, `nl`, `es`, `fr`, `fi`, `el`, `he`, `hi`, `hu`, `ja`, `it`, `ko`, `mk`, `ms`, `ru`, `fa`, `pl`, `pt`, `sv`, `ro`, `sw`, `tl`, `th`, `tr`, `vi` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `delay-variant`, `local-variant`, `local-v1.5-variant`, `realtime-variant`, `raw-audio-fine-tuning`, `preencoded-rvq-fine-tuning`, `native-codec-v1`, `native-codec-v2`, `buffered-generation` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`zh`, `yue`, `en`, `ar`, `cs`, `da`, `de`, `nl`, `es`, `fr`, `fi`, `el`, `he`, `hi`, `hu`, `ja`, `it`, `ko`, `mk`, `ms`, `ru`, `fa`, `pl`, `pt`, `sv`, `ro`, `sw`, `tl`, `th`, `tr`, `vi`
+
+</details>
 
 ## Paper and GitHub
 

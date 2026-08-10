@@ -39,14 +39,21 @@ integration. This page is generated from its registry contract. [Open the `asr_g
 | Task | Automatic speech recognition |
 | Architecture | `granite-speech` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en`, `fr`, `de`, `es`, `pt`, `ja` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `hotwords`, `translation`, `safetensors`, `fine-tuning`, `lora`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`, `fr`, `de`, `es`, `pt`, `ja`
+
+These are ASR input languages; Italian and Mandarin are documented as translation targets only.
+
+</details>
 
 ## Paper and GitHub
 

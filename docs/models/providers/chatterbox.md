@@ -47,7 +47,7 @@ integration. This page is generated from its registry contract. [Open the `chatt
 | Task | Text to speech |
 | Architecture | `chatterbox` |
 | Runtime | `VoiceHub-native` |
-| Languages | `en` |
+| Languages | `ar`, `da`, `de`, `el`, `en`, `es`, `fi`, `fr`, `he`, `hi`, `it`, `ja`, `ko`, `ms`, `nl`, `no`, `pl`, `pt`, `ru`, `sv`, `sw`, `tr`, `zh` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `raw-audio-fine-tuning` |
 | Reusable components | `conformer` |
 | Normalized output | `TTSOutput` |
@@ -57,7 +57,7 @@ integration. This page is generated from its registry contract. [Open the `chatt
 <details class="vh-language-support" markdown>
 <summary>Supported language abbreviations</summary>
 
-`en`
+`ar`, `da`, `de`, `el`, `en`, `es`, `fi`, `fr`, `he`, `hi`, `it`, `ja`, `ko`, `ms`, `nl`, `no`, `pl`, `pt`, `ru`, `sv`, `sw`, `tr`, `zh`
 
 </details>
 

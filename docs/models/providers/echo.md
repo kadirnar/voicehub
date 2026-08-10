@@ -47,14 +47,21 @@ integration. This page is generated from its registry contract. [Open the `echo`
 | Task | Text to speech |
 | Architecture | `echo-dit` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `fine-tuning`, `flow-matching`, `safetensors`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`
+
+The release card and reference implementation demonstrate English prompts and do not claim broader language coverage.
+
+</details>
 
 ## Paper and GitHub
 

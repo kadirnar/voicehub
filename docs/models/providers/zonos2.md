@@ -47,14 +47,19 @@ integration. This page is generated from its registry contract. [Open the `zonos
 | Task | Text to speech |
 | Architecture | `zonos2` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en`, `zh`, `ja`, `ko`, `ru`, `it`, `pt`, `fr`, `es`, `vi`, `de`, `he`, `nl`, `sv`, `hi`, `ta`, `te`, `th`, `no`, `bn`, `tl`, `ar`, `da`, `id`, `pl`, `uk`, `ro`, `fi`, `hu`, `lt`, `et`, `sk`, `hr`, `lv` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime` |
 | Reusable components | `dac` |
 | Normalized output | `TTSOutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`, `zh`, `ja`, `ko`, `ru`, `it`, `pt`, `fr`, `es`, `vi`, `de`, `he`, `nl`, `sv`, `hi`, `ta`, `te`, `th`, `no`, `bn`, `tl`, `ar`, `da`, `id`, `pl`, `uk`, `ro`, `fi`, `hu`, `lt`, `et`, `sk`, `hr`, `lv`
+
+</details>
 
 ## Paper and GitHub
 

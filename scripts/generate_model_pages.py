@@ -68,9 +68,7 @@ def _language_summary(spec) -> str:
     support = model_language_support(spec)
     if support.kind == "enumerated":
         return _code_list(support.codes)
-    if support.kind == "not-text-conditioned":
-        return "Not text-language conditioned"
-    return "Checkpoint-defined; not exhaustively enumerated"
+    return "Not text-language conditioned"
 
 
 def _language_details(spec) -> str:
@@ -84,7 +82,7 @@ def _language_details(spec) -> str:
 {codes}{note}
 
 </details>'''
-    return support.note or "Language support is not declared."
+    return support.note or "The model is not text-language conditioned."
 
 
 def _checkpoint(spec) -> tuple[str, str]:
