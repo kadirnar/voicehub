@@ -2110,8 +2110,10 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn("initializePrimaryNavigationControl();", script)
 
         for fragment in (
-                "> :is(label, button).md-nav__link--active {",
-                "> :is(label, button).md-nav__link--active\n  .md-ellipsis {",
+                ".md-nav--primary .md-nav__item--active\n"
+                "  > :is(label, button).md-nav__link--active {",
+                ".md-nav--primary .md-nav__item--active\n"
+                "  > :is(label, button).md-nav__link--active\n  .md-ellipsis {",
                 "+ a.md-nav__link--active {",
                 "background: var(--vh-active-bg);",
                 "color: var(--vh-active-text);",

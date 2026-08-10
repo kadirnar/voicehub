@@ -919,20 +919,20 @@ body.vh-optimization-page .md-typeset h1 {
 /* The active page owns a TOC toggle and a same-name fallback link. Keep one
    visible row while preserving the expandable page outline. */
 
-.md-sidebar--primary .md-nav__item--active
+.md-sidebar--primary .md-nav--primary .md-nav__item--active
   > :is(label, button).md-nav__link--active {
   background: var(--vh-active-bg);
   color: var(--vh-active-text);
   font-weight: 700;
 }
 
-.md-sidebar--primary .md-nav__item--active
+.md-sidebar--primary .md-nav--primary .md-nav__item--active
   > :is(label, button).md-nav__link--active
   .md-ellipsis {
   color: inherit;
 }
 
-.md-sidebar--primary .md-nav__item--active
+.md-sidebar--primary .md-nav--primary .md-nav__item--active
   > :is(label, button).md-nav__link--active
   + a.md-nav__link--active {
   display: none;
