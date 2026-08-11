@@ -1,6 +1,4 @@
 import ast
-import importlib
-import inspect
 import io
 import json
 import os
@@ -70,6 +68,79 @@ MOBILE_DRAWER_SCRIPT_PATH = DOCS_ROOT / "javascripts" / "mobile-drawer.js"
 PAGE_ACTIONS_OVERRIDE_PATH = REPOSITORY_ROOT / "overrides" / "partials" / "actions.html"
 PUBLIC_SITE_URL = "https://kadirnar.github.io/voicehub/"
 LOCALIZED_HOME_LOCALES = ("ar", "de", "es", "fr", "ja", "ko", "pt", "ru", "tr", "zh")
+
+
+def _python_module_source(module_name):
+    module_path = REPOSITORY_ROOT.joinpath(*module_name.split("."))
+    source_path = module_path.with_suffix(".py")
+    if source_path.is_file():
+        return source_path, False
+    source_path = module_path / "__init__.py"
+    if source_path.is_file():
+        return source_path, True
+    raise AssertionError(f"Cannot resolve source for {module_name!r}.")
+
+
+def _relative_import_module(module_name, is_package, node):
+    if node.level == 0:
+        return node.module
+    package_parts = module_name.split(".") if is_package else module_name.split(".")[:-1]
+    package_parts = package_parts[:len(package_parts) - node.level + 1]
+    if node.module:
+        package_parts.extend(node.module.split("."))
+    return ".".join(package_parts)
+
+
+def _static_method_signature(module_name, class_name, method_name, seen=frozenset()):
+    key = (module_name, class_name, method_name)
+    if key in seen:
+        raise AssertionError(f"Cyclic static class resolution for {key!r}.")
+    seen = seen | {key}
+    source_path, is_package = _python_module_source(module_name)
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+    imports = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.module == "__future__":
+            continue
+        imported_module = _relative_import_module(module_name, is_package, node)
+        for alias in node.names:
+            imports[alias.asname or alias.name] = (imported_module, alias.name)
+
+    class_node = classes.get(class_name)
+    if class_node is None:
+        if class_name in imports:
+            return _static_method_signature(*imports[class_name], method_name, seen)
+        if is_package:
+            for candidate in sorted(source_path.parent.rglob("*.py")):
+                candidate_tree = ast.parse(candidate.read_text(encoding="utf-8"), filename=str(candidate))
+                if any(isinstance(node, ast.ClassDef) and node.name == class_name
+                       for node in candidate_tree.body):
+                    relative = candidate.relative_to(REPOSITORY_ROOT).with_suffix("")
+                    candidate_module = ".".join(relative.parts)
+                    if candidate.name == "__init__.py":
+                        candidate_module = candidate_module.removesuffix(".__init__")
+                    return _static_method_signature(candidate_module, class_name, method_name, seen)
+        raise AssertionError(f"Cannot resolve {class_name!r} from {source_path}.")
+
+    for node in class_node.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == method_name:
+            parameters = {
+                argument.arg
+                for argument in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+            } - {"self", "cls"}
+            return parameters, node.args.kwarg is not None, source_path
+
+    for base in class_node.bases:
+        if not isinstance(base, ast.Name):
+            continue
+        if base.id in classes:
+            return _static_method_signature(module_name, base.id, method_name, seen)
+        if base.id in imports:
+            return _static_method_signature(*imports[base.id], method_name, seen)
+    raise AssertionError(f"Cannot resolve {class_name}.{method_name} from {source_path}.")
+
+
 TOP_LEVEL_NAVIGATION = (
     "Get started",
     "Models",
@@ -500,17 +571,17 @@ class DocumentationSiteTests(unittest.TestCase):
         self.assertEqual(set(profiles), {spec.model_type for spec in specs})
         for spec in specs:
             with self.subTest(model_type=spec.model_type):
-                model_class = getattr(importlib.import_module(spec.module), spec.class_name)
-                signature = inspect.signature(getattr(model_class, method_names[spec.task.value]))
-                accepts_kwargs = any(
-                    parameter.kind is inspect.Parameter.VAR_KEYWORD
-                    for parameter in signature.parameters.values())
+                parameters, accepts_kwargs, source_path = _static_method_signature(
+                    spec.module,
+                    spec.class_name,
+                    method_names[spec.task.value],
+                )
                 for argument in profiles[spec.model_type].arguments:
                     name, separator, _ = argument.partition("=")
                     self.assertEqual(separator, "=")
                     self.assertTrue(
-                        accepts_kwargs or name in signature.parameters,
-                        f"{name!r} is not accepted by {spec.class_name}{signature}",
+                        accepts_kwargs or name in parameters,
+                        f"{name!r} is not accepted by {spec.class_name} in {source_path}",
                     )
 
     def test_speecht5_model_detail_matches_transformers_contract(self):
