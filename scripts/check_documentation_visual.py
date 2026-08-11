@@ -1920,6 +1920,9 @@ def _validate_page_copy(page: Page, case: str, key: str, *, wait_for_idle: bool 
     page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=origin)
     page.evaluate("navigator.clipboard.writeText('voicehub-page-copy-sentinel')")
     button.scroll_into_view_if_needed()
+    # Playwright's select/click helpers leave Chromium in pointer modality.
+    # Restore keyboard modality before asserting the keyboard-only focus ring.
+    page.keyboard.press("Tab")
     button.focus()
     focused = button.evaluate(
         """element => {

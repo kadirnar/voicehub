@@ -847,6 +847,34 @@ def render_index(specs) -> str:
     architecture_options = _render_catalog_options(
         (value, value, count)
         for value, count in sorted(architecture_counts.items(), key=lambda item: item[0].casefold()))
+    language_select = _render_catalog_select(
+        "language",
+        "Language",
+        '<option value="">Any language</option>\n'
+        '<option value="not-text-conditioned">Language-neutral (VAD)</option>',
+    )
+    task_select = _render_catalog_select(
+        "task", "Task", '<option value="">Any task</option>\n' + task_options)
+    training_select = _render_catalog_select(
+        "training",
+        "Training",
+        '<option value="">Any training path</option>\n' + training_options,
+    )
+    checkpoint_select = _render_catalog_select(
+        "checkpoint",
+        "Checkpoint",
+        '<option value="">Any checkpoint source</option>\n' + checkpoint_options,
+    )
+    license_select = _render_catalog_select(
+        "license",
+        "License",
+        '<option value="">Any license status</option>\n' + license_options,
+    )
+    architecture_select = _render_catalog_select(
+        "architecture",
+        "Architecture",
+        '<option value="">Any architecture</option>\n' + architecture_options,
+    )
     return f'''---
 description: Search and filter every registered VoiceHub TTS, ASR, and VAD model.
 ---
@@ -883,12 +911,12 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
     </div>
 
     <div class="vh-model-filters__grid">
-      {_render_catalog_select('language', 'Language', '<option value="">Any language</option>\n<option value="not-text-conditioned">Language-neutral (VAD)</option>')}
-      {_render_catalog_select('task', 'Task', '<option value="">Any task</option>\n' + task_options)}
-      {_render_catalog_select('training', 'Training', '<option value="">Any training path</option>\n' + training_options)}
-      {_render_catalog_select('checkpoint', 'Checkpoint', '<option value="">Any checkpoint source</option>\n' + checkpoint_options)}
-      {_render_catalog_select('license', 'License', '<option value="">Any license status</option>\n' + license_options)}
-      {_render_catalog_select('architecture', 'Architecture', '<option value="">Any architecture</option>\n' + architecture_options)}
+      {language_select}
+      {task_select}
+      {training_select}
+      {checkpoint_select}
+      {license_select}
+      {architecture_select}
     </div>
 
     <details class="vh-model-filters__advanced">

@@ -1047,7 +1047,7 @@ body.vh-optimization-page .md-typeset h1 {
 .md-typeset .vh-model-filter-chip > span small {
   color: inherit;
   font-size: 0.52rem;
-  opacity: 0.72;
+  opacity: 1;
 }
 
 .md-typeset .vh-model-filter-chip input:checked + span {
