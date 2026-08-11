@@ -6,14 +6,24 @@ description: Public API, checkpoint, training, and optimization guide for the as
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a supported recording at `speech.wav` and inspect the transcript.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Uses Granite Speech's instruction prompt with deterministic generation.
+
+**Inputs and controls:** Medical or regulated recordings still require domain review; model output is not a verified record.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForSpeechRecognition
+
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
 
 model = AutoModelForSpeechRecognition.from_pretrained(
     'ibm-granite/granite-speech-4.1-2b',
@@ -21,10 +31,14 @@ model = AutoModelForSpeechRecognition.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-output = model.transcribe("speech.wav")
+output = model.transcribe(
+    AUDIO_FILE,
+    prompt="Transcribe the recording faithfully in English.",
+    do_sample=False,
+)
 print(output.text)
 for segment in output.segments:
-    print(segment.start, segment.end, segment.text)
+    print(segment.start, segment.end, segment.text, segment.confidence)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -39,14 +53,21 @@ integration. This page is generated from its registry contract. [Open the `asr_g
 | Task | Automatic speech recognition |
 | Architecture | `granite-speech` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en`, `fr`, `de`, `es`, `pt`, `ja` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `hotwords`, `translation`, `safetensors`, `fine-tuning`, `lora`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`, `fr`, `de`, `es`, `pt`, `ja`
+
+These are ASR input languages; Italian and Mandarin are documented as translation targets only.
+
+</details>
 
 ## Paper and GitHub
 
@@ -133,6 +154,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`ibm-granite/granite-speech-4.1-2b`](https://huggingface.co/ibm-granite/granite-speech-4.1-2b) |
+| Hugging Face ID | [`ibm-granite/granite-speech-4.1-2b`](https://huggingface.co/ibm-granite/granite-speech-4.1-2b)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

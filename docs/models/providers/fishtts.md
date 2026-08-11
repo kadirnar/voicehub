@@ -6,16 +6,25 @@ description: Public API, checkpoint, training, and optimization guide for the fi
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Set the text and generation options, then inspect the returned audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Pairs Fish S2 reference audio and text while keeping semantic sampling bounded.
+
+**Inputs and controls:** Use either reference audio or precomputed codes, never both; each requires a matching transcript.
 
 ```python
 from pathlib import Path
 
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+
+REFERENCE_AUDIO = Path("reference.wav")
+REFERENCE_TEXT = "The reference transcript must exactly match the authorized audio."
+if not REFERENCE_AUDIO.is_file():
+    raise FileNotFoundError(REFERENCE_AUDIO)
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'fishaudio/s2-pro',
@@ -23,16 +32,19 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    speaker_audio_path=str(REFERENCE_AUDIO),
+    reference_text=REFERENCE_TEXT,
+    top_p=0.8,
+    temperature=0.8,
+    iterative_prompt=True,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -47,14 +59,19 @@ integration. This page is generated from its registry contract. [Open the `fisht
 | Task | Text to speech |
 | Architecture | `fish-s2` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `zh`, `en`, `ja`, `ko`, `es`, `pt`, `ar`, `ru`, `fr`, `de`, `sv`, `it`, `tr`, `no`, `nl`, `cy`, `eu`, `ca`, `da`, `gl`, `ta`, `hu`, `fi`, `pl`, `et`, `hi`, `la`, `ur`, `th`, `vi`, `jw`, `bn`, `yo`, `sl`, `cs`, `sw`, `nn`, `he`, `ms`, `uk`, `id`, `kk`, `bg`, `lv`, `my`, `tl`, `sk`, `ne`, `fa`, `af`, `el`, `bo`, `hr`, `ro`, `sn`, `mi`, `yi`, `am`, `be`, `km`, `is`, `az`, `sd`, `br`, `sq`, `ps`, `mn`, `ht`, `ml`, `sr`, `sa`, `te`, `ka`, `bs`, `pa`, `lt`, `kn`, `si`, `hy`, `mr`, `as`, `gu`, `fo` |
 | Capabilities | `text-to-speech`, `voice-cloning`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `preprocessed-training`, `noncommercial` |
 | Reusable components | `dac` |
 | Normalized output | `TTSOutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`zh`, `en`, `ja`, `ko`, `es`, `pt`, `ar`, `ru`, `fr`, `de`, `sv`, `it`, `tr`, `no`, `nl`, `cy`, `eu`, `ca`, `da`, `gl`, `ta`, `hu`, `fi`, `pl`, `et`, `hi`, `la`, `ur`, `th`, `vi`, `jw`, `bn`, `yo`, `sl`, `cs`, `sw`, `nn`, `he`, `ms`, `uk`, `id`, `kk`, `bg`, `lv`, `my`, `tl`, `sk`, `ne`, `fa`, `af`, `el`, `bo`, `hr`, `ro`, `sn`, `mi`, `yi`, `am`, `be`, `km`, `is`, `az`, `sd`, `br`, `sq`, `ps`, `mn`, `ht`, `ml`, `sr`, `sa`, `te`, `ka`, `bs`, `pa`, `lt`, `kn`, `si`, `hy`, `mr`, `as`, `gu`, `fo`
+
+</details>
 
 ## Paper and GitHub
 
@@ -140,6 +157,7 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`fishaudio/s2-pro`](https://huggingface.co/fishaudio/s2-pro) |
+| Hugging Face ID | [`fishaudio/s2-pro`](https://huggingface.co/fishaudio/s2-pro)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

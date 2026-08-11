@@ -1618,7 +1618,7 @@ _AUDIO_INPUT_MODEL_SPECS = (
         "asr_funasr",
         "voicehub.models.asr_native.funasr",
         "FunASRForSpeechRecognition",
-        "iic/SenseVoiceSmall",
+        "FunAudioLLM/SenseVoiceSmall",
         None,
         (
             "multilingual",

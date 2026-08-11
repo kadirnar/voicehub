@@ -410,11 +410,20 @@ or hardware-limited record to the provider page and evidence inventory.
 ## 8. Generate the model page
 
 Do not maintain a second hand-written catalog. After the registry, training,
-license, and capability metadata are complete, generate the provider page and
-its `mkdocs.yml` navigation entry:
+license, and capability metadata are complete, add the model's explicit entry
+to `scripts/model_documentation.py`. Record either its verified Hugging Face
+repository ID or the exact reason no ID applies. The inference profile must use
+the VoiceHub public wrapper, include model-specific required inputs and
+controls, and contain no package-install command or copied upstream snippet.
+Generation fails when either record is missing.
+
+Then generate the provider page, focused Hub notebook when applicable, and the
+generated navigation entry in `mkdocs.yml`:
 
 ```bash
+python scripts/generate_model_notebooks.py
 python scripts/generate_model_pages.py
+python scripts/generate_model_notebooks.py --check
 python scripts/generate_model_pages.py --check
 ```
 
@@ -432,7 +441,7 @@ of duplicating them across model pages.
 | Provenance and license | Immutable source/checkpoint revisions, authoritative license metadata, `SOURCE.json`, and bundled legal text |
 | Training | A truthful `ModelTrainingSpec`, dataset/input boundary, failure behavior, and at least one CPU-safe step when supported |
 | Optimization | Registry-wide capability coverage plus apply, validate, manifest, restore, and unsupported-hardware tests |
-| Documentation | Generated provider page, generated navigation entry, limitations, checkpoint status, provenance, and license |
+| Documentation | Explicit HF-ID status and model-specific VoiceHub inference profile; generated provider page, notebook when applicable, navigation entry, limitations, checkpoint status, provenance, and license |
 | Real checkpoint | Reproducible dated evidence, or an explicit unverified or hardware-limited record |
 
 Run:

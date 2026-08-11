@@ -6,14 +6,24 @@ description: Public API, checkpoint, training, and optimization guide for the as
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a supported recording at `speech.wav` and inspect the transcript.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Uses Nemotron's cache-aware native decoder and requests word timestamps.
+
+**Inputs and controls:** Chunk geometry is owned by the checkpoint runtime; common chunk and stride overrides intentionally fail closed.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForSpeechRecognition
+
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
 
 model = AutoModelForSpeechRecognition.from_pretrained(
     'nvidia/nemotron-3.5-asr-streaming-0.6b',
@@ -21,10 +31,13 @@ model = AutoModelForSpeechRecognition.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-output = model.transcribe("speech.wav")
+output = model.transcribe(
+    AUDIO_FILE,
+    return_timestamps="word",
+)
 print(output.text)
 for segment in output.segments:
-    print(segment.start, segment.end, segment.text)
+    print(segment.start, segment.end, segment.text, segment.confidence)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -39,14 +52,21 @@ integration. This page is generated from its registry contract. [Open the `asr_n
 | Task | Automatic speech recognition |
 | Architecture | `nemotron-3.5-rnnt` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en-US`, `en-GB`, `es-US`, `es-ES`, `fr-FR`, `fr-CA`, `it-IT`, `pt-BR`, `pt-PT`, `nl-NL`, `de-DE`, `tr-TR`, `ru-RU`, `ar-AR`, `hi-IN`, `ja-JP`, `ko-KR`, `vi-VN`, `uk-UA`, `pl-PL`, `sv-SE`, `cs-CZ`, `nb-NO`, `da-DK`, `bg-BG`, `fi-FI`, `hr-HR`, `sk-SK`, `zh-CN`, `hu-HU`, `ro-RO`, `et-EE`, `el-GR`, `lt-LT`, `lv-LV`, `mt-MT`, `sl-SI`, `he-IL`, `th-TH`, `nn-NO` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `language-identification`, `timestamps`, `streaming-architecture`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en-US`, `en-GB`, `es-US`, `es-ES`, `fr-FR`, `fr-CA`, `it-IT`, `pt-BR`, `pt-PT`, `nl-NL`, `de-DE`, `tr-TR`, `ru-RU`, `ar-AR`, `hi-IN`, `ja-JP`, `ko-KR`, `vi-VN`, `uk-UA`, `pl-PL`, `sv-SE`, `cs-CZ`, `nb-NO`, `da-DK`, `bg-BG`, `fi-FI`, `hr-HR`, `sk-SK`, `zh-CN`, `hu-HU`, `ro-RO`, `et-EE`, `el-GR`, `lt-LT`, `lv-LV`, `mt-MT`, `sl-SI`, `he-IL`, `th-TH`, `nn-NO`
+
+The `el-GR`, `lt-LT`, `lv-LV`, `mt-MT`, `sl-SI`, `he-IL`, `th-TH`, and `nn-NO` locales are adaptation-ready and require in-domain fine-tuning; the other listed locales are transcription-ready or broad-coverage.
+
+</details>
 
 ## Paper and GitHub
 
@@ -133,6 +153,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`nvidia/nemotron-3.5-asr-streaming-0.6b`](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b) |
+| Hugging Face ID | [`nvidia/nemotron-3.5-asr-streaming-0.6b`](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

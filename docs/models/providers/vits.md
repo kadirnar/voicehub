@@ -6,11 +6,15 @@ description: Public API, checkpoint, training, and optimization guide for the vi
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Set the text and generation options, then inspect the returned audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Controls MMS-VITS speaking rate, stochastic duration, and output-frame guardrails.
+
+**Inputs and controls:** The registered English checkpoint is single-speaker; choose a different HF ID for another MMS language.
 
 ```python
 from pathlib import Path
@@ -23,16 +27,17 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    speaking_rate=1.0,
+    noise_scale=0.667,
+    max_output_frames=240_000,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -47,14 +52,19 @@ integration. This page is generated from its registry contract. [Open the `vits`
 | Task | Text to speech |
 | Architecture | `vits` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `en` |
 | Capabilities | `text-to-speech`, `multilingual`, `mms-tts`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime`, `raw-audio-training`, `preprocessed-training`, `adversarial-training`, `generator-warm-start`, `explicit-acoustic-training-config` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`en`
+
+</details>
 
 ## Paper and GitHub
 
@@ -143,6 +153,7 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`facebook/mms-tts-eng`](https://huggingface.co/facebook/mms-tts-eng) |
+| Hugging Face ID | [`facebook/mms-tts-eng`](https://huggingface.co/facebook/mms-tts-eng)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

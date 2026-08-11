@@ -6,14 +6,24 @@ description: Public API, checkpoint, training, and optimization guide for the as
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a supported recording at `speech.wav` and inspect the transcript.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Runs VoiceHub's native QuartzNet15x5 graph from the pinned NeMo/NGC source.
+
+**Inputs and controls:** The audited release is English-only and supports CTC word timestamps, not arbitrary NeMo architectures.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForSpeechRecognition
+
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
 
 model = AutoModelForSpeechRecognition.from_pretrained(
     'nvidia/nemo/stt_en_quartznet15x5',
@@ -21,10 +31,14 @@ model = AutoModelForSpeechRecognition.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-output = model.transcribe("speech.wav")
+output = model.transcribe(
+    AUDIO_FILE,
+    language="en",
+    return_timestamps="word",
+)
 print(output.text)
 for segment in output.segments:
-    print(segment.start, segment.end, segment.text)
+    print(segment.start, segment.end, segment.text, segment.confidence)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -139,7 +153,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | `nvidia/nemo/stt_en_quartznet15x5` |
-| Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
+| Hugging Face ID | Not published / not applicable<br>No canonical Hugging Face repository for the exact audited QuartzNet15x5 release; VoiceHub resolves the pinned NeMo/NGC artifact instead. |
+| Checkpoint status | Pinned NeMo/NGC QuartzNet15x5 release; VoiceHub converts the exact audited graph into its safe native artifact boundary |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |

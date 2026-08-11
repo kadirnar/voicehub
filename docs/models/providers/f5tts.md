@@ -6,19 +6,25 @@ description: Public API, checkpoint, training, and optimization guide for the f5
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Provide an authorized `reference.wav` and its exact transcript when requested.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Supplies F5-TTS with the mandatory reference waveform and matching transcript.
+
+**Inputs and controls:** The transcript must match the reference audio exactly or alignment quality will degrade.
 
 ```python
 from pathlib import Path
 
-REFERENCE_AUDIO = Path("reference.wav")
-REFERENCE_TEXT = "This transcript must exactly match the authorized reference audio."
-
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+
+REFERENCE_AUDIO = Path("reference.wav")
+REFERENCE_TEXT = "The reference transcript must exactly match the authorized audio."
+if not REFERENCE_AUDIO.is_file():
+    raise FileNotFoundError(REFERENCE_AUDIO)
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'F5TTS_v1_Base',
@@ -26,19 +32,18 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {
-    "speaker_audio_path": str(REFERENCE_AUDIO),
-    "reference_text": REFERENCE_TEXT,
-}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    speaker_audio_path=str(REFERENCE_AUDIO),
+    reference_text=REFERENCE_TEXT,
+    nfe_steps=32,
+    cfg_strength=2.0,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -153,6 +158,7 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Property | Value |
 | --- | --- |
 | Default checkpoint | `F5TTS_v1_Base` |
+| Hugging Face ID | [`SWivid/F5-TTS`](https://huggingface.co/SWivid/F5-TTS)<br>Official F5-TTS repository, verified available on 2026-08-11; the registry alias selects the F5TTS_v1_Base files inside it. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

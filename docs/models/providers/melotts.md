@@ -6,33 +6,38 @@ description: Public API, checkpoint, training, and optimization guide for the me
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Set the text and generation options, then inspect the returned audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Opts into the pinned legacy MeloTTS release explicitly and selects its English speaker table.
+
+**Inputs and controls:** The official release is a reviewed pickle checkpoint; keep `trust_pickle_checkpoint` false for arbitrary files.
 
 ```python
 from pathlib import Path
 
-from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig, AutoConfig
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'EN',
     model_type='melotts',
     device="cuda",
     lazy_load=True,
+    config=AutoConfig.for_model("melotts", trust_pickle_checkpoint=True),
 )
-generation_kwargs = {}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    speaker="EN-US",
+    speed=1.0,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -147,6 +152,7 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Property | Value |
 | --- | --- |
 | Default checkpoint | `EN` |
+| Hugging Face ID | [`myshell-ai/MeloTTS-English`](https://huggingface.co/myshell-ai/MeloTTS-English)<br>Official English MeloTTS repository, verified available on 2026-08-11 and used by the registered EN release alias. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

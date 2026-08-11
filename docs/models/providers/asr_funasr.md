@@ -6,25 +6,39 @@ description: Public API, checkpoint, training, and optimization guide for the as
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a supported recording at `speech.wav` and inspect the transcript.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Runs SenseVoiceSmall's native SANM-CTC graph with language detection and word timestamps.
+
+**Inputs and controls:** This provider recognizes SenseVoiceSmall only; VAD, punctuation, and speaker models must be composed separately.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForSpeechRecognition
 
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
+
 model = AutoModelForSpeechRecognition.from_pretrained(
-    'iic/SenseVoiceSmall',
+    'FunAudioLLM/SenseVoiceSmall',
     model_type='asr_funasr',
     device="cuda",
     lazy_load=True,
 )
-output = model.transcribe("speech.wav")
+output = model.transcribe(
+    AUDIO_FILE,
+    language="auto",
+    return_timestamps="word",
+)
 print(output.text)
 for segment in output.segments:
-    print(segment.start, segment.end, segment.text)
+    print(segment.start, segment.end, segment.text, segment.confidence)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -39,14 +53,19 @@ integration. This page is generated from its registry contract. [Open the `asr_f
 | Task | Automatic speech recognition |
 | Architecture | `sensevoice-small` |
 | Runtime | `VoiceHub-native` |
-| Languages | Checkpoint-defined; not exhaustively enumerated |
+| Languages | `zh`, `en`, `ja`, `ko`, `yue` |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `timestamps`, `language-identification`, `emotion-recognition`, `audio-events`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
 
 ### Language support
 
-VoiceHub does not claim one exhaustive language list across compatible checkpoints; verify the selected checkpoint card and processor metadata.
+<details class="vh-language-support" markdown>
+<summary>Supported language abbreviations</summary>
+
+`zh`, `en`, `ja`, `ko`, `yue`
+
+</details>
 
 ## Paper and GitHub
 
@@ -79,7 +98,7 @@ Create the registered processor without allocating model weights:
 from voicehub import AutoProcessor
 
 processor = AutoProcessor.from_pretrained(
-    'iic/SenseVoiceSmall',
+    'FunAudioLLM/SenseVoiceSmall',
     model_type='asr_funasr',
 )
 print(type(processor).__name__)
@@ -119,7 +138,7 @@ Unsupported runtime or hardware fails closed before mutation.
 | Family | `ctc` |
 | Recipe | `single-phase` |
 | Default phase | `speech_recognition` |
-| Training checkpoint | `iic/SenseVoiceSmall` |
+| Training checkpoint | `FunAudioLLM/SenseVoiceSmall` |
 | Native training graph | `yes` |
 
 | Phase | Kind | Components | Required inputs | Loss keys |
@@ -133,7 +152,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 
 | Property | Value |
 | --- | --- |
-| Default checkpoint | [`iic/SenseVoiceSmall`](https://huggingface.co/iic/SenseVoiceSmall) |
+| Default checkpoint | [`FunAudioLLM/SenseVoiceSmall`](https://huggingface.co/FunAudioLLM/SenseVoiceSmall) |
+| Hugging Face ID | [`FunAudioLLM/SenseVoiceSmall`](https://huggingface.co/FunAudioLLM/SenseVoiceSmall)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

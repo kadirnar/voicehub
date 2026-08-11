@@ -32,6 +32,7 @@ MODEL_NOTEBOOK_GENERATOR_PATH = REPOSITORY_ROOT / "scripts" / "generate_model_no
 MODEL_PAGE_DIR = DOCS_ROOT / "models" / "providers"
 MODEL_PAGE_INDEX_PATH = MODEL_PAGE_DIR / "index.md"
 MODEL_PAGE_GENERATOR_PATH = REPOSITORY_ROOT / "scripts" / "generate_model_pages.py"
+TTS_CAPABILITIES_PATH = DOCS_ROOT / "models" / "tts-capabilities.md"
 OPTIMIZATION_PAGE_DIR = DOCS_ROOT / "optimizations"
 OPTIMIZATION_PAGE_INDEX_PATH = OPTIMIZATION_PAGE_DIR / "index.md"
 OPTIMIZATION_PAGE_GENERATOR_PATH = (REPOSITORY_ROOT / "scripts" / "generate_optimization_pages.py")
@@ -67,6 +68,79 @@ MOBILE_DRAWER_SCRIPT_PATH = DOCS_ROOT / "javascripts" / "mobile-drawer.js"
 PAGE_ACTIONS_OVERRIDE_PATH = REPOSITORY_ROOT / "overrides" / "partials" / "actions.html"
 PUBLIC_SITE_URL = "https://kadirnar.github.io/voicehub/"
 LOCALIZED_HOME_LOCALES = ("ar", "de", "es", "fr", "ja", "ko", "pt", "ru", "tr", "zh")
+
+
+def _python_module_source(module_name):
+    module_path = REPOSITORY_ROOT.joinpath(*module_name.split("."))
+    source_path = module_path.with_suffix(".py")
+    if source_path.is_file():
+        return source_path, False
+    source_path = module_path / "__init__.py"
+    if source_path.is_file():
+        return source_path, True
+    raise AssertionError(f"Cannot resolve source for {module_name!r}.")
+
+
+def _relative_import_module(module_name, is_package, node):
+    if node.level == 0:
+        return node.module
+    package_parts = module_name.split(".") if is_package else module_name.split(".")[:-1]
+    package_parts = package_parts[:len(package_parts) - node.level + 1]
+    if node.module:
+        package_parts.extend(node.module.split("."))
+    return ".".join(package_parts)
+
+
+def _static_method_signature(module_name, class_name, method_name, seen=frozenset()):
+    key = (module_name, class_name, method_name)
+    if key in seen:
+        raise AssertionError(f"Cyclic static class resolution for {key!r}.")
+    seen = seen | {key}
+    source_path, is_package = _python_module_source(module_name)
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+    imports = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.module == "__future__":
+            continue
+        imported_module = _relative_import_module(module_name, is_package, node)
+        for alias in node.names:
+            imports[alias.asname or alias.name] = (imported_module, alias.name)
+
+    class_node = classes.get(class_name)
+    if class_node is None:
+        if class_name in imports:
+            return _static_method_signature(*imports[class_name], method_name, seen)
+        if is_package:
+            for candidate in sorted(source_path.parent.rglob("*.py")):
+                candidate_tree = ast.parse(candidate.read_text(encoding="utf-8"), filename=str(candidate))
+                if any(isinstance(node, ast.ClassDef) and node.name == class_name
+                       for node in candidate_tree.body):
+                    relative = candidate.relative_to(REPOSITORY_ROOT).with_suffix("")
+                    candidate_module = ".".join(relative.parts)
+                    if candidate.name == "__init__.py":
+                        candidate_module = candidate_module.removesuffix(".__init__")
+                    return _static_method_signature(candidate_module, class_name, method_name, seen)
+        raise AssertionError(f"Cannot resolve {class_name!r} from {source_path}.")
+
+    for node in class_node.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == method_name:
+            parameters = {
+                argument.arg
+                for argument in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+            } - {"self", "cls"}
+            return parameters, node.args.kwarg is not None, source_path
+
+    for base in class_node.bases:
+        if not isinstance(base, ast.Name):
+            continue
+        if base.id in classes:
+            return _static_method_signature(module_name, base.id, method_name, seen)
+        if base.id in imports:
+            return _static_method_signature(*imports[base.id], method_name, seen)
+    raise AssertionError(f"Cannot resolve {class_name}.{method_name} from {source_path}.")
+
+
 TOP_LEVEL_NAVIGATION = (
     "Get started",
     "Models",
@@ -249,6 +323,8 @@ class DocumentationSiteTests(unittest.TestCase):
                 checkpoint = checkpoint_documentation(spec)
                 self.assertTrue(checkpoint.is_hugging_face)
                 self.assertIn(checkpoint.url, source)
+                self.assertNotIn("pip install", source)
+                self.assertNotIn("subprocess", source)
                 self.assertIn(
                     "https://colab.research.google.com/github/"
                     "kadirnar/voicehub/blob/main/notebooks/models/"
@@ -289,7 +365,34 @@ class DocumentationSiteTests(unittest.TestCase):
         generator = runpy.run_path(str(MODEL_PAGE_GENERATOR_PATH))
         module_source_path = generator["_module_source_path"]
         references = generator["MODEL_REFERENCES"]
+        inference_profiles = generator["inference_profile"]
         specs = tuple(list_model_specs(task=None))
+        documented_profiles = runpy.run_path(str(REPOSITORY_ROOT / "scripts" /
+                                                 "model_documentation.py"))["INFERENCE_PROFILES"]
+        self.assertEqual(set(documented_profiles), {spec.model_type for spec in specs})
+        self.assertEqual(
+            len({profile.summary
+                 for profile in documented_profiles.values()}),
+            len(specs),
+            "Every model needs a separately authored inference summary.",
+        )
+        self.assertEqual(
+            len({profile.input_note
+                 for profile in documented_profiles.values()}),
+            len(specs),
+            "Every model needs separately authored input guidance.",
+        )
+        self.assertEqual(
+            {spec.model_type
+             for spec in specs if checkpoint_documentation(spec).hugging_face_id is None},
+            {
+                "asr_nemo",
+                "asr_wenet",
+                "vad_auditok",
+                "vad_transformers",
+                "vad_webrtc",
+            },
+        )
         self.assertEqual(set(references), {spec.model_type for spec in specs})
         expected_paths = {MODEL_PAGE_DIR / f"{spec.model_type}.md": spec for spec in specs}
         self.assertEqual(
@@ -310,13 +413,12 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertEqual(sections, MODEL_PAGE_SECTIONS)
                 self.assertLessEqual(
                     len(source.splitlines()),
-                    230,
+                    240,
                     f"{path.name} should link shared workflows instead of repeating them.",
                 )
-                self.assertIn(
-                    'git+https://github.com/kadirnar/voicehub.git@main',
-                    source,
-                )
+                self.assertIn("[VoiceHub installation](../../getting-started/installation.md)", source)
+                self.assertNotIn("pip install", source)
+                self.assertNotIn("git+https://", source)
                 self.assertNotIn(
                     "linked release record before treating a checkpoint path as verified",
                     source,
@@ -324,6 +426,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertIn(spec.task.value.replace("-", " "), source.lower())
                 self.assertIn(spec.training.support.value, source)
                 self.assertIn("Checkpoint status", source)
+                self.assertIn("| Hugging Face ID |", source)
                 self.assertIn("Source provenance", source)
                 self.assertIn("available_optimization_passes", source)
                 self.assertIn("## Paper and GitHub", source)
@@ -350,7 +453,19 @@ class DocumentationSiteTests(unittest.TestCase):
                 )
                 if spec.default_model_path:
                     self.assertIn(spec.default_model_path, source)
-                if checkpoint_documentation(spec).is_hugging_face:
+                checkpoint = checkpoint_documentation(spec)
+                profile = inference_profiles(spec)
+                self.assertIn(profile.summary, source)
+                self.assertIn(profile.input_note, source)
+                self.assertIn(checkpoint.hugging_face_status, source)
+                if checkpoint.hugging_face_id is None:
+                    self.assertIn("Not published / not applicable", source)
+                else:
+                    self.assertIn(
+                        f"[`{checkpoint.hugging_face_id}`]({checkpoint.hugging_face_url})",
+                        source,
+                    )
+                if checkpoint.is_hugging_face:
                     self.assertIn(
                         "https://colab.research.google.com/github/"
                         "kadirnar/voicehub/blob/main/notebooks/models/"
@@ -363,7 +478,18 @@ class DocumentationSiteTests(unittest.TestCase):
                     "## Overview",
                     1,
                 )[0]
-                self.assertTrue(PYTHON_BLOCK.findall(quickstart))
+                quickstart_examples = PYTHON_BLOCK.findall(quickstart)
+                self.assertEqual(len(quickstart_examples), 1)
+                quickstart_tree = ast.parse(textwrap.dedent(quickstart_examples[0]))
+                imported_roots = {
+                    node.module.split(".", 1)[0]
+                    for node in ast.walk(quickstart_tree)
+                    if isinstance(node, ast.ImportFrom) and node.module is not None
+                }
+                imported_roots.update(
+                    alias.name.split(".", 1)[0] for node in ast.walk(quickstart_tree)
+                    if isinstance(node, ast.Import) for alias in node.names)
+                self.assertLessEqual(imported_roots, {"json", "pathlib", "voicehub"})
                 for example_index, example in enumerate(examples, start=1):
                     ast.parse(
                         textwrap.dedent(example),
@@ -430,6 +556,33 @@ class DocumentationSiteTests(unittest.TestCase):
                 '"model_index_interaction_cases"',
         ):
             self.assertIn(fragment, checker)
+
+    def test_model_inference_profiles_match_every_public_wrapper_signature(self):
+        from voicehub import list_model_specs
+
+        profiles = runpy.run_path(str(REPOSITORY_ROOT / "scripts" /
+                                      "model_documentation.py"))["INFERENCE_PROFILES"]
+        method_names = {
+            "text-to-speech": "_generate",
+            "automatic-speech-recognition": "_transcribe",
+            "voice-activity-detection": "_detect",
+        }
+        specs = tuple(list_model_specs(task=None))
+        self.assertEqual(set(profiles), {spec.model_type for spec in specs})
+        for spec in specs:
+            with self.subTest(model_type=spec.model_type):
+                parameters, accepts_kwargs, source_path = _static_method_signature(
+                    spec.module,
+                    spec.class_name,
+                    method_names[spec.task.value],
+                )
+                for argument in profiles[spec.model_type].arguments:
+                    name, separator, _ = argument.partition("=")
+                    self.assertEqual(separator, "=")
+                    self.assertTrue(
+                        accepts_kwargs or name in parameters,
+                        f"{name!r} is not accepted by {spec.class_name} in {source_path}",
+                    )
 
     def test_speecht5_model_detail_matches_transformers_contract(self):
         source = (MODEL_PAGE_DIR / "speecht5.md").read_text(encoding="utf-8")
@@ -598,7 +751,8 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn(checkpoint.example, page)
         self.assertIn(checkpoint.status, page)
         self.assertIn(checkpoint.url, page)
-        self.assertIn(checkpoint.url, index)
+        index_row = next(line for line in index.splitlines() if "](asr_wenet.md)" in line)
+        self.assertIn("Not published / not applicable", index_row)
         self.assertNotIn("https://huggingface.co/wenet/gigaspeech", page)
         self.assertNotIn("asr_wenet.ipynb", page)
         self.assertNotIn("asr_wenet.ipynb", gallery)
@@ -942,11 +1096,19 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         index = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
         self.assertEqual(index.count('<div class="vh-model-catalog" markdown>'), 3)
-        self.assertEqual(index.count("| Model | Languages | Default checkpoint | Training | Notebook |"), 3)
+        self.assertEqual(index.count("| Model | Languages | Hugging Face ID | Training | Notebook |"), 3)
         count_only_language_summary = (
-            r"\b(?:(?:supports?|support for)\s+)?\d+\s+"
-            r"(?:(?:enumerated|documented|supported|verified)\s+)?languages?\b")
+            r"(?:\b(?:(?:supports?|support for)\s+)?\d+\s+"
+            r"(?:(?:enumerated|documented|supported|verified)\s+)?languages?\b|"
+            r"\b\d+\s+language (?:codes?|locales?|prompts?)\b)")
         self.assertNotRegex(index, count_only_language_summary)
+        self.assertNotIn("Checkpoint-defined; not exhaustively enumerated", index)
+
+        for path in (DOCS_ROOT / "models").glob("*.md"):
+            source = path.read_text(encoding="utf-8")
+            with self.subTest(model_document=path.name):
+                self.assertNotRegex(source, count_only_language_summary)
+                self.assertNotIn("checkpoint-defined", source.lower())
 
         for spec in list_model_specs(task=None):
             with self.subTest(model_type=spec.model_type):
@@ -956,7 +1118,14 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 self.assertIn("| Languages |", page)
                 self.assertIn("### Language support", page)
                 self.assertNotRegex(page, count_only_language_summary)
-                if support.kind == "enumerated":
+                self.assertNotIn("Checkpoint-defined; not exhaustively enumerated", page)
+                if spec.task is SpeechTask.VOICE_ACTIVITY_DETECTION:
+                    self.assertEqual(support.kind, "not-text-conditioned")
+                    self.assertFalse(support.codes)
+                    self.assertIn("Not text-language conditioned", page)
+                    self.assertIn("does not select a spoken language", page)
+                else:
+                    self.assertEqual(support.kind, "enumerated")
                     self.assertTrue(support.codes)
                     rendered_codes = ", ".join(f"`{code}`" for code in support.codes)
                     self.assertIn(f"| Languages | {rendered_codes} |", page)
@@ -967,14 +1136,36 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                         self.assertIn(f"`{code}`", page)
                     self.assertIn('<details class="vh-language-support" markdown>', page)
                     self.assertIn("<summary>Supported language abbreviations</summary>", page)
-                elif support.kind == "not-text-conditioned":
-                    self.assertIs(spec.task, SpeechTask.VOICE_ACTIVITY_DETECTION)
-                    self.assertIn("Not text-language conditioned", page)
-                    self.assertIn("does not select a spoken language", page)
-                else:
-                    self.assertFalse(support.codes)
-                    self.assertIn("Checkpoint-defined; not exhaustively enumerated", page)
-                    self.assertIn("does not claim one exhaustive language list", page)
+
+    def test_tts_capability_matrix_lists_every_language_abbreviation(self):
+        from voicehub import SpeechTask, list_model_specs
+        from voicehub.models.language_support import model_language_support
+
+        source = TTS_CAPABILITIES_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("checkpoint-defined", source.lower())
+        for spec in list_model_specs(task=SpeechTask.TEXT_TO_SPEECH):
+            with self.subTest(model_type=spec.model_type):
+                support = model_language_support(spec)
+                rendered_codes = ", ".join(support.codes)
+                row = next(
+                    line for line in source.splitlines() if line.startswith(f"| `{spec.model_type}` |"))
+                self.assertIn(f"| {rendered_codes} |", row)
+
+    def test_omnivoice_language_snapshot_matches_vendored_mapping(self):
+        from voicehub.architectures.omnivoice.languages import OMNIVOICE_LANGUAGE_CODES
+
+        source_path = (
+            REPOSITORY_ROOT / "voicehub" / "models" / "omnivoice" / "source" / "omnivoice" / "utils" /
+            "lang_map.py")
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        assignment = next(
+            node for node in tree.body if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "LANG_NAME_TO_ID" for target in node.targets))
+        language_name_to_id = ast.literal_eval(assignment.value)
+        self.assertEqual(
+            OMNIVOICE_LANGUAGE_CODES,
+            tuple(sorted(set(language_name_to_id.values()))),
+        )
 
     def test_model_and_optimization_highlights_use_semantic_routes(self):
         stylesheet = STYLESHEET_PATH.read_text(encoding="utf-8")

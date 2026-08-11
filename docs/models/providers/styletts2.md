@@ -6,33 +6,44 @@ description: Public API, checkpoint, training, and optimization guide for the st
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Set the text and generation options, then inspect the returned audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Uses an explicit local VoiceHub artifact and the native phoneme boundary required by StyleTTS 2.
+
+**Inputs and controls:** Convert or review the upstream LibriTTS files first; the HF repository is provenance, not a drop-in VoiceHub directory.
 
 ```python
 from pathlib import Path
 
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
 
+REFERENCE_AUDIO = Path("reference.wav")
+REFERENCE_TEXT = "The reference transcript must exactly match the authorized audio."
+if not REFERENCE_AUDIO.is_file():
+    raise FileNotFoundError(REFERENCE_AUDIO)
+
 model = AutoModelForTextToSpeech.from_pretrained(
-    'owner/model-or-local-directory',
+    'checkpoints/styletts2/model.safetensors',
     model_type='styletts2',
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'həˈloʊ fɹʌm vɔɪs hʌb',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    speaker_audio_path=str(REFERENCE_AUDIO),
+    text_is_phonemes=True,
+    diffusion_steps=5,
+    embedding_scale=1.0,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -92,7 +103,7 @@ Create the registered processor without allocating model weights:
 from voicehub import AutoProcessor
 
 processor = AutoProcessor.from_pretrained(
-    'owner/model-or-local-directory',
+    'checkpoints/styletts2/model.safetensors',
     model_type='styletts2',
 )
 print(type(processor).__name__)
@@ -146,7 +157,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Property | Value |
 | --- | --- |
 | Default checkpoint | No default; pass a compatible Hub ID or local directory. |
-| Checkpoint status | No registry default; provide a compatible Hub ID or local directory |
+| Hugging Face ID | [`yl4579/StyleTTS2-LibriTTS`](https://huggingface.co/yl4579/StyleTTS2-LibriTTS)<br>Upstream LibriTTS repository, verified available on 2026-08-11. VoiceHub requires a reviewed local artifact because the published layout is not a native VoiceHub directory. |
+| Checkpoint status | No registry default; provide the compatible local artifact described on this page |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |

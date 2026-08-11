@@ -6,22 +6,37 @@ description: Public API, checkpoint, training, and optimization guide for the va
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a recording at `speech.wav`; tune the threshold on labeled audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Runs a caller-selected Transformers frame classifier with explicit hysteresis and frame output.
+
+**Inputs and controls:** The local directory must be compatible with VoiceHub's generic frame-classification adapter.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForVoiceActivityDetection
 
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
+
 model = AutoModelForVoiceActivityDetection.from_pretrained(
-    'owner/model-or-local-directory',
+    'checkpoints/frame-vad',
     model_type='vad_transformers',
     device="cpu",
     lazy_load=True,
 )
-output = model.detect("speech.wav", threshold=0.5)
+output = model.detect(
+    AUDIO_FILE,
+    onset=0.6,
+    offset=0.4,
+    return_frames=True,
+)
 for segment in output.segments:
     print(segment.start, segment.end, segment.score)
 ```
@@ -78,7 +93,7 @@ Create the registered processor without allocating model weights:
 from voicehub import AutoProcessor
 
 processor = AutoProcessor.from_pretrained(
-    'owner/model-or-local-directory',
+    'checkpoints/frame-vad',
     model_type='vad_transformers',
 )
 print(type(processor).__name__)
@@ -126,7 +141,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | No default; pass a compatible Hub ID or local directory. |
-| Checkpoint status | No registry default; provide a compatible Hub ID or local directory |
+| Hugging Face ID | Not published / not applicable<br>No single repository applies: this generic adapter requires the caller to choose a compatible frame-classification checkpoint or local artifact. |
+| Checkpoint status | No registry default; the caller must provide a compatible reviewed frame-classification artifact |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |

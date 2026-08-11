@@ -6,19 +6,26 @@ description: Public API, checkpoint, training, and optimization guide for the op
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Provide an authorized `reference.wav` and its exact transcript when requested.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Runs OpenVoice tone-color transfer from a source utterance to an authorized target-speaker recording.
+
+**Inputs and controls:** `base.wav` must contain the utterance to convert; `reference.wav` supplies only the target tone color.
 
 ```python
 from pathlib import Path
 
-REFERENCE_AUDIO = Path("reference.wav")
-REFERENCE_TEXT = "This transcript must exactly match the authorized reference audio."
-
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+
+BASE_AUDIO = Path("base.wav")
+REFERENCE_AUDIO = Path("reference.wav")
+for audio_file in (BASE_AUDIO, REFERENCE_AUDIO):
+    if not audio_file.is_file():
+        raise FileNotFoundError(audio_file)
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'myshell-ai/OpenVoiceV2',
@@ -26,18 +33,17 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {
-    "speaker_audio_path": str(REFERENCE_AUDIO),
-}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    base_audio=str(BASE_AUDIO),
+    speaker_audio_path=str(REFERENCE_AUDIO),
+    tau=0.3,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -151,6 +157,7 @@ This profile uses model-specific phases; inspect and honor each phase boundary. 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`myshell-ai/OpenVoiceV2`](https://huggingface.co/myshell-ai/OpenVoiceV2) |
+| Hugging Face ID | [`myshell-ai/OpenVoiceV2`](https://huggingface.co/myshell-ai/OpenVoiceV2)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

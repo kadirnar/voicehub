@@ -6,14 +6,24 @@ description: Public API, checkpoint, training, and optimization guide for the va
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a recording at `speech.wav`; tune the threshold on labeled audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Runs weightless WebRTC VAD with frame-compatible duration controls.
+
+**Inputs and controls:** Input is resampled and framed by VoiceHub; algorithm aggressiveness belongs to the model configuration.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForVoiceActivityDetection
+
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
 
 model = AutoModelForVoiceActivityDetection.from_pretrained(
     'webrtc-vad',
@@ -21,7 +31,12 @@ model = AutoModelForVoiceActivityDetection.from_pretrained(
     device="cpu",
     lazy_load=True,
 )
-output = model.detect("speech.wav", threshold=0.5)
+output = model.detect(
+    AUDIO_FILE,
+    min_speech_duration_ms=120,
+    min_silence_duration_ms=240,
+    speech_pad_ms=30,
+)
 for segment in output.segments:
     print(segment.start, segment.end, segment.score)
 ```
@@ -126,7 +141,8 @@ This integration is **inference-only**. Choose a verified model from the
 | Property | Value |
 | --- | --- |
 | Default checkpoint | `webrtc-vad` |
-| Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
+| Hugging Face ID | Not published / not applicable<br>Not applicable: WebRTC VAD is a weightless signal-processing algorithm. |
+| Checkpoint status | Weightless algorithm; version the implementation and configuration, not model weights |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
