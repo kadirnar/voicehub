@@ -1,4 +1,6 @@
 import ast
+import importlib
+import inspect
 import io
 import json
 import os
@@ -250,6 +252,8 @@ class DocumentationSiteTests(unittest.TestCase):
                 checkpoint = checkpoint_documentation(spec)
                 self.assertTrue(checkpoint.is_hugging_face)
                 self.assertIn(checkpoint.url, source)
+                self.assertNotIn("pip install", source)
+                self.assertNotIn("subprocess", source)
                 self.assertIn(
                     "https://colab.research.google.com/github/"
                     "kadirnar/voicehub/blob/main/notebooks/models/"
@@ -290,7 +294,34 @@ class DocumentationSiteTests(unittest.TestCase):
         generator = runpy.run_path(str(MODEL_PAGE_GENERATOR_PATH))
         module_source_path = generator["_module_source_path"]
         references = generator["MODEL_REFERENCES"]
+        inference_profiles = generator["inference_profile"]
         specs = tuple(list_model_specs(task=None))
+        documented_profiles = runpy.run_path(str(REPOSITORY_ROOT / "scripts" /
+                                                 "model_documentation.py"))["INFERENCE_PROFILES"]
+        self.assertEqual(set(documented_profiles), {spec.model_type for spec in specs})
+        self.assertEqual(
+            len({profile.summary
+                 for profile in documented_profiles.values()}),
+            len(specs),
+            "Every model needs a separately authored inference summary.",
+        )
+        self.assertEqual(
+            len({profile.input_note
+                 for profile in documented_profiles.values()}),
+            len(specs),
+            "Every model needs separately authored input guidance.",
+        )
+        self.assertEqual(
+            {spec.model_type
+             for spec in specs if checkpoint_documentation(spec).hugging_face_id is None},
+            {
+                "asr_nemo",
+                "asr_wenet",
+                "vad_auditok",
+                "vad_transformers",
+                "vad_webrtc",
+            },
+        )
         self.assertEqual(set(references), {spec.model_type for spec in specs})
         expected_paths = {MODEL_PAGE_DIR / f"{spec.model_type}.md": spec for spec in specs}
         self.assertEqual(
@@ -311,13 +342,12 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertEqual(sections, MODEL_PAGE_SECTIONS)
                 self.assertLessEqual(
                     len(source.splitlines()),
-                    230,
+                    240,
                     f"{path.name} should link shared workflows instead of repeating them.",
                 )
-                self.assertIn(
-                    'git+https://github.com/kadirnar/voicehub.git@main',
-                    source,
-                )
+                self.assertIn("[VoiceHub installation](../../getting-started/installation.md)", source)
+                self.assertNotIn("pip install", source)
+                self.assertNotIn("git+https://", source)
                 self.assertNotIn(
                     "linked release record before treating a checkpoint path as verified",
                     source,
@@ -325,6 +355,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertIn(spec.task.value.replace("-", " "), source.lower())
                 self.assertIn(spec.training.support.value, source)
                 self.assertIn("Checkpoint status", source)
+                self.assertIn("| Hugging Face ID |", source)
                 self.assertIn("Source provenance", source)
                 self.assertIn("available_optimization_passes", source)
                 self.assertIn("## Paper and GitHub", source)
@@ -351,7 +382,19 @@ class DocumentationSiteTests(unittest.TestCase):
                 )
                 if spec.default_model_path:
                     self.assertIn(spec.default_model_path, source)
-                if checkpoint_documentation(spec).is_hugging_face:
+                checkpoint = checkpoint_documentation(spec)
+                profile = inference_profiles(spec)
+                self.assertIn(profile.summary, source)
+                self.assertIn(profile.input_note, source)
+                self.assertIn(checkpoint.hugging_face_status, source)
+                if checkpoint.hugging_face_id is None:
+                    self.assertIn("Not published / not applicable", source)
+                else:
+                    self.assertIn(
+                        f"[`{checkpoint.hugging_face_id}`]({checkpoint.hugging_face_url})",
+                        source,
+                    )
+                if checkpoint.is_hugging_face:
                     self.assertIn(
                         "https://colab.research.google.com/github/"
                         "kadirnar/voicehub/blob/main/notebooks/models/"
@@ -364,7 +407,18 @@ class DocumentationSiteTests(unittest.TestCase):
                     "## Overview",
                     1,
                 )[0]
-                self.assertTrue(PYTHON_BLOCK.findall(quickstart))
+                quickstart_examples = PYTHON_BLOCK.findall(quickstart)
+                self.assertEqual(len(quickstart_examples), 1)
+                quickstart_tree = ast.parse(textwrap.dedent(quickstart_examples[0]))
+                imported_roots = {
+                    node.module.split(".", 1)[0]
+                    for node in ast.walk(quickstart_tree)
+                    if isinstance(node, ast.ImportFrom) and node.module is not None
+                }
+                imported_roots.update(
+                    alias.name.split(".", 1)[0] for node in ast.walk(quickstart_tree)
+                    if isinstance(node, ast.Import) for alias in node.names)
+                self.assertLessEqual(imported_roots, {"json", "pathlib", "voicehub"})
                 for example_index, example in enumerate(examples, start=1):
                     ast.parse(
                         textwrap.dedent(example),
@@ -431,6 +485,33 @@ class DocumentationSiteTests(unittest.TestCase):
                 '"model_index_interaction_cases"',
         ):
             self.assertIn(fragment, checker)
+
+    def test_model_inference_profiles_match_every_public_wrapper_signature(self):
+        from voicehub import list_model_specs
+
+        profiles = runpy.run_path(str(REPOSITORY_ROOT / "scripts" /
+                                      "model_documentation.py"))["INFERENCE_PROFILES"]
+        method_names = {
+            "text-to-speech": "_generate",
+            "automatic-speech-recognition": "_transcribe",
+            "voice-activity-detection": "_detect",
+        }
+        specs = tuple(list_model_specs(task=None))
+        self.assertEqual(set(profiles), {spec.model_type for spec in specs})
+        for spec in specs:
+            with self.subTest(model_type=spec.model_type):
+                model_class = getattr(importlib.import_module(spec.module), spec.class_name)
+                signature = inspect.signature(getattr(model_class, method_names[spec.task.value]))
+                accepts_kwargs = any(
+                    parameter.kind is inspect.Parameter.VAR_KEYWORD
+                    for parameter in signature.parameters.values())
+                for argument in profiles[spec.model_type].arguments:
+                    name, separator, _ = argument.partition("=")
+                    self.assertEqual(separator, "=")
+                    self.assertTrue(
+                        accepts_kwargs or name in signature.parameters,
+                        f"{name!r} is not accepted by {spec.class_name}{signature}",
+                    )
 
     def test_speecht5_model_detail_matches_transformers_contract(self):
         source = (MODEL_PAGE_DIR / "speecht5.md").read_text(encoding="utf-8")
@@ -599,7 +680,8 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn(checkpoint.example, page)
         self.assertIn(checkpoint.status, page)
         self.assertIn(checkpoint.url, page)
-        self.assertIn(checkpoint.url, index)
+        index_row = next(line for line in index.splitlines() if "](asr_wenet.md)" in line)
+        self.assertIn("Not published / not applicable", index_row)
         self.assertNotIn("https://huggingface.co/wenet/gigaspeech", page)
         self.assertNotIn("asr_wenet.ipynb", page)
         self.assertNotIn("asr_wenet.ipynb", gallery)
@@ -943,7 +1025,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         index = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
         self.assertEqual(index.count('<div class="vh-model-catalog" markdown>'), 3)
-        self.assertEqual(index.count("| Model | Languages | Default checkpoint | Training | Notebook |"), 3)
+        self.assertEqual(index.count("| Model | Languages | Hugging Face ID | Training | Notebook |"), 3)
         count_only_language_summary = (
             r"(?:\b(?:(?:supports?|support for)\s+)?\d+\s+"
             r"(?:(?:enumerated|documented|supported|verified)\s+)?languages?\b|"

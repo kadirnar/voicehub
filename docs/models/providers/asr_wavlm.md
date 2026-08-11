@@ -6,14 +6,24 @@ description: Public API, checkpoint, training, and optimization guide for the as
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a supported recording at `speech.wav` and inspect the transcript.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Runs the registered WavLM CTC checkpoint with greedy single-beam decoding.
+
+**Inputs and controls:** This community LibriSpeech checkpoint is English-specific even though the WavLM architecture is general.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForSpeechRecognition
+
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
 
 model = AutoModelForSpeechRecognition.from_pretrained(
     'patrickvonplaten/wavlm-libri-clean-100h-base-plus',
@@ -21,10 +31,14 @@ model = AutoModelForSpeechRecognition.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-output = model.transcribe("speech.wav")
+output = model.transcribe(
+    AUDIO_FILE,
+    language="en",
+    num_beams=1,
+)
 print(output.text)
 for segment in output.segments:
-    print(segment.start, segment.end, segment.text)
+    print(segment.start, segment.end, segment.text, segment.confidence)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -138,6 +152,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`patrickvonplaten/wavlm-libri-clean-100h-base-plus`](https://huggingface.co/patrickvonplaten/wavlm-libri-clean-100h-base-plus) |
+| Hugging Face ID | [`patrickvonplaten/wavlm-libri-clean-100h-base-plus`](https://huggingface.co/patrickvonplaten/wavlm-libri-clean-100h-base-plus)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

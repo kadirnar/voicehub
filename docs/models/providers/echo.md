@@ -6,11 +6,15 @@ description: Public API, checkpoint, training, and optimization guide for the ec
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Set the text and generation options, then inspect the returned audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Exposes Echo's flow-matching step count and separate text/speaker guidance scales.
+
+**Inputs and controls:** Increase `num_steps` only after measuring latency and audio quality on the target device.
 
 ```python
 from pathlib import Path
@@ -23,16 +27,17 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    num_steps=20,
+    cfg_scale_text=3.0,
+    cfg_scale_speaker=1.0,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -147,6 +152,7 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`jordand/echo-tts-base`](https://huggingface.co/jordand/echo-tts-base) |
+| Hugging Face ID | [`jordand/echo-tts-base`](https://huggingface.co/jordand/echo-tts-base)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

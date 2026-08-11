@@ -6,19 +6,26 @@ description: Public API, checkpoint, training, and optimization guide for the co
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Provide an authorized `reference.wav` and its exact transcript when requested.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Loads the required 192-value speaker embedding from a reviewable JSON file.
+
+**Inputs and controls:** The native boundary intentionally does not run an unverified speaker encoder behind the caller's back.
 
 ```python
 from pathlib import Path
-
-REFERENCE_AUDIO = Path("reference.wav")
-REFERENCE_TEXT = "This transcript must exactly match the authorized reference audio."
+import json
 
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+
+SPEAKER_EMBEDDING_FILE = Path("speaker_embedding.json")
+SPEAKER_EMBEDDING = json.loads(SPEAKER_EMBEDDING_FILE.read_text(encoding="utf-8"))
+if len(SPEAKER_EMBEDDING) != 192:
+    raise ValueError("CosyVoice expects exactly 192 speaker-embedding values.")
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'FunAudioLLM/Fun-CosyVoice3-0.5B-2512',
@@ -26,19 +33,17 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {
-    "speaker_embedding": None,
-    "speaker_audio_path": str(REFERENCE_AUDIO),
-}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    speaker_embedding=SPEAKER_EMBEDDING,
+    instruction="Speak clearly.",
+    flow_steps=10,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -157,6 +162,7 @@ This profile uses model-specific phases; inspect and honor each phase boundary. 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`FunAudioLLM/Fun-CosyVoice3-0.5B-2512`](https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512) |
+| Hugging Face ID | [`FunAudioLLM/Fun-CosyVoice3-0.5B-2512`](https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

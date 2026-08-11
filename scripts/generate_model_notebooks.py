@@ -5,122 +5,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
-from dataclasses import dataclass
 from pathlib import Path
-from textwrap import dedent
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPOSITORY_ROOT))
+sys.path.insert(0, str(SCRIPTS_ROOT))
+
+from model_documentation import TASK_LABELS, TASK_ORDER, checkpoint_documentation, inference_profile  # noqa: E402
 
 from voicehub import list_model_specs  # noqa: E402
 
 MODEL_NOTEBOOK_DIR = REPOSITORY_ROOT / "notebooks" / "models"
 GENERATOR_PATH = "scripts/generate_model_notebooks.py"
-HUGGING_FACE_MODEL_ID = re.compile(r"^[^/\s]+/[^/\s]+$")
-TASK_LABELS = {
-    "text-to-speech": "Text to speech",
-    "automatic-speech-recognition": "Automatic speech recognition",
-    "voice-activity-detection": "Voice activity detection",
-}
-TASK_ORDER = tuple(TASK_LABELS)
-
-TTS_GENERATION_OPTIONS = {
-    "f5tts": (
-        '"speaker_audio_path": str(REFERENCE_AUDIO),',
-        '"reference_text": REFERENCE_TEXT,',
-    ),
-    "orpheustts": ('"voice": "tara",', ),
-    "cosyvoice": (
-        '"speaker_embedding": None,',
-        '"speaker_audio_path": str(REFERENCE_AUDIO),',
-    ),
-    "gptsovits": (
-        '"speaker_audio_path": str(REFERENCE_AUDIO),',
-        '"prompt_text": REFERENCE_TEXT,',
-        '"text_language": "en",',
-        '"prompt_language": "en",',
-    ),
-    "openvoice": ('"speaker_audio_path": str(REFERENCE_AUDIO),', ),
-    "xtts": (
-        '"speaker_audio_path": str(REFERENCE_AUDIO),',
-        '"language": "en",',
-    ),
-    "neutts": (
-        '"speaker_audio_path": str(REFERENCE_AUDIO),',
-        '"reference_text": REFERENCE_TEXT,',
-    ),
-}
-
-
-@dataclass(frozen=True)
-class CheckpointDocumentation:
-    """Declarative checkpoint presentation shared by generated artifacts."""
-
-    identifier: str
-    example: str
-    provider: str
-    url: str | None
-    status: str
-    note: str | None
-
-    @property
-    def is_hugging_face(self) -> bool:
-        """Whether the checkpoint is a real Hugging Face repository."""
-        return self.provider == "huggingface"
-
-
-def checkpoint_documentation(spec) -> CheckpointDocumentation:
-    """Resolve documentation metadata without importing a model backend."""
-    metadata = spec.native_architecture.metadata if spec.is_voicehub_native else {}
-    inferred_provider = (
-        "huggingface" if HUGGING_FACE_MODEL_ID.fullmatch(spec.default_model_path) else "local")
-    provider = metadata.get("checkpoint_provider", inferred_provider)
-    if provider not in {"external-archive", "huggingface", "local"}:
-        raise ValueError(
-            f"Unsupported checkpoint documentation provider {provider!r} "
-            f"for {spec.model_type!r}.")
-
-    identifier = spec.default_model_path
-    example = metadata.get(
-        "documentation_checkpoint_path",
-        identifier or "owner/model-or-local-directory",
-    )
-    url = metadata.get("reference_checkpoint_url")
-    if url is None and provider == "huggingface" and identifier:
-        url = f"https://huggingface.co/{identifier}"
-    status = metadata.get(
-        "reference_checkpoint_status",
-        (
-            "Registry default; pin an immutable revision for production and "
-            "reproducible evidence"
-            if identifier else "No registry default; provide a compatible Hub ID or local directory"),
-    )
-    note = metadata.get("documentation_checkpoint_note")
-    for name, value in (
-        ("example", example),
-        ("provider", provider),
-        ("status", status),
-    ):
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError(
-                f"Checkpoint documentation {name} for {spec.model_type!r} "
-                "must be a non-empty string.")
-    if url is not None and (not isinstance(url, str) or not url.startswith("https://")):
-        raise ValueError(f"Checkpoint documentation URL for {spec.model_type!r} must use HTTPS.")
-    if note is not None and (not isinstance(note, str) or not note.strip()):
-        raise ValueError(
-            f"Checkpoint documentation note for {spec.model_type!r} must be "
-            "a non-empty string or None.")
-    return CheckpointDocumentation(
-        identifier=identifier,
-        example=example,
-        provider=provider,
-        url=url,
-        status=status,
-        note=note,
-    )
 
 
 def hub_model_specs():
@@ -155,73 +53,83 @@ def _code(
     }
 
 
-def _installation_cell() -> dict[str, object]:
-    return _code(
-        "install",
-        '''import importlib.util
-import subprocess
-import sys
+def _indented_lines(lines: tuple[str, ...], *, spaces: int) -> str:
+    prefix = " " * spaces
+    return "\n".join(f"{prefix}{line}" for line in lines)
 
-if importlib.util.find_spec("voicehub") is None:
-    subprocess.check_call([
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        "--upgrade",
-        "voicehub @ git+https://github.com/kadirnar/voicehub.git@main",
-    ])''',
-        tags=("setup", "optional-colab"),
-    )
+
+def _call_arguments(arguments: tuple[str, ...], *, spaces: int = 8) -> str:
+    prefix = " " * spaces
+    return "".join(f"{prefix}{argument},\n" for argument in arguments)
 
 
 def _tts_cells(spec) -> tuple[dict[str, object], ...]:
-    option_lines = TTS_GENERATION_OPTIONS.get(spec.model_type, ())
-    rendered_options = "\n".join(f"    {line}" for line in option_lines)
-    if rendered_options:
-        rendered_options += "\n"
+    profile = inference_profile(spec)
     configuration = f'''from pathlib import Path
 
 RUN_INFERENCE = False
 MODEL_TYPE = {spec.model_type!r}
 CHECKPOINT = {spec.default_model_path!r}
 DEVICE = "cuda"
+TEXT = {profile.text!r}
+OUTPUT_FILE = Path("artifacts/{spec.model_type}.wav")'''
+    if profile.high_level_supported:
+        setup_import = "    import json\n\n" if any("json." in line for line in profile.setup) else ""
+        imports = ", ".join(
+            dict.fromkeys((
+                "AutoModelForTextToSpeech",
+                "TTSGenerationConfig",
+                *profile.voicehub_imports,
+            )))
+        setup = _indented_lines(profile.setup, spaces=4)
+        if setup:
+            setup += "\n\n"
+        load_arguments = _call_arguments(profile.load_arguments)
+        arguments = _call_arguments(profile.arguments)
+        inference = f'''if RUN_INFERENCE:
+{setup_import}    from voicehub import {imports}
 
-TEXT = "VoiceHub provides one clear and reproducible notebook for every registered Hub model."
-REFERENCE_AUDIO = Path("reference.wav")
-REFERENCE_TEXT = "This transcript must exactly match the authorized reference audio."
-OUTPUT_FILE = Path("artifacts/{spec.model_type}.wav")
-GENERATION_KWARGS = {{
-{rendered_options}}}'''
-    inference = dedent(
-        '''
-        if RUN_INFERENCE:
-            from IPython.display import Audio, display
+{setup}    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    model = AutoModelForTextToSpeech.from_pretrained(
+        CHECKPOINT,
+        model_type=MODEL_TYPE,
+        device=DEVICE,
+        lazy_load=True,
+{load_arguments}    )
+    output = model.generate(
+        TEXT,
+        generation_config=TTSGenerationConfig(seed=42, output_file=OUTPUT_FILE),
+{arguments}    )
+    print(output.file_path, output.sample_rate, output.metadata)'''
+    else:
+        inference = '''if RUN_INFERENCE:
+    from voicehub import AutoModelForTextToSpeech
 
-            from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
-
-            OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-            model = AutoModelForTextToSpeech.from_pretrained(
-                CHECKPOINT,
-                model_type=MODEL_TYPE,
-                device=DEVICE,
-                lazy_load=True,
-            )
-            output = model.generate(
-                TEXT,
-                generation_config=TTSGenerationConfig(seed=42, output_file=OUTPUT_FILE),
-                **GENERATION_KWARGS,
-            )
-            print(output.file_path, output.sample_rate, output.metadata)
-            display(Audio(output.audio, rate=output.sample_rate))
-    ''').strip()
+    model = AutoModelForTextToSpeech.from_pretrained(
+        CHECKPOINT,
+        model_type=MODEL_TYPE,
+        device=DEVICE,
+        lazy_load=True,
+    )
+    model.load()
+    required_stages = (
+        "forward_lm",
+        "forward_tts_lm",
+        "sample_speech_latents",
+        "decode_speech_latents",
+    )
+    missing = [name for name in required_stages if not hasattr(model.model, name)]
+    if missing:
+        raise RuntimeError(f"Missing audited VibeVoice stage(s): {', '.join(missing)}")
+    print("High-level synthesis is not verified; available native stages:", required_stages)'''
     return (
         _code("configure", configuration, tags=("smoke-safe", )),
         _markdown(
             "inputs",
             "## Run inference\n\n"
-            "Set `RUN_INFERENCE = True`. Models that clone or prompt a voice also need an "
-            "authorized `reference.wav`; review `GENERATION_KWARGS` before running.",
+            f"{profile.summary}\n\n{profile.input_note}\n\n"
+            "This VoiceHub example is maintained in this repository and is not copied from "
+            "an upstream package snippet. Set `RUN_INFERENCE = True` after reviewing inputs.",
         ),
         _code(
             "inference",
@@ -232,6 +140,7 @@ GENERATION_KWARGS = {{
 
 
 def _asr_cells(spec) -> tuple[dict[str, object], ...]:
+    profile = inference_profile(spec)
     configuration = f'''from pathlib import Path
 
 RUN_INFERENCE = False
@@ -239,29 +148,30 @@ MODEL_TYPE = {spec.model_type!r}
 CHECKPOINT = {spec.default_model_path!r}
 DEVICE = "cuda"
 AUDIO_FILE = Path("speech.wav")'''
-    inference = dedent(
-        '''
-        if RUN_INFERENCE:
-            from voicehub import AutoModelForSpeechRecognition
+    arguments = _call_arguments(profile.arguments)
+    inference = f'''if RUN_INFERENCE:
+    from voicehub import AutoModelForSpeechRecognition
 
-            if not AUDIO_FILE.is_file():
-                raise FileNotFoundError(AUDIO_FILE)
-            model = AutoModelForSpeechRecognition.from_pretrained(
-                CHECKPOINT,
-                model_type=MODEL_TYPE,
-                device=DEVICE,
-                lazy_load=True,
-            )
-            output = model.transcribe(AUDIO_FILE)
-            print(output.text)
-            for segment in output.segments:
-                print(segment.start, segment.end, segment.text)
-    ''').strip()
+    if not AUDIO_FILE.is_file():
+        raise FileNotFoundError(AUDIO_FILE)
+    model = AutoModelForSpeechRecognition.from_pretrained(
+        CHECKPOINT,
+        model_type=MODEL_TYPE,
+        device=DEVICE,
+        lazy_load=True,
+    )
+    output = model.transcribe(
+        AUDIO_FILE,
+{arguments}    )
+    print(output.text)
+    for segment in output.segments:
+        print(segment.start, segment.end, segment.text, segment.confidence)'''
     return (
         _code("configure", configuration, tags=("smoke-safe", )),
         _markdown(
             "inputs",
             "## Run inference\n\n"
+            f"{profile.summary}\n\n{profile.input_note}\n\n"
             "Place an authorized recording at `speech.wav`, then set `RUN_INFERENCE = True`.",
         ),
         _code(
@@ -273,6 +183,7 @@ AUDIO_FILE = Path("speech.wav")'''
 
 
 def _vad_cells(spec) -> tuple[dict[str, object], ...]:
+    profile = inference_profile(spec)
     configuration = f'''from pathlib import Path
 
 RUN_INFERENCE = False
@@ -280,28 +191,29 @@ MODEL_TYPE = {spec.model_type!r}
 CHECKPOINT = {spec.default_model_path!r}
 DEVICE = "cpu"
 AUDIO_FILE = Path("speech.wav")'''
-    inference = dedent(
-        '''
-        if RUN_INFERENCE:
-            from voicehub import AutoModelForVoiceActivityDetection
+    arguments = _call_arguments(profile.arguments)
+    inference = f'''if RUN_INFERENCE:
+    from voicehub import AutoModelForVoiceActivityDetection
 
-            if not AUDIO_FILE.is_file():
-                raise FileNotFoundError(AUDIO_FILE)
-            model = AutoModelForVoiceActivityDetection.from_pretrained(
-                CHECKPOINT,
-                model_type=MODEL_TYPE,
-                device=DEVICE,
-                lazy_load=True,
-            )
-            output = model.detect(AUDIO_FILE, threshold=0.5)
-            for segment in output.segments:
-                print(segment.start, segment.end, segment.score)
-    ''').strip()
+    if not AUDIO_FILE.is_file():
+        raise FileNotFoundError(AUDIO_FILE)
+    model = AutoModelForVoiceActivityDetection.from_pretrained(
+        CHECKPOINT,
+        model_type=MODEL_TYPE,
+        device=DEVICE,
+        lazy_load=True,
+    )
+    output = model.detect(
+        AUDIO_FILE,
+{arguments}    )
+    for segment in output.segments:
+        print(segment.start, segment.end, segment.score)'''
     return (
         _code("configure", configuration, tags=("smoke-safe", )),
         _markdown(
             "inputs",
             "## Run inference\n\n"
+            f"{profile.summary}\n\n{profile.input_note}\n\n"
             "Place an authorized recording at `speech.wav`, then set `RUN_INFERENCE = True`.",
         ),
         _code(
@@ -318,13 +230,16 @@ def render_notebook(spec) -> str:
     colab_url = (
         "https://colab.research.google.com/github/kadirnar/voicehub/"
         f"blob/main/notebooks/models/{filename}")
-    hub_url = f"https://huggingface.co/{spec.default_model_path}"
+    checkpoint = checkpoint_documentation(spec)
     introduction = f'''# `{spec.model_type}` with VoiceHub
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)]({colab_url})
 
 - Task: **{TASK_LABELS[spec.task.value]}**
-- Default checkpoint: [`{spec.default_model_path}`]({hub_url})
+- Hugging Face ID: [`{checkpoint.hugging_face_id}`]({checkpoint.hugging_face_url})
+
+Install VoiceHub using the [installation guide](https://kadirnar.github.io/voicehub/getting-started/installation/)
+before opening this model workflow. This notebook contains no package-install cell.
 
 The registry check is safe to run without downloading weights. Inference is disabled by default.'''
     inspection = f'''from voicehub import get_model_spec
@@ -343,7 +258,6 @@ print("training:", model_spec.training.support.value)'''
     }[spec.task.value](spec)
     cells = [
         _markdown("introduction", introduction),
-        _installation_cell(),
         task_cells[0],
         _markdown("registry-heading", "## Inspect registry support"),
         _code("registry", inspection, tags=("smoke-safe", )),
@@ -403,13 +317,14 @@ def render_gallery(specs) -> str:
             "| --- | --- | --- | --- |",
         ))
         for spec in task_specs:
+            checkpoint = checkpoint_documentation(spec)
             filename = f"{spec.model_type}.ipynb"
             colab_url = (
                 "https://colab.research.google.com/github/kadirnar/voicehub/"
                 f"blob/main/notebooks/models/{filename}")
             lines.append(
                 f"| `{spec.model_type}` | "
-                f"[`{spec.default_model_path}`](https://huggingface.co/{spec.default_model_path}) | "
+                f"[`{checkpoint.hugging_face_id}`]({checkpoint.hugging_face_url}) | "
                 f"[View]({filename}) | [Run]({colab_url}) |")
         lines.append("")
     return "\n".join(lines)

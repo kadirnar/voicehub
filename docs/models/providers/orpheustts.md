@@ -6,11 +6,15 @@ description: Public API, checkpoint, training, and optimization guide for the or
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Provide an authorized `reference.wav` and its exact transcript when requested.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Selects a released Orpheus voice and bounds autoregressive audio-token generation.
+
+**Inputs and controls:** `voice` is required by the VoiceHub wrapper; change it only to a voice present in the selected checkpoint.
 
 ```python
 from pathlib import Path
@@ -23,18 +27,17 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {
-    "voice": "tara",
-}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    voice="tara",
+    max_new_tokens=2_048,
+    temperature=0.7,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -148,6 +151,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`canopylabs/orpheus-3b-0.1-ft`](https://huggingface.co/canopylabs/orpheus-3b-0.1-ft) |
+| Hugging Face ID | [`canopylabs/orpheus-3b-0.1-ft`](https://huggingface.co/canopylabs/orpheus-3b-0.1-ft)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

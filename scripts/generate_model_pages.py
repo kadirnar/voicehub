@@ -14,12 +14,7 @@ sys.path.insert(0, str(REPOSITORY_ROOT))
 sys.path.insert(0, str(SCRIPTS_ROOT))
 
 from documentation_references import MODEL_REFERENCES, Reference  # noqa: E402
-from generate_model_notebooks import (  # noqa: E402
-    TASK_LABELS,
-    TASK_ORDER,
-    TTS_GENERATION_OPTIONS,
-    checkpoint_documentation,
-)
+from model_documentation import TASK_LABELS, TASK_ORDER, checkpoint_documentation, inference_profile  # noqa: E402
 
 from voicehub import list_model_specs  # noqa: E402
 from voicehub.models.language_support import model_language_support  # noqa: E402
@@ -96,30 +91,17 @@ def _checkpoint(spec) -> tuple[str, str]:
     return documentation.example, rendered
 
 
-def _install_command(spec) -> str:
-    extra = f"[{spec.install_extra}]" if spec.install_extra else ""
-    return (
-        f'python -m pip install "voicehub{extra} @ '
-        'git+https://github.com/kadirnar/voicehub.git@main"')
+def _render_call_arguments(arguments: tuple[str, ...], *, indent: int = 4) -> str:
+    prefix = " " * indent
+    return "".join(f"{prefix}{argument},\n" for argument in arguments)
 
 
 def _inference_code(spec) -> str:
     checkpoint, _ = _checkpoint(spec)
+    profile = inference_profile(spec)
     if spec.task.value == "text-to-speech":
-        options = TTS_GENERATION_OPTIONS.get(spec.model_type, ())
-        generation_kwargs = "{}"
-        if options:
-            rendered = "\n".join(f"    {line}" for line in options)
-            generation_kwargs = f"{{\n{rendered}\n}}"
-        reference_setup = "\n"
-        if any("REFERENCE_" in line for line in options):
-            reference_setup = '''
-REFERENCE_AUDIO = Path("reference.wav")
-REFERENCE_TEXT = "This transcript must exactly match the authorized reference audio."
-
-'''
-        return f'''from pathlib import Path
-{reference_setup}from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+        if not profile.high_level_supported:
+            return f'''from voicehub import AutoModelForTextToSpeech
 
 model = AutoModelForTextToSpeech.from_pretrained(
     {checkpoint!r},
@@ -127,57 +109,113 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {generation_kwargs}
+model.load()
+required_stages = (
+    "forward_lm",
+    "forward_tts_lm",
+    "sample_speech_latents",
+    "decode_speech_latents",
+)
+missing = [name for name in required_stages if not hasattr(model.model, name)]
+if missing:
+    raise RuntimeError(f"Missing audited VibeVoice stage(s): {{', '.join(missing)}}")
+print("High-level synthesis is not verified; available native stages:", required_stages)'''
+
+        imports = (
+            "AutoModelForTextToSpeech",
+            "TTSGenerationConfig",
+            *profile.voicehub_imports,
+        )
+        setup_imports = "\nimport json" if any("json." in line for line in profile.setup) else ""
+        setup = "\n".join(profile.setup)
+        if setup:
+            setup += "\n\n"
+        load_arguments = _render_call_arguments(profile.load_arguments)
+        arguments = _render_call_arguments(profile.arguments)
+        rendered_imports = ", ".join(dict.fromkeys(imports))
+        return f'''from pathlib import Path{setup_imports}
+
+from voicehub import {rendered_imports}
+
+{setup}model = AutoModelForTextToSpeech.from_pretrained(
+    {checkpoint!r},
+    model_type={spec.model_type!r},
+    device="cuda",
+    lazy_load=True,
+{load_arguments})
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    {profile.text!r},
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
-)
-print(output.file_path, output.sample_rate)'''
-    if spec.task.value == "automatic-speech-recognition":
-        return f'''from voicehub import AutoModelForSpeechRecognition
+{arguments})
+print(output.file_path, output.sample_rate, output.metadata)'''
 
-model = AutoModelForSpeechRecognition.from_pretrained(
+    setup = '''AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
+
+'''
+    arguments = _render_call_arguments(profile.arguments)
+    if spec.task.value == "automatic-speech-recognition":
+        return f'''from pathlib import Path
+
+from voicehub import AutoModelForSpeechRecognition
+
+{setup}model = AutoModelForSpeechRecognition.from_pretrained(
     {checkpoint!r},
     model_type={spec.model_type!r},
     device="cuda",
     lazy_load=True,
 )
-output = model.transcribe("speech.wav")
+output = model.transcribe(
+    AUDIO_FILE,
+{arguments})
 print(output.text)
 for segment in output.segments:
-    print(segment.start, segment.end, segment.text)'''
-    return f'''from voicehub import AutoModelForVoiceActivityDetection
+    print(segment.start, segment.end, segment.text, segment.confidence)'''
+    return f'''from pathlib import Path
 
-model = AutoModelForVoiceActivityDetection.from_pretrained(
+from voicehub import AutoModelForVoiceActivityDetection
+
+{setup}model = AutoModelForVoiceActivityDetection.from_pretrained(
     {checkpoint!r},
     model_type={spec.model_type!r},
     device="cpu",
     lazy_load=True,
 )
-output = model.detect("speech.wav", threshold=0.5)
+output = model.detect(
+    AUDIO_FILE,
+{arguments})
 for segment in output.segments:
     print(segment.start, segment.end, segment.score)'''
 
 
 def _inference_notes(spec) -> str:
-    notes = ["Install from source, then choose a compatible checkpoint."]
-    if spec.task.value == "text-to-speech":
-        if spec.model_type in TTS_GENERATION_OPTIONS:
-            notes.append("Provide an authorized `reference.wav` and its exact transcript when requested.")
-        else:
-            notes.append("Set the text and generation options, then inspect the returned audio.")
-    elif spec.task.value == "automatic-speech-recognition":
-        notes.append("Place a supported recording at `speech.wav` and inspect the transcript.")
-    else:
-        notes.append("Place a recording at `speech.wav`; tune the threshold on labeled audio.")
+    profile = inference_profile(spec)
+    notes = [
+        (
+            "This example is maintained against VoiceHub's public API; it is "
+            "not copied from an upstream demo or package README."),
+        f"**Model-specific path:** {profile.summary}",
+        f"**Inputs and controls:** {profile.input_note}",
+    ]
     checkpoint_note = checkpoint_documentation(spec).note
-    rendered = " ".join(notes)
     if checkpoint_note:
-        rendered += f"\n\nCheckpoint note: {checkpoint_note}"
+        notes.append(f"**Checkpoint note:** {checkpoint_note}")
+    return "\n\n".join(notes)
+
+
+def _hugging_face_checkpoint(spec, *, detailed: bool = True) -> str:
+    documentation = checkpoint_documentation(spec)
+    if documentation.hugging_face_id is not None:
+        rendered = (f"[`{documentation.hugging_face_id}`]"
+                    f"({documentation.hugging_face_url})")
+    else:
+        rendered = "Not published / not applicable"
+    if detailed:
+        return f"{rendered}<br>{_cell(documentation.hugging_face_status)}"
     return rendered
 
 
@@ -435,9 +473,9 @@ description: Public API, checkpoint, training, and optimization guide for the {s
 
 ## Usage
 
-```bash
-{_install_command(spec)}
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
 {_inference_notes(spec)}
 
@@ -517,6 +555,7 @@ Unsupported runtime or hardware fails closed before mutation.
 | Property | Value |
 | --- | --- |
 | Default checkpoint | {checkpoint} |
+| Hugging Face ID | {_hugging_face_checkpoint(spec)} |
 | Checkpoint status | {_cell(checkpoint_metadata.status)} |
 | Optional dependency extra | {dependency_extra} |
 | Hardware and runtime | Usage selects `{_example_device(spec)}`; verify checkpoint-specific requirements |
@@ -622,18 +661,17 @@ def render_index(specs) -> str:
             "",
             "<div class=\"vh-model-catalog\" markdown>",
             "",
-            "| Model | Languages | Default checkpoint | Training | Notebook |",
+            "| Model | Languages | Hugging Face ID | Training | Notebook |",
             "| --- | --- | --- | --- | --- |",
         ))
         for spec in task_specs:
-            _, checkpoint = _checkpoint(spec)
             checkpoint_metadata = checkpoint_documentation(spec)
             notebook = (
                 f"[Colab]({COLAB_ROOT}/{spec.model_type}.ipynb)"
                 if checkpoint_metadata.is_hugging_face else "—")
             lines.append(
                 f"| [`{spec.display_name}`]({spec.model_type}.md) | "
-                f"{_language_summary(spec)} | {checkpoint} | "
+                f"{_language_summary(spec)} | {_hugging_face_checkpoint(spec, detailed=False)} | "
                 f"`{spec.training.support.value}` | {notebook} |")
         lines.extend(("", "</div>", ""))
     return "\n".join(lines)

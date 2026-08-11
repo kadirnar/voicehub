@@ -6,16 +6,25 @@ description: Public API, checkpoint, training, and optimization guide for the cs
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Set the text and generation options, then inspect the returned audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Builds CSM speaker context from a stable speaker index and paired reference recording.
+
+**Inputs and controls:** Reference audio and text must be supplied together; speaker IDs must be non-negative.
 
 ```python
 from pathlib import Path
 
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+
+REFERENCE_AUDIO = Path("reference.wav")
+REFERENCE_TEXT = "The reference transcript must exactly match the authorized audio."
+if not REFERENCE_AUDIO.is_file():
+    raise FileNotFoundError(REFERENCE_AUDIO)
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'sesame/csm-1b',
@@ -23,16 +32,18 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {}
 output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
+    'VoiceHub keeps model integrations explicit and reproducible.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    **generation_kwargs,
+    speaker=0,
+    speaker_audio_path=str(REFERENCE_AUDIO),
+    reference_text=REFERENCE_TEXT,
+    max_audio_length_ms=30_000,
 )
-print(output.file_path, output.sample_rate)
+print(output.file_path, output.sample_rate, output.metadata)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -149,6 +160,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`sesame/csm-1b`](https://huggingface.co/sesame/csm-1b) |
+| Hugging Face ID | [`sesame/csm-1b`](https://huggingface.co/sesame/csm-1b)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

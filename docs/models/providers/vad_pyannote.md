@@ -6,14 +6,24 @@ description: Public API, checkpoint, training, and optimization guide for the va
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a recording at `speech.wav`; tune the threshold on labeled audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Applies pyannote VAD with separate onset and offset thresholds.
+
+**Inputs and controls:** The repository can be gated; authenticate through the normal Hugging Face token flow before loading.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForVoiceActivityDetection
+
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
 
 model = AutoModelForVoiceActivityDetection.from_pretrained(
     'pyannote/voice-activity-detection',
@@ -21,7 +31,12 @@ model = AutoModelForVoiceActivityDetection.from_pretrained(
     device="cpu",
     lazy_load=True,
 )
-output = model.detect("speech.wav", threshold=0.5)
+output = model.detect(
+    AUDIO_FILE,
+    onset=0.55,
+    offset=0.45,
+    min_speech_duration_ms=100,
+)
 for segment in output.segments:
     print(segment.start, segment.end, segment.score)
 ```
@@ -126,6 +141,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`pyannote/voice-activity-detection`](https://huggingface.co/pyannote/voice-activity-detection) |
+| Hugging Face ID | [`pyannote/voice-activity-detection`](https://huggingface.co/pyannote/voice-activity-detection)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |

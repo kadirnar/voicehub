@@ -203,7 +203,7 @@ SPEECHT5_HEADINGS = (
     ("H3", "SpeechT5Config"),
     ("H3", "SpeechT5ForTextToSpeech"),
 )
-SPEECHT5_TABLE_ROWS = (7, 3, 4, 2, 6, 1, 9, 8)
+SPEECHT5_TABLE_ROWS = (7, 3, 4, 2, 6, 1, 10, 8)
 QUICKSTART_ROUTE = "getting-started/quickstart/index.html"
 QUICKSTART_HEADINGS = (
     ("H1", "Quickstart"),
@@ -1976,10 +1976,10 @@ def _validate_speecht5_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: SpeechT5 table rows are {state['tableRows']!r}, "
             f"expected {SPEECHT5_TABLE_ROWS!r}.")
-    if state["codeBlocks"] != 7 or state["codeCopyButtons"] != 7:
+    if state["codeBlocks"] != 6 or state["codeCopyButtons"] != 6:
         raise DocumentationVisualError(
             f"{case}: SpeechT5 code inventory is codeBlocks={state['codeBlocks']}, "
-            f"copyButtons={state['codeCopyButtons']}; expected 7 and 7.")
+            f"copyButtons={state['codeCopyButtons']}; expected 6 and 6.")
     expected_sources = (
         "voicehub/models/speecht5/configuration_speecht5.py",
         "voicehub/models/speecht5/modeling_speecht5.py",

@@ -184,7 +184,7 @@ class FunASRForSpeechRecognition(PreTrainedASRModel):
     """
 
     config_class = FunASRConfig
-    default_model_name_or_path = "iic/SenseVoiceSmall"
+    default_model_name_or_path = "FunAudioLLM/SenseVoiceSmall"
     architecture_family = "ctc"
     native_checkpoint_format = "voicehub-sensevoice-small-v1"
     training_support = "native"

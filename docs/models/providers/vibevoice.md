@@ -6,16 +6,18 @@ description: Public API, checkpoint, training, and optimization guide for the vi
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Set the text and generation options, then inspect the returned audio.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
+
+**Model-specific path:** Loads the audited VibeVoice realtime stages without claiming an unverified text-to-waveform loop.
+
+**Inputs and controls:** High-level cached-prompt synthesis intentionally fails closed until cache serialization, chunk boundaries, and waveform parity are verified.
 
 ```python
-from pathlib import Path
-
-from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+from voicehub import AutoModelForTextToSpeech
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'microsoft/VibeVoice-Realtime-0.5B',
@@ -23,16 +25,17 @@ model = AutoModelForTextToSpeech.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-generation_kwargs = {}
-output = model.generate(
-    "VoiceHub keeps model integrations consistent and easy to extend.",
-    generation_config=TTSGenerationConfig(
-        seed=42,
-        output_file=Path("output.wav"),
-    ),
-    **generation_kwargs,
+model.load()
+required_stages = (
+    "forward_lm",
+    "forward_tts_lm",
+    "sample_speech_latents",
+    "decode_speech_latents",
 )
-print(output.file_path, output.sample_rate)
+missing = [name for name in required_stages if not hasattr(model.model, name)]
+if missing:
+    raise RuntimeError(f"Missing audited VibeVoice stage(s): {', '.join(missing)}")
+print("High-level synthesis is not verified; available native stages:", required_stages)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -145,6 +148,7 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`microsoft/VibeVoice-Realtime-0.5B`](https://huggingface.co/microsoft/VibeVoice-Realtime-0.5B) |
+| Hugging Face ID | [`microsoft/VibeVoice-Realtime-0.5B`](https://huggingface.co/microsoft/VibeVoice-Realtime-0.5B)<br>Repository availability verified through the Hugging Face model API on 2026-08-11; pin a revision before production use. |
 | Checkpoint status | Registry default; pin an immutable revision for production and reproducible evidence |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

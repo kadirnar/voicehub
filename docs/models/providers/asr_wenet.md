@@ -6,16 +6,26 @@ description: Public API, checkpoint, training, and optimization guide for the as
 
 ## Usage
 
-```bash
-python -m pip install "voicehub @ git+https://github.com/kadirnar/voicehub.git@main"
-```
+Complete the [VoiceHub installation](../../getting-started/installation.md) once,
+then run this repository-authored example. Model pages intentionally contain no
+package-install command.
 
-Install from source, then choose a compatible checkpoint. Place a supported recording at `speech.wav` and inspect the transcript.
+This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-Checkpoint note: The registry identifier is not a Hugging Face repository and the original upstream archive endpoints are unavailable. VoiceHub verifies an immutable mirror against the published 503,845,602-byte archive's SHA-256. Convert that trust-gated pickle archive first, then replace the path below with the resulting VoiceHub-native directory containing model.safetensors, config.json, tokenizer.model, and units.txt.
+**Model-specific path:** Loads a reviewed VoiceHub conversion of WeNet GigaSpeech U2++ and requests word timestamps.
+
+**Inputs and controls:** The external release is not a drop-in HF model; convert it through the audited artifact boundary first.
+
+**Checkpoint note:** The registry identifier is not a Hugging Face repository and the original upstream archive endpoints are unavailable. VoiceHub verifies an immutable mirror against the published 503,845,602-byte archive's SHA-256. Convert that trust-gated pickle archive first, then replace the path below with the resulting VoiceHub-native directory containing model.safetensors, config.json, tokenizer.model, and units.txt.
 
 ```python
+from pathlib import Path
+
 from voicehub import AutoModelForSpeechRecognition
+
+AUDIO_FILE = Path("speech.wav")
+if not AUDIO_FILE.is_file():
+    raise FileNotFoundError(AUDIO_FILE)
 
 model = AutoModelForSpeechRecognition.from_pretrained(
     'path/to/converted-wenet-u2pp',
@@ -23,10 +33,15 @@ model = AutoModelForSpeechRecognition.from_pretrained(
     device="cuda",
     lazy_load=True,
 )
-output = model.transcribe("speech.wav")
+output = model.transcribe(
+    AUDIO_FILE,
+    language="en",
+    return_timestamps="word",
+    num_beams=10,
+)
 print(output.text)
 for segment in output.segments:
-    print(segment.start, segment.end, segment.text)
+    print(segment.start, segment.end, segment.text, segment.confidence)
 ```
 
 Use authorized recordings. Verify hardware needs and pin a revision in production.
@@ -141,6 +156,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Property | Value |
 | --- | --- |
 | Default checkpoint | [`wenet/gigaspeech-u2pp-conformer`](https://github.com/wenet-e2e/wenet/blob/a50d4208f13bbf3a0746e606ac29176cd2e87e6b/examples/gigaspeech/s0/README.md#conformer-u2-result) |
+| Hugging Face ID | Not published / not applicable<br>No canonical Hugging Face repository for the exact audited GigaSpeech U2++ release; the page links the verified external archive and conversion boundary. |
 | Checkpoint status | Original upstream archive unavailable (HTTP 404 and TLS failures verified 2026-08-04); exact bytes are available from the immutable openspeech/wenet-models mirror at 90acd57d17169a15d5ceab462c6e7db3bd003921 |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
