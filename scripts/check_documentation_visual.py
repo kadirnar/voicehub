@@ -179,11 +179,10 @@ INSTALLATION_INTERNAL_TARGETS = ()
 MODEL_INDEX_ROUTE = "models/providers/index.html"
 MODEL_INDEX_HEADINGS = (
     ("H1", "Model list"),
-    ("H2", "Text to speech"),
-    ("H2", "Automatic speech recognition"),
-    ("H2", "Voice activity detection"),
+    ("H2", "Find the right speech model"),
+    ("H2", "Search the registry in Python"),
 )
-MODEL_INDEX_TABLE_ROWS = (34, 23, 11)
+MODEL_INDEX_TOC = ("Search the registry in Python", )
 SPEECHT5_ROUTE = "models/providers/speecht5/index.html"
 SPEECHT5_HEADINGS = (
     ("H1", "SpeechT5"),
@@ -1812,17 +1811,36 @@ def _validate_model_index_state(page: Page, case: str) -> None:
         r"""() => {
           const content = document.querySelector(".md-content__inner");
           const normalize = value => value?.trim().replace(/¶$/, "").trim() || "";
-          const tables = Array.from(content?.querySelectorAll("table") || []);
-          const providerLinks = tables.flatMap(table =>
-            Array.from(table.querySelectorAll("tbody tr td:first-child a[href]"))
-          );
+          const explorer = content?.querySelector("[data-vh-model-explorer]");
+          const cards = Array.from(explorer?.querySelectorAll("[data-vh-model-card]") || []);
+          const providerLinks = cards.map(card =>
+            card.querySelector(".vh-model-card__heading h2 a[href]")
+          ).filter(Boolean);
           return {
             headings: Array.from(content?.querySelectorAll("h1, h2, h3") || [])
+              .filter(heading => !heading.closest(
+                "[data-vh-model-card], [data-vh-model-empty]"
+              ))
               .map(heading => [heading.tagName, normalize(heading.textContent)]),
             toc: Array.from(document.querySelectorAll(
               ".md-sidebar--secondary a.md-nav__link"
             )).map(link => normalize(link.textContent)),
-            tableRows: tables.map(table => table.querySelectorAll("tbody tr").length),
+            enhanced: explorer?.dataset.enhanced,
+            cardCount: cards.length,
+            visibleCardCount: cards.filter(card => !card.hidden).length,
+            resultCount: explorer?.querySelector("[data-vh-model-result-count]")?.textContent,
+            filterSelectNames: Array.from(
+              explorer?.querySelectorAll("[data-vh-model-select]") || []
+            ).map(select => select.name),
+            featureFilterCount: explorer?.querySelectorAll(
+              'input[data-vh-model-checkbox][name="feature"]'
+            ).length || 0,
+            resourceFilterCount: explorer?.querySelectorAll(
+              'input[data-vh-model-checkbox][name="resource"]'
+            ).length || 0,
+            languageOptionCount: explorer?.querySelector(
+              'select[name="language"]'
+            )?.options.length || 0,
             codeBlocks: content?.querySelectorAll("pre").length || 0,
             codeCopyButtons: content?.querySelectorAll("button[data-vh-code-copy]").length || 0,
             providerLabels: providerLinks.map(link => normalize(link.textContent)),
@@ -1834,14 +1852,31 @@ def _validate_model_index_state(page: Page, case: str) -> None:
     if headings != MODEL_INDEX_HEADINGS:
         raise DocumentationVisualError(
             f"{case}: model-index headings are {headings!r}, expected {MODEL_INDEX_HEADINGS!r}.")
-    expected_toc = tuple(label for _, label in MODEL_INDEX_HEADINGS[1:])
-    if tuple(state["toc"]) != expected_toc:
+    if tuple(state["toc"]) != MODEL_INDEX_TOC:
         raise DocumentationVisualError(
-            f"{case}: model-index table of contents is {state['toc']!r}, expected {expected_toc!r}.")
-    if tuple(state["tableRows"]) != MODEL_INDEX_TABLE_ROWS:
+            f"{case}: model-index table of contents is {state['toc']!r}, "
+            f"expected {MODEL_INDEX_TOC!r}.")
+    if state["enhanced"] != "true" or state["cardCount"] != 68 or state["visibleCardCount"] != 68:
         raise DocumentationVisualError(
-            f"{case}: model-index table rows are {state['tableRows']!r}, "
-            f"expected {MODEL_INDEX_TABLE_ROWS!r}.")
+            f"{case}: model explorer state is enhanced={state['enhanced']!r}, "
+            f"cards={state['cardCount']!r}, visible={state['visibleCardCount']!r}; "
+            "expected 'true', 68, and 68.")
+    if state["resultCount"] != "68":
+        raise DocumentationVisualError(
+            f"{case}: model explorer result count is {state['resultCount']!r}, expected '68'.")
+    expected_selects = ("language", "task", "training", "checkpoint", "license", "architecture")
+    if tuple(state["filterSelectNames"]) != expected_selects:
+        raise DocumentationVisualError(
+            f"{case}: model explorer selects are {state['filterSelectNames']!r}, "
+            f"expected {expected_selects!r}.")
+    if state["featureFilterCount"] != 11 or state["resourceFilterCount"] != 2:
+        raise DocumentationVisualError(
+            f"{case}: model explorer checkbox counts are "
+            f"{state['featureFilterCount']!r} features and {state['resourceFilterCount']!r} resources; "
+            "expected 11 and 2.")
+    if state["languageOptionCount"] < 700:
+        raise DocumentationVisualError(
+            f"{case}: model explorer exposes only {state['languageOptionCount']!r} language options.")
     if state["codeBlocks"] != 1 or state["codeCopyButtons"] != 1:
         raise DocumentationVisualError(
             f"{case}: model-index code inventory is codeBlocks={state['codeBlocks']}, "
@@ -1857,7 +1892,9 @@ def _validate_model_index_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: model-index labels are not uppercase-first: {invalid_labels!r}.")
     for marker in (
-            "dedicated usage, paper, GitHub, training",
+            "Find the right speech model",
+            "Search models",
+            "Any language",
             "list_model_specs()",
             "training matrix",
             "optimization catalog",
@@ -1940,6 +1977,57 @@ def _validate_installation_page_copy(page: Page, case: str, key: str) -> None:
 
 def _validate_model_index_page_copy(page: Page, case: str, key: str) -> None:
     _validate_page_copy(page, f"{case} / model-index page copy", key)
+
+
+def _validate_model_explorer_filters(page: Page, case: str) -> None:
+    explorer = page.locator("[data-vh-model-explorer]")
+    count = explorer.locator("[data-vh-model-result-count]")
+    language = explorer.locator('select[name="language"]')
+    task = explorer.locator('select[name="task"]')
+    query = explorer.locator("[data-vh-model-query]")
+    feature = explorer.locator('input[name="feature"][value="voice-cloning"]')
+    details = explorer.locator(".vh-model-filters__advanced")
+
+    language.select_option("tr")
+    page.wait_for_function("element => element.textContent === '16'", arg=count.element_handle())
+    task.select_option("text-to-speech")
+    details.locator(":scope > summary").click()
+    feature.check()
+    page.wait_for_function("element => element.textContent === '6'", arg=count.element_handle())
+    expected_models = ("Chatterbox", "FishTTS", "MossTTS", "OmniVoice", "VoxCPM", "XTTS")
+    visible_models = tuple(explorer.locator(".vh-model-card:not([hidden]) h2").all_text_contents())
+    if visible_models != expected_models:
+        raise DocumentationVisualError(
+            f"{case}: Turkish TTS voice-cloning models are {visible_models!r}, "
+            f"expected {expected_models!r}.")
+
+    query.fill("Turkish voice cloning")
+    page.wait_for_function("element => element.textContent === '6'", arg=count.element_handle())
+    parameters = page.evaluate("() => Object.fromEntries(new URLSearchParams(location.search).entries())")
+    expected_parameters = {
+        "model_q": "Turkish voice cloning",
+        "model_language": "tr",
+        "model_task": "text-to-speech",
+        "model_features": "voice-cloning",
+    }
+    if parameters != expected_parameters:
+        raise DocumentationVisualError(
+            f"{case}: model explorer URL state is {parameters!r}, expected {expected_parameters!r}.")
+    if explorer.locator("[data-vh-model-active-filters] button").count() != 4:
+        raise DocumentationVisualError(f"{case}: model explorer did not render four active filters.")
+
+    query.fill("no-such-model-zzzz")
+    empty = explorer.locator("[data-vh-model-empty]")
+    if not empty.is_visible() or count.inner_text() != "0":
+        raise DocumentationVisualError(f"{case}: model explorer empty state is not visible at zero results.")
+    empty.locator("[data-vh-model-clear]").click()
+    page.wait_for_function("element => element.textContent === '68'", arg=count.element_handle())
+    explorer.locator("[data-vh-model-sort]").select_option("languages")
+    first_card = explorer.locator(".vh-model-card:not([hidden])").first
+    if (first_card.get_attribute("data-model-type") != "omnivoice" or
+            first_card.get_attribute("data-language-count") != "646"):
+        raise DocumentationVisualError(f"{case}: language-coverage sorting did not place OmniVoice first.")
+    explorer.locator("[data-vh-model-sort]").select_option("name")
 
 
 def _validate_speecht5_state(page: Page, case: str) -> None:
@@ -3789,6 +3877,7 @@ def validate_site(
                                             f"to {case_axe_core!r}.")
                                     inference_interaction_cases += 1
                                 if relative_path == MODEL_INDEX_ROUTE:
+                                    _validate_model_explorer_filters(page, case)
                                     key = "Enter" if palette == "default" else "Space"
                                     _validate_model_index_page_copy(page, case, key)
                                     case_axe_core = _validate_accessibility(

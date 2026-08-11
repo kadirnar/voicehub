@@ -65,6 +65,7 @@ STYLESHEET_PATH = DOCS_ROOT / "stylesheets" / "extra.css"
 HEADER_CONTROL_SCRIPT_PATH = DOCS_ROOT / "javascripts" / "header-controls.js"
 PAGE_ACTION_SCRIPT_PATH = DOCS_ROOT / "javascripts" / "page-actions.js"
 MOBILE_DRAWER_SCRIPT_PATH = DOCS_ROOT / "javascripts" / "mobile-drawer.js"
+MODEL_EXPLORER_SCRIPT_PATH = DOCS_ROOT / "javascripts" / "model-explorer.js"
 PAGE_ACTIONS_OVERRIDE_PATH = REPOSITORY_ROOT / "overrides" / "partials" / "actions.html"
 PUBLIC_SITE_URL = "https://kadirnar.github.io/voicehub/"
 LOCALIZED_HOME_LOCALES = ("ar", "de", "es", "fr", "ja", "ko", "pt", "ru", "tr", "zh")
@@ -445,7 +446,10 @@ class DocumentationSiteTests(unittest.TestCase):
                     source_path = module_source_path(module)
                     self.assertTrue((REPOSITORY_ROOT / source_path).is_file())
                     self.assertIn(source_path.as_posix(), source)
-                self.assertIn(f"[`{spec.display_name}`]({path.name})", index)
+                self.assertIn(
+                    f'<h2><a href="{spec.model_type}/">{spec.display_name}</a></h2>',
+                    index,
+                )
                 self.assertEqual(
                     config.count(f"models/providers/{path.name}"),
                     1,
@@ -512,13 +516,20 @@ class DocumentationSiteTests(unittest.TestCase):
 
         headings = (
             "# Model list",
-            "## Text to speech",
-            "## Automatic speech recognition",
-            "## Voice activity detection",
+            "## Search the registry in Python",
         )
         positions = tuple(index.index(heading) for heading in headings)
         self.assertEqual(positions, tuple(sorted(positions)))
         for fragment in (
+                "data-vh-model-explorer",
+                "Find the right speech model",
+                'name="language"',
+                'name="task"',
+                'name="training"',
+                'name="checkpoint"',
+                'name="license"',
+                'name="architecture"',
+                "Capabilities &amp; resources",
                 "from voicehub import list_model_specs",
                 "for model in list_model_specs():",
                 "model.display_name",
@@ -526,12 +537,27 @@ class DocumentationSiteTests(unittest.TestCase):
                 "optimization catalog",
         ):
             self.assertIn(fragment, index)
+        self.assertEqual(index.count("data-vh-model-card\n"), len(specs))
         self.assertIn("- Model list: models/providers/index.md", config)
+        self.assertIn("- javascripts/model-explorer.js", config)
         for example_index, example in enumerate(PYTHON_BLOCK.findall(index), start=1):
             ast.parse(
                 textwrap.dedent(example),
                 filename=f"models/providers/index.md:python-block-{example_index}",
             )
+
+        explorer_script = MODEL_EXPLORER_SCRIPT_PATH.read_text(encoding="utf-8")
+        for fragment in (
+                'querySelector("[data-vh-model-explorer]")',
+                "Intl.DisplayNames",
+                "modelSupportsLanguage",
+                "state.features.every",
+                "state.resources.every",
+                "window.history.replaceState",
+                "renderActiveFilters",
+                "applyFilters();",
+        ):
+            self.assertIn(fragment, explorer_script)
 
         for spec in specs:
             with self.subTest(model_type=spec.model_type):
@@ -539,7 +565,10 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertNotEqual(spec.display_name, spec.model_type)
                 page = (MODEL_PAGE_DIR / f"{spec.model_type}.md").read_text(encoding="utf-8")
                 self.assertIn(f"# {spec.display_name}", page)
-                self.assertIn(f"[`{spec.display_name}`]({spec.model_type}.md)", index)
+                self.assertIn(
+                    f'<h2><a href="{spec.model_type}/">{spec.display_name}</a></h2>',
+                    index,
+                )
                 self.assertIn(
                     f'- "{spec.display_name}": models/providers/{spec.model_type}.md',
                     config,
@@ -549,8 +578,9 @@ class DocumentationSiteTests(unittest.TestCase):
         for fragment in (
                 "MODEL_INDEX_ROUTE",
                 "MODEL_INDEX_HEADINGS",
-                "MODEL_INDEX_TABLE_ROWS",
+                "MODEL_INDEX_TOC",
                 "def _validate_model_index_state(",
+                "def _validate_model_explorer_filters(",
                 "def _validate_model_index_page_copy(",
                 '"model_index_cases"',
                 '"model_index_interaction_cases"',
@@ -751,8 +781,9 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn(checkpoint.example, page)
         self.assertIn(checkpoint.status, page)
         self.assertIn(checkpoint.url, page)
-        index_row = next(line for line in index.splitlines() if "](asr_wenet.md)" in line)
-        self.assertIn("Not published / not applicable", index_row)
+        index_card = index.split('data-model-type="asr_wenet"', 1)[1].split("</article>", 1)[0]
+        self.assertIn('data-checkpoint="external-archive"', index_card)
+        self.assertNotIn("Hugging Face</a>", index_card)
         self.assertNotIn("https://huggingface.co/wenet/gigaspeech", page)
         self.assertNotIn("asr_wenet.ipynb", page)
         self.assertNotIn("asr_wenet.ipynb", gallery)
@@ -1095,8 +1126,8 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         from voicehub.models.language_support import model_language_support
 
         index = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
-        self.assertEqual(index.count('<div class="vh-model-catalog" markdown>'), 3)
-        self.assertEqual(index.count("| Model | Languages | Hugging Face ID | Training | Notebook |"), 3)
+        self.assertEqual(index.count('class="vh-model-explorer"'), 1)
+        self.assertEqual(index.count("data-vh-model-card\n"), 68)
         count_only_language_summary = (
             r"(?:\b(?:(?:supports?|support for)\s+)?\d+\s+"
             r"(?:(?:enumerated|documented|supported|verified)\s+)?languages?\b|"
@@ -1124,14 +1155,18 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                     self.assertFalse(support.codes)
                     self.assertIn("Not text-language conditioned", page)
                     self.assertIn("does not select a spoken language", page)
+                    card = index.split(f'data-model-type="{spec.model_type}"', 1)[1].split("</article>", 1)[0]
+                    self.assertIn('data-language-kind="not-text-conditioned"', card)
                 else:
                     self.assertEqual(support.kind, "enumerated")
                     self.assertTrue(support.codes)
                     rendered_codes = ", ".join(f"`{code}`" for code in support.codes)
                     self.assertIn(f"| Languages | {rendered_codes} |", page)
-                    index_row = next(
-                        line for line in index.splitlines() if f"]({spec.model_type}.md)" in line)
-                    self.assertIn(f"| {rendered_codes} |", index_row)
+                    card = index.split(f'data-model-type="{spec.model_type}"', 1)[1].split("</article>", 1)[0]
+                    self.assertIn(
+                        f'data-languages="{" ".join(support.codes)}"',
+                        card,
+                    )
                     for code in support.codes:
                         self.assertIn(f"`{code}`", page)
                     self.assertIn('<details class="vh-language-support" markdown>', page)
@@ -3486,7 +3521,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         for model_spec in AutoInferenceModel.available_models():
             with self.subTest(model_type=model_spec.model_type):
                 self.assertIn(
-                    f"| [`{model_spec.display_name}`]({model_spec.model_type}.md) |",
+                    f'<h2><a href="{model_spec.model_type}/">{model_spec.display_name}</a></h2>',
                     catalog,
                 )
                 self.assertEqual(
