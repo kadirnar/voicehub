@@ -33,15 +33,16 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
       <span id="vh-model-search-hint" class="vh-model-filters__hint">Try “Turkish voice cloning” or “Whisper timestamps”.</span>
     </div>
 
-    <div class="vh-model-filters__grid">
-      <div class="vh-model-filter-field">
+    <div class="vh-model-filters__controls">
+      <div class="vh-model-filters__quick" aria-label="Quick filters">
+        <div class="vh-model-filter-field">
         <label for="vh-model-language">Language</label>
         <select id="vh-model-language" name="language" data-vh-model-select>
           <option value="">Any language</option>
 <option value="not-text-conditioned">Language-neutral (VAD)</option>
         </select>
       </div>
-      <div class="vh-model-filter-field">
+        <div class="vh-model-filter-field">
         <label for="vh-model-task">Task</label>
         <select id="vh-model-task" name="task" data-vh-model-select>
           <option value="">Any task</option>
@@ -50,7 +51,7 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
 <option value="voice-activity-detection">Voice activity detection (11)</option>
         </select>
       </div>
-      <div class="vh-model-filter-field">
+        <div class="vh-model-filter-field">
         <label for="vh-model-training">Training</label>
         <select id="vh-model-training" name="training" data-vh-model-select>
           <option value="">Any training path</option>
@@ -60,7 +61,18 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
 <option value="inference-only">Inference only (2)</option>
         </select>
       </div>
-      <div class="vh-model-filter-field">
+      </div>
+
+      <details class="vh-model-filters__advanced">
+        <summary>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg>
+          <span>More filters</span>
+          <span class="vh-model-filters__advanced-count"
+            data-vh-model-advanced-count hidden>0</span>
+        </summary>
+        <div class="vh-model-filters__advanced-body">
+          <div class="vh-model-filters__secondary">
+            <div class="vh-model-filter-field">
         <label for="vh-model-checkpoint">Checkpoint</label>
         <select id="vh-model-checkpoint" name="checkpoint" data-vh-model-select>
           <option value="">Any checkpoint source</option>
@@ -69,7 +81,7 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
 <option value="local">Local or caller-provided (8)</option>
         </select>
       </div>
-      <div class="vh-model-filter-field">
+            <div class="vh-model-filter-field">
         <label for="vh-model-license">License</label>
         <select id="vh-model-license" name="license" data-vh-model-select>
           <option value="">Any license status</option>
@@ -79,7 +91,7 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
 <option value="checkpoint-specific">Checkpoint-specific (54)</option>
         </select>
       </div>
-      <div class="vh-model-filter-field">
+            <div class="vh-model-filter-field">
         <label for="vh-model-architecture">Architecture</label>
         <select id="vh-model-architecture" name="architecture" data-vh-model-select>
           <option value="">Any architecture</option>
@@ -146,17 +158,10 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
 <option value="zonos2">zonos2 (1)</option>
         </select>
       </div>
-    </div>
-
-    <details class="vh-model-filters__advanced">
-      <summary>
-        <span>Capabilities &amp; resources</span>
-        <small>Choose one or more</small>
-      </summary>
-      <div class="vh-model-filters__advanced-body">
-        <fieldset>
-          <legend>Capabilities <span>Models must include every selected capability</span></legend>
-          <div class="vh-model-filter-chips"><label class="vh-model-filter-chip" for="vh-model-feature-voice-cloning">
+          </div>
+          <fieldset>
+            <legend>Capabilities <span>Models must include every selected capability</span></legend>
+            <div class="vh-model-filter-chips"><label class="vh-model-filter-chip" for="vh-model-feature-voice-cloning">
             <input id="vh-model-feature-voice-cloning" name="feature"
               type="checkbox" value="voice-cloning"
               data-vh-model-checkbox data-filter-label="Voice cloning">
@@ -222,10 +227,10 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
               data-vh-model-checkbox data-filter-label="Frame scores">
             <span>Frame scores <small>8</small></span>
           </label></div>
-        </fieldset>
-        <fieldset>
-          <legend>Resources</legend>
-          <div class="vh-model-filter-chips"><label class="vh-model-filter-chip" for="vh-model-resource-notebook">
+          </fieldset>
+          <fieldset>
+            <legend>Resources</legend>
+            <div class="vh-model-filter-chips"><label class="vh-model-filter-chip" for="vh-model-resource-notebook">
             <input id="vh-model-resource-notebook" name="resource"
               type="checkbox" value="notebook"
               data-vh-model-checkbox data-filter-label="Colab notebook">
@@ -237,9 +242,10 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
               data-vh-model-checkbox data-filter-label="Hugging Face page">
             <span>Hugging Face page <small>63</small></span>
           </label></div>
-        </fieldset>
-      </div>
-    </details>
+          </fieldset>
+        </div>
+      </details>
+    </div>
   </form>
 
   <div class="vh-model-results__toolbar">

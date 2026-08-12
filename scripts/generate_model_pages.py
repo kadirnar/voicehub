@@ -910,31 +910,37 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
       <span id="vh-model-search-hint" class="vh-model-filters__hint">Try “Turkish voice cloning” or “Whisper timestamps”.</span>
     </div>
 
-    <div class="vh-model-filters__grid">
-      {language_select}
-      {task_select}
-      {training_select}
-      {checkpoint_select}
-      {license_select}
-      {architecture_select}
-    </div>
-
-    <details class="vh-model-filters__advanced">
-      <summary>
-        <span>Capabilities &amp; resources</span>
-        <small>Choose one or more</small>
-      </summary>
-      <div class="vh-model-filters__advanced-body">
-        <fieldset>
-          <legend>Capabilities <span>Models must include every selected capability</span></legend>
-          <div class="vh-model-filter-chips">{feature_filters}</div>
-        </fieldset>
-        <fieldset>
-          <legend>Resources</legend>
-          <div class="vh-model-filter-chips">{resource_filters}</div>
-        </fieldset>
+    <div class="vh-model-filters__controls">
+      <div class="vh-model-filters__quick" aria-label="Quick filters">
+        {language_select}
+        {task_select}
+        {training_select}
       </div>
-    </details>
+
+      <details class="vh-model-filters__advanced">
+        <summary>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg>
+          <span>More filters</span>
+          <span class="vh-model-filters__advanced-count"
+            data-vh-model-advanced-count hidden>0</span>
+        </summary>
+        <div class="vh-model-filters__advanced-body">
+          <div class="vh-model-filters__secondary">
+            {checkpoint_select}
+            {license_select}
+            {architecture_select}
+          </div>
+          <fieldset>
+            <legend>Capabilities <span>Models must include every selected capability</span></legend>
+            <div class="vh-model-filter-chips">{feature_filters}</div>
+          </fieldset>
+          <fieldset>
+            <legend>Resources</legend>
+            <div class="vh-model-filter-chips">{resource_filters}</div>
+          </fieldset>
+        </div>
+      </details>
+    </div>
   </form>
 
   <div class="vh-model-results__toolbar">
