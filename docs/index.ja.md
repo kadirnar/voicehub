@@ -34,6 +34,22 @@ description: 統一された TTS 推論、データ準備、アーキテクチ�
   <span class="vh-doc-teaser__audio">音声</span>
 </div>
 
+<section class="vh-home-models" aria-labelledby="vh-home-models-title">
+  <p class="vh-home-models__eyebrow">モデルカタログ</p>
+  <h2 id="vh-home-models-title">言語とタスクに合うモデルを見つける</h2>
+  <p class="vh-home-models__description">68 の TTS、ASR、VAD 統合を、言語、機能、学習方法、ライセンス、アーキテクチャ、チェックポイントの提供元で検索できます。</p>
+  <p class="vh-home-models__actions">
+    <a class="vh-home-models__primary" href="models/providers/">すべてのモデルを見る <span aria-hidden="true">→</span></a>
+    <a class="vh-home-models__secondary" href="models/training-support/">学習サポートを比較</a>
+  </p>
+  <ul class="vh-home-models__stats" aria-label="モデルレジストリの概要">
+    <li><strong>68</strong><span>モデル</span></li>
+    <li><strong>34</strong><span>TTS</span></li>
+    <li><strong>23</strong><span>ASR</span></li>
+    <li><strong>11</strong><span>VAD</span></li>
+  </ul>
+</section>
+
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="VoiceHub の継続的インテグレーションのステータス">
