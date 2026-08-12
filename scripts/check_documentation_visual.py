@@ -117,9 +117,26 @@ PALETTES = {
 HOME_ROUTE = "index.html"
 HOME_HEADINGS = (
     ("H1", "VoiceHub"),
+    ("H2", "Find a model for your language and task"),
     ("H2", "Features"),
     ("H2", "Design"),
     ("H2", "Learn"),
+)
+HOME_TOC = (
+    "Find a model for your language and task",
+    "Features",
+    "Design",
+    "Learn",
+)
+HOME_MODEL_TARGETS = (
+    "/models/providers/",
+    "/models/training-support/",
+)
+HOME_MODEL_STATS = (
+    "68 Models",
+    "34 TTS",
+    "23 ASR",
+    "11 VAD",
 )
 HOME_FEATURE_TARGETS = (
     "/guides/inference/",
@@ -1517,6 +1534,11 @@ def _validate_home_state(page: Page, case: str) -> None:
           );
           const badgeLinks = Array.from(content?.querySelectorAll(".vh-badges a[href]") || []);
           const images = Array.from(content?.querySelectorAll("img") || []);
+          const modelPanel = content?.querySelector(".vh-home-models");
+          const modelLinks = Array.from(modelPanel?.querySelectorAll(".vh-home-models__actions a[href]") || []);
+          const modelStats = Array.from(modelPanel?.querySelectorAll(".vh-home-models__stats > li") || []);
+          const teaser = content?.querySelector(".vh-doc-teaser");
+          const badges = content?.querySelector(".vh-badges");
           const next = document.querySelector(".md-footer__link--next");
           return {
             headings: Array.from(content?.querySelectorAll("h1, h2, h3") || [])
@@ -1532,6 +1554,17 @@ def _validate_home_state(page: Page, case: str) -> None:
             cardCount: content?.querySelectorAll(".grid.cards > ul > li").length || 0,
             cardTargets: cardLinks.map(pathWithHash),
             badgeTargets: badgeLinks.map(link => link.href),
+            modelTargets: modelLinks.map(pathWithHash),
+            modelStats: modelStats.map(item =>
+              `${normalize(item.querySelector("strong")?.textContent)} ${normalize(item.querySelector("span")?.textContent)}`
+            ),
+            modelLabelTarget: modelPanel?.getAttribute("aria-labelledby"),
+            modelTitleId: modelPanel?.querySelector("h2")?.id,
+            modelPanelAfterTeaser: teaser?.nextElementSibling === modelPanel,
+            modelPanelBeforeBadges: modelPanel?.nextElementSibling === badges,
+            modelPanelRect: modelPanel?.getBoundingClientRect().toJSON(),
+            teaserRect: teaser?.getBoundingClientRect().toJSON(),
+            badgesRect: badges?.getBoundingClientRect().toJSON(),
             imageCount: images.length,
             decorativeImages: images.filter(image => image.getAttribute("alt") === "").length,
             badgeAlts: badgeLinks.map(link => normalize(link.querySelector("img")?.alt)),
@@ -1548,10 +1581,37 @@ def _validate_home_state(page: Page, case: str) -> None:
     headings = tuple(tuple(value) for value in state["headings"])
     if headings != HOME_HEADINGS:
         raise DocumentationVisualError(f"{case}: Home headings are {headings!r}, expected {HOME_HEADINGS!r}.")
-    expected_toc = tuple(label for _, label in HOME_HEADINGS[1:])
-    if tuple(state["toc"]) != expected_toc:
+    if tuple(state["toc"]) != HOME_TOC:
         raise DocumentationVisualError(
-            f"{case}: Home table of contents is {state['toc']!r}, expected {expected_toc!r}.")
+            f"{case}: Home table of contents is {state['toc']!r}, expected {HOME_TOC!r}.")
+    if tuple(state["modelTargets"]) != HOME_MODEL_TARGETS:
+        raise DocumentationVisualError(
+            f"{case}: Home model targets are {state['modelTargets']!r}, "
+            f"expected {HOME_MODEL_TARGETS!r}.")
+    if tuple(state["modelStats"]) != HOME_MODEL_STATS:
+        raise DocumentationVisualError(
+            f"{case}: Home model stats are {state['modelStats']!r}, "
+            f"expected {HOME_MODEL_STATS!r}.")
+    if state["modelLabelTarget"] != state["modelTitleId"] or not state["modelTitleId"]:
+        raise DocumentationVisualError(
+            f"{case}: Home model panel label target is {state['modelLabelTarget']!r} "
+            f"for title {state['modelTitleId']!r}.")
+    if not state["modelPanelAfterTeaser"] or not state["modelPanelBeforeBadges"]:
+        raise DocumentationVisualError(
+            f"{case}: Home model panel is not directly between the teaser and badges.")
+    model_rect = state["modelPanelRect"]
+    teaser_rect = state["teaserRect"]
+    badges_rect = state["badgesRect"]
+    if not model_rect or not teaser_rect or not badges_rect:
+        raise DocumentationVisualError(f"{case}: Home model panel geometry is incomplete.")
+    if model_rect["top"] < teaser_rect["bottom"] - 1 or model_rect["bottom"] > badges_rect["top"] + 1:
+        raise DocumentationVisualError(
+            f"{case}: Home model panel does not remain between the hero and badges: "
+            f"teaser={teaser_rect!r}, model={model_rect!r}, badges={badges_rect!r}.")
+    if model_rect["width"] < teaser_rect["width"]:
+        raise DocumentationVisualError(
+            f"{case}: Home model panel is narrower than the hero: "
+            f"model={model_rect['width']!r}, teaser={teaser_rect['width']!r}.")
     if tuple(state["featureLabels"]) != ("Inference", "Trainer", "generate"):
         raise DocumentationVisualError(f"{case}: Home feature labels are {state['featureLabels']!r}.")
     if tuple(state["featureTargets"]) != HOME_FEATURE_TARGETS:
@@ -1590,6 +1650,7 @@ def _validate_home_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(f"{case}: Home next label is {state['nextLabel']!r}.")
     for marker in (
             "68 integrations",
+            "Find a model for your language and task",
             "34 TTS backends",
             "23 ASR providers",
             "11 VAD providers",

@@ -34,6 +34,22 @@ description: Documentação do VoiceHub para inferência TTS unificada, prepara�
   <span class="vh-doc-teaser__audio">ÁUDIO</span>
 </div>
 
+<section class="vh-home-models" aria-labelledby="vh-home-models-title">
+  <p class="vh-home-models__eyebrow">Catálogo de modelos</p>
+  <h2 id="vh-home-models-title">Encontre um modelo para seu idioma e sua tarefa</h2>
+  <p class="vh-home-models__description">Pesquise todas as 68 integrações de TTS, ASR e VAD por idioma, recurso, caminho de treinamento, licença, arquitetura e origem do checkpoint.</p>
+  <p class="vh-home-models__actions">
+    <a class="vh-home-models__primary" href="models/providers/">Explorar todos os modelos <span aria-hidden="true">→</span></a>
+    <a class="vh-home-models__secondary" href="models/training-support/">Comparar suporte de treinamento</a>
+  </p>
+  <ul class="vh-home-models__stats" aria-label="Resumo do registro de modelos">
+    <li><strong>68</strong><span>Modelos</span></li>
+    <li><strong>34</strong><span>TTS</span></li>
+    <li><strong>23</strong><span>ASR</span></li>
+    <li><strong>11</strong><span>VAD</span></li>
+  </ul>
+</section>
+
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="Status da integração contínua do VoiceHub">

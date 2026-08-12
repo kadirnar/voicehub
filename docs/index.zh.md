@@ -34,6 +34,22 @@ description: VoiceHub 文档：统一的 TTS 推理、数据准备和架构感�
   <span class="vh-doc-teaser__audio">音频</span>
 </div>
 
+<section class="vh-home-models" aria-labelledby="vh-home-models-title">
+  <p class="vh-home-models__eyebrow">模型目录</p>
+  <h2 id="vh-home-models-title">按语言和任务查找合适的模型</h2>
+  <p class="vh-home-models__description">可按语言、能力、训练方式、许可证、架构和 checkpoint 来源搜索全部 68 个 TTS、ASR 和 VAD 集成。</p>
+  <p class="vh-home-models__actions">
+    <a class="vh-home-models__primary" href="models/providers/">浏览所有模型 <span aria-hidden="true">→</span></a>
+    <a class="vh-home-models__secondary" href="models/training-support/">比较训练支持</a>
+  </p>
+  <ul class="vh-home-models__stats" aria-label="模型注册表摘要">
+    <li><strong>68</strong><span>模型</span></li>
+    <li><strong>34</strong><span>TTS</span></li>
+    <li><strong>23</strong><span>ASR</span></li>
+    <li><strong>11</strong><span>VAD</span></li>
+  </ul>
+</section>
+
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="VoiceHub 持续集成状态">

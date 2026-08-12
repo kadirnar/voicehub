@@ -34,6 +34,22 @@ description: 통합 TTS 추론, 데이터 준비, 아키텍처 인식 미세 조
   <span class="vh-doc-teaser__audio">오디오</span>
 </div>
 
+<section class="vh-home-models" aria-labelledby="vh-home-models-title">
+  <p class="vh-home-models__eyebrow">모델 카탈로그</p>
+  <h2 id="vh-home-models-title">언어와 작업에 맞는 모델 찾기</h2>
+  <p class="vh-home-models__description">68개의 TTS, ASR, VAD 통합을 언어, 기능, 학습 경로, 라이선스, 아키텍처, 체크포인트 출처별로 검색하세요.</p>
+  <p class="vh-home-models__actions">
+    <a class="vh-home-models__primary" href="models/providers/">모든 모델 살펴보기 <span aria-hidden="true">→</span></a>
+    <a class="vh-home-models__secondary" href="models/training-support/">학습 지원 비교</a>
+  </p>
+  <ul class="vh-home-models__stats" aria-label="모델 레지스트리 요약">
+    <li><strong>68</strong><span>모델</span></li>
+    <li><strong>34</strong><span>TTS</span></li>
+    <li><strong>23</strong><span>ASR</span></li>
+    <li><strong>11</strong><span>VAD</span></li>
+  </ul>
+</section>
+
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="VoiceHub 지속적 통합 상태">

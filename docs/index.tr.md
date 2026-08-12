@@ -34,6 +34,22 @@ description: Birleşik TTS çıkarımı, veri hazırlama ve mimariye duyarlı in
   <span class="vh-doc-teaser__audio">SES</span>
 </div>
 
+<section class="vh-home-models" aria-labelledby="vh-home-models-title">
+  <p class="vh-home-models__eyebrow">Model kataloğu</p>
+  <h2 id="vh-home-models-title">Diliniz ve göreviniz için doğru modeli bulun</h2>
+  <p class="vh-home-models__description">68 TTS, ASR ve VAD entegrasyonunun tamamını dil, yetenek, eğitim yolu, lisans, mimari ve checkpoint kaynağına göre arayın.</p>
+  <p class="vh-home-models__actions">
+    <a class="vh-home-models__primary" href="models/providers/">Tüm modelleri keşfedin <span aria-hidden="true">→</span></a>
+    <a class="vh-home-models__secondary" href="models/training-support/">Eğitim desteğini karşılaştırın</a>
+  </p>
+  <ul class="vh-home-models__stats" aria-label="Model kayıt özeti">
+    <li><strong>68</strong><span>Model</span></li>
+    <li><strong>34</strong><span>TTS</span></li>
+    <li><strong>23</strong><span>ASR</span></li>
+    <li><strong>11</strong><span>VAD</span></li>
+  </ul>
+</section>
+
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="VoiceHub sürekli entegrasyon durumu">
