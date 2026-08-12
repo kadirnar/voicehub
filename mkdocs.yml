@@ -1006,6 +1006,7 @@ extra_javascript:
   - javascripts/header-controls.js
   - javascripts/page-actions.js
   - javascripts/mobile-drawer.js
+  - javascripts/model-explorer.js
 
 extra:
   docs_version:
