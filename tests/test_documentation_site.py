@@ -529,7 +529,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 'name="checkpoint"',
                 'name="license"',
                 'name="architecture"',
-                "Capabilities &amp; resources",
+                "More filters",
                 "from voicehub import list_model_specs",
                 "for model in list_model_specs():",
                 "model.display_name",
@@ -555,6 +555,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 "state.resources.every",
                 "window.history.replaceState",
                 "renderActiveFilters",
+                "renderAdvancedCount",
                 "applyFilters();",
         ):
             self.assertIn(fragment, explorer_script)

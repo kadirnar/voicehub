@@ -20,6 +20,7 @@
     const resultCount = explorer.querySelector("[data-vh-model-result-count]");
     const resultLabel = explorer.querySelector("[data-vh-model-result-label]");
     const activeFilters = explorer.querySelector("[data-vh-model-active-filters]");
+    const advancedCount = explorer.querySelector("[data-vh-model-advanced-count]");
     const emptyState = explorer.querySelector("[data-vh-model-empty]");
     const clearButtons = Array.from(explorer.querySelectorAll("[data-vh-model-clear]"));
     if (!(form instanceof HTMLFormElement)
@@ -250,6 +251,16 @@
       activeFilters.hidden = activeFilters.childElementCount === 0;
     };
 
+    const renderAdvancedCount = (state) => {
+      if (!(advancedCount instanceof HTMLElement)) return;
+      const selectedCount = ["checkpoint", "license", "architecture"]
+        .filter((name) => state.selects[name]).length
+        + state.features.length
+        + state.resources.length;
+      advancedCount.textContent = String(selectedCount);
+      advancedCount.hidden = selectedCount === 0;
+    };
+
     const applyFilters = () => {
       const state = currentState();
       const orderedModels = [...models].sort((left, right) => compareModels(left, right, state.sort));
@@ -271,6 +282,7 @@
       );
       clearButtons.forEach((button) => { button.hidden = !hasFilters; });
       renderActiveFilters(state);
+      renderAdvancedCount(state);
       updateUrl(state);
     };
 

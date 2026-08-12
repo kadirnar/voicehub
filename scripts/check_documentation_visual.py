@@ -2051,6 +2051,7 @@ def _validate_model_explorer_filters(page: Page, case: str) -> None:
     query = explorer.locator("[data-vh-model-query]")
     feature = explorer.locator('input[name="feature"][value="voice-cloning"]')
     details = explorer.locator(".vh-model-filters__advanced")
+    advanced_count = explorer.locator("[data-vh-model-advanced-count]")
 
     language.select_option("tr")
     page.wait_for_function("element => element.textContent === '16'", arg=count.element_handle())
@@ -2058,6 +2059,9 @@ def _validate_model_explorer_filters(page: Page, case: str) -> None:
     details.locator(":scope > summary").click()
     feature.check()
     page.wait_for_function("element => element.textContent === '6'", arg=count.element_handle())
+    if advanced_count.inner_text() != "1" or advanced_count.is_hidden():
+        raise DocumentationVisualError(
+            f"{case}: advanced-filter count is not visible with one selected filter.")
     expected_models = ("Chatterbox", "FishTTS", "MossTTS", "OmniVoice", "VoxCPM", "XTTS")
     visible_models = tuple(explorer.locator(".vh-model-card:not([hidden]) h2").all_text_contents())
     if visible_models != expected_models:
@@ -2086,6 +2090,9 @@ def _validate_model_explorer_filters(page: Page, case: str) -> None:
         raise DocumentationVisualError(f"{case}: model explorer empty state is not visible at zero results.")
     empty.locator("[data-vh-model-clear]").click()
     page.wait_for_function("element => element.textContent === '68'", arg=count.element_handle())
+    if not advanced_count.is_hidden():
+        raise DocumentationVisualError(
+            f"{case}: advanced-filter count remains visible after clearing filters.")
     explorer.locator("[data-vh-model-sort]").select_option("languages")
     first_card = explorer.locator(".vh-model-card:not([hidden])").first
     if (first_card.get_attribute("data-model-type") != "omnivoice" or
