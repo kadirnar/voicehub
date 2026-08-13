@@ -208,6 +208,7 @@ MODEL_INDEX_MINIMUM_INTERSECTING_CARDS = {
 SPEECHT5_ROUTE = "models/providers/speecht5/index.html"
 SPEECHT5_HEADINGS = (
     ("H1", "SpeechT5"),
+    ("H2", "Model facts"),
     ("H2", "Usage"),
     ("H2", "Overview"),
     ("H3", "Language support"),
@@ -224,7 +225,55 @@ SPEECHT5_HEADINGS = (
     ("H3", "SpeechT5Config"),
     ("H3", "SpeechT5ForTextToSpeech"),
 )
+SPEECHT5_TOC = ()
 SPEECHT5_TABLE_ROWS = (7, 3, 4, 2, 6, 1, 10, 8)
+SPEECHT5_ARTICLE_WIDTHS = {
+    "desktop": 1074,
+    "tablet": 658,
+    "mobile": 342,
+}
+SPEECHT5_TABS = (
+    ("usage", "#usage", "Usage", None),
+    ("model-card", "#overview", "Model card", "location"),
+    ("sources", "#paper-and-github", "Sources", None),
+    ("training", "#training-and-optimization", "Training", None),
+    (
+        "checkpoint",
+        "#checkpoints-provenance-license-and-limitations",
+        "Checkpoint",
+        None,
+    ),
+    ("api", "#public-api", "Public API", None),
+)
+SPEECHT5_ACTIONS = (
+    ("use", "#usage"),
+    ("checkpoint", "https://huggingface.co/microsoft/speecht5_tts"),
+    ("paper", "https://arxiv.org/abs/2110.07205"),
+    ("github", "https://github.com/microsoft/SpeechT5"),
+    (
+        "source",
+        "https://github.com/kadirnar/voicehub/blob/main/"
+        "voicehub/models/speecht5/modeling_speecht5.py",
+    ),
+    (
+        "colab",
+        "https://colab.research.google.com/github/kadirnar/voicehub/blob/main/"
+        "notebooks/models/speecht5.ipynb",
+    ),
+)
+SPEECHT5_FACT_LABELS = (
+    "Task",
+    "Parameters",
+    "Architecture",
+    "Runtime",
+    "Languages",
+    "Capabilities",
+    "Training",
+    "License",
+    "Default checkpoint",
+)
+TOC_ROUTES = tuple(route for route in REPRESENTATIVE_ROUTES if route != SPEECHT5_ROUTE)
+PAGE_ACTION_ROUTES = tuple(REPRESENTATIVE_ROUTES)
 QUICKSTART_ROUTE = "getting-started/quickstart/index.html"
 QUICKSTART_HEADINGS = (
     ("H1", "Quickstart"),
@@ -1418,6 +1467,7 @@ def _validate_case(
     route_expectation: Any,
     viewport: dict[str, Any],
     palette: str,
+    hide_secondary: bool = False,
 ) -> None:
     if state["scheme"] != palette:
         raise DocumentationVisualError(f"{case}: palette is {state['scheme']!r}, expected {palette!r}.")
@@ -1502,11 +1552,12 @@ def _validate_case(
                     f"{case}: {child_name} escapes the repository control: "
                     f"child={child!r}, source={source!r}.")
 
+    article_width = (
+        SPEECHT5_ARTICLE_WIDTHS[viewport["name"]] if hide_secondary else viewport["article_width"])
     for selector, fields in (
-        ("article", ("x", "width")),
+        ("article", ("x", )),
         ("header", ("height", )),
         ("primary", ("x", "width")),
-        ("secondary", ("x", "width")),
     ):
         rectangle = state[selector]
         if rectangle is None:
@@ -1514,6 +1565,22 @@ def _validate_case(
         for field in fields:
             expected_key = f"{selector}_{field}"
             _assert_close(case, expected_key, rectangle[field], viewport[expected_key])
+    _assert_close(case, "article_width", state["article"]["width"], article_width)
+    secondary = state["secondary"]
+    if secondary is None:
+        raise DocumentationVisualError(f"{case}: secondary is missing.")
+    if hide_secondary:
+        if secondary["display"] != "none" or secondary["width"] != 0 or secondary["height"] != 0:
+            raise DocumentationVisualError(
+                f"{case}: hidden secondary navigation still occupies space: {secondary!r}.")
+    else:
+        for field in ("x", "width"):
+            _assert_close(
+                case,
+                f"secondary_{field}",
+                secondary[field],
+                viewport[f"secondary_{field}"],
+            )
 
 
 def _validate_home_state(page: Page, case: str) -> None:
@@ -2212,36 +2279,339 @@ def _validate_model_explorer_filters(page: Page, case: str) -> None:
     sort.select_option("name")
 
 
-def _validate_speecht5_state(page: Page, case: str) -> None:
+def _validate_speecht5_state(page: Page, case: str, viewport: dict[str, Any]) -> None:
     state = page.evaluate(
         r"""() => {
           const content = document.querySelector(".md-content__inner");
-          const normalize = value => value?.trim().replace(/¶$/, "").trim() || "";
+          const detail = content?.querySelector("[data-vh-model-detail]");
+          const normalize = value => value?.trim().replace(/¶$/, "").trim()
+            .replace(/\s+/g, " ") || "";
+          const visible = element => {
+            if (!element) return false;
+            const bounds = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return bounds.width > 0 && bounds.height > 0 && style.display !== "none" &&
+              style.visibility !== "hidden";
+          };
+          const rectangle = element => {
+            if (!element) return null;
+            const bounds = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return {
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: bounds.height,
+              right: bounds.right,
+              bottom: bounds.bottom,
+              display: style.display,
+              position: style.position,
+              overflowX: style.overflowX,
+              clientWidth: element.clientWidth,
+              scrollWidth: element.scrollWidth,
+            };
+          };
           const tables = Array.from(content?.querySelectorAll("table") || []);
-          const sourceLinks = Array.from(content?.querySelectorAll(
-            'a[href*="/voicehub/models/speecht5/"]'
-          ) || []);
+          const secondary = document.querySelector(".md-sidebar--secondary");
+          const facts = detail?.querySelector("[data-vh-model-facts]");
+          const factsDisclosure = facts?.querySelector("[data-vh-model-facts-disclosure]");
+          const factsSummary = factsDisclosure?.querySelector(":scope > summary");
+          const modelContent = detail?.querySelector(".vh-model-detail__content");
+          const modelNamespace = detail?.querySelector(".vh-model-detail__namespace");
+          const parameterNote = detail?.querySelector(".vh-model-detail__parameter-note");
           return {
+            counts: {
+              detail: content?.querySelectorAll("[data-vh-model-detail]").length || 0,
+              hero: detail?.querySelectorAll("[data-vh-model-hero]").length || 0,
+              h1: detail?.querySelectorAll("h1").length || 0,
+              tabs: detail?.querySelectorAll(".vh-model-detail__tabs").length || 0,
+              layout: detail?.querySelectorAll(".vh-model-detail__layout").length || 0,
+              content: detail?.querySelectorAll(".vh-model-detail__content").length || 0,
+              facts: detail?.querySelectorAll("[data-vh-model-facts]").length || 0,
+              factsDisclosure: detail?.querySelectorAll(
+                "[data-vh-model-facts-disclosure]"
+              ).length || 0,
+            },
+            dataset: detail ? {
+              modelType: detail.dataset.modelType,
+              task: detail.dataset.task,
+              training: detail.dataset.training,
+              parameterCount: detail.dataset.parameterCount,
+            } : null,
+            namespace: {
+              avatar: normalize(modelNamespace?.querySelector(
+                ".vh-model-detail__owner-avatar"
+              )?.textContent),
+              avatarHidden: modelNamespace?.querySelector(
+                ".vh-model-detail__owner-avatar"
+              )?.getAttribute("aria-hidden"),
+              owner: normalize(modelNamespace?.querySelector("a")?.textContent),
+              repository: normalize(modelNamespace?.querySelector("strong")?.textContent),
+              href: modelNamespace?.querySelector("a")?.getAttribute("href"),
+            },
+            tags: Array.from(detail?.querySelectorAll(".vh-model-detail__chip") || [])
+              .map(chip => normalize(chip.textContent)),
+            actions: Array.from(detail?.querySelectorAll("[data-vh-model-action]") || [])
+              .map(link => [link.dataset.vhModelAction, link.getAttribute("href")]),
+            tabs: Array.from(detail?.querySelectorAll("[data-vh-model-tab]") || [])
+              .map(link => [
+                link.dataset.vhModelTab,
+                link.getAttribute("href"),
+                normalize(link.textContent),
+                link.getAttribute("aria-current"),
+                link.getAttribute("role"),
+              ]),
+            tabNavigation: {
+              ariaLabel: detail?.querySelector(".vh-model-detail__tabs")?.getAttribute("aria-label"),
+              role: detail?.querySelector(".vh-model-detail__tabs")?.getAttribute("role"),
+            },
+            facts: Array.from(facts?.querySelectorAll(".vh-model-detail__facts > div") || [])
+              .map(row => {
+                const value = row.querySelector("dd");
+                return [
+                  normalize(row.querySelector("dt")?.textContent),
+                  normalize(value?.textContent),
+                  value?.getAttribute("aria-describedby"),
+                ];
+              }),
+            factsDisclosure: factsDisclosure ? {
+              open: factsDisclosure.open,
+              summaryCount: factsDisclosure.querySelectorAll(":scope > summary").length,
+              labelledBy: factsDisclosure.getAttribute("aria-labelledby"),
+              asideLabelledBy: facts?.getAttribute("aria-labelledby"),
+              heading: normalize(facts?.querySelector(":scope > h2")?.textContent),
+              headingId: facts?.querySelector(":scope > h2")?.id,
+              toggleLabel: normalize(factsDisclosure.querySelector(
+                ":scope > summary > span"
+              )?.textContent),
+              summaryTabIndex: factsSummary?.tabIndex,
+              summaryVisible: visible(factsSummary),
+              factsBeforeContent: Boolean(
+                facts && modelContent &&
+                facts.compareDocumentPosition(modelContent) & Node.DOCUMENT_POSITION_FOLLOWING
+              ),
+            } : null,
+            parameterNote: parameterNote ? {
+              id: parameterNote.id,
+              text: normalize(parameterNote.textContent),
+              visible: visible(parameterNote),
+              describedElements: detail?.querySelectorAll(
+                `[aria-describedby~="${CSS.escape(parameterNote.id)}"]`
+              ).length || 0,
+            } : null,
+            copy: (() => {
+              const button = detail?.querySelector("button[data-vh-copy-model-id]");
+              const label = button?.querySelector("[data-vh-copy-model-id-label]");
+              const descriptionId = button?.getAttribute("aria-describedby");
+              return button ? {
+                count: detail.querySelectorAll("button[data-vh-copy-model-id]").length,
+                type: button.getAttribute("type"),
+                modelId: button.dataset.modelId,
+                ariaLabel: button.getAttribute("aria-label"),
+                ariaBusy: button.getAttribute("aria-busy"),
+                descriptionId,
+                description: normalize(document.getElementById(descriptionId)?.textContent),
+                label: normalize(label?.textContent),
+                live: label?.getAttribute("aria-live"),
+                atomic: label?.getAttribute("aria-atomic"),
+              } : null;
+            })(),
+            apiCards: Array.from(detail?.querySelectorAll("[data-vh-model-api-card]") || [])
+              .map(card => ({
+                kind: card.dataset.vhModelApiCard,
+                badge: normalize(card.querySelector(".vh-model-api-card__badge")?.textContent),
+                heading: normalize(card.querySelector("h3")?.textContent),
+                source: card.querySelector(".vh-model-api-card__source")?.getAttribute("href"),
+                signature: (card.querySelector(".vh-model-api-card__signature code")?.innerText || "")
+                  .split("\n").map(line => line.trim()).filter(Boolean),
+                parameterHeading: normalize(card.querySelector("h4")?.textContent),
+                parameters: Array.from(card.querySelectorAll(
+                  ".vh-model-api-card__parameters li"
+                )).map(item => normalize(item.textContent)),
+              })),
             headings: Array.from(content?.querySelectorAll("h1, h2, h3") || [])
               .map(heading => [heading.tagName, normalize(heading.textContent)]),
-            toc: Array.from(document.querySelectorAll(
-              ".md-sidebar--secondary a.md-nav__link"
-            )).map(link => normalize(link.textContent)),
+            toc: visible(secondary) ? Array.from(secondary.querySelectorAll(
+              "a.md-nav__link"
+            )).map(link => normalize(link.textContent)) : [],
             tableRows: tables.map(table => table.querySelectorAll("tbody tr").length),
             codeBlocks: content?.querySelectorAll("pre").length || 0,
             codeCopyButtons: content?.querySelectorAll("button[data-vh-code-copy]").length || 0,
-            sourceHrefs: sourceLinks.map(link => link.getAttribute("href")),
-            text: normalize(content?.textContent).replace(/\s+/g, " "),
+            text: normalize(content?.textContent),
+            geometry: {
+              article: rectangle(content),
+              detail: rectangle(detail),
+              hero: rectangle(detail?.querySelector("[data-vh-model-hero]")),
+              tabs: rectangle(detail?.querySelector(".vh-model-detail__tabs")),
+              layout: rectangle(detail?.querySelector(".vh-model-detail__layout")),
+              content: rectangle(modelContent),
+              facts: rectangle(facts),
+              factsDisclosure: rectangle(factsDisclosure),
+              factsSummary: rectangle(factsSummary),
+            },
           };
         }""")
+    if state["counts"] != {"detail": 1, "hero": 1, "h1": 1, "tabs": 1, "layout": 1, "content": 1, "facts": 1,
+                           "factsDisclosure": 1}:
+        raise DocumentationVisualError(f"{case}: SpeechT5 structural inventory is {state['counts']!r}.")
+    expected_dataset = {
+        "modelType": "speecht5",
+        "task": "text-to-speech",
+        "training": "native",
+        "parameterCount": "",
+    }
+    if state["dataset"] != expected_dataset:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 model metadata is {state['dataset']!r}, expected {expected_dataset!r}.")
+    expected_namespace = {
+        "avatar": "MI",
+        "avatarHidden": "true",
+        "owner": "microsoft",
+        "repository": "speecht5_tts",
+        "href": "https://huggingface.co/microsoft",
+    }
+    if state["namespace"] != expected_namespace:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 namespace is {state['namespace']!r}, expected {expected_namespace!r}.")
+    expected_tags = (
+        "Text to speech",
+        "VoiceHub-native",
+        "speecht5",
+        "Parameters: Not reported",
+        "Language: en",
+        "Training: native",
+        "License: Checkpoint-specific",
+    )
+    if tuple(state["tags"]) != expected_tags:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 tags are {state['tags']!r}, expected {expected_tags!r}.")
+    if tuple(tuple(value) for value in state["actions"]) != SPEECHT5_ACTIONS:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 actions are {state['actions']!r}, expected {SPEECHT5_ACTIONS!r}.")
+    tabs = tuple((value, href, label) for value, href, label, _, _ in state["tabs"])
+    expected_tabs = tuple((value, href, label) for value, href, label, _ in SPEECHT5_TABS)
+    current_tabs = tuple(value for value, _, _, current, _ in state["tabs"] if current == "location")
+    if (tabs != expected_tabs or len(current_tabs) != 1 or
+            any(current not in (None, "location") for _, _, _, current, _ in state["tabs"]) or
+            any(role is not None for *_, role in state["tabs"])):
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 section navigation is {state['tabs']!r}, expected ordinary links "
+            f"{expected_tabs!r} with exactly one current location.")
+    if state["tabNavigation"] != {"ariaLabel": "Model sections", "role": None}:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 section-navigation semantics are {state['tabNavigation']!r}.")
+    expected_disclosure = {
+        "open": viewport["name"] == "desktop",
+        "summaryCount": 1,
+        "labelledBy": "vh-model-facts-title-speecht5",
+        "asideLabelledBy": "vh-model-facts-title-speecht5",
+        "heading": "Model facts",
+        "headingId": "vh-model-facts-title-speecht5",
+        "toggleLabel": "Toggle model facts",
+        "summaryTabIndex": 0,
+        "summaryVisible": viewport["name"] != "desktop",
+        "factsBeforeContent": True,
+    }
+    if state["factsDisclosure"] != expected_disclosure:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 facts disclosure is {state['factsDisclosure']!r}, "
+            f"expected {expected_disclosure!r}.")
+    fact_labels = tuple(row[0] for row in state["facts"])
+    if fact_labels != SPEECHT5_FACT_LABELS:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 fact labels are {fact_labels!r}, expected {SPEECHT5_FACT_LABELS!r}.")
+    fact_values = {label: value for label, value, _ in state["facts"]}
+    expected_fact_values = {
+        "Task": "Text to speech",
+        "Parameters": "Not reported",
+        "Architecture": "speecht5",
+        "Runtime": "VoiceHub-native",
+        "Languages": "en",
+        "Training": "native",
+        "License": "Checkpoint-specific",
+        "Default checkpoint": "microsoft/speecht5_tts",
+    }
+    if any(fact_values.get(label) != value for label, value in expected_fact_values.items()):
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 fact values are {fact_values!r}, expected {expected_fact_values!r}.")
+    note = state["parameterNote"]
+    if (not note or note["id"] != "vh-model-parameters-note-speecht5" or not note["visible"] or
+            note["describedElements"] != 2 or "Not reported" not in note["text"] or
+            next(row[2] for row in state["facts"] if row[0] == "Parameters") != note["id"]):
+        raise DocumentationVisualError(f"{case}: SpeechT5 parameter note is invalid: {note!r}.")
+    expected_copy = {
+        "count": 1,
+        "type": "button",
+        "modelId": "microsoft/speecht5_tts",
+        "ariaLabel": "Copy model ID",
+        "ariaBusy": "false",
+        "descriptionId": "vh-model-checkpoint-speecht5",
+        "description": "microsoft/speecht5_tts",
+        "label": "Copy model ID",
+        "live": "polite",
+        "atomic": "true",
+    }
+    if state["copy"] != expected_copy:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 model-ID copy semantics are {state['copy']!r}, "
+            f"expected {expected_copy!r}.")
+    expected_api_cards = (
+        {
+            "kind":
+            "configuration",
+            "badge":
+            "Configuration",
+            "heading":
+            "SpeechT5Config",
+            "source": (
+                "https://github.com/kadirnar/voicehub/blob/main/"
+                "voicehub/models/speecht5/configuration_speecht5.py"),
+            "signature": ["SpeechT5Config(**config_kwargs)"],
+            "parameterHeading":
+            "Parameters",
+            "parameters": ["**config_kwargs — Configuration fields validated by SpeechT5Config."],
+        },
+        {
+            "kind":
+            "model",
+            "badge":
+            "Model",
+            "heading":
+            "SpeechT5ForTextToSpeech",
+            "source": (
+                "https://github.com/kadirnar/voicehub/blob/main/"
+                "voicehub/models/speecht5/modeling_speecht5.py"),
+            "signature": [
+                "AutoModelForTextToSpeech.from_pretrained(",
+                "pretrained_model_name_or_path,",
+                "*,",
+                "model_type='speecht5',",
+                "config=None,",
+                "**model_kwargs,",
+                ")",
+            ],
+            "parameterHeading":
+            "Parameters",
+            "parameters": [
+                "pretrained_model_name_or_path — Hub ID or compatible local directory.",
+                "model_type — Canonical model type; use 'speecht5'.",
+                "config — Optional preloaded SpeechT5Config instance.",
+                "**model_kwargs — Model-specific loading arguments.",
+            ],
+        },
+    )
+    if tuple(state["apiCards"]) != expected_api_cards:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 API cards are {state['apiCards']!r}, expected {expected_api_cards!r}.")
+    if len({card["kind"] for card in state["apiCards"]}) != len(state["apiCards"]):
+        raise DocumentationVisualError(f"{case}: SpeechT5 API-card identities are not unique.")
     headings = tuple(tuple(value) for value in state["headings"])
     if headings != SPEECHT5_HEADINGS:
         raise DocumentationVisualError(
             f"{case}: SpeechT5 headings are {headings!r}, expected {SPEECHT5_HEADINGS!r}.")
-    expected_toc = tuple(label for _, label in SPEECHT5_HEADINGS[1:])
-    if tuple(state["toc"]) != expected_toc:
+    if tuple(state["toc"]) != SPEECHT5_TOC:
         raise DocumentationVisualError(
-            f"{case}: SpeechT5 table of contents is {state['toc']!r}, expected {expected_toc!r}.")
+            f"{case}: SpeechT5 table of contents is {state['toc']!r}, expected {SPEECHT5_TOC!r}.")
     if tuple(state["tableRows"]) != SPEECHT5_TABLE_ROWS:
         raise DocumentationVisualError(
             f"{case}: SpeechT5 table rows are {state['tableRows']!r}, "
@@ -2250,16 +2620,6 @@ def _validate_speecht5_state(page: Page, case: str) -> None:
         raise DocumentationVisualError(
             f"{case}: SpeechT5 code inventory is codeBlocks={state['codeBlocks']}, "
             f"copyButtons={state['codeCopyButtons']}; expected 6 and 6.")
-    expected_sources = (
-        "voicehub/models/speecht5/configuration_speecht5.py",
-        "voicehub/models/speecht5/modeling_speecht5.py",
-    )
-    hrefs = tuple(state["sourceHrefs"])
-    if len(hrefs) != 3 or any(not any(href.endswith(expected) for href in hrefs)
-                              for expected in expected_sources):
-        raise DocumentationVisualError(
-            f"{case}: SpeechT5 source links are {hrefs!r}, expected three links covering "
-            f"{expected_sources!r}.")
     for marker in (
             "AutoModelForTextToSpeech",
             "AutoProcessor",
@@ -2274,8 +2634,196 @@ def _validate_speecht5_state(page: Page, case: str) -> None:
         if marker not in state["text"]:
             raise DocumentationVisualError(f"{case}: rendered SpeechT5 content is missing {marker!r}.")
 
+    geometry = state["geometry"]
+    if any(value is None for value in geometry.values()):
+        raise DocumentationVisualError(f"{case}: SpeechT5 geometry is incomplete: {geometry!r}.")
+    for name in ("detail", "hero", "tabs", "layout", "content", "facts"):
+        rectangle = geometry[name]
+        if rectangle["display"] == "none" or rectangle["width"] <= 0 or rectangle["height"] <= 0:
+            raise DocumentationVisualError(f"{case}: SpeechT5 {name} is not visibly sized: {rectangle!r}.")
+    facts_disclosure = geometry["factsDisclosure"]
+    if (facts_disclosure["display"] == "none" or facts_disclosure["width"] <= 0 or
+            viewport["name"] == "desktop" and facts_disclosure["height"] <= 0):
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 facts disclosure geometry is invalid: {facts_disclosure!r}.")
+    facts_summary = geometry["factsSummary"]
+    if viewport["name"] == "desktop":
+        if (facts_summary["display"] != "none" or facts_summary["width"] != 0 or
+                facts_summary["height"] != 0):
+            raise DocumentationVisualError(
+                f"{case}: SpeechT5 desktop facts summary is not hidden: {facts_summary!r}.")
+    elif (facts_summary["display"] == "none" or facts_summary["width"] <= 0 or facts_summary["height"] <= 0):
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 responsive facts summary is not visible: {facts_summary!r}.")
+    elif not _rectangle_contains(geometry["facts"], facts_summary):
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 responsive facts summary escapes the sidebar: {geometry!r}.")
+    containment_pairs = [
+        ("article", "detail"),
+        ("detail", "hero"),
+        ("detail", "tabs"),
+        ("detail", "layout"),
+        ("layout", "content"),
+        ("layout", "facts"),
+    ]
+    if viewport["name"] == "desktop":
+        containment_pairs.append(("facts", "factsDisclosure"))
+    for parent_name, child_name in containment_pairs:
+        if not _rectangle_contains(geometry[parent_name], geometry[child_name]):
+            raise DocumentationVisualError(
+                f"{case}: SpeechT5 {child_name} escapes {parent_name}: {geometry!r}.")
+    for name in ("hero", "tabs", "layout"):
+        _assert_close(case, f"SpeechT5 {name} x", geometry[name]["x"], geometry["detail"]["x"])
+        _assert_close(
+            case,
+            f"SpeechT5 {name} width",
+            geometry[name]["width"],
+            geometry["detail"]["width"],
+        )
+    if geometry["tabs"]["position"] != "sticky":
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 section navigation is not sticky: {geometry['tabs']!r}.")
+    if geometry["tabs"]["scrollWidth"] < geometry["tabs"]["clientWidth"]:
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 tab scrolling geometry is invalid: {geometry['tabs']!r}.")
+    if viewport["name"] == "desktop":
+        if (geometry["content"]["right"] > geometry["facts"]["x"] + 0.75 or
+                not math.isclose(geometry["content"]["y"], geometry["facts"]["y"], abs_tol=0.75) or
+                geometry["facts"]["position"] != "sticky"):
+            raise DocumentationVisualError(
+                f"{case}: SpeechT5 desktop content/facts layout is invalid: {geometry!r}.")
+    elif (geometry["facts"]["bottom"] > geometry["content"]["y"] + 0.75 or
+          geometry["facts"]["position"] != "relative"):
+        raise DocumentationVisualError(
+            f"{case}: SpeechT5 responsive facts must precede the main content: {geometry!r}.")
+
+
+def _validate_speecht5_section_navigation(page: Page, case: str) -> None:
+    for value, href, _, _ in SPEECHT5_TABS:
+        link = page.locator(f'[data-vh-model-tab="{value}"]')
+        if link.count() != 1 or page.locator(href).count() != 1:
+            raise DocumentationVisualError(
+                f"{case}: SpeechT5 section {value!r} does not have one link and target.")
+        link.focus()
+        focus_state = link.evaluate(
+            """link => {
+              const style = getComputedStyle(link);
+              return {
+                focused: document.activeElement === link,
+                outlineStyle: style.outlineStyle,
+                outlineWidth: style.outlineWidth,
+              };
+            }""")
+        if focus_state != {"focused": True, "outlineStyle": "solid", "outlineWidth": "2px"}:
+            raise DocumentationVisualError(
+                f"{case}: SpeechT5 section {value!r} focus state is {focus_state!r}.")
+        page.keyboard.press("Enter")
+        page.wait_for_function("hash => window.location.hash === hash", arg=href)
+        page.wait_for_function(
+            "selector => { const current = document.querySelector(selector); "
+            "return current?.getAttribute('aria-current') === 'location' && "
+            "document.querySelectorAll('[data-vh-model-tab][aria-current]').length === 1; }",
+            arg=f'[data-vh-model-tab="{value}"]',
+        )
+        page.wait_for_function(
+            "hash => { const target = document.querySelector(hash); "
+            "const navigation = document.querySelector('.vh-model-detail__tabs'); "
+            "if (!target || !navigation) return false; "
+            "return target.getBoundingClientRect().top >= "
+            "navigation.getBoundingClientRect().bottom; }",
+            arg=href,
+            timeout=5000,
+        )
+        activated = page.evaluate(
+            r"""({ selector, hash }) => {
+              const link = document.querySelector(selector);
+              const target = document.querySelector(hash);
+              const bounds = target?.getBoundingClientRect();
+              const navigation = document.querySelector(".vh-model-detail__tabs");
+              const navigationBounds = navigation?.getBoundingClientRect();
+              const hitTarget = navigationBounds
+                ? document.elementFromPoint(
+                    Math.min(innerWidth - 2, Math.max(1, navigationBounds.left + navigationBounds.width / 2)),
+                    navigationBounds.top + navigationBounds.height / 2,
+                  )
+                : null;
+              return {
+                targeted: target?.matches(":target") || false,
+                current: link?.getAttribute("aria-current"),
+                currentCount: document.querySelectorAll(
+                  "[data-vh-model-tab][aria-current='location']"
+                ).length,
+                width: bounds?.width || 0,
+                height: bounds?.height || 0,
+                navigationHit: navigation?.contains(hitTarget) || false,
+                targetBelowNavigation: (bounds?.top || 0) >= (navigationBounds?.bottom || 0),
+                overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+              };
+            }""",
+            {
+                "selector": f'[data-vh-model-tab="{value}"]',
+                "hash": href
+            },
+        )
+        if activated != {"targeted": True, "current": "location", "currentCount": 1, "width":
+                         activated["width"], "height": activated["height"], "navigationHit": True,
+                         "targetBelowNavigation": True, "overflow": 0
+                         } or activated["width"] <= 0 or activated["height"] <= 0:
+            raise DocumentationVisualError(
+                f"{case}: SpeechT5 section {value!r} activation is invalid: {activated!r}.")
+
+
+def _validate_speecht5_model_id_copy(page: Page, case: str) -> None:
+    page.evaluate(
+        """() => {
+          window.__vhCopiedModelId = null;
+          window.__vhClipboardText = null;
+          Object.defineProperty(navigator, "clipboard", {
+            configurable: true,
+            value: {
+              writeText: async value => {
+                window.__vhCopiedModelId = value;
+                window.__vhClipboardText = value;
+              },
+              readText: async () => window.__vhClipboardText,
+            },
+          });
+        }""")
+    button = page.locator("button[data-vh-copy-model-id]")
+    if button.count() != 1:
+        raise DocumentationVisualError(f"{case}: SpeechT5 has {button.count()} model-ID copy controls.")
+    button.focus()
+    page.keyboard.press("Enter")
+    page.wait_for_function(
+        "() => window.__vhCopiedModelId === 'microsoft/speecht5_tts' && "
+        "document.querySelector('[data-vh-copy-model-id-label]')?.textContent === 'Copied' && "
+        "document.querySelector('[data-vh-copy-model-id]')?.getAttribute('aria-busy') === 'false'")
+    copied = page.evaluate(
+        """() => {
+          const button = document.querySelector("button[data-vh-copy-model-id]");
+          const outline = getComputedStyle(button);
+          return {
+            modelId: window.__vhCopiedModelId,
+            label: button?.querySelector("[data-vh-copy-model-id-label]")?.textContent,
+            ariaLabel: button?.getAttribute("aria-label"),
+            ariaBusy: button?.getAttribute("aria-busy"),
+            focused: document.activeElement === button,
+            outlineStyle: outline.outlineStyle,
+            outlineWidth: outline.outlineWidth,
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          };
+        }""")
+    if copied != {"modelId": "microsoft/speecht5_tts", "label": "Copied", "ariaLabel": "Copied", "ariaBusy":
+                  "false", "focused": True, "outlineStyle": "solid", "outlineWidth": "2px", "overflow": 0}:
+        raise DocumentationVisualError(f"{case}: SpeechT5 model-ID copy state is {copied!r}.")
+
 
 def _validate_speecht5_page_copy(page: Page, case: str, key: str) -> None:
+    page.wait_for_function(
+        'document.querySelector("[data-vh-copy-model-id-label]")?.textContent === '
+        '"Copy model ID"',
+        timeout=5000,
+    )
     _validate_page_copy(page, f"{case} / SpeechT5 page copy", key)
 
 
@@ -3919,6 +4467,7 @@ def validate_site(
                                 route_expectation=expectation,
                                 viewport=viewport,
                                 palette=palette,
+                                hide_secondary=relative_path == SPEECHT5_ROUTE,
                             )
                             if relative_path == HOME_ROUTE:
                                 _validate_home_state(page, case)
@@ -3936,7 +4485,7 @@ def validate_site(
                                 _validate_quickstart_state(page, case)
                                 quickstart_cases += 1
                             if relative_path == SPEECHT5_ROUTE:
-                                _validate_speecht5_state(page, case)
+                                _validate_speecht5_state(page, case, viewport)
                                 speecht5_cases += 1
                             if relative_path == TRAINER_ROUTE:
                                 _validate_trainer_state(page, case)
@@ -4073,6 +4622,11 @@ def validate_site(
                                             f"to {case_axe_core!r}.")
                                     model_index_interaction_cases += 1
                                 if relative_path == SPEECHT5_ROUTE:
+                                    _validate_speecht5_section_navigation(page, case)
+                                    page.reload(wait_until="networkidle")
+                                    _set_palette(page, palette)
+                                    page.wait_for_function("document.fonts.status === 'loaded'")
+                                    _validate_speecht5_model_id_copy(page, case)
                                     key = "Enter" if palette == "default" else "Space"
                                     _validate_speecht5_page_copy(page, case, key)
                                     case_axe_core = _validate_accessibility(
@@ -4214,7 +4768,7 @@ def validate_site(
                                 "width": viewport["width"],
                                 "height": viewport["height"],
                             })
-                            for relative_path in REPRESENTATIVE_ROUTES:
+                            for relative_path in PAGE_ACTION_ROUTES:
                                 case = (
                                     f"{relative_path} / {viewport['name']} / {palette} / "
                                     f"page actions {activation_method} activation")
@@ -4412,6 +4966,8 @@ def validate_site(
                         page.set_viewport_size({"width": 1440, "height": 900})
                         for palette in selected_palette_names:
                             for relative_path in REPRESENTATIVE_ROUTES:
+                                if relative_path == SPEECHT5_ROUTE:
+                                    continue
                                 route_url = _route_url(base_url, relative_path)
                                 for activation_method in TOC_ACTIVATION_METHODS:
                                     case = (

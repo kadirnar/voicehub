@@ -4023,3 +4023,35 @@ default-palette shard then passed all ten representative routes on both macOS
 and a genuine Ubuntu browser run, including the model explorer's complete
 filter/sort exercise, screenshots, Axe checks, and complete focus traversal.
 No publication or deployment action was performed.
+
+## 2026-08-13 Hugging Face-style model-detail evidence
+
+The model-detail comparison was refreshed against Transformers `main` commit
+`f4062e259421126a38b5f2db3e9d005b599d7963` and the official
+`microsoft/speecht5_tts` Hub page at immutable model revision
+`30fcde30f19b87502b8435427b5f5068e401d5f6`. The retrieved SpeechT5 source has
+SHA-256 `71bba8a2921cf637383fb8d6f2fd66df9cd95deb59118b9f49e1362485c27eb5`,
+and `_toctree.yml` has SHA-256
+`79da32ab73d6445f12e5e14ec5d76ed8e67c4b0724b2856095bbe86aa5eb0af9`.
+Both official rendered routes returned HTTP 200 during the comparison.
+
+All 68 generated VoiceHub model pages now share one metadata-first detail
+surface. A compact owner/checkpoint identity, integration display name,
+registry-derived task/runtime/architecture/parameter/language/training/license
+chips, audited parameter note, conditional model-ID and real-checkpoint actions,
+resource links, sticky section navigation, responsive model facts, and
+Transformers-style API cards are generated from dependency-light contracts.
+The desktop layout uses the width released by the model page's redundant
+right-hand documentation TOC for a Hub-style main column and sticky facts rail;
+tablet and mobile place the single facts panel before the model content as a
+compact disclosure. The left documentation hierarchy, edit/copy actions, previous/next
+navigation, search, palette, language, and version controls remain unchanged.
+
+VoiceHub intentionally does not fabricate Hub product state. Likes, followers,
+download or community counts, hosted inference providers, Deploy controls,
+model trees, Spaces, and a VoiceHub-owned Files or Community tab remain absent.
+The generated page links only to an audited checkpoint, paper, upstream
+repository, VoiceHub source, or existing notebook. Model-specific speech
+contracts, checkpoint status, provenance, license posture, limitations,
+training support, and optimization failure boundaries remain original VoiceHub
+content rather than copied Transformers prose.

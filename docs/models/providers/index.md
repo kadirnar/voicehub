@@ -345,8 +345,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Prepared-data training</span>
       </div>
@@ -462,8 +462,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -618,8 +618,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Prepared-data training</span>
       </div>
@@ -657,8 +657,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--asr">ASR</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -813,8 +813,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--asr">ASR</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -852,8 +852,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -1008,8 +1008,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--asr">ASR</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -1047,8 +1047,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Prepared-data training</span>
       </div>
@@ -1242,8 +1242,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Prepared-data training</span>
       </div>
@@ -1359,8 +1359,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--asr">ASR</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -1437,8 +1437,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -1788,8 +1788,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -1827,8 +1827,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -1866,8 +1866,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -2022,8 +2022,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -2061,8 +2061,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -2100,8 +2100,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--asr">ASR</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -2139,8 +2139,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -2178,8 +2178,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -2217,8 +2217,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Prepared-data training</span>
       </div>
@@ -2256,8 +2256,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Prepared-data training</span>
       </div>
@@ -2373,8 +2373,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--vad">VAD</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -2568,8 +2568,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--tts">TTS</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Prepared-data training</span>
       </div>
@@ -2646,8 +2646,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--asr">ASR</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>
@@ -2724,8 +2724,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
         <div class="vh-model-card__identity">
           <span class="vh-model-badge vh-model-badge--asr">ASR</span>
           <span class="vh-model-card__parameters"
-            title="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint."
-            aria-label="Not reported: neither current audited native metadata nor the Hugging Face Safetensors metadata retrieved 2026-08-13 provides an exact total for the registered default checkpoint.">Not reported</span>
+            title="Not reported: the audited metadata available for the registered default does not provide an exact parameter total."
+            aria-label="Not reported: the audited metadata available for the registered default does not provide an exact parameter total.">Not reported</span>
         </div>
         <span class="vh-model-card__training">Native training</span>
       </div>

@@ -1,8 +1,43 @@
 ---
 description: Public API, checkpoint, training, and optimization guide for the asr_whisper integration.
+hide:
+  - toc
 ---
 
+<div class="vh-model-detail" data-vh-model-detail data-model-type="asr_whisper" data-task="automatic-speech-recognition" data-training="native" data-parameter-count="808878080" markdown>
+
+<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+<p class="vh-model-detail__namespace" aria-label="Model repository"><span class="vh-model-detail__owner-avatar" aria-hidden="true">OP</span><a href="https://huggingface.co/openai">openai</a><span aria-hidden="true">/</span><strong>whisper-large-v3-turbo</strong></p>
+
 # Whisper {.vh-model-title}
+
+<p class="vh-model-detail__summary">Uses VoiceHub&#x27;s native Whisper graph with explicit transcription language and word timestamps.</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Automatic speech recognition</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">whisper</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-asr_whisper">Parameters: 808.9M</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: en, zh +97</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
+<p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-asr_whisper"><strong>Parameter metadata:</strong> Exact Safetensors total reported by the Hugging Face model API for the registered default checkpoint, retrieved 2026-08-13.</p>
+<div class="vh-model-detail__actions" aria-label="Model actions">
+<a class="vh-model-detail__action vh-model-detail__action--primary" href="#usage" data-vh-model-action="use">Use this model</a>
+<button class="vh-model-detail__action vh-model-detail__copy" type="button" data-vh-copy-model-id data-model-id="openai/whisper-large-v3-turbo" aria-describedby="vh-model-checkpoint-asr_whisper"><span data-vh-copy-model-id-label>Copy model ID</span></button>
+<a class="vh-model-detail__action" href="https://huggingface.co/openai/whisper-large-v3-turbo" data-vh-model-action="checkpoint">Checkpoint</a>
+<details class="vh-model-detail__resources">
+<summary class="vh-model-detail__action">Resources</summary>
+<div class="vh-model-detail__resource-menu">
+<a href="https://arxiv.org/abs/2212.04356" data-vh-model-action="paper">Paper</a>
+<a href="https://github.com/openai/whisper" data-vh-model-action="github">Upstream GitHub</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling_asr_whisper_native.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_whisper.ipynb" data-vh-model-action="colab">Open in Colab</a>
+</div>
+</details>
+</div>
+</header>
+
+<nav class="vh-model-detail__tabs" aria-label="Model sections"><a href="#usage" data-vh-model-tab="usage">Usage</a><a href="#overview" data-vh-model-tab="model-card" aria-current="location">Model card</a><a href="#paper-and-github" data-vh-model-tab="sources">Sources</a><a href="#training-and-optimization" data-vh-model-tab="training">Training</a><a href="#checkpoints-provenance-license-and-limitations" data-vh-model-tab="checkpoint">Checkpoint</a><a href="#public-api" data-vh-model-tab="api">Public API</a></nav>
+
+<div class="vh-model-detail__layout" markdown>
+
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-asr_whisper"><h2 id="vh-model-facts-title-asr_whisper">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-asr_whisper" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Automatic speech recognition</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-asr_whisper">808.9M</dd></div><div><dt>Architecture</dt><dd><code>whisper</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd><details class="vh-model-detail__languages"><summary>99 documented codes</summary><span><code>en</code> <code>zh</code> <code>de</code> <code>es</code> <code>ru</code> <code>ko</code> <code>fr</code> <code>ja</code> <code>pt</code> <code>tr</code> <code>pl</code> <code>ca</code> <code>nl</code> <code>ar</code> <code>sv</code> <code>it</code> <code>id</code> <code>hi</code> <code>fi</code> <code>vi</code> <code>he</code> <code>uk</code> <code>el</code> <code>ms</code> <code>cs</code> <code>ro</code> <code>da</code> <code>hu</code> <code>ta</code> <code>no</code> <code>th</code> <code>ur</code> <code>hr</code> <code>bg</code> <code>lt</code> <code>la</code> <code>mi</code> <code>ml</code> <code>cy</code> <code>sk</code> <code>te</code> <code>fa</code> <code>lv</code> <code>bn</code> <code>sr</code> <code>az</code> <code>sl</code> <code>kn</code> <code>et</code> <code>mk</code> <code>br</code> <code>eu</code> <code>is</code> <code>hy</code> <code>ne</code> <code>mn</code> <code>bs</code> <code>kk</code> <code>sq</code> <code>sw</code> <code>gl</code> <code>mr</code> <code>pa</code> <code>si</code> <code>km</code> <code>sn</code> <code>yo</code> <code>so</code> <code>af</code> <code>oc</code> <code>ka</code> <code>be</code> <code>tg</code> <code>sd</code> <code>gu</code> <code>am</code> <code>yi</code> <code>lo</code> <code>uz</code> <code>fo</code> <code>ht</code> <code>ps</code> <code>tk</code> <code>nn</code> <code>mt</code> <code>sa</code> <code>lb</code> <code>my</code> <code>bo</code> <code>tl</code> <code>mg</code> <code>as</code> <code>tt</code> <code>haw</code> <code>ln</code> <code>ha</code> <code>ba</code> <code>jw</code> <code>su</code></span></details></dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>7 capabilities</summary><span><code>automatic-speech-recognition</code> <code>multilingual</code> <code>translation</code> <code>timestamps</code> <code>safetensors</code> <code>fine-tuning</code> <code>voicehub-native</code></span></details></dd></div><div><dt>Training</dt><dd><code>native</code></dd></div><div><dt>License</dt><dd>Checkpoint-specific</dd></div><div><dt>Default checkpoint</dt><dd id="vh-model-checkpoint-asr_whisper"><a href="https://huggingface.co/openai/whisper-large-v3-turbo"><code>openai/whisper-large-v3-turbo</code></a></dd></div></dl></details></aside>
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -55,7 +90,7 @@ integration. This page is generated from its registry contract. [Open the `asr_w
 | Task | Automatic speech recognition |
 | Architecture | `whisper` |
 | Runtime | `VoiceHub-native` |
-| Languages | `en`, `zh`, `de`, `es`, `ru`, `ko`, `fr`, `ja`, `pt`, `tr`, `pl`, `ca`, `nl`, `ar`, `sv`, `it`, `id`, `hi`, `fi`, `vi`, `he`, `uk`, `el`, `ms`, `cs`, `ro`, `da`, `hu`, `ta`, `no`, `th`, `ur`, `hr`, `bg`, `lt`, `la`, `mi`, `ml`, `cy`, `sk`, `te`, `fa`, `lv`, `bn`, `sr`, `az`, `sl`, `kn`, `et`, `mk`, `br`, `eu`, `is`, `hy`, `ne`, `mn`, `bs`, `kk`, `sq`, `sw`, `gl`, `mr`, `pa`, `si`, `km`, `sn`, `yo`, `so`, `af`, `oc`, `ka`, `be`, `tg`, `sd`, `gu`, `am`, `yi`, `lo`, `uz`, `fo`, `ht`, `ps`, `tk`, `nn`, `mt`, `sa`, `lb`, `my`, `bo`, `tl`, `mg`, `as`, `tt`, `haw`, `ln`, `ha`, `ba`, `jw`, `su` |
+| Languages | `en`, `zh`, `de`, `es`, … complete audited list below |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `translation`, `timestamps`, `safetensors`, `fine-tuning`, `voicehub-native` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
@@ -180,17 +215,32 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 Use the stable configuration, processor, and task-model facades below.
 
+<section class="vh-model-api-card" data-vh-model-api-card="configuration" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Configuration</span></p>
+
 ### `WhisperASRConfig`
 
-[View `WhisperASRConfig` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/configuration_asr_whisper_native.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/configuration_asr_whisper_native.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 WhisperASRConfig(**config_kwargs)
 ```
 
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `**config_kwargs` — Configuration fields validated by WhisperASRConfig.
+</div>
+</section>
+
+<section class="vh-model-api-card" data-vh-model-api-card="model" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Model</span></p>
+
 ### `WhisperForSpeechRecognition`
 
-[View `WhisperForSpeechRecognition` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling_asr_whisper_native.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling_asr_whisper_native.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AutoModelForSpeechRecognition.from_pretrained(
@@ -201,6 +251,16 @@ AutoModelForSpeechRecognition.from_pretrained(
     **model_kwargs,
 )
 ```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `pretrained_model_name_or_path` — Hub ID or compatible local directory.
+- `model_type` — Canonical model type; use 'asr_whisper'.
+- `config` — Optional preloaded WhisperASRConfig instance.
+- `**model_kwargs` — Model-specific loading arguments.
+</div>
+</section>
 
 ```python
 from voicehub import get_model_spec
@@ -222,3 +282,9 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>

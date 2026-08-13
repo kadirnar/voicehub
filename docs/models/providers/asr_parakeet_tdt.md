@@ -1,8 +1,42 @@
 ---
 description: Public API, checkpoint, training, and optimization guide for the asr_parakeet_tdt integration.
+hide:
+  - toc
 ---
 
+<div class="vh-model-detail" data-vh-model-detail data-model-type="asr_parakeet_tdt" data-task="automatic-speech-recognition" data-training="native" data-parameter-count="627008134" markdown>
+
+<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+<p class="vh-model-detail__namespace" aria-label="Model repository"><span class="vh-model-detail__owner-avatar" aria-hidden="true">NV</span><a href="https://huggingface.co/nvidia">nvidia</a><span aria-hidden="true">/</span><strong>parakeet-tdt-0.6b-v3</strong></p>
+
 # ParakeetTDT {.vh-model-title}
+
+<p class="vh-model-detail__summary">Runs the native Parakeet TDT decoder and returns its calibrated timestamp segments.</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Automatic speech recognition</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">parakeet-tdt</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-asr_parakeet_tdt">Parameters: 627M</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: en, es +23</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: CC-BY-4.0</span></div>
+<p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-asr_parakeet_tdt"><strong>Parameter metadata:</strong> Exact learned-parameter total for VoiceHub&#x27;s audited native primary graph at the registered default selection; separately loaded auxiliary models are excluded.</p>
+<div class="vh-model-detail__actions" aria-label="Model actions">
+<a class="vh-model-detail__action vh-model-detail__action--primary" href="#usage" data-vh-model-action="use">Use this model</a>
+<button class="vh-model-detail__action vh-model-detail__copy" type="button" data-vh-copy-model-id data-model-id="nvidia/parakeet-tdt-0.6b-v3" aria-describedby="vh-model-checkpoint-asr_parakeet_tdt"><span data-vh-copy-model-id-label>Copy model ID</span></button>
+<a class="vh-model-detail__action" href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3" data-vh-model-action="checkpoint">Checkpoint</a>
+<details class="vh-model-detail__resources">
+<summary class="vh-model-detail__action">Resources</summary>
+<div class="vh-model-detail__resource-menu">
+<a href="https://github.com/NVIDIA/NeMo" data-vh-model-action="github">Upstream GitHub</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling_asr_parakeet_tdt.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_parakeet_tdt.ipynb" data-vh-model-action="colab">Open in Colab</a>
+</div>
+</details>
+</div>
+</header>
+
+<nav class="vh-model-detail__tabs" aria-label="Model sections"><a href="#usage" data-vh-model-tab="usage">Usage</a><a href="#overview" data-vh-model-tab="model-card" aria-current="location">Model card</a><a href="#paper-and-github" data-vh-model-tab="sources">Sources</a><a href="#training-and-optimization" data-vh-model-tab="training">Training</a><a href="#checkpoints-provenance-license-and-limitations" data-vh-model-tab="checkpoint">Checkpoint</a><a href="#public-api" data-vh-model-tab="api">Public API</a></nav>
+
+<div class="vh-model-detail__layout" markdown>
+
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-asr_parakeet_tdt"><h2 id="vh-model-facts-title-asr_parakeet_tdt">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-asr_parakeet_tdt" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Automatic speech recognition</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-asr_parakeet_tdt">627M</dd></div><div><dt>Architecture</dt><dd><code>parakeet-tdt</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd><details class="vh-model-detail__languages"><summary>25 documented codes</summary><span><code>en</code> <code>es</code> <code>fr</code> <code>de</code> <code>bg</code> <code>hr</code> <code>cs</code> <code>da</code> <code>nl</code> <code>et</code> <code>fi</code> <code>el</code> <code>hu</code> <code>it</code> <code>lv</code> <code>lt</code> <code>mt</code> <code>pl</code> <code>pt</code> <code>ro</code> <code>sk</code> <code>sl</code> <code>sv</code> <code>ru</code> <code>uk</code></span></details></dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>8 capabilities</summary><span><code>automatic-speech-recognition</code> <code>multilingual</code> <code>timestamps</code> <code>long-form</code> <code>safetensors</code> <code>fine-tuning</code> <code>voicehub-native</code> <code>native-runtime</code></span></details></dd></div><div><dt>Training</dt><dd><code>native</code></dd></div><div><dt>License</dt><dd><a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3">CC-BY-4.0</a></dd></div><div><dt>Default checkpoint</dt><dd id="vh-model-checkpoint-asr_parakeet_tdt"><a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3"><code>nvidia/parakeet-tdt-0.6b-v3</code></a></dd></div></dl></details></aside>
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -52,7 +86,7 @@ integration. This page is generated from its registry contract. [Open the `asr_p
 | Task | Automatic speech recognition |
 | Architecture | `parakeet-tdt` |
 | Runtime | `VoiceHub-native` |
-| Languages | `en`, `es`, `fr`, `de`, `bg`, `hr`, `cs`, `da`, `nl`, `et`, `fi`, `el`, `hu`, `it`, `lv`, `lt`, `mt`, `pl`, `pt`, `ro`, `sk`, `sl`, `sv`, `ru`, `uk` |
+| Languages | `en`, `es`, `fr`, `de`, … complete audited list below |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `timestamps`, `long-form`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
@@ -177,17 +211,32 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 Use the stable configuration, processor, and task-model facades below.
 
+<section class="vh-model-api-card" data-vh-model-api-card="configuration" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Configuration</span></p>
+
 ### `ParakeetTDTASRConfig`
 
-[View `ParakeetTDTASRConfig` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/configuration_asr_parakeet_tdt.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/configuration_asr_parakeet_tdt.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 ParakeetTDTASRConfig(**config_kwargs)
 ```
 
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `**config_kwargs` — Configuration fields validated by ParakeetTDTASRConfig.
+</div>
+</section>
+
+<section class="vh-model-api-card" data-vh-model-api-card="model" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Model</span></p>
+
 ### `ParakeetTDTForSpeechRecognition`
 
-[View `ParakeetTDTForSpeechRecognition` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling_asr_parakeet_tdt.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling_asr_parakeet_tdt.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AutoModelForSpeechRecognition.from_pretrained(
@@ -198,6 +247,16 @@ AutoModelForSpeechRecognition.from_pretrained(
     **model_kwargs,
 )
 ```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `pretrained_model_name_or_path` — Hub ID or compatible local directory.
+- `model_type` — Canonical model type; use 'asr_parakeet_tdt'.
+- `config` — Optional preloaded ParakeetTDTASRConfig instance.
+- `**model_kwargs` — Model-specific loading arguments.
+</div>
+</section>
 
 ```python
 from voicehub import get_model_spec
@@ -219,3 +278,9 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>
