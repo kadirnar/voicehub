@@ -34,22 +34,6 @@ description: VoiceHub-Dokumentation für einheitliche TTS-Inferenz, Datenaufbere
   <span class="vh-doc-teaser__audio">AUDIO</span>
 </div>
 
-<section class="vh-home-models" aria-labelledby="vh-home-models-title">
-  <p class="vh-home-models__eyebrow">Modellkatalog</p>
-  <h2 id="vh-home-models-title">Finden Sie ein Modell für Ihre Sprache und Aufgabe</h2>
-  <p class="vh-home-models__description">Durchsuchen Sie alle 68 TTS-, ASR- und VAD-Integrationen nach Sprache, Funktion, Trainingspfad, Lizenz, Architektur und Checkpoint-Quelle.</p>
-  <p class="vh-home-models__actions">
-    <a class="vh-home-models__primary" href="models/providers/">Alle Modelle entdecken <span aria-hidden="true">→</span></a>
-    <a class="vh-home-models__secondary" href="models/training-support/">Trainingsunterstützung vergleichen</a>
-  </p>
-  <ul class="vh-home-models__stats" aria-label="Zusammenfassung des Modellregisters">
-    <li><strong>68</strong><span>Modelle</span></li>
-    <li><strong>34</strong><span>TTS</span></li>
-    <li><strong>23</strong><span>ASR</span></li>
-    <li><strong>11</strong><span>VAD</span></li>
-  </ul>
-</section>
-
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="Status der kontinuierlichen Integration von VoiceHub">
@@ -79,8 +63,7 @@ Die Registry enthält **34 TTS-Integrationen**, **23 ASR-Anbieter** und **11
 VAD-Anbieter**. Die Fine-Tuning-Unterstützung hängt vom Checkpoint und von der
 Laufzeitumgebung ab; eine Inferenzintegration bedeutet nicht, dass ihr
 aktuelles VoiceHub-Artefakt differenzierbar ist. Wählen Sie eine Integration
-mithilfe des [TTS-Modellkatalogs](models/index.md), der
-[TTS-Trainingsmatrix](models/training-support.md) und der
+mithilfe der [TTS-Trainingsmatrix](models/training-support.md) und der
 [ASR/VAD-Unterstützungsmatrix](models/asr-vad-support.md) aus.
 
 Der Modellquellcode und alle integrierten TTS-, ASR- und
@@ -131,15 +114,6 @@ Audiodateien können anderen Bedingungen unterliegen.
     speichern Sie portable Artefakte.
 
     [Trainingsleitfaden](guides/training.md)
-
--   **Modelle**
-
-    ---
-
-    Vergleichen Sie TTS-Registry-Einträge, Standard-Checkpoints, Funktionen,
-    Herkunft des Quellcodes und Einschränkungen.
-
-    [Modellkatalog](models/index.md)
 
 -   **Trainingsunterstützung**
 

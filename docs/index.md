@@ -34,22 +34,6 @@ description: VoiceHub documentation for unified TTS, ASR, and VAD inference, dat
   <span class="vh-doc-teaser__audio">AUDIO</span>
 </div>
 
-<section class="vh-home-models" aria-labelledby="vh-home-models-title">
-  <p class="vh-home-models__eyebrow">Model catalog</p>
-  <h2 id="vh-home-models-title">Find a model for your language and task</h2>
-  <p class="vh-home-models__description">Search all 68 TTS, ASR, and VAD integrations by language, capability, training path, license, architecture, and checkpoint source.</p>
-  <p class="vh-home-models__actions">
-    <a class="vh-home-models__primary" href="models/providers/">Explore all models <span aria-hidden="true">→</span></a>
-    <a class="vh-home-models__secondary" href="models/training-support/">Compare training support</a>
-  </p>
-  <ul class="vh-home-models__stats" aria-label="Model registry summary">
-    <li><strong>68</strong><span>Models</span></li>
-    <li><strong>34</strong><span>TTS</span></li>
-    <li><strong>23</strong><span>ASR</span></li>
-    <li><strong>11</strong><span>VAD</span></li>
-  </ul>
-</section>
-
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="VoiceHub continuous integration status">
@@ -77,8 +61,7 @@ The registry contains **68 integrations**: **34 TTS backends**, **23 ASR
 providers**, and **11 VAD providers**. Fine-tuning support is checkpoint- and
 runtime-specific; an
 inference integration does not imply that its current VoiceHub artifact is
-differentiable. Use the [TTS catalog](models/index.md),
-[TTS training matrix](models/training-support.md), and
+differentiable. Use the [TTS training matrix](models/training-support.md) and
 [ASR/VAD support matrix](models/asr-vad-support.md) to select an integration.
 
 Model source and every built-in TTS, ASR, and VAD inference runtime are
@@ -178,15 +161,6 @@ details.
     complete checkpoints, and save portable artifacts.
 
     [Training guide](guides/training.md)
-
--   **Models**
-
-    ---
-
-    Compare TTS registry entries, default checkpoints, capabilities, source
-    provenance, and constraints.
-
-    [Model catalog](models/index.md)
 
 -   **ASR and VAD support**
 

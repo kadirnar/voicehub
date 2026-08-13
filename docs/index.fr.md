@@ -34,22 +34,6 @@ description: Documentation de VoiceHub pour l'inférence TTS unifiée, la prépa
   <span class="vh-doc-teaser__audio">AUDIO</span>
 </div>
 
-<section class="vh-home-models" aria-labelledby="vh-home-models-title">
-  <p class="vh-home-models__eyebrow">Catalogue de modèles</p>
-  <h2 id="vh-home-models-title">Trouvez un modèle pour votre langue et votre tâche</h2>
-  <p class="vh-home-models__description">Explorez les 68 intégrations TTS, ASR et VAD par langue, capacité, parcours d’entraînement, licence, architecture et source de checkpoint.</p>
-  <p class="vh-home-models__actions">
-    <a class="vh-home-models__primary" href="models/providers/">Explorer tous les modèles <span aria-hidden="true">→</span></a>
-    <a class="vh-home-models__secondary" href="models/training-support/">Comparer la prise en charge de l’entraînement</a>
-  </p>
-  <ul class="vh-home-models__stats" aria-label="Résumé du registre de modèles">
-    <li><strong>68</strong><span>Modèles</span></li>
-    <li><strong>34</strong><span>TTS</span></li>
-    <li><strong>23</strong><span>ASR</span></li>
-    <li><strong>11</strong><span>VAD</span></li>
-  </ul>
-</section>
-
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="État de l'intégration continue de VoiceHub">
@@ -80,8 +64,7 @@ paramètres et règles d'exportation.
 Le registry contient **34 intégrations TTS**, **23 fournisseurs ASR** et **11
 fournisseurs VAD**. La prise en charge de l'ajustement dépend du checkpoint et
 de l'environnement d'exécution ; une intégration d'inférence ne garantit pas
-que son artefact VoiceHub actuel soit différentiable. Consultez le
-[catalogue TTS](models/index.md), la
+que son artefact VoiceHub actuel soit différentiable. Consultez la
 [matrice d'entraînement TTS](models/training-support.md) et la
 [matrice de prise en charge ASR/VAD](models/asr-vad-support.md) pour choisir
 une intégration.
@@ -134,15 +117,6 @@ codecs, les jeux de données et les fichiers audio générés peuvent être soum
     portables.
 
     [Guide d'entraînement](guides/training.md)
-
--   **Modèles**
-
-    ---
-
-    Comparez les entrées TTS du registry, leurs checkpoints par défaut, leurs
-    capacités, la provenance du code source et leurs contraintes.
-
-    [Catalogue des modèles](models/index.md)
 
 -   **Prise en charge de l'entraînement**
 

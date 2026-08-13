@@ -34,22 +34,6 @@ description: VoiceHub 文档：统一的 TTS 推理、数据准备和架构感�
   <span class="vh-doc-teaser__audio">音频</span>
 </div>
 
-<section class="vh-home-models" aria-labelledby="vh-home-models-title">
-  <p class="vh-home-models__eyebrow">模型目录</p>
-  <h2 id="vh-home-models-title">按语言和任务查找合适的模型</h2>
-  <p class="vh-home-models__description">可按语言、能力、训练方式、许可证、架构和 checkpoint 来源搜索全部 68 个 TTS、ASR 和 VAD 集成。</p>
-  <p class="vh-home-models__actions">
-    <a class="vh-home-models__primary" href="models/providers/">浏览所有模型 <span aria-hidden="true">→</span></a>
-    <a class="vh-home-models__secondary" href="models/training-support/">比较训练支持</a>
-  </p>
-  <ul class="vh-home-models__stats" aria-label="模型注册表摘要">
-    <li><strong>68</strong><span>模型</span></li>
-    <li><strong>34</strong><span>TTS</span></li>
-    <li><strong>23</strong><span>ASR</span></li>
-    <li><strong>11</strong><span>VAD</span></li>
-  </ul>
-</section>
-
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="VoiceHub 持续集成状态">
@@ -74,8 +58,7 @@ VoiceHub 通过统一的配置、处理器、模型、输出和训练器 API 提
 
 模型注册表包含 **34 个 TTS 集成**、**23 个 ASR 提供程序**和 **11 个 VAD
 提供程序**。微调支持取决于具体的 checkpoint 和运行时；支持推理并不意味着当前的
-VoiceHub 工件支持可微分训练。请参考 [TTS 模型目录](models/index.md)、
-[TTS 训练矩阵](models/training-support.md)和
+VoiceHub 工件支持可微分训练。请参考 [TTS 训练矩阵](models/training-support.md)和
 [ASR/VAD 支持矩阵](models/asr-vad-support.md)来选择合适的集成。
 
 模型源码以及所有内置 TTS、ASR 和 VAD 推理运行时都会随 VoiceHub 默认安装。
@@ -119,14 +102,6 @@ checkpoint 权重仍按需下载，也可以通过本地路径提供。只有在
     恢复训练，并保存可移植工件。
 
     [训练指南](guides/training.md)
-
--   **模型**
-
-    ---
-
-    对比 TTS 注册项的默认 checkpoint、功能、源码来源和使用限制。
-
-    [模型目录](models/index.md)
 
 -   **训练支持**
 

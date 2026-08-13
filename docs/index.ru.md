@@ -34,22 +34,6 @@ description: Документация VoiceHub по унифицированно
   <span class="vh-doc-teaser__audio">АУДИО</span>
 </div>
 
-<section class="vh-home-models" aria-labelledby="vh-home-models-title">
-  <p class="vh-home-models__eyebrow">Каталог моделей</p>
-  <h2 id="vh-home-models-title">Найдите модель для своего языка и задачи</h2>
-  <p class="vh-home-models__description">Выполните поиск по всем 68 интеграциям TTS, ASR и VAD по языку, возможностям, способу обучения, лицензии, архитектуре и источнику checkpoint.</p>
-  <p class="vh-home-models__actions">
-    <a class="vh-home-models__primary" href="models/providers/">Посмотреть все модели <span aria-hidden="true">→</span></a>
-    <a class="vh-home-models__secondary" href="models/training-support/">Сравнить поддержку обучения</a>
-  </p>
-  <ul class="vh-home-models__stats" aria-label="Сводка реестра моделей">
-    <li><strong>68</strong><span>Модели</span></li>
-    <li><strong>34</strong><span>TTS</span></li>
-    <li><strong>23</strong><span>ASR</span></li>
-    <li><strong>11</strong><span>VAD</span></li>
-  </ul>
-</section>
-
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="Статус непрерывной интеграции VoiceHub">
@@ -80,8 +64,7 @@ sequence-to-sequence, модели flow-matching и диффузионные м�
 VAD**. Возможность дообучения зависит от конкретных checkpoint и среды
 выполнения; поддержка инференса не означает, что текущий артефакт VoiceHub
 поддерживает дифференцируемое обучение. Для выбора интеграции используйте
-[каталог TTS](models/index.md), [матрицу обучения
-TTS](models/training-support.md) и [матрицу поддержки
+[матрицу обучения TTS](models/training-support.md) и [матрицу поддержки
 ASR/VAD](models/asr-vad-support.md).
 
 Исходный код моделей и все встроенные среды инференса TTS, ASR и VAD входят в
@@ -131,15 +114,6 @@ checkpoint, кодеков, наборов данных и сгенериров�
     переносимые артефакты.
 
     [Руководство по обучению](guides/training.md)
-
--   **Модели**
-
-    ---
-
-    Сравнивайте записи TTS в реестре: checkpoint по умолчанию, возможности,
-    происхождение исходного кода и ограничения.
-
-    [Каталог моделей](models/index.md)
 
 -   **Поддержка обучения**
 
