@@ -384,11 +384,14 @@ class DocumentationSiteTests(unittest.TestCase):
         )
         self.assertIn("speech-to-text subset", documented_parameters["asr_seamless_m4t_v2"].note)
         from voicehub.architectures.medasr.configuration import MedASRConfig
-        from voicehub.architectures.medasr.modeling import MedASRForCTC
-        medasr_model = MedASRForCTC(MedASRConfig(), initialize=False)
+        medasr_config = MedASRConfig()
+        medasr_metadata = runpy.run_path(
+            str(REPOSITORY_ROOT / "voicehub" / "architectures" / "medasr" / "metadata.py"))
+        medasr_checkpoint = medasr_metadata["MEDASR_CHECKPOINT"]
+        batch_norm_buffers = medasr_config.num_hidden_layers * (2 * medasr_config.hidden_size + 1)
         self.assertEqual(
             documented_parameters["asr_medasr"].count,
-            sum(parameter.numel() for parameter in medasr_model.parameters()),
+            medasr_checkpoint["parameters"] - batch_norm_buffers,
         )
         self.assertIn("BatchNorm buffers are excluded", documented_parameters["asr_medasr"].note)
         melotts_spec = next(spec for spec in specs if spec.model_type == "melotts")
