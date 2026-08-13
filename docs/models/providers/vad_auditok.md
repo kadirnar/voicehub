@@ -1,8 +1,39 @@
 ---
 description: Public API, checkpoint, training, and optimization guide for the vad_auditok integration.
+hide:
+  - toc
 ---
 
+<div class="vh-model-detail" data-vh-model-detail data-model-type="vad_auditok" data-task="voice-activity-detection" data-training="inference-only" data-parameter-count="0" markdown>
+
+<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+<p class="vh-model-detail__namespace" aria-label="Model repository"><span class="vh-model-detail__owner-avatar" aria-hidden="true">VH</span><a href="https://github.com/kadirnar/voicehub">VoiceHub</a><span aria-hidden="true">/</span><strong>vad_auditok</strong></p>
+
 # AuditokVAD {.vh-model-title}
+
+<p class="vh-model-detail__summary">Runs Auditok&#x27;s weightless energy detector with conservative speech/silence durations.</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Voice activity detection</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">energy-vad</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-vad_auditok">Parameters: Weightless</span><span class="vh-model-detail__chip" data-chip-kind="language">Not text-language conditioned</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: inference-only</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Source terms require review</span></div>
+<p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-vad_auditok"><strong>Parameter metadata:</strong> Weightless algorithm; the registered default has no model parameters.</p>
+<div class="vh-model-detail__actions" aria-label="Model actions">
+<a class="vh-model-detail__action vh-model-detail__action--primary" href="#usage" data-vh-model-action="use">Use this model</a>
+<details class="vh-model-detail__resources">
+<summary class="vh-model-detail__action">Resources</summary>
+<div class="vh-model-detail__resource-menu">
+<a href="https://github.com/amsehili/auditok" data-vh-model-action="github">Upstream GitHub</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling_vad_auditok.py" data-vh-model-action="source">VoiceHub source</a>
+</div>
+</details>
+</div>
+</header>
+
+<nav class="vh-model-detail__tabs" aria-label="Model sections"><a href="#usage" data-vh-model-tab="usage">Usage</a><a href="#overview" data-vh-model-tab="model-card" aria-current="location">Model card</a><a href="#paper-and-github" data-vh-model-tab="sources">Sources</a><a href="#training-and-optimization" data-vh-model-tab="training">Training</a><a href="#checkpoints-provenance-license-and-limitations" data-vh-model-tab="checkpoint">Runtime</a><a href="#public-api" data-vh-model-tab="api">Public API</a></nav>
+
+<div class="vh-model-detail__layout" markdown>
+
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-vad_auditok"><h2 id="vh-model-facts-title-vad_auditok">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-vad_auditok" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Voice activity detection</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-vad_auditok">Weightless</dd></div><div><dt>Architecture</dt><dd><code>energy-vad</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd>This weightless runtime does not select a spoken language and is not text-language conditioned; validate its implementation, configuration, and recording conditions for the target speech.</dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>5 capabilities</summary><span><code>voice-activity-detection</code> <code>energy-based</code> <code>adaptive-threshold</code> <code>algorithmic</code> <code>voicehub-native</code></span></details></dd></div><div><dt>Training</dt><dd><code>inference-only</code></dd></div><div><dt>License</dt><dd>Source terms require review</dd></div><div><dt>Runtime identifier</dt><dd id="vh-model-checkpoint-vad_auditok"><code>auditok-energy-vad</code></dd></div></dl></details></aside>
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -41,7 +72,7 @@ for segment in output.segments:
     print(segment.start, segment.end, segment.score)
 ```
 
-Use authorized recordings. Verify hardware needs and pin a revision in production.
+Use authorized recordings. Version the implementation and configuration in production.
 
 ## Overview
 
@@ -60,7 +91,7 @@ integration. This page is generated from its registry contract.
 
 ### Language support
 
-The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.
+This weightless runtime does not select a spoken language and is not text-language conditioned; validate its implementation, configuration, and recording conditions for the target speech.
 
 ## Paper and GitHub
 
@@ -126,7 +157,7 @@ Unsupported runtime or hardware fails closed before mutation.
 | Family | `upstream-native` |
 | Recipe | `single-phase` |
 | Default phase | `default` |
-| Training checkpoint | `auditok-energy-vad` |
+| Runtime identifier | `auditok-energy-vad` |
 | Native training graph | `no` |
 
 | Phase | Kind | Components | Required inputs | Loss keys |
@@ -140,44 +171,59 @@ This integration is **inference-only**. Choose a verified model from the
 
 | Property | Value |
 | --- | --- |
-| Default checkpoint | `auditok-energy-vad` |
+| Runtime identifier | `auditok-energy-vad` |
 | Hugging Face ID | Not published / not applicable<br>Not applicable: Auditok VAD is an energy-based detector with no model weights. |
-| Checkpoint status | Weightless energy detector; version the implementation and configuration, not model weights |
+| Checkpoint status | Not applicable; this is a weightless algorithm with no checkpoint |
 | Optional dependency extra | Core package |
-| Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
-| Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
+| Hardware and runtime | Usage selects `cpu`; verify implementation-specific requirements |
+| Real-checkpoint evidence | Not applicable; version the implementation, configuration, and source provenance |
 | Implementation | `voicehub.models.vad_auditok.modeling_vad_auditok.AuditokVADForVoiceActivityDetection` |
 | Configuration | `voicehub.models.vad_auditok.configuration_vad_auditok.AuditokVADConfig` |
 | Source provenance | No integration-specific bundled `SOURCE.json` is declared for this registry entry. |
-| License | Checkpoint-specific |
+| License | Source terms require review |
 
-No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
+This weightless runtime has no checkpoint license. Review the VoiceHub and upstream implementation terms before use.
 
-Confirm the checkpoint revision, access terms, provenance, and license.
+Confirm the implementation revision, source provenance, access terms, and license.
 
 ### Limitations
 
-- No integration-specific checkpoint limitation is registered. Verify the selected checkpoint revision and its documented runtime requirements.
+- Weightless algorithm; the registered default has no model parameters.
 - Validate memory, precision, and optional dependencies on the target system.
 - Public optimizations fail closed when the runtime or hardware cannot satisfy
   their validation contract; an unavailable pass is not reported as applied.
-- Contract tests do not replace the linked released-checkpoint evidence.
+- Contract tests do not replace implementation and recording-condition validation.
 
 ## Public API
 
 Use the stable configuration, processor, and task-model facades below.
 
+<section class="vh-model-api-card" data-vh-model-api-card="configuration" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Configuration</span></p>
+
 ### `AuditokVADConfig`
 
-[View `AuditokVADConfig` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/configuration_vad_auditok.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/configuration_vad_auditok.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AuditokVADConfig(**config_kwargs)
 ```
 
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `**config_kwargs` — Configuration fields validated by AuditokVADConfig.
+</div>
+</section>
+
+<section class="vh-model-api-card" data-vh-model-api-card="model" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Model</span></p>
+
 ### `AuditokVADForVoiceActivityDetection`
 
-[View `AuditokVADForVoiceActivityDetection` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling_vad_auditok.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling_vad_auditok.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AutoModelForVoiceActivityDetection.from_pretrained(
@@ -188,6 +234,16 @@ AutoModelForVoiceActivityDetection.from_pretrained(
     **model_kwargs,
 )
 ```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `pretrained_model_name_or_path` — Runtime identifier for this weightless implementation.
+- `model_type` — Canonical model type; use 'vad_auditok'.
+- `config` — Optional preloaded AuditokVADConfig instance.
+- `**model_kwargs` — Model-specific loading arguments.
+</div>
+</section>
 
 ```python
 from voicehub import get_model_spec
@@ -209,3 +265,9 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>

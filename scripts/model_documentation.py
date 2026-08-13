@@ -86,9 +86,8 @@ _HF_COUNT = (
     "Exact Safetensors total reported by the Hugging Face model API for the "
     "registered default checkpoint, retrieved 2026-08-13.")
 _NOT_REPORTED = (
-    "Not reported: neither current audited native metadata nor the Hugging "
-    "Face Safetensors metadata retrieved 2026-08-13 provides an exact total "
-    "for the registered default checkpoint.")
+    "Not reported: the audited metadata available for the registered default "
+    "does not provide an exact parameter total.")
 _WEIGHTLESS = "Weightless algorithm; the registered default has no model parameters."
 _SEAMLESS_S2T_COUNT = (
     "Exact parameter total for the speech-to-text subset loaded from VoiceHub's "

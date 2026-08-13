@@ -1,8 +1,42 @@
 ---
 description: Public API, checkpoint, training, and optimization guide for the supertonic integration.
+hide:
+  - toc
 ---
 
+<div class="vh-model-detail" data-vh-model-detail data-model-type="supertonic" data-task="text-to-speech" data-training="preprocessed" data-parameter-count="" markdown>
+
+<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+<p class="vh-model-detail__namespace" aria-label="Model repository"><span class="vh-model-detail__owner-avatar" aria-hidden="true">SU</span><a href="https://huggingface.co/Supertone">Supertone</a><span aria-hidden="true">/</span><strong>supertonic-3</strong></p>
+
 # Supertonic {.vh-model-title}
+
+<p class="vh-model-detail__summary">Selects a Supertonic style ID, language, diffusion-step count, and speaking speed.</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Text to speech</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">supertonic</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-supertonic">Parameters: Not reported</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: en, ko +29</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: preprocessed</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
+<p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-supertonic"><strong>Parameter metadata:</strong> Not reported: the audited metadata available for the registered default does not provide an exact parameter total.</p>
+<div class="vh-model-detail__actions" aria-label="Model actions">
+<a class="vh-model-detail__action vh-model-detail__action--primary" href="#usage" data-vh-model-action="use">Use this model</a>
+<button class="vh-model-detail__action vh-model-detail__copy" type="button" data-vh-copy-model-id data-model-id="Supertone/supertonic-3" aria-describedby="vh-model-checkpoint-supertonic"><span data-vh-copy-model-id-label>Copy model ID</span></button>
+<a class="vh-model-detail__action" href="https://huggingface.co/Supertone/supertonic-3" data-vh-model-action="checkpoint">Checkpoint</a>
+<details class="vh-model-detail__resources">
+<summary class="vh-model-detail__action">Resources</summary>
+<div class="vh-model-detail__resource-menu">
+<a href="https://github.com/supertone-inc/supertonic" data-vh-model-action="github">Upstream GitHub</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/supertonic/modeling_supertonic.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/supertonic.ipynb" data-vh-model-action="colab">Open in Colab</a>
+</div>
+</details>
+</div>
+</header>
+
+<nav class="vh-model-detail__tabs" aria-label="Model sections"><a href="#usage" data-vh-model-tab="usage">Usage</a><a href="#overview" data-vh-model-tab="model-card" aria-current="location">Model card</a><a href="#paper-and-github" data-vh-model-tab="sources">Sources</a><a href="#training-and-optimization" data-vh-model-tab="training">Training</a><a href="#checkpoints-provenance-license-and-limitations" data-vh-model-tab="checkpoint">Checkpoint</a><a href="#public-api" data-vh-model-tab="api">Public API</a></nav>
+
+<div class="vh-model-detail__layout" markdown>
+
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-supertonic"><h2 id="vh-model-facts-title-supertonic">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-supertonic" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Text to speech</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-supertonic">Not reported</dd></div><div><dt>Architecture</dt><dd><code>supertonic</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd><details class="vh-model-detail__languages"><summary>31 documented codes</summary><span><code>en</code> <code>ko</code> <code>ja</code> <code>ar</code> <code>bg</code> <code>cs</code> <code>da</code> <code>de</code> <code>el</code> <code>es</code> <code>et</code> <code>fi</code> <code>fr</code> <code>hi</code> <code>hr</code> <code>hu</code> <code>id</code> <code>it</code> <code>lt</code> <code>lv</code> <code>nl</code> <code>pl</code> <code>pt</code> <code>ro</code> <code>ru</code> <code>sk</code> <code>sl</code> <code>sv</code> <code>tr</code> <code>uk</code> <code>vi</code></span></details></dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>7 capabilities</summary><span><code>text-to-speech</code> <code>multilingual</code> <code>fine-tuning</code> <code>safetensors</code> <code>voicehub-native</code> <code>native-runtime</code> <code>preprocessed-training</code></span></details></dd></div><div><dt>Training</dt><dd><code>preprocessed</code></dd></div><div><dt>License</dt><dd>Checkpoint-specific</dd></div><div><dt>Default checkpoint</dt><dd id="vh-model-checkpoint-supertonic"><a href="https://huggingface.co/Supertone/supertonic-3"><code>Supertone/supertonic-3</code></a></dd></div></dl></details></aside>
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -53,7 +87,7 @@ integration. This page is generated from its registry contract. [Open the `super
 | Task | Text to speech |
 | Architecture | `supertonic` |
 | Runtime | `VoiceHub-native` |
-| Languages | `en`, `ko`, `ja`, `ar`, `bg`, `cs`, `da`, `de`, `el`, `es`, `et`, `fi`, `fr`, `hi`, `hr`, `hu`, `id`, `it`, `lt`, `lv`, `nl`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sv`, `tr`, `uk`, `vi` |
+| Languages | `en`, `ko`, `ja`, `ar`, … complete audited list below |
 | Capabilities | `text-to-speech`, `multilingual`, `fine-tuning`, `safetensors`, `voicehub-native`, `native-runtime`, `preprocessed-training` |
 | Reusable components | — |
 | Normalized output | `TTSOutput` |
@@ -180,17 +214,32 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 Use the stable configuration, processor, and task-model facades below.
 
+<section class="vh-model-api-card" data-vh-model-api-card="configuration" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Configuration</span></p>
+
 ### `SupertonicConfig`
 
-[View `SupertonicConfig` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/supertonic/configuration_supertonic.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/supertonic/configuration_supertonic.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 SupertonicConfig(**config_kwargs)
 ```
 
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `**config_kwargs` — Configuration fields validated by SupertonicConfig.
+</div>
+</section>
+
+<section class="vh-model-api-card" data-vh-model-api-card="model" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Model</span></p>
+
 ### `SupertonicForTextToSpeech`
 
-[View `SupertonicForTextToSpeech` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/supertonic/modeling_supertonic.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/supertonic/modeling_supertonic.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AutoModelForTextToSpeech.from_pretrained(
@@ -201,6 +250,16 @@ AutoModelForTextToSpeech.from_pretrained(
     **model_kwargs,
 )
 ```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `pretrained_model_name_or_path` — Hub ID or compatible local directory.
+- `model_type` — Canonical model type; use 'supertonic'.
+- `config` — Optional preloaded SupertonicConfig instance.
+- `**model_kwargs` — Model-specific loading arguments.
+</div>
+</section>
 
 ```python
 from voicehub import get_model_spec
@@ -222,3 +281,9 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>

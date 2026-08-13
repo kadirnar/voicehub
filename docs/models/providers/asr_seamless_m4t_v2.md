@@ -1,8 +1,43 @@
 ---
 description: Public API, checkpoint, training, and optimization guide for the asr_seamless_m4t_v2 integration.
+hide:
+  - toc
 ---
 
+<div class="vh-model-detail" data-vh-model-detail data-model-type="asr_seamless_m4t_v2" data-task="automatic-speech-recognition" data-training="native" data-parameter-count="1501842240" markdown>
+
+<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+<p class="vh-model-detail__namespace" aria-label="Model repository"><span class="vh-model-detail__owner-avatar" aria-hidden="true">FA</span><a href="https://huggingface.co/facebook">facebook</a><span aria-hidden="true">/</span><strong>seamless-m4t-v2-large</strong></p>
+
 # SeamlessM4Tv2 {.vh-model-title}
+
+<p class="vh-model-detail__summary">Selects SeamlessM4T v2 transcription rather than speech translation.</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Automatic speech recognition</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">seamless-m4t-v2-s2t</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-asr_seamless_m4t_v2">Parameters: 1.5B</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: afr, amh +96</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: CC-BY-NC-4.0</span></div>
+<p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-asr_seamless_m4t_v2"><strong>Parameter metadata:</strong> Exact parameter total for the speech-to-text subset loaded from VoiceHub&#x27;s audited unified default checkpoint.</p>
+<div class="vh-model-detail__actions" aria-label="Model actions">
+<a class="vh-model-detail__action vh-model-detail__action--primary" href="#usage" data-vh-model-action="use">Use this model</a>
+<button class="vh-model-detail__action vh-model-detail__copy" type="button" data-vh-copy-model-id data-model-id="facebook/seamless-m4t-v2-large" aria-describedby="vh-model-checkpoint-asr_seamless_m4t_v2"><span data-vh-copy-model-id-label>Copy model ID</span></button>
+<a class="vh-model-detail__action" href="https://huggingface.co/facebook/seamless-m4t-v2-large" data-vh-model-action="checkpoint">Checkpoint</a>
+<details class="vh-model-detail__resources">
+<summary class="vh-model-detail__action">Resources</summary>
+<div class="vh-model-detail__resource-menu">
+<a href="https://arxiv.org/abs/2312.05187" data-vh-model-action="paper">Paper</a>
+<a href="https://github.com/facebookresearch/seamless_communication" data-vh-model-action="github">Upstream GitHub</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling_asr_seamless_m4t_v2.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_seamless_m4t_v2.ipynb" data-vh-model-action="colab">Open in Colab</a>
+</div>
+</details>
+</div>
+</header>
+
+<nav class="vh-model-detail__tabs" aria-label="Model sections"><a href="#usage" data-vh-model-tab="usage">Usage</a><a href="#overview" data-vh-model-tab="model-card" aria-current="location">Model card</a><a href="#paper-and-github" data-vh-model-tab="sources">Sources</a><a href="#training-and-optimization" data-vh-model-tab="training">Training</a><a href="#checkpoints-provenance-license-and-limitations" data-vh-model-tab="checkpoint">Checkpoint</a><a href="#public-api" data-vh-model-tab="api">Public API</a></nav>
+
+<div class="vh-model-detail__layout" markdown>
+
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-asr_seamless_m4t_v2"><h2 id="vh-model-facts-title-asr_seamless_m4t_v2">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-asr_seamless_m4t_v2" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Automatic speech recognition</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-asr_seamless_m4t_v2">1.5B</dd></div><div><dt>Architecture</dt><dd><code>seamless-m4t-v2-s2t</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd><details class="vh-model-detail__languages"><summary>98 documented codes</summary><span><code>afr</code> <code>amh</code> <code>arb</code> <code>ary</code> <code>arz</code> <code>asm</code> <code>azj</code> <code>bel</code> <code>ben</code> <code>bos</code> <code>bul</code> <code>cat</code> <code>ceb</code> <code>ces</code> <code>ckb</code> <code>cmn</code> <code>cmn_Hant</code> <code>cym</code> <code>dan</code> <code>deu</code> <code>ell</code> <code>eng</code> <code>est</code> <code>eus</code> <code>fin</code> <code>fra</code> <code>fuv</code> <code>gaz</code> <code>gle</code> <code>glg</code> <code>guj</code> <code>heb</code> <code>hin</code> <code>hrv</code> <code>hun</code> <code>hye</code> <code>ibo</code> <code>ind</code> <code>isl</code> <code>ita</code> <code>jav</code> <code>jpn</code> <code>kan</code> <code>kat</code> <code>kaz</code> <code>khk</code> <code>khm</code> <code>kir</code> <code>kor</code> <code>lao</code> <code>lit</code> <code>lug</code> <code>luo</code> <code>lvs</code> <code>mai</code> <code>mal</code> <code>mar</code> <code>mkd</code> <code>mlt</code> <code>mni</code> <code>mya</code> <code>nld</code> <code>nno</code> <code>nob</code> <code>npi</code> <code>nya</code> <code>ory</code> <code>pan</code> <code>pbt</code> <code>pes</code> <code>pol</code> <code>por</code> <code>ron</code> <code>rus</code> <code>sat</code> <code>slk</code> <code>slv</code> <code>sna</code> <code>snd</code> <code>som</code> <code>spa</code> <code>srp</code> <code>swe</code> <code>swh</code> <code>tam</code> <code>tel</code> <code>tgk</code> <code>tgl</code> <code>tha</code> <code>tur</code> <code>ukr</code> <code>urd</code> <code>uzn</code> <code>vie</code> <code>yor</code> <code>yue</code> <code>zlm</code> <code>zul</code></span></details></dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>8 capabilities</summary><span><code>automatic-speech-recognition</code> <code>multilingual</code> <code>safetensors</code> <code>fine-tuning</code> <code>voicehub-native</code> <code>native-runtime</code> <code>greedy-decoding</code> <code>full-model-training</code></span></details></dd></div><div><dt>Training</dt><dd><code>native</code></dd></div><div><dt>License</dt><dd><a href="https://huggingface.co/facebook/seamless-m4t-v2-large">CC-BY-NC-4.0</a></dd></div><div><dt>Default checkpoint</dt><dd id="vh-model-checkpoint-asr_seamless_m4t_v2"><a href="https://huggingface.co/facebook/seamless-m4t-v2-large"><code>facebook/seamless-m4t-v2-large</code></a></dd></div></dl></details></aside>
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -54,7 +89,7 @@ integration. This page is generated from its registry contract. [Open the `asr_s
 | Task | Automatic speech recognition |
 | Architecture | `seamless-m4t-v2-s2t` |
 | Runtime | `VoiceHub-native` |
-| Languages | `afr`, `amh`, `arb`, `ary`, `arz`, `asm`, `azj`, `bel`, `ben`, `bos`, `bul`, `cat`, `ceb`, `ces`, `ckb`, `cmn`, `cmn_Hant`, `cym`, `dan`, `deu`, `ell`, `eng`, `est`, `eus`, `fin`, `fra`, `fuv`, `gaz`, `gle`, `glg`, `guj`, `heb`, `hin`, `hrv`, `hun`, `hye`, `ibo`, `ind`, `isl`, `ita`, `jav`, `jpn`, `kan`, `kat`, `kaz`, `khk`, `khm`, `kir`, `kor`, `lao`, `lit`, `lug`, `luo`, `lvs`, `mai`, `mal`, `mar`, `mkd`, `mlt`, `mni`, `mya`, `nld`, `nno`, `nob`, `npi`, `nya`, `ory`, `pan`, `pbt`, `pes`, `pol`, `por`, `ron`, `rus`, `sat`, `slk`, `slv`, `sna`, `snd`, `som`, `spa`, `srp`, `swe`, `swh`, `tam`, `tel`, `tgk`, `tgl`, `tha`, `tur`, `ukr`, `urd`, `uzn`, `vie`, `yor`, `yue`, `zlm`, `zul` |
+| Languages | `afr`, `amh`, `arb`, `ary`, … complete audited list below |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `safetensors`, `fine-tuning`, `voicehub-native`, `native-runtime`, `greedy-decoding`, `full-model-training` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
@@ -181,17 +216,32 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 Use the stable configuration, processor, and task-model facades below.
 
+<section class="vh-model-api-card" data-vh-model-api-card="configuration" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Configuration</span></p>
+
 ### `SeamlessM4Tv2ASRConfig`
 
-[View `SeamlessM4Tv2ASRConfig` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/configuration_asr_seamless_m4t_v2.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/configuration_asr_seamless_m4t_v2.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 SeamlessM4Tv2ASRConfig(**config_kwargs)
 ```
 
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `**config_kwargs` — Configuration fields validated by SeamlessM4Tv2ASRConfig.
+</div>
+</section>
+
+<section class="vh-model-api-card" data-vh-model-api-card="model" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Model</span></p>
+
 ### `SeamlessM4Tv2ForSpeechRecognition`
 
-[View `SeamlessM4Tv2ForSpeechRecognition` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling_asr_seamless_m4t_v2.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling_asr_seamless_m4t_v2.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AutoModelForSpeechRecognition.from_pretrained(
@@ -202,6 +252,16 @@ AutoModelForSpeechRecognition.from_pretrained(
     **model_kwargs,
 )
 ```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `pretrained_model_name_or_path` — Hub ID or compatible local directory.
+- `model_type` — Canonical model type; use 'asr_seamless_m4t_v2'.
+- `config` — Optional preloaded SeamlessM4Tv2ASRConfig instance.
+- `**model_kwargs` — Model-specific loading arguments.
+</div>
+</section>
 
 ```python
 from voicehub import get_model_spec
@@ -223,3 +283,9 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>

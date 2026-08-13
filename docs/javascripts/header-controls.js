@@ -301,13 +301,222 @@
     });
   };
 
+  const initializeModelIdCopyControl = () => {
+    const button = document.querySelector("[data-vh-copy-model-id]");
+    const label = button?.querySelector("[data-vh-copy-model-id-label]");
+    const modelId = button instanceof HTMLButtonElement
+      ? button.dataset.modelId?.trim()
+      : "";
+    if (!(button instanceof HTMLButtonElement)
+        || !(label instanceof HTMLElement)
+        || !modelId) return;
+
+    const idleLabel = "Copy model ID";
+    let resetTimer;
+    let copyInProgress = false;
+
+    const copyWithSelection = () => {
+      const previousFocus = document.activeElement;
+      const copyBuffer = document.createElement("textarea");
+      copyBuffer.value = modelId;
+      copyBuffer.setAttribute("readonly", "");
+      copyBuffer.setAttribute("aria-hidden", "true");
+      copyBuffer.style.position = "fixed";
+      copyBuffer.style.inset = "0 auto auto -9999px";
+      copyBuffer.style.opacity = "0";
+      document.body.append(copyBuffer);
+
+      let copied = false;
+      try {
+        copyBuffer.focus({ preventScroll: true });
+        copyBuffer.select();
+        copied = document.execCommand("copy");
+      } finally {
+        copyBuffer.remove();
+        if (previousFocus instanceof HTMLElement) previousFocus.focus({ preventScroll: true });
+      }
+      if (!copied) throw new Error("The browser rejected both clipboard copy methods.");
+    };
+
+    const writeModelId = async () => {
+      try {
+        await navigator.clipboard.writeText(modelId);
+      } catch (_error) {
+        copyWithSelection();
+      }
+    };
+
+    const resetFeedback = () => {
+      label.textContent = idleLabel;
+      button.setAttribute("aria-label", idleLabel);
+    };
+
+    label.setAttribute("aria-live", "polite");
+    label.setAttribute("aria-atomic", "true");
+    resetFeedback();
+    button.setAttribute("aria-busy", "false");
+    button.addEventListener("click", async () => {
+      if (copyInProgress) return;
+      copyInProgress = true;
+      button.setAttribute("aria-busy", "true");
+      window.clearTimeout(resetTimer);
+      try {
+        await writeModelId();
+        label.textContent = "Copied";
+        button.setAttribute("aria-label", "Copied");
+      } catch (_error) {
+        label.textContent = "Copy failed";
+        button.setAttribute("aria-label", "Copy failed");
+      } finally {
+        copyInProgress = false;
+        button.setAttribute("aria-busy", "false");
+        resetTimer = window.setTimeout(resetFeedback, 1600);
+      }
+    });
+  };
+
+  const initializeModelFactsDisclosure = () => {
+    const disclosure = document.querySelector("[data-vh-model-facts-disclosure]");
+    if (!(disclosure instanceof HTMLDetailsElement)) return;
+
+    const desktopLayout = window.matchMedia("(min-width: 76.25em)");
+    const synchronizeLayout = () => {
+      disclosure.open = desktopLayout.matches;
+    };
+    desktopLayout.addEventListener("change", synchronizeLayout);
+    synchronizeLayout();
+  };
+
+  const initializeModelSectionNavigation = () => {
+    const navigation = document.querySelector(".vh-model-detail__tabs");
+    if (!(navigation instanceof HTMLElement)) return;
+
+    const sections = Array.from(navigation.querySelectorAll("a[href^='#']"))
+      .flatMap((link) => {
+        if (!(link instanceof HTMLAnchorElement) || !link.hash) return [];
+        const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+        return target instanceof HTMLElement ? [{ link, target }] : [];
+      })
+      .sort((left, right) => left.target.compareDocumentPosition(right.target)
+        & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+    if (!sections.length) return;
+    const defaultLink = navigation.querySelector('[data-vh-model-tab="model-card"]');
+
+    const setCurrent = (currentLink) => {
+      sections.forEach(({ link }) => {
+        if (link === currentLink) link.setAttribute("aria-current", "location");
+        else link.removeAttribute("aria-current");
+      });
+    };
+    const updateFromScroll = () => {
+      if (window.scrollY <= 24) {
+        setCurrent(defaultLink instanceof HTMLAnchorElement ? defaultLink : sections[0].link);
+        return;
+      }
+      const header = document.querySelector(".md-header");
+      const shellThreshold = Math.max(
+        0,
+        header?.getBoundingClientRect().bottom || 0,
+        navigation.getBoundingClientRect().bottom,
+      );
+      const threshold = Math.max(shellThreshold + 32, window.innerHeight * 0.24);
+      let current = defaultLink instanceof HTMLAnchorElement ? defaultLink : sections[0].link;
+      sections.forEach(({ link, target }) => {
+        if (target.getBoundingClientRect().top <= threshold) current = link;
+      });
+      setCurrent(current);
+    };
+
+    const ANCHOR_RELEASE_DISTANCE = 24;
+    let lockedLink = null;
+    let settledScrollY = null;
+    let settleTimer;
+
+    const settleAnchorNavigation = () => {
+      if (!(lockedLink instanceof HTMLAnchorElement) || settledScrollY !== null) return;
+      settledScrollY = window.scrollY;
+      window.clearTimeout(settleTimer);
+    };
+    const deferAnchorSettlement = () => {
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(settleAnchorNavigation, 240);
+    };
+    const releaseAnchorNavigation = () => {
+      window.clearTimeout(settleTimer);
+      lockedLink = null;
+      settledScrollY = null;
+    };
+    const lockAnchorNavigation = (link) => {
+      lockedLink = link;
+      settledScrollY = null;
+      setCurrent(link);
+      deferAnchorSettlement();
+    };
+    const lockCurrentHash = () => {
+      if (!window.location.hash) return false;
+      let targetId;
+      try {
+        targetId = decodeURIComponent(window.location.hash.slice(1));
+      } catch (_error) {
+        return false;
+      }
+      const matchingSection = sections.find(({ target }) => target.id === targetId);
+      if (!matchingSection) return false;
+      lockAnchorNavigation(matchingSection.link);
+      return true;
+    };
+
+    let updateScheduled = false;
+    let releaseOnNextUpdate = false;
+    const scheduleUpdate = (event) => {
+      if (event?.type === "hashchange") {
+        if (lockCurrentHash()) return;
+        releaseAnchorNavigation();
+      }
+      if (event?.type === "scroll" && lockedLink instanceof HTMLAnchorElement) {
+        if (settledScrollY === null) deferAnchorSettlement();
+        releaseOnNextUpdate = true;
+      }
+      if (updateScheduled) return;
+      updateScheduled = true;
+      requestAnimationFrame(() => {
+        updateScheduled = false;
+        const mayReleaseAnchor = releaseOnNextUpdate;
+        releaseOnNextUpdate = false;
+        if (lockedLink instanceof HTMLAnchorElement) {
+          const movedAfterSettlement = settledScrollY !== null
+            && Math.abs(window.scrollY - settledScrollY) >= ANCHOR_RELEASE_DISTANCE;
+          if (mayReleaseAnchor && movedAfterSettlement) releaseAnchorNavigation();
+          else {
+            setCurrent(lockedLink);
+            return;
+          }
+        }
+        updateFromScroll();
+      });
+    };
+    navigation.addEventListener("click", (event) => {
+      const link = event.target instanceof Element
+        ? event.target.closest("a[href^='#']")
+        : null;
+      if (link instanceof HTMLAnchorElement) lockAnchorNavigation(link);
+    });
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("scrollend", settleAnchorNavigation, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("hashchange", scheduleUpdate);
+    if (!lockCurrentHash()) scheduleUpdate();
+  };
+
   const initializeSemanticHighlights = () => {
     const optimizationRoute = /\/(?:guides\/[^/]*optimization[^/]*|project\/adding-an-optimization)\/?$/;
     const modelRoute = /\/models\/providers\/[^/]+\/?$/;
     const currentPath = window.location.pathname.replace(/index\.html$/, "");
     const isOptimizationPage = optimizationRoute.test(currentPath);
+    const isModelPage = modelRoute.test(currentPath);
 
     document.body.classList.toggle("vh-optimization-page", isOptimizationPage);
+    document.body.classList.toggle("vh-model-page", isModelPage);
     document.querySelectorAll(".md-nav__link[href]").forEach((link) => {
       if (!(link instanceof HTMLAnchorElement)) return;
       let target;
@@ -536,6 +745,9 @@
     initializeLanguageControl();
     initializeThemeControl();
     initializeCodeBlockLandmarks();
+    initializeModelIdCopyControl();
+    initializeModelFactsDisclosure();
+    initializeModelSectionNavigation();
     initializeSemanticHighlights();
     initializeScrollableRegions();
     initializeContentTabFocus();

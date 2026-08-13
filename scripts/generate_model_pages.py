@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import sys
 from collections import Counter
@@ -110,6 +111,9 @@ def _code_list(values) -> str:
 def _language_summary(spec) -> str:
     support = model_language_support(spec)
     if support.kind == "enumerated":
+        if len(support.codes) > 8:
+            preview = _code_list(support.codes[:4])
+            return f"{preview}, … complete audited list below"
         return _code_list(support.codes)
     return "Not text-language conditioned"
 
@@ -125,6 +129,11 @@ def _language_details(spec) -> str:
 {codes}{note}
 
 </details>'''
+    if _is_weightless(spec):
+        return (
+            "This weightless runtime does not select a spoken language and is not "
+            "text-language conditioned; validate its "
+            "implementation, configuration, and recording conditions for the target speech.")
     return support.note or "The model is not text-language conditioned."
 
 
@@ -296,6 +305,14 @@ def _module_source_roots(module: str) -> tuple[Path, ...]:
 
 def _source_provenance(spec) -> str:
     """Describe the closest bundled source record without inventing provenance."""
+    source_record = _source_record_path(spec)
+    if source_record is not None:
+        return f"`{source_record.relative_to(REPOSITORY_ROOT).as_posix()}`"
+    return "No integration-specific bundled `SOURCE.json` is declared for this registry entry."
+
+
+def _source_record_path(spec) -> Path | None:
+    """Resolve the closest bundled provenance record without importing a backend."""
     roots = [
         REPOSITORY_ROOT / "voicehub" / "models" / spec.model_type,
         *_module_source_roots(spec.module),
@@ -316,8 +333,27 @@ def _source_provenance(spec) -> str:
                 seen.add(candidate)
     for candidate in candidates:
         if candidate.is_file():
-            return f"`{candidate.relative_to(REPOSITORY_ROOT).as_posix()}`"
-    return "No integration-specific bundled `SOURCE.json` is declared for this registry entry."
+            return candidate
+    return None
+
+
+def _source_terms(spec) -> tuple[str, str | None]:
+    """Return audited source-license terms and their local evidence link when declared."""
+    source_record = _source_record_path(spec)
+    if source_record is None:
+        return "Source terms require review", None
+    try:
+        record = json.loads(source_record.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return "Source terms require review", None
+    upstream = record.get("upstream")
+    license_name = upstream.get("license") if isinstance(upstream, dict) else None
+    if not isinstance(license_name, str) or not license_name.strip():
+        return "Source terms require review", None
+    source_url = (
+        "https://github.com/kadirnar/voicehub/blob/main/" +
+        source_record.relative_to(REPOSITORY_ROOT).as_posix())
+    return license_name.strip(), source_url
 
 
 def _module_source_path(module: str) -> Path:
@@ -444,13 +480,14 @@ def _training_section(spec) -> str:
     training_checkpoint = (
         training.training_default_model_name_or_path or spec.default_model_path or
         "owner/model-or-local-directory")
+    training_artifact_label = "Runtime identifier" if _is_weightless(spec) else "Training checkpoint"
     summary = f'''| Property | Value |
 | --- | --- |
 | Support | `{training.support.value}` |
 | Family | `{training.family_name}` |
 | Recipe | `{training.recipe_kind.value}` |
 | Default phase | `{training.default_phase}` |
-| Training checkpoint | `{training_checkpoint}` |
+| {training_artifact_label} | `{training_checkpoint}` |
 | Native training graph | `{'yes' if training.native_training else 'no'}` |
 
 | Phase | Kind | Components | Required inputs | Loss keys |
@@ -473,24 +510,299 @@ This integration is **inference-only**. Choose a verified model from the
 [training workflow](../../guides/training.md).'''
 
 
+def _is_weightless(spec) -> bool:
+    """Whether the integration is an algorithm with no model weights."""
+    return parameter_documentation(spec).count == 0
+
+
+def _license_details(spec) -> tuple[str, str | None, str]:
+    """Return the compact label, source URL, and complete license notice."""
+    if _is_weightless(spec):
+        license_label, source_url = _source_terms(spec)
+        if source_url:
+            notice = (
+                "This weightless runtime has no checkpoint license. Its audited source "
+                f"record declares **{license_label}**; verify those implementation terms.")
+        else:
+            notice = (
+                "This weightless runtime has no checkpoint license. Review the VoiceHub "
+                "and upstream implementation terms before use.")
+        return license_label, source_url, notice
+    license_spec = spec.license
+    if license_spec is None:
+        return (
+            "Checkpoint-specific",
+            None,
+            "No VoiceHub-specific license override is registered. Verify the "
+            "checkpoint and upstream source terms before use.",
+        )
+    commercial = {
+        True: "allowed by the registered terms",
+        False: "not allowed",
+        None: "review required",
+    }[license_spec.commercial_use]
+    return (
+        license_spec.license_id,
+        license_spec.upstream,
+        f"{license_spec.notice} Commercial use: **{commercial}**.",
+    )
+
+
+def _module_source_url(module: str) -> str:
+    """Return the stable repository URL for a declared lazy module."""
+    source_path = _module_source_path(module).as_posix()
+    return f"https://github.com/kadirnar/voicehub/blob/main/{source_path}"
+
+
+def _render_model_chip(label: str, kind: str, *, described_by: str | None = None) -> str:
+    description = (f' aria-describedby="{html.escape(described_by, quote=True)}"' if described_by else "")
+    return (
+        f'<span class="vh-model-detail__chip" data-chip-kind="{html.escape(kind, quote=True)}"'
+        f'{description}>{html.escape(label)}</span>')
+
+
+def _model_language_chip(spec) -> str:
+    support = model_language_support(spec)
+    if support.kind != "enumerated":
+        return "Not text-language conditioned"
+    if len(support.codes) == 1:
+        return f"Language: {support.codes[0]}"
+    if len(support.codes) == 2:
+        return f"Languages: {', '.join(support.codes)}"
+    preview = ", ".join(support.codes[:2])
+    return f"Languages: {preview} +{len(support.codes) - 2}"
+
+
+def _render_model_namespace(spec, checkpoint_metadata) -> str:
+    if (checkpoint_metadata.is_hugging_face and checkpoint_metadata.hugging_face_id and
+            checkpoint_metadata.hugging_face_url):
+        owner, repository = checkpoint_metadata.hugging_face_id.split("/", 1)
+        owner_url = f"https://huggingface.co/{owner}"
+    else:
+        owner = "VoiceHub"
+        owner_url = "https://github.com/kadirnar/voicehub"
+        repository = spec.model_type
+    initials = "".join(character for character in owner if character.isupper())[:2]
+    if len(initials) < 2:
+        initials = "".join(part[0] for part in re.split(r"[^A-Za-z0-9]+", owner) if part)[:2].upper()
+    if len(initials) < 2:
+        initials = owner[:2].upper()
+    return (
+        '<p class="vh-model-detail__namespace" aria-label="Model repository">'
+        f'<span class="vh-model-detail__owner-avatar" aria-hidden="true">{html.escape(initials)}</span>'
+        f'<a href="{html.escape(owner_url, quote=True)}">{html.escape(owner)}</a>'
+        '<span aria-hidden="true">/</span>'
+        f'<strong>{html.escape(repository)}</strong></p>')
+
+
+def _render_model_actions(spec, checkpoint_metadata) -> str:
+    references = MODEL_REFERENCES[spec.model_type]
+    source_url = _module_source_url(spec.module)
+    actions = [
+        '<a class="vh-model-detail__action vh-model-detail__action--primary" '
+        'href="#usage" data-vh-model-action="use">Use this model</a>',
+    ]
+    if checkpoint_metadata.identifier and not _is_weightless(spec):
+        checkpoint_id = html.escape(checkpoint_metadata.identifier, quote=True)
+        checkpoint_description_id = f"vh-model-checkpoint-{spec.model_type}"
+        actions.append(
+            '<button class="vh-model-detail__action vh-model-detail__copy" type="button" '
+            f'data-vh-copy-model-id data-model-id="{checkpoint_id}" '
+            f'aria-describedby="{checkpoint_description_id}">'
+            '<span data-vh-copy-model-id-label>Copy model ID</span></button>')
+    if checkpoint_metadata.url:
+        checkpoint_label = "Runtime source" if _is_weightless(spec) else "Checkpoint"
+        actions.append(
+            f'<a class="vh-model-detail__action" href="{html.escape(checkpoint_metadata.url, quote=True)}" '
+            f'data-vh-model-action="checkpoint">{checkpoint_label}</a>')
+    resources = []
+    if references.papers:
+        paper = references.papers[0]
+        resources.append(
+            f'<a href="{html.escape(paper.url, quote=True)}" '
+            'data-vh-model-action="paper">Paper</a>')
+    resources.extend((
+        f'<a href="{html.escape(references.github.url, quote=True)}" '
+        'data-vh-model-action="github">Upstream GitHub</a>',
+        f'<a href="{html.escape(source_url, quote=True)}" '
+        'data-vh-model-action="source">VoiceHub source</a>',
+    ))
+    if checkpoint_metadata.is_hugging_face:
+        notebook_url = f"{COLAB_ROOT}/{spec.model_type}.ipynb"
+        resources.append(
+            f'<a href="{html.escape(notebook_url, quote=True)}" '
+            'data-vh-model-action="colab">Open in Colab</a>')
+    actions.append(
+        '<details class="vh-model-detail__resources">\n'
+        '<summary class="vh-model-detail__action">Resources</summary>\n'
+        '<div class="vh-model-detail__resource-menu">\n' + "\n".join(resources) + "\n</div>\n</details>")
+    return (
+        '<div class="vh-model-detail__actions" aria-label="Model actions">\n' + "\n".join(actions) +
+        "\n</div>")
+
+
+def _render_model_detail_hero(spec, checkpoint_metadata, license_label: str) -> str:
+    parameter_metadata = parameter_documentation(spec)
+    parameter_note_id = f"vh-model-parameters-note-{spec.model_type}"
+    architecture = spec.architecture or "provider-owned"
+    runtime = "VoiceHub-native" if spec.is_voicehub_native else "Provider adapter"
+    chips = [
+        _render_model_chip(TASK_LABELS[spec.task.value], "task"),
+        _render_model_chip(runtime, "runtime"),
+        _render_model_chip(architecture, "architecture"),
+        _render_model_chip(
+            f"Parameters: {_format_parameter_count(parameter_metadata.count)}",
+            "parameters",
+            described_by=parameter_note_id,
+        ),
+        _render_model_chip(_model_language_chip(spec), "language"),
+        _render_model_chip(f"Training: {spec.training.support.value}", "training"),
+        _render_model_chip(f"License: {license_label}", "license"),
+    ]
+    profile = inference_profile(spec)
+    return f'''<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+{_render_model_namespace(spec, checkpoint_metadata)}
+
+# {spec.display_name} {{.vh-model-title}}
+
+<p class="vh-model-detail__summary">{html.escape(profile.summary)}</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata">{"".join(chips)}</div>
+<p class="vh-model-detail__parameter-note" id="{parameter_note_id}"><strong>Parameter metadata:</strong> {html.escape(parameter_metadata.note)}</p>
+{_render_model_actions(spec, checkpoint_metadata)}
+</header>'''
+
+
+def _render_model_detail_tabs(spec) -> str:
+    tabs = (
+        ("usage", "Usage", "#usage", False),
+        ("model-card", "Model card", "#overview", True),
+        ("sources", "Sources", "#paper-and-github", False),
+        ("training", "Training", "#training-and-optimization", False),
+        (
+            "checkpoint",
+            "Runtime" if _is_weightless(spec) else "Checkpoint",
+            "#checkpoints-provenance-license-and-limitations",
+            False,
+        ),
+        ("api", "Public API", "#public-api", False),
+    )
+    links = []
+    for value, label, target, active in tabs:
+        current = ' aria-current="location"' if active else ""
+        links.append(f'<a href="{target}" data-vh-model-tab="{value}"{current}>{label}</a>')
+    return ('<nav class="vh-model-detail__tabs" aria-label="Model sections">' + "".join(links) + "</nav>")
+
+
+def _render_model_languages_fact(spec) -> str:
+    support = model_language_support(spec)
+    if support.kind != "enumerated":
+        return html.escape(_language_details(spec))
+    codes = " ".join(f"<code>{html.escape(code)}</code>" for code in support.codes)
+    if len(support.codes) <= 4:
+        return codes
+    return (
+        '<details class="vh-model-detail__languages">'
+        f'<summary>{len(support.codes)} documented codes</summary>'
+        f'<span>{codes}</span></details>')
+
+
+def _render_model_capabilities_fact(spec) -> str:
+    capabilities = " ".join(f"<code>{html.escape(capability)}</code>" for capability in spec.capabilities)
+    if len(spec.capabilities) <= 3:
+        return capabilities or "Not declared"
+    return (
+        '<details class="vh-model-detail__capabilities">'
+        f'<summary>{len(spec.capabilities)} capabilities</summary>'
+        f'<span>{capabilities}</span></details>')
+
+
+def _render_model_fact(label: str, value: str, *, value_attributes: str = "") -> str:
+    return (f'<div><dt>{html.escape(label)}</dt><dd{value_attributes}>{value}</dd></div>')
+
+
+def _render_model_detail_facts(spec, checkpoint_metadata, license_label: str, license_url: str | None) -> str:
+    parameter_metadata = parameter_documentation(spec)
+    parameter_note_id = f"vh-model-parameters-note-{spec.model_type}"
+    checkpoint_description_id = f"vh-model-checkpoint-{spec.model_type}"
+    architecture = spec.architecture or "provider-owned"
+    runtime = "VoiceHub-native" if spec.is_voicehub_native else "Provider adapter"
+    parameter_count = html.escape(_format_parameter_count(parameter_metadata.count))
+    if checkpoint_metadata.identifier:
+        identifier = html.escape(checkpoint_metadata.identifier)
+        checkpoint_value = f"<code>{identifier}</code>"
+        if checkpoint_metadata.url:
+            checkpoint_value = (
+                f'<a href="{html.escape(checkpoint_metadata.url, quote=True)}">'
+                f'{checkpoint_value}</a>')
+    else:
+        checkpoint_value = "Caller-provided compatible artifact"
+    if license_url:
+        license_value = (
+            f'<a href="{html.escape(license_url, quote=True)}">'
+            f'{html.escape(license_label)}</a>')
+    else:
+        license_value = html.escape(license_label)
+    facts = (
+        _render_model_fact("Task", html.escape(TASK_LABELS[spec.task.value])),
+        _render_model_fact(
+            "Parameters",
+            parameter_count,
+            value_attributes=f' aria-describedby="{parameter_note_id}"',
+        ),
+        _render_model_fact("Architecture", f"<code>{html.escape(architecture)}</code>"),
+        _render_model_fact("Runtime", html.escape(runtime)),
+        _render_model_fact("Languages", _render_model_languages_fact(spec)),
+        _render_model_fact("Capabilities", _render_model_capabilities_fact(spec)),
+        _render_model_fact("Training", f"<code>{html.escape(spec.training.support.value)}</code>"),
+        _render_model_fact("License", license_value),
+        _render_model_fact(
+            "Runtime identifier" if _is_weightless(spec) else "Default checkpoint",
+            checkpoint_value,
+            value_attributes=f' id="{checkpoint_description_id}"',
+        ),
+    )
+    facts_heading_id = f"vh-model-facts-title-{spec.model_type}"
+    return (
+        '<aside class="vh-model-detail__sidebar" data-vh-model-facts '
+        f'aria-labelledby="{facts_heading_id}">'
+        f'<h2 id="{facts_heading_id}">Model facts</h2>'
+        '<details class="vh-model-detail__facts-disclosure" '
+        f'data-vh-model-facts-disclosure aria-labelledby="{facts_heading_id}" open>'
+        '<summary><span>Toggle model facts</span></summary>'
+        '<dl class="vh-model-detail__facts">' + "".join(facts) + "</dl></details></aside>")
+
+
+def _render_model_api_card(
+        *, kind: str, badge: str, class_name: str, source_url: str, signature: str,
+        parameters: tuple[tuple[str, str], ...]) -> str:
+    parameter_items = "\n".join(f"- `{name}` — {description}" for name, description in parameters)
+    return f'''<section class="vh-model-api-card" data-vh-model-api-card="{html.escape(kind, quote=True)}" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">{html.escape(badge)}</span></p>
+
+### `{class_name}`
+
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="{html.escape(source_url, quote=True)}">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
+
+```text
+{signature}
+```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+{parameter_items}
+</div>
+</section>'''
+
+
 def render_page(spec) -> str:
     """Render one deterministic provider guide."""
     _, checkpoint = _checkpoint(spec)
     checkpoint_metadata = checkpoint_documentation(spec)
-    license_spec = spec.license
-    if license_spec is None:
-        license_text = (
-            "No VoiceHub-specific license override is registered. Verify the "
-            "checkpoint and upstream source terms before use.")
-        license_value = "Checkpoint-specific"
-    else:
-        commercial = {
-            True: "allowed by the registered terms",
-            False: "not allowed",
-            None: "review required",
-        }[license_spec.commercial_use]
-        license_value = f"[{license_spec.license_id}]({license_spec.upstream})"
-        license_text = f"{license_spec.notice} Commercial use: **{commercial}**."
+    license_label, license_url, license_text = _license_details(spec)
+    license_value = f"[{license_label}]({license_url})" if license_url else license_label
     notebook = ""
     if checkpoint_metadata.is_hugging_face:
         notebook = (
@@ -500,24 +812,85 @@ def render_page(spec) -> str:
     components = _code_list(spec.components)
     factory = _factory_name(spec)
     output = _output_name(spec)
+    parameter_metadata = parameter_documentation(spec)
+    weightless = _is_weightless(spec)
     source_provenance = _source_provenance(spec)
-    config_source = _module_source_link(
-        spec.config_module,
-        f"View `{spec.config_class}` source",
-    )
-    model_source = _module_source_link(
-        spec.module,
-        f"View `{spec.class_name}` source",
-    )
+    config_source_url = _module_source_url(spec.config_module)
+    model_source_url = _module_source_url(spec.module)
     dependency_extra = (f"`voicehub[{spec.install_extra}]`" if spec.install_extra else "Core package")
     checkpoint_note = checkpoint_metadata.note or (
-        "No integration-specific checkpoint limitation is registered. Verify the selected "
+        parameter_metadata.note
+        if weightless else "No integration-specific checkpoint limitation is registered. Verify the selected "
         "checkpoint revision and its documented runtime requirements.")
+    production_note = (
+        "Use authorized recordings. Version the implementation and configuration in production." if weightless
+        else "Use authorized recordings. Verify hardware needs and pin a revision in production.")
+    artifact_property = "Runtime identifier" if weightless else "Default checkpoint"
+    checkpoint_status = (
+        "Not applicable; this is a weightless algorithm with no checkpoint" if weightless else _cell(
+            checkpoint_metadata.status))
+    hardware_note = (
+        f"Usage selects `{_example_device(spec)}`; verify implementation-specific requirements" if weightless
+        else f"Usage selects `{_example_device(spec)}`; verify checkpoint-specific requirements")
+    checkpoint_evidence = (
+        "Not applicable; version the implementation, configuration, and source provenance" if weightless else
+        "[Release evidence](../../project/release-readiness.md); a registry default alone is not "
+        "execution evidence")
+    confirmation = (
+        "Confirm the implementation revision, source provenance, access terms, and license."
+        if weightless else "Confirm the checkpoint revision, access terms, provenance, and license.")
+    contract_evidence_note = (
+        "Contract tests do not replace implementation and recording-condition validation."
+        if weightless else "Contract tests do not replace the linked released-checkpoint evidence.")
+    configuration_api = _render_model_api_card(
+        kind="configuration",
+        badge="Configuration",
+        class_name=spec.config_class,
+        source_url=config_source_url,
+        signature=f"{spec.config_class}(**config_kwargs)",
+        parameters=(("**config_kwargs", f"Configuration fields validated by {spec.config_class}."), ),
+    )
+    model_signature = f'''{factory}.from_pretrained(
+    pretrained_model_name_or_path,
+    *,
+    model_type={spec.model_type!r},
+    config=None,
+    **model_kwargs,
+)'''
+    model_api = _render_model_api_card(
+        kind="model",
+        badge="Model",
+        class_name=spec.class_name,
+        source_url=model_source_url,
+        signature=model_signature,
+        parameters=(
+            (
+                "pretrained_model_name_or_path",
+                "Runtime identifier for this weightless implementation."
+                if weightless else "Hub ID or compatible local directory.",
+            ),
+            ("model_type", f"Canonical model type; use {spec.model_type!r}."),
+            ("config", f"Optional preloaded {spec.config_class} instance."),
+            ("**model_kwargs", "Model-specific loading arguments."),
+        ),
+    )
     return f'''---
 description: Public API, checkpoint, training, and optimization guide for the {spec.model_type} integration.
+hide:
+  - toc
 ---
 
-# {spec.display_name} {{.vh-model-title}}
+<div class="vh-model-detail" data-vh-model-detail data-model-type="{html.escape(spec.model_type, quote=True)}" data-task="{html.escape(spec.task.value, quote=True)}" data-training="{html.escape(spec.training.support.value, quote=True)}" data-parameter-count="{parameter_metadata.count if parameter_metadata.count is not None else ''}" markdown>
+
+{_render_model_detail_hero(spec, checkpoint_metadata, license_label)}
+
+{_render_model_detail_tabs(spec)}
+
+<div class="vh-model-detail__layout" markdown>
+
+{_render_model_detail_facts(spec, checkpoint_metadata, license_label, license_url)}
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -531,7 +904,7 @@ package-install command.
 {_inference_code(spec)}
 ```
 
-Use authorized recordings. Verify hardware needs and pin a revision in production.
+{production_note}
 
 ## Overview
 
@@ -602,12 +975,12 @@ Unsupported runtime or hardware fails closed before mutation.
 
 | Property | Value |
 | --- | --- |
-| Default checkpoint | {checkpoint} |
+| {artifact_property} | {checkpoint} |
 | Hugging Face ID | {_hugging_face_checkpoint(spec)} |
-| Checkpoint status | {_cell(checkpoint_metadata.status)} |
+| Checkpoint status | {checkpoint_status} |
 | Optional dependency extra | {dependency_extra} |
-| Hardware and runtime | Usage selects `{_example_device(spec)}`; verify checkpoint-specific requirements |
-| Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
+| Hardware and runtime | {hardware_note} |
+| Real-checkpoint evidence | {checkpoint_evidence} |
 | Implementation | `{spec.module}.{spec.class_name}` |
 | Configuration | `{spec.config_module}.{spec.config_class}` |
 | Source provenance | {source_provenance} |
@@ -615,7 +988,7 @@ Unsupported runtime or hardware fails closed before mutation.
 
 {license_text}
 
-Confirm the checkpoint revision, access terms, provenance, and license.
+{confirmation}
 
 ### Limitations
 
@@ -623,33 +996,15 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 - Validate memory, precision, and optional dependencies on the target system.
 - Public optimizations fail closed when the runtime or hardware cannot satisfy
   their validation contract; an unavailable pass is not reported as applied.
-- Contract tests do not replace the linked released-checkpoint evidence.
+- {contract_evidence_note}
 
 ## Public API
 
 Use the stable configuration, processor, and task-model facades below.
 
-### `{spec.config_class}`
+{configuration_api}
 
-{config_source}
-
-```text
-{spec.config_class}(**config_kwargs)
-```
-
-### `{spec.class_name}`
-
-{model_source}
-
-```text
-{factory}.from_pretrained(
-    pretrained_model_name_or_path,
-    *,
-    model_type={spec.model_type!r},
-    config=None,
-    **model_kwargs,
-)
-```
+{model_api}
 
 ```python
 from voicehub import get_model_spec
@@ -671,6 +1026,12 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>
 '''
 
 

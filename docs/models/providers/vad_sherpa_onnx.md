@@ -1,8 +1,42 @@
 ---
 description: Public API, checkpoint, training, and optimization guide for the vad_sherpa_onnx integration.
+hide:
+  - toc
 ---
 
+<div class="vh-model-detail" data-vh-model-detail data-model-type="vad_sherpa_onnx" data-task="voice-activity-detection" data-training="native" data-parameter-count="" markdown>
+
+<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+<p class="vh-model-detail__namespace" aria-label="Model repository"><span class="vh-model-detail__owner-avatar" aria-hidden="true">SA</span><a href="https://huggingface.co/safestack">safestack</a><span aria-hidden="true">/</span><strong>silero-vad</strong></p>
+
 # SherpaONNXVAD {.vh-model-title}
+
+<p class="vh-model-detail__summary">Uses sherpa-onnx streaming Silero state with an explicit threshold and segment padding.</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Voice activity detection</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">native-vad-dispatch</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-vad_sherpa_onnx">Parameters: Not reported</span><span class="vh-model-detail__chip" data-chip-kind="language">Not text-language conditioned</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: LicenseRef-TEN-VAD-Open-Source-License</span></div>
+<p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-vad_sherpa_onnx"><strong>Parameter metadata:</strong> Not reported: the audited metadata available for the registered default does not provide an exact parameter total.</p>
+<div class="vh-model-detail__actions" aria-label="Model actions">
+<a class="vh-model-detail__action vh-model-detail__action--primary" href="#usage" data-vh-model-action="use">Use this model</a>
+<button class="vh-model-detail__action vh-model-detail__copy" type="button" data-vh-copy-model-id data-model-id="safestack/silero-vad" aria-describedby="vh-model-checkpoint-vad_sherpa_onnx"><span data-vh-copy-model-id-label>Copy model ID</span></button>
+<a class="vh-model-detail__action" href="https://huggingface.co/safestack/silero-vad" data-vh-model-action="checkpoint">Checkpoint</a>
+<details class="vh-model-detail__resources">
+<summary class="vh-model-detail__action">Resources</summary>
+<div class="vh-model-detail__resource-menu">
+<a href="https://github.com/k2-fsa/sherpa-onnx" data-vh-model-action="github">Upstream GitHub</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling_vad_sherpa_onnx.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/vad_sherpa_onnx.ipynb" data-vh-model-action="colab">Open in Colab</a>
+</div>
+</details>
+</div>
+</header>
+
+<nav class="vh-model-detail__tabs" aria-label="Model sections"><a href="#usage" data-vh-model-tab="usage">Usage</a><a href="#overview" data-vh-model-tab="model-card" aria-current="location">Model card</a><a href="#paper-and-github" data-vh-model-tab="sources">Sources</a><a href="#training-and-optimization" data-vh-model-tab="training">Training</a><a href="#checkpoints-provenance-license-and-limitations" data-vh-model-tab="checkpoint">Checkpoint</a><a href="#public-api" data-vh-model-tab="api">Public API</a></nav>
+
+<div class="vh-model-detail__layout" markdown>
+
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-vad_sherpa_onnx"><h2 id="vh-model-facts-title-vad_sherpa_onnx">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-vad_sherpa_onnx" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Voice activity detection</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-vad_sherpa_onnx">Not reported</dd></div><div><dt>Architecture</dt><dd><code>native-vad-dispatch</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd>The public VAD contract does not select a spoken language; validate checkpoint acoustic coverage on the target languages and recording conditions.</dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>9 capabilities</summary><span><code>voice-activity-detection</code> <code>voicehub-native</code> <code>safetensors</code> <code>explicit-onnx-weight-conversion</code> <code>fine-tuning</code> <code>streaming</code> <code>sherpa-compatible-segmentation</code> <code>silero</code> <code>ten-vad</code></span></details></dd></div><div><dt>Training</dt><dd><code>native</code></dd></div><div><dt>License</dt><dd><a href="https://github.com/TEN-framework/ten-vad">LicenseRef-TEN-VAD-Open-Source-License</a></dd></div><div><dt>Default checkpoint</dt><dd id="vh-model-checkpoint-vad_sherpa_onnx"><a href="https://huggingface.co/safestack/silero-vad"><code>safestack/silero-vad</code></a></dd></div></dl></details></aside>
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -167,17 +201,32 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 Use the stable configuration, processor, and task-model facades below.
 
+<section class="vh-model-api-card" data-vh-model-api-card="configuration" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Configuration</span></p>
+
 ### `SherpaONNXVADConfig`
 
-[View `SherpaONNXVADConfig` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/configuration_vad_sherpa_onnx.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/configuration_vad_sherpa_onnx.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 SherpaONNXVADConfig(**config_kwargs)
 ```
 
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `**config_kwargs` — Configuration fields validated by SherpaONNXVADConfig.
+</div>
+</section>
+
+<section class="vh-model-api-card" data-vh-model-api-card="model" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Model</span></p>
+
 ### `SherpaONNXVADForVoiceActivityDetection`
 
-[View `SherpaONNXVADForVoiceActivityDetection` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling_vad_sherpa_onnx.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling_vad_sherpa_onnx.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AutoModelForVoiceActivityDetection.from_pretrained(
@@ -188,6 +237,16 @@ AutoModelForVoiceActivityDetection.from_pretrained(
     **model_kwargs,
 )
 ```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `pretrained_model_name_or_path` — Hub ID or compatible local directory.
+- `model_type` — Canonical model type; use 'vad_sherpa_onnx'.
+- `config` — Optional preloaded SherpaONNXVADConfig instance.
+- `**model_kwargs` — Model-specific loading arguments.
+</div>
+</section>
 
 ```python
 from voicehub import get_model_spec
@@ -209,3 +268,9 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>

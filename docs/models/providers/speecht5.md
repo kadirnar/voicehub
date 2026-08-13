@@ -1,8 +1,43 @@
 ---
 description: Public API, checkpoint, training, and optimization guide for the speecht5 integration.
+hide:
+  - toc
 ---
 
+<div class="vh-model-detail" data-vh-model-detail data-model-type="speecht5" data-task="text-to-speech" data-training="native" data-parameter-count="" markdown>
+
+<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+<p class="vh-model-detail__namespace" aria-label="Model repository"><span class="vh-model-detail__owner-avatar" aria-hidden="true">MI</span><a href="https://huggingface.co/microsoft">microsoft</a><span aria-hidden="true">/</span><strong>speecht5_tts</strong></p>
+
 # SpeechT5 {.vh-model-title}
+
+<p class="vh-model-detail__summary">Passes a reviewed speaker-embedding file through SpeechT5&#x27;s safe public loader.</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Text to speech</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">speecht5</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-speecht5">Parameters: Not reported</span><span class="vh-model-detail__chip" data-chip-kind="language">Language: en</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
+<p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-speecht5"><strong>Parameter metadata:</strong> Not reported: the audited metadata available for the registered default does not provide an exact parameter total.</p>
+<div class="vh-model-detail__actions" aria-label="Model actions">
+<a class="vh-model-detail__action vh-model-detail__action--primary" href="#usage" data-vh-model-action="use">Use this model</a>
+<button class="vh-model-detail__action vh-model-detail__copy" type="button" data-vh-copy-model-id data-model-id="microsoft/speecht5_tts" aria-describedby="vh-model-checkpoint-speecht5"><span data-vh-copy-model-id-label>Copy model ID</span></button>
+<a class="vh-model-detail__action" href="https://huggingface.co/microsoft/speecht5_tts" data-vh-model-action="checkpoint">Checkpoint</a>
+<details class="vh-model-detail__resources">
+<summary class="vh-model-detail__action">Resources</summary>
+<div class="vh-model-detail__resource-menu">
+<a href="https://arxiv.org/abs/2110.07205" data-vh-model-action="paper">Paper</a>
+<a href="https://github.com/microsoft/SpeechT5" data-vh-model-action="github">Upstream GitHub</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling_speecht5.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/speecht5.ipynb" data-vh-model-action="colab">Open in Colab</a>
+</div>
+</details>
+</div>
+</header>
+
+<nav class="vh-model-detail__tabs" aria-label="Model sections"><a href="#usage" data-vh-model-tab="usage">Usage</a><a href="#overview" data-vh-model-tab="model-card" aria-current="location">Model card</a><a href="#paper-and-github" data-vh-model-tab="sources">Sources</a><a href="#training-and-optimization" data-vh-model-tab="training">Training</a><a href="#checkpoints-provenance-license-and-limitations" data-vh-model-tab="checkpoint">Checkpoint</a><a href="#public-api" data-vh-model-tab="api">Public API</a></nav>
+
+<div class="vh-model-detail__layout" markdown>
+
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-speecht5"><h2 id="vh-model-facts-title-speecht5">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-speecht5" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Text to speech</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-speecht5">Not reported</dd></div><div><dt>Architecture</dt><dd><code>speecht5</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd><code>en</code></dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>8 capabilities</summary><span><code>text-to-speech</code> <code>speaker-embedding</code> <code>safetensors</code> <code>fine-tuning</code> <code>voicehub-native</code> <code>native-runtime</code> <code>raw-audio-fine-tuning</code> <code>inference-reloadable-training-export</code></span></details></dd></div><div><dt>Training</dt><dd><code>native</code></dd></div><div><dt>License</dt><dd>Checkpoint-specific</dd></div><div><dt>Default checkpoint</dt><dd id="vh-model-checkpoint-speecht5"><a href="https://huggingface.co/microsoft/speecht5_tts"><code>microsoft/speecht5_tts</code></a></dd></div></dl></details></aside>
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -180,17 +215,32 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 Use the stable configuration, processor, and task-model facades below.
 
+<section class="vh-model-api-card" data-vh-model-api-card="configuration" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Configuration</span></p>
+
 ### `SpeechT5Config`
 
-[View `SpeechT5Config` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/configuration_speecht5.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/configuration_speecht5.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 SpeechT5Config(**config_kwargs)
 ```
 
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `**config_kwargs` — Configuration fields validated by SpeechT5Config.
+</div>
+</section>
+
+<section class="vh-model-api-card" data-vh-model-api-card="model" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Model</span></p>
+
 ### `SpeechT5ForTextToSpeech`
 
-[View `SpeechT5ForTextToSpeech` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling_speecht5.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling_speecht5.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AutoModelForTextToSpeech.from_pretrained(
@@ -201,6 +251,16 @@ AutoModelForTextToSpeech.from_pretrained(
     **model_kwargs,
 )
 ```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `pretrained_model_name_or_path` — Hub ID or compatible local directory.
+- `model_type` — Canonical model type; use 'speecht5'.
+- `config` — Optional preloaded SpeechT5Config instance.
+- `**model_kwargs` — Model-specific loading arguments.
+</div>
+</section>
 
 ```python
 from voicehub import get_model_spec
@@ -222,3 +282,9 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>

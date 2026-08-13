@@ -1,8 +1,42 @@
 ---
 description: Public API, checkpoint, training, and optimization guide for the asr_qwen3 integration.
+hide:
+  - toc
 ---
 
+<div class="vh-model-detail" data-vh-model-detail data-model-type="asr_qwen3" data-task="automatic-speech-recognition" data-training="native" data-parameter-count="938008576" markdown>
+
+<header class="vh-model-detail__hero" data-vh-model-hero markdown>
+
+<p class="vh-model-detail__namespace" aria-label="Model repository"><span class="vh-model-detail__owner-avatar" aria-hidden="true">QW</span><a href="https://huggingface.co/Qwen">Qwen</a><span aria-hidden="true">/</span><strong>Qwen3-ASR-0.6B</strong></p>
+
 # Qwen3ASR {.vh-model-title}
+
+<p class="vh-model-detail__summary">Provides Qwen3-ASR with a domain prompt and deterministic decoding controls.</p>
+<div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Automatic speech recognition</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">qwen3-asr</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-asr_qwen3">Parameters: 938M</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: ar, yue +28</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
+<p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-asr_qwen3"><strong>Parameter metadata:</strong> Exact serialized tensor-element total from VoiceHub&#x27;s audited native primary checkpoint; a distinct learned-parameter total is not available.</p>
+<div class="vh-model-detail__actions" aria-label="Model actions">
+<a class="vh-model-detail__action vh-model-detail__action--primary" href="#usage" data-vh-model-action="use">Use this model</a>
+<button class="vh-model-detail__action vh-model-detail__copy" type="button" data-vh-copy-model-id data-model-id="Qwen/Qwen3-ASR-0.6B" aria-describedby="vh-model-checkpoint-asr_qwen3"><span data-vh-copy-model-id-label>Copy model ID</span></button>
+<a class="vh-model-detail__action" href="https://huggingface.co/Qwen/Qwen3-ASR-0.6B" data-vh-model-action="checkpoint">Checkpoint</a>
+<details class="vh-model-detail__resources">
+<summary class="vh-model-detail__action">Resources</summary>
+<div class="vh-model-detail__resource-menu">
+<a href="https://github.com/QwenLM/Qwen3-ASR" data-vh-model-action="github">Upstream GitHub</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling_asr_qwen3.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_qwen3.ipynb" data-vh-model-action="colab">Open in Colab</a>
+</div>
+</details>
+</div>
+</header>
+
+<nav class="vh-model-detail__tabs" aria-label="Model sections"><a href="#usage" data-vh-model-tab="usage">Usage</a><a href="#overview" data-vh-model-tab="model-card" aria-current="location">Model card</a><a href="#paper-and-github" data-vh-model-tab="sources">Sources</a><a href="#training-and-optimization" data-vh-model-tab="training">Training</a><a href="#checkpoints-provenance-license-and-limitations" data-vh-model-tab="checkpoint">Checkpoint</a><a href="#public-api" data-vh-model-tab="api">Public API</a></nav>
+
+<div class="vh-model-detail__layout" markdown>
+
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-asr_qwen3"><h2 id="vh-model-facts-title-asr_qwen3">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-asr_qwen3" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Automatic speech recognition</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-asr_qwen3">938M</dd></div><div><dt>Architecture</dt><dd><code>qwen3-asr</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd><details class="vh-model-detail__languages"><summary>30 documented codes</summary><span><code>ar</code> <code>yue</code> <code>zh</code> <code>cs</code> <code>da</code> <code>nl</code> <code>en</code> <code>fil</code> <code>fi</code> <code>fr</code> <code>de</code> <code>el</code> <code>hi</code> <code>hu</code> <code>id</code> <code>it</code> <code>ja</code> <code>ko</code> <code>mk</code> <code>ms</code> <code>fa</code> <code>pl</code> <code>pt</code> <code>ro</code> <code>ru</code> <code>es</code> <code>sv</code> <code>th</code> <code>tr</code> <code>vi</code></span></details></dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>10 capabilities</summary><span><code>automatic-speech-recognition</code> <code>multilingual</code> <code>language-identification</code> <code>hotwords</code> <code>long-form</code> <code>safetensors</code> <code>fine-tuning</code> <code>lora</code> <code>voicehub-native</code> <code>native-runtime</code></span></details></dd></div><div><dt>Training</dt><dd><code>native</code></dd></div><div><dt>License</dt><dd>Checkpoint-specific</dd></div><div><dt>Default checkpoint</dt><dd id="vh-model-checkpoint-asr_qwen3"><a href="https://huggingface.co/Qwen/Qwen3-ASR-0.6B"><code>Qwen/Qwen3-ASR-0.6B</code></a></dd></div></dl></details></aside>
+
+<div class="vh-model-detail__main vh-model-detail__content" markdown>
 
 ## Usage
 
@@ -54,7 +88,7 @@ integration. This page is generated from its registry contract. [Open the `asr_q
 | Task | Automatic speech recognition |
 | Architecture | `qwen3-asr` |
 | Runtime | `VoiceHub-native` |
-| Languages | `ar`, `yue`, `zh`, `cs`, `da`, `nl`, `en`, `fil`, `fi`, `fr`, `de`, `el`, `hi`, `hu`, `id`, `it`, `ja`, `ko`, `mk`, `ms`, `fa`, `pl`, `pt`, `ro`, `ru`, `es`, `sv`, `th`, `tr`, `vi` |
+| Languages | `ar`, `yue`, `zh`, `cs`, … complete audited list below |
 | Capabilities | `automatic-speech-recognition`, `multilingual`, `language-identification`, `hotwords`, `long-form`, `safetensors`, `fine-tuning`, `lora`, `voicehub-native`, `native-runtime` |
 | Reusable components | — |
 | Normalized output | `ASROutput` |
@@ -181,17 +215,32 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 Use the stable configuration, processor, and task-model facades below.
 
+<section class="vh-model-api-card" data-vh-model-api-card="configuration" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Configuration</span></p>
+
 ### `Qwen3ASRConfig`
 
-[View `Qwen3ASRConfig` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/configuration_asr_qwen3.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/configuration_asr_qwen3.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 Qwen3ASRConfig(**config_kwargs)
 ```
 
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `**config_kwargs` — Configuration fields validated by Qwen3ASRConfig.
+</div>
+</section>
+
+<section class="vh-model-api-card" data-vh-model-api-card="model" markdown>
+<p class="vh-model-api-card__badge-wrap"><span class="vh-model-api-card__badge">Model</span></p>
+
 ### `Qwen3ASRForSpeechRecognition`
 
-[View `Qwen3ASRForSpeechRecognition` source](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling_asr_qwen3.py)
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling_asr_qwen3.py">View source</a></p>
+<div class="vh-model-api-card__signature" markdown>
 
 ```text
 AutoModelForSpeechRecognition.from_pretrained(
@@ -202,6 +251,16 @@ AutoModelForSpeechRecognition.from_pretrained(
     **model_kwargs,
 )
 ```
+
+</div>
+<h4>Parameters</h4>
+<div class="vh-model-api-card__parameters" markdown>
+- `pretrained_model_name_or_path` — Hub ID or compatible local directory.
+- `model_type` — Canonical model type; use 'asr_qwen3'.
+- `config` — Optional preloaded Qwen3ASRConfig instance.
+- `**model_kwargs` — Model-specific loading arguments.
+</div>
+</section>
 
 ```python
 from voicehub import get_model_spec
@@ -223,3 +282,9 @@ print(spec.display_name, spec.task.value)
 
 See [all model guides](index.md), [inference](../../guides/index.md), and the
 [training matrix](../training-support.md).
+
+</div>
+
+</div>
+
+</div>

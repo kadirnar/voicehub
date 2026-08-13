@@ -1,4 +1,5 @@
 import ast
+import html
 import io
 import json
 import os
@@ -448,8 +449,59 @@ class DocumentationSiteTests(unittest.TestCase):
                 self.assertEqual(sections, MODEL_PAGE_SECTIONS)
                 self.assertLessEqual(
                     len(source.splitlines()),
-                    240,
+                    300,
                     f"{path.name} should link shared workflows instead of repeating them.",
+                )
+                rendered_parameter_count = (
+                    "" if parameter_metadata.count is None else str(parameter_metadata.count))
+                detail_open = (
+                    '<div class="vh-model-detail" data-vh-model-detail '
+                    f'data-model-type="{html.escape(spec.model_type, quote=True)}" '
+                    f'data-task="{html.escape(spec.task.value, quote=True)}" '
+                    f'data-training="{html.escape(spec.training.support.value, quote=True)}" '
+                    f'data-parameter-count="{rendered_parameter_count}" markdown>')
+                self.assertEqual(source.count(detail_open), 1)
+                self.assertEqual(source.count("data-vh-model-hero"), 1)
+                self.assertEqual(
+                    source.count(
+                        f'data-vh-model-facts aria-labelledby="vh-model-facts-title-'
+                        f'{spec.model_type}"'),
+                    1,
+                )
+                self.assertEqual(source.count("data-vh-model-facts-disclosure"), 1)
+                self.assertEqual(
+                    source.count(f'id="vh-model-facts-title-{spec.model_type}"'),
+                    1,
+                )
+                self.assertEqual(
+                    source.count(f'aria-labelledby="vh-model-facts-title-{spec.model_type}"'),
+                    2,
+                )
+                self.assertEqual(
+                    len(re.findall(r"^# [^\n]+ \{\.vh-model-title\}$", source, re.MULTILINE)),
+                    1,
+                )
+                facts = source.split("data-vh-model-facts", 1)[1].split("</aside>", 1)[0]
+                self.assertEqual(
+                    tuple(re.findall(r"<dt>([^<]+)</dt>", facts)),
+                    (
+                        "Task",
+                        "Parameters",
+                        "Architecture",
+                        "Runtime",
+                        "Languages",
+                        "Capabilities",
+                        "Training",
+                        "License",
+                        ("Runtime identifier" if parameter_metadata.count == 0 else "Default checkpoint"),
+                    ),
+                )
+                parameter_note_id = f"vh-model-parameters-note-{spec.model_type}"
+                self.assertEqual(source.count(f'id="{parameter_note_id}"'), 1)
+                self.assertEqual(source.count(f'aria-describedby="{parameter_note_id}"'), 2)
+                self.assertIn(
+                    f'<strong>Parameter metadata:</strong> {html.escape(parameter_metadata.note)}',
+                    source,
                 )
                 self.assertIn("[VoiceHub installation](../../getting-started/installation.md)", source)
                 self.assertNotIn("pip install", source)
@@ -510,6 +562,49 @@ class DocumentationSiteTests(unittest.TestCase):
                         f"{spec.model_type}.ipynb",
                         source,
                     )
+                expected_actions = [("#usage", "use")]
+                if checkpoint.url:
+                    expected_actions.append((checkpoint.url, "checkpoint"))
+                if references[spec.model_type].papers:
+                    expected_actions.append((references[spec.model_type].papers[0].url, "paper"))
+                expected_actions.extend((
+                    (references[spec.model_type].github.url, "github"),
+                    (
+                        "https://github.com/kadirnar/voicehub/blob/main/" +
+                        module_source_path(spec.module).as_posix(),
+                        "source",
+                    ),
+                ))
+                if checkpoint.is_hugging_face:
+                    expected_actions.append((
+                        "https://colab.research.google.com/github/"
+                        "kadirnar/voicehub/blob/main/notebooks/models/"
+                        f"{spec.model_type}.ipynb",
+                        "colab",
+                    ))
+                self.assertEqual(
+                    tuple(
+                        re.findall(
+                            r'<a[^>]*href="([^"]+)"[^>]*data-vh-model-action="([^"]+)"[^>]*>',
+                            source,
+                        )),
+                    tuple(expected_actions),
+                )
+                copy_controls = re.findall(
+                    r'<button[^>]*\bdata-vh-copy-model-id(?:\s|>)[^>]*>',
+                    source,
+                )
+                expects_copy_control = bool(checkpoint.identifier) and parameter_metadata.count != 0
+                self.assertEqual(len(copy_controls), int(expects_copy_control))
+                if expects_copy_control:
+                    self.assertIn(
+                        f'data-model-id="{html.escape(checkpoint.identifier, quote=True)}"',
+                        copy_controls[0],
+                    )
+                    self.assertIn(
+                        f'aria-describedby="vh-model-checkpoint-{spec.model_type}"',
+                        copy_controls[0],
+                    )
                 examples = PYTHON_BLOCK.findall(source)
                 self.assertGreaterEqual(len(examples), 4)
                 quickstart = source.split("## Usage", 1)[1].split(
@@ -532,6 +627,13 @@ class DocumentationSiteTests(unittest.TestCase):
                     ast.parse(
                         textwrap.dedent(example),
                         filename=f"{path.name}:python-block-{example_index}",
+                    )
+                if parameter_metadata.count == 0:
+                    self.assertNotIn("checkpoint acoustic coverage", source)
+                    self.assertNotIn("released-checkpoint evidence", source)
+                    self.assertIn(
+                        "implementation, configuration, and recording conditions",
+                        source,
                     )
 
         generated_files = generator["generated_files"]()
@@ -700,6 +802,82 @@ class DocumentationSiteTests(unittest.TestCase):
 
     def test_speecht5_model_detail_matches_transformers_contract(self):
         source = (MODEL_PAGE_DIR / "speecht5.md").read_text(encoding="utf-8")
+        self.assertIn("hide:\n  - toc", source)
+        self.assertEqual(source.count("data-vh-model-detail"), 1)
+        self.assertIn(
+            '<div class="vh-model-detail" data-vh-model-detail data-model-type="speecht5" '
+            'data-task="text-to-speech" data-training="native" data-parameter-count="" markdown>',
+            source,
+        )
+        self.assertIn(
+            '<p class="vh-model-detail__namespace" aria-label="Model repository">'
+            '<span class="vh-model-detail__owner-avatar" aria-hidden="true">MI</span>'
+            '<a href="https://huggingface.co/microsoft">microsoft</a>'
+            '<span aria-hidden="true">/</span><strong>speecht5_tts</strong></p>',
+            source,
+        )
+        parameter_note_id = "vh-model-parameters-note-speecht5"
+        self.assertEqual(source.count(f'id="{parameter_note_id}"'), 1)
+        self.assertEqual(source.count(f'aria-describedby="{parameter_note_id}"'), 2)
+        parameter_note = source.split(f'id="{parameter_note_id}"', 1)[1].split("</p>", 1)[0]
+        self.assertIn("Not reported", parameter_note)
+
+        tabs = source.split(
+            '<nav class="vh-model-detail__tabs" aria-label="Model sections">',
+            1,
+        )[1].split("</nav>", 1)[0]
+        self.assertEqual(
+            tuple(
+                re.findall(
+                    r'<a href="([^"]+)" data-vh-model-tab="([^"]+)"'
+                    r'( aria-current="location")?'
+                    r'>([^<]+)</a>',
+                    tabs,
+                )),
+            (
+                ("#usage", "usage", "", "Usage"),
+                ("#overview", "model-card", ' aria-current="location"', "Model card"),
+                ("#paper-and-github", "sources", "", "Sources"),
+                ("#training-and-optimization", "training", "", "Training"),
+                (
+                    "#checkpoints-provenance-license-and-limitations",
+                    "checkpoint",
+                    "",
+                    "Checkpoint",
+                ),
+                ("#public-api", "api", "", "Public API"),
+            ),
+        )
+        self.assertEqual(tabs.count('aria-current="location"'), 1)
+        self.assertNotIn('role="tab', tabs)
+
+        self.assertEqual(
+            tuple(re.findall(
+                r'<a[^>]*href="([^"]+)"[^>]*data-vh-model-action="([^"]+)"[^>]*>',
+                source,
+            )),
+            (
+                ("#usage", "use"),
+                ("https://huggingface.co/microsoft/speecht5_tts", "checkpoint"),
+                ("https://arxiv.org/abs/2110.07205", "paper"),
+                ("https://github.com/microsoft/SpeechT5", "github"),
+                (
+                    "https://github.com/kadirnar/voicehub/blob/main/"
+                    "voicehub/models/speecht5/modeling_speecht5.py",
+                    "source",
+                ),
+                (
+                    "https://colab.research.google.com/github/kadirnar/voicehub/blob/main/"
+                    "notebooks/models/speecht5.ipynb",
+                    "colab",
+                ),
+            ),
+        )
+        self.assertIn(
+            'data-vh-copy-model-id data-model-id="microsoft/speecht5_tts" '
+            'aria-describedby="vh-model-checkpoint-speecht5"',
+            source,
+        )
         headings = (
             "# SpeechT5",
             "## Usage",
@@ -739,6 +917,42 @@ class DocumentationSiteTests(unittest.TestCase):
         ):
             self.assertIn(fragment, source)
 
+        api_cards = re.findall(
+            r'<section class="vh-model-api-card" data-vh-model-api-card="([^"]+)" markdown>'
+            r'(.*?)</section>',
+            source,
+            flags=re.DOTALL,
+        )
+        self.assertEqual(tuple(kind for kind, _ in api_cards), ("configuration", "model"))
+        self.assertEqual(len({kind for kind, _ in api_cards}), len(api_cards))
+        expected_api = (
+            (
+                "configuration",
+                "SpeechT5Config",
+                "voicehub/models/speecht5/configuration_speecht5.py",
+                "SpeechT5Config(**config_kwargs)",
+                ("**config_kwargs", ),
+            ),
+            (
+                "model",
+                "SpeechT5ForTextToSpeech",
+                "voicehub/models/speecht5/modeling_speecht5.py",
+                "AutoModelForTextToSpeech.from_pretrained(",
+                ("pretrained_model_name_or_path", "model_type", "config", "**model_kwargs"),
+            ),
+        )
+        for (kind, card), (_, class_name, source_path, signature, parameters) in zip(api_cards, expected_api,
+                                                                                     strict=True):
+            self.assertIn(f"### `{class_name}`", card)
+            self.assertIn(f'href="https://github.com/kadirnar/voicehub/blob/main/{source_path}"', card)
+            self.assertIn(signature, card)
+            self.assertEqual(card.count("<h4>Parameters</h4>"), 1)
+            self.assertEqual(
+                tuple(re.findall(r"^- `([^`]+)` — ", card, flags=re.MULTILINE)),
+                parameters,
+                kind,
+            )
+
         examples = PYTHON_BLOCK.findall(source)
         self.assertGreaterEqual(len(examples), 4)
         for example_index, example in enumerate(examples, start=1):
@@ -751,8 +965,11 @@ class DocumentationSiteTests(unittest.TestCase):
         for fragment in (
                 "SPEECHT5_ROUTE",
                 "SPEECHT5_HEADINGS",
+                "SPEECHT5_TOC",
                 "SPEECHT5_TABLE_ROWS",
                 "def _validate_speecht5_state(",
+                "def _validate_speecht5_section_navigation(",
+                "def _validate_speecht5_model_id_copy(",
                 "def _validate_speecht5_page_copy(",
                 '"speecht5_cases"',
                 '"speecht5_interaction_cases"',
@@ -865,6 +1082,12 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         self.assertIn(checkpoint.example, page)
         self.assertIn(checkpoint.status, page)
         self.assertIn(checkpoint.url, page)
+        parameter_metadata = runpy.run_path(str(REPOSITORY_ROOT / "scripts" /
+                                                "model_documentation.py"))["parameter_documentation"](spec)
+        self.assertIsNone(parameter_metadata.count)
+        self.assertIn("audited metadata available", parameter_metadata.note)
+        self.assertNotIn("Hugging Face", parameter_metadata.note)
+        self.assertNotIn("Hugging Face Safetensors metadata", page)
         index_card = index.split('data-model-type="asr_wenet"', 1)[1].split("</article>", 1)[0]
         self.assertIn('data-checkpoint="external-archive"', index_card)
         self.assertNotIn("Hugging Face</a>", index_card)
@@ -1249,7 +1472,10 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                     self.assertEqual(support.kind, "enumerated")
                     self.assertTrue(support.codes)
                     rendered_codes = ", ".join(f"`{code}`" for code in support.codes)
-                    self.assertIn(f"| Languages | {rendered_codes} |", page)
+                    overview_languages = (
+                        ", ".join(f"`{code}`" for code in support.codes[:4]) +
+                        ", … complete audited list below" if len(support.codes) > 8 else rendered_codes)
+                    self.assertIn(f"| Languages | {overview_languages} |", page)
                     card = index.split(f'data-model-type="{spec.model_type}"', 1)[1].split("</article>", 1)[0]
                     self.assertIn(
                         f'data-languages="{" ".join(support.codes)}"',
@@ -1308,6 +1534,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         for fragment in (
                 "const initializeSemanticHighlights = () => {",
                 'document.body.classList.toggle("vh-optimization-page", isOptimizationPage)',
+                'document.body.classList.toggle("vh-model-page", isModelPage)',
                 '"vh-model-link",',
                 'link.classList.toggle("vh-optimization-link"',
                 'document.querySelectorAll(".md-typeset code:not(pre code)")',
@@ -1322,6 +1549,72 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         )[1].split("}", 1)[0]
         self.assertIn("width: calc(100% + 0.45rem);", model_link_rule)
         self.assertIn("padding: 0.3rem 0.45rem;", model_link_rule)
+
+    def test_model_id_copy_control_uses_fallback_and_native_button_activation(self):
+        script = HEADER_CONTROL_SCRIPT_PATH.read_text(encoding="utf-8")
+        copy_control = script.split(
+            "const initializeModelIdCopyControl = () => {",
+            1,
+        )[1].split("const initializeSemanticHighlights = () => {", 1)[0]
+
+        for fragment in (
+                'document.querySelector("[data-vh-copy-model-id]")',
+                'querySelector("[data-vh-copy-model-id-label]")',
+                "button.dataset.modelId?.trim()",
+                "navigator.clipboard.writeText(modelId)",
+                'document.execCommand("copy")',
+                'label.setAttribute("aria-live", "polite")',
+                'label.setAttribute("aria-atomic", "true")',
+                'label.textContent = "Copied"',
+                'button.setAttribute("aria-label", "Copied")',
+                'const idleLabel = "Copy model ID"',
+                'button.addEventListener("click", async () => {',
+                'button.setAttribute("aria-busy", "true")',
+                "window.setTimeout(resetFeedback, 1600)",
+        ):
+            self.assertIn(fragment, copy_control)
+
+        self.assertNotIn('button.addEventListener("keydown"', copy_control)
+        self.assertIn("initializeModelIdCopyControl();", script)
+
+    def test_model_detail_controls_track_sections_and_responsive_facts(self):
+        script = HEADER_CONTROL_SCRIPT_PATH.read_text(encoding="utf-8")
+        facts_control = script.split(
+            "const initializeModelFactsDisclosure = () => {",
+            1,
+        )[1].split("const initializeModelSectionNavigation = () => {", 1)[0]
+        for fragment in (
+                'document.querySelector("[data-vh-model-facts-disclosure]")',
+                'window.matchMedia("(min-width: 76.25em)")',
+                "disclosure.open = desktopLayout.matches",
+                'desktopLayout.addEventListener("change", synchronizeLayout)',
+        ):
+            self.assertIn(fragment, facts_control)
+
+        section_control = script.split(
+            "const initializeModelSectionNavigation = () => {",
+            1,
+        )[1].split("const initializeSemanticHighlights = () => {", 1)[0]
+        for fragment in (
+                'document.querySelector(".vh-model-detail__tabs")',
+                'navigation.querySelectorAll("a[href^=\'#\']")',
+                "document.getElementById(decodeURIComponent(link.hash.slice(1)))",
+                'link.setAttribute("aria-current", "location")',
+                'link.removeAttribute("aria-current")',
+                "const ANCHOR_RELEASE_DISTANCE = 24",
+                "const lockAnchorNavigation = (link) => {",
+                "const lockCurrentHash = () => {",
+                "window.setTimeout(settleAnchorNavigation, 240)",
+                'window.addEventListener("scrollend", settleAnchorNavigation, { passive: true })',
+                'navigation.addEventListener("click"',
+                'window.addEventListener("scroll", scheduleUpdate, { passive: true })',
+                'window.addEventListener("resize", scheduleUpdate)',
+                'window.addEventListener("hashchange", scheduleUpdate)',
+                "requestAnimationFrame",
+        ):
+            self.assertIn(fragment, section_control)
+        self.assertIn("initializeModelFactsDisclosure();", script)
+        self.assertIn("initializeModelSectionNavigation();", script)
 
     def test_theme_uses_reference_neutral_surfaces_with_voicehub_accents(self):
         stylesheet = STYLESHEET_PATH.read_text(encoding="utf-8")
@@ -2517,7 +2810,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "_validate_viewport_summary",
                 "_validate_viewport_palette_summary",
                 '"cases": 60',
-                '"keyboard_cases": 330',
+                '"keyboard_cases": 328',
                 '"screenshot_cases": 60',
                 'totals.get("focus_steps", 0) < 4200',
                 "if result.returncode:",
@@ -2636,7 +2929,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         aggregate = namespace["_aggregate_summaries"](summaries)
         self.assertEqual(aggregate["totals"]["cases"], 60)
-        self.assertEqual(aggregate["totals"]["keyboard_cases"], 330)
+        self.assertEqual(aggregate["totals"]["keyboard_cases"], 328)
         self.assertEqual(aggregate["totals"]["viewports"], 3)
 
         incomplete = {viewport: dict(summary) for viewport, summary in summaries.items()}
