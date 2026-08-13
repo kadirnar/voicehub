@@ -675,6 +675,11 @@ body.vh-model-page .md-content__inner {
   max-width: none;
 }
 
+body.vh-model-page .md-content__button {
+  position: relative;
+  z-index: 2;
+}
+
 .md-typeset .vh-model-detail {
   width: 100%;
   max-width: 76rem;
@@ -2221,6 +2226,10 @@ body.vh-optimization-page .md-typeset h1 {
     color 125ms,
     background-color 125ms,
     transform 125ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.vh-model-page .md-top {
+  top: calc(var(--vh-global-header-height) + 3rem) !important;
 }
 
 .md-top:is(:hover, :focus-visible) {
