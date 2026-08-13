@@ -368,9 +368,33 @@ class DocumentationSiteTests(unittest.TestCase):
         references = generator["MODEL_REFERENCES"]
         inference_profiles = generator["inference_profile"]
         specs = tuple(list_model_specs(task=None))
-        documented_profiles = runpy.run_path(str(REPOSITORY_ROOT / "scripts" /
-                                                 "model_documentation.py"))["INFERENCE_PROFILES"]
+        model_documentation = runpy.run_path(str(REPOSITORY_ROOT / "scripts" / "model_documentation.py"))
+        documented_profiles = model_documentation["INFERENCE_PROFILES"]
+        parameter_documentation = model_documentation["parameter_documentation"]
+        documented_parameters = model_documentation["PARAMETER_DOCUMENTATION"]
         self.assertEqual(set(documented_profiles), {spec.model_type for spec in specs})
+        self.assertEqual(set(documented_parameters), {spec.model_type for spec in specs})
+        seamless_metadata = runpy.run_path(
+            str(REPOSITORY_ROOT / "voicehub" / "architectures" / "seamless_m4t_v2" / "metadata.py"))
+        seamless_repository = seamless_metadata["SEAMLESS_M4T_V2_REPOSITORY"]
+        seamless_checkpoint = seamless_metadata["SEAMLESS_M4T_V2_CHECKPOINTS"][seamless_repository]
+        self.assertEqual(
+            documented_parameters["asr_seamless_m4t_v2"].count,
+            seamless_checkpoint["s2t_parameter_count"],
+        )
+        self.assertIn("speech-to-text subset", documented_parameters["asr_seamless_m4t_v2"].note)
+        from voicehub.architectures.medasr.configuration import MedASRConfig
+        from voicehub.architectures.medasr.modeling import MedASRForCTC
+        medasr_model = MedASRForCTC(MedASRConfig(), initialize=False)
+        self.assertEqual(
+            documented_parameters["asr_medasr"].count,
+            sum(parameter.numel() for parameter in medasr_model.parameters()),
+        )
+        self.assertIn("BatchNorm buffers are excluded", documented_parameters["asr_medasr"].note)
+        melotts_spec = next(spec for spec in specs if spec.model_type == "melotts")
+        self.assertEqual(melotts_spec.default_model_path, "EN")
+        self.assertIsNone(documented_parameters["melotts"].count)
+        self.assertIn("Not reported", documented_parameters["melotts"].note)
         self.assertEqual(
             len({profile.summary
                  for profile in documented_profiles.values()}),
@@ -406,6 +430,13 @@ class DocumentationSiteTests(unittest.TestCase):
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
         for path, spec in expected_paths.items():
             with self.subTest(model_type=spec.model_type):
+                parameter_metadata = parameter_documentation(spec)
+                self.assertEqual(parameter_metadata, documented_parameters[spec.model_type])
+                self.assertTrue(
+                    parameter_metadata.count is None or
+                    isinstance(parameter_metadata.count, int) and parameter_metadata.count >= 0, )
+                self.assertIsInstance(parameter_metadata.note, str)
+                self.assertTrue(parameter_metadata.note.strip())
                 source = path.read_text(encoding="utf-8")
                 self.assertIn(f"# {spec.display_name}", source)
                 self.assertIn(f"`{spec.model_type}`", source)
@@ -510,7 +541,27 @@ class DocumentationSiteTests(unittest.TestCase):
         from voicehub import list_model_specs
 
         specs = tuple(list_model_specs(task=None))
+        model_documentation = runpy.run_path(str(REPOSITORY_ROOT / "scripts" / "model_documentation.py"))
+        parameter_documentation = model_documentation["parameter_documentation"]
+        documented_parameters = model_documentation["PARAMETER_DOCUMENTATION"]
+        parameter_band = runpy.run_path(str(MODEL_PAGE_GENERATOR_PATH))["_catalog_parameter_band"]
         self.assertEqual(len(specs), 68)
+        self.assertEqual(set(documented_parameters), {spec.model_type for spec in specs})
+        for count, expected_band in (
+            (None, "not-reported"),
+            (0, "weightless"),
+            (1, "under-100m"),
+            (99_999_999, "under-100m"),
+            (100_000_000, "100m-499m"),
+            (499_999_999, "100m-499m"),
+            (500_000_000, "500m-999m"),
+            (999_999_999, "500m-999m"),
+            (1_000_000_000, "1b-2.9b"),
+            (2_999_999_999, "1b-2.9b"),
+            (3_000_000_000, "3b-plus"),
+        ):
+            with self.subTest(parameter_count=count):
+                self.assertEqual(parameter_band(count), expected_band)
         index = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
 
@@ -525,6 +576,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 "Find the right speech model",
                 'name="language"',
                 'name="task"',
+                'name="parameters"',
                 'name="training"',
                 'name="checkpoint"',
                 'name="license"',
@@ -538,6 +590,19 @@ class DocumentationSiteTests(unittest.TestCase):
         ):
             self.assertIn(fragment, index)
         self.assertEqual(index.count("data-vh-model-card\n"), len(specs))
+        sort_markup = index.split('data-vh-model-sort>', 1)[1].split("</select>", 1)[0]
+        self.assertEqual(
+            tuple(re.findall(r'<option value="([^"]+)">', sort_markup)),
+            (
+                "name",
+                "task",
+                "parameters-desc",
+                "parameters-asc",
+                "languages",
+                "languages-asc",
+                "training",
+            ),
+        )
         self.assertIn("- Model list: models/providers/index.md", config)
         self.assertIn("- javascripts/model-explorer.js", config)
         for example_index, example in enumerate(PYTHON_BLOCK.findall(index), start=1):
@@ -551,8 +616,14 @@ class DocumentationSiteTests(unittest.TestCase):
                 'querySelector("[data-vh-model-explorer]")',
                 "Intl.DisplayNames",
                 "modelSupportsLanguage",
+                'parameters: "model_parameters"',
                 "state.features.every",
                 "state.resources.every",
+                'order === "parameters-desc"',
+                'order === "parameters-asc"',
+                'order === "languages-asc"',
+                "if (leftUnknown) return 1;",
+                "if (rightUnknown) return -1;",
                 "window.history.replaceState",
                 "renderActiveFilters",
                 "renderAdvancedCount",
@@ -562,6 +633,7 @@ class DocumentationSiteTests(unittest.TestCase):
 
         for spec in specs:
             with self.subTest(model_type=spec.model_type):
+                parameter_metadata = parameter_documentation(spec)
                 self.assertTrue(spec.display_name[0].isupper())
                 self.assertNotEqual(spec.display_name, spec.model_type)
                 page = (MODEL_PAGE_DIR / f"{spec.model_type}.md").read_text(encoding="utf-8")
@@ -574,6 +646,13 @@ class DocumentationSiteTests(unittest.TestCase):
                     f'- "{spec.display_name}": models/providers/{spec.model_type}.md',
                     config,
                 )
+                card = index.split(
+                    f'data-model-type="{spec.model_type}"',
+                    1,
+                )[1].split("</article>", 1)[0]
+                self.assertRegex(card, r'data-parameter-band="[^"]+"')
+                rendered_count = "" if parameter_metadata.count is None else str(parameter_metadata.count)
+                self.assertIn(f'data-parameter-count="{rendered_count}"', card)
 
         checker = DOCUMENTATION_VISUAL_CHECK_PATH.read_text(encoding="utf-8")
         for fragment in (
@@ -582,6 +661,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 "MODEL_INDEX_TOC",
                 "def _validate_model_index_state(",
                 "def _validate_model_explorer_filters(",
+                "MODEL_INDEX_MINIMUM_INTERSECTING_CARDS",
                 "def _validate_model_index_page_copy(",
                 '"model_index_cases"',
                 '"model_index_interaction_cases"',

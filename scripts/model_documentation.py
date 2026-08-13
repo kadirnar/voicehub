@@ -61,6 +61,136 @@ class InferenceProfile:
     high_level_supported: bool = True
 
 
+@dataclass(frozen=True, slots=True)
+class ParameterDocumentation:
+    """Audited model-size metadata used only by documentation."""
+
+    count: int | None
+    note: str
+
+    def __post_init__(self) -> None:
+        if self.count is not None and (not isinstance(self.count, int) or self.count < 0):
+            raise ValueError("Parameter documentation count must be a non-negative integer or None.")
+        if not isinstance(self.note, str) or not self.note.strip():
+            raise ValueError("Parameter documentation note must be a non-empty string.")
+
+
+_NATIVE_COUNT = (
+    "Exact learned-parameter total for VoiceHub's audited native primary graph "
+    "at the registered default selection; separately loaded auxiliary models "
+    "are excluded.")
+_NATIVE_SERIALIZED_COUNT = (
+    "Exact serialized tensor-element total from VoiceHub's audited native primary "
+    "checkpoint; a distinct learned-parameter total is not available.")
+_HF_COUNT = (
+    "Exact Safetensors total reported by the Hugging Face model API for the "
+    "registered default checkpoint, retrieved 2026-08-13.")
+_NOT_REPORTED = (
+    "Not reported: neither current audited native metadata nor the Hugging "
+    "Face Safetensors metadata retrieved 2026-08-13 provides an exact total "
+    "for the registered default checkpoint.")
+_WEIGHTLESS = "Weightless algorithm; the registered default has no model parameters."
+_SEAMLESS_S2T_COUNT = (
+    "Exact parameter total for the speech-to-text subset loaded from VoiceHub's "
+    "audited unified default checkpoint.")
+_MEDASR_LEARNED_COUNT = (
+    "Exact learned-parameter total for VoiceHub's audited native default graph; "
+    "persistent BatchNorm buffers are excluded.")
+
+
+def _parameters(count: int | None, note: str) -> ParameterDocumentation:
+    return ParameterDocumentation(count=count, note=note)
+
+
+# Documentation-only values are deliberately keyed by canonical model type.
+# Counts are never inferred from repository names or marketing labels. Audited
+# native learned-parameter totals take precedence. Audited serialized totals are
+# labeled as such when the native graph cannot be reconstructed, and Hugging Face
+# Safetensors totals are used only when the repository API supplies an exact total
+# for the registry default.
+PARAMETER_DOCUMENTATION = {
+    "orpheustts": _parameters(3_782_986_752, _HF_COUNT),
+    "dia": _parameters(1_611_160_576, _NATIVE_COUNT),
+    "vui": _parameters(None, _NOT_REPORTED),
+    "chatterbox": _parameters(797_762_633, _NATIVE_COUNT),
+    "kokoro": _parameters(81_810_022, _NATIVE_COUNT),
+    "echo": _parameters(None, _NOT_REPORTED),
+    "conversationtts": _parameters(None, _NOT_REPORTED),
+    "llasa": _parameters(1_766_950_912, _HF_COUNT),
+    "cosyvoice": _parameters(859_185_455, _NATIVE_COUNT),
+    "f5tts": _parameters(337_096_804, _NATIVE_COUNT),
+    "gptsovits": _parameters(128_916_482, _NATIVE_COUNT),
+    "melotts": _parameters(None, _NOT_REPORTED),
+    "openvoice": _parameters(32_792_226, _NATIVE_COUNT),
+    "outetts": _parameters(1_248_397_312, _HF_COUNT),
+    "parlertts": _parameters(877_842_290, _NATIVE_COUNT),
+    "styletts2": _parameters(None, _NOT_REPORTED),
+    "mosstts": _parameters(8_489_841_664, _NATIVE_COUNT),
+    "qwen3tts": _parameters(1_916_676_352, _NATIVE_COUNT),
+    "irodoritts": _parameters(512_049_441, _NATIVE_COUNT),
+    "zonos": _parameters(1_624_399_872, _NATIVE_COUNT),
+    "zonos2": _parameters(7_668_118_208, _NATIVE_COUNT),
+    "voxcpm": _parameters(2_290_004_544, _NATIVE_COUNT),
+    "omnivoice": _parameters(612_577_280, _NATIVE_COUNT),
+    "higgstts": _parameters(5_771_283_456, _NATIVE_COUNT),
+    "xtts": _parameters(466_874_863, _NATIVE_COUNT),
+    "vibevoice": _parameters(1_017_626_724, _NATIVE_SERIALIZED_COUNT),
+    "fishtts": _parameters(4_561_852_416, _NATIVE_COUNT),
+    "csm": _parameters(1_552_791_552, _NATIVE_COUNT),
+    "neutts": _parameters(236_039_680, _HF_COUNT),
+    "supertonic": _parameters(None, _NOT_REPORTED),
+    "inflecttts": _parameters(None, _NOT_REPORTED),
+    "bark": _parameters(None, _NOT_REPORTED),
+    "speecht5": _parameters(None, _NOT_REPORTED),
+    "vits": _parameters(36_284_592, _HF_COUNT),
+    "asr_transformers": _parameters(241_734_912, _HF_COUNT),
+    "asr_whisper": _parameters(808_878_080, _HF_COUNT),
+    "asr_tiron": _parameters(1_543_539_200, _HF_COUNT),
+    "asr_qwen3": _parameters(938_008_576, _NATIVE_SERIALIZED_COUNT),
+    "asr_vibevoice": _parameters(8_330_325_888, _NATIVE_SERIALIZED_COUNT),
+    "asr_granite_speech": _parameters(2_313_141_596, _NATIVE_COUNT),
+    "asr_parakeet_tdt": _parameters(627_008_134, _NATIVE_COUNT),
+    "asr_nemotron": _parameters(637_997_088, _NATIVE_COUNT),
+    "asr_cohere": _parameters(2_047_822_080, _NATIVE_COUNT),
+    "asr_medasr": _parameters(105_265_408, _MEDASR_LEARNED_COUNT),
+    "asr_wav2vec2": _parameters(94_395_552, _HF_COUNT),
+    "asr_hubert": _parameters(None, _NOT_REPORTED),
+    "asr_wavlm": _parameters(None, _NOT_REPORTED),
+    "asr_moonshine": _parameters(27_092_736, _HF_COUNT),
+    "asr_seamless_m4t_v2": _parameters(1_501_842_240, _SEAMLESS_S2T_COUNT),
+    "asr_faster_whisper": _parameters(241_734_912, _HF_COUNT),
+    "asr_whisperx": _parameters(241_734_912, _HF_COUNT),
+    "asr_openai_whisper": _parameters(241_734_912, _HF_COUNT),
+    "asr_nemo": _parameters(None, _NOT_REPORTED),
+    "asr_speechbrain": _parameters(None, _NOT_REPORTED),
+    "asr_funasr": _parameters(None, _NOT_REPORTED),
+    "asr_espnet": _parameters(None, _NOT_REPORTED),
+    "asr_wenet": _parameters(None, _NOT_REPORTED),
+    "vad_transformers": _parameters(None, _NOT_REPORTED),
+    "vad_silero": _parameters(None, _NOT_REPORTED),
+    "vad_webrtc": _parameters(0, _WEIGHTLESS),
+    "vad_pyannote": _parameters(None, _NOT_REPORTED),
+    "vad_speechbrain": _parameters(None, _NOT_REPORTED),
+    "vad_nemo": _parameters(None, _NOT_REPORTED),
+    "vad_funasr": _parameters(None, _NOT_REPORTED),
+    "vad_auditok": _parameters(0, _WEIGHTLESS),
+    "vad_sherpa_onnx": _parameters(None, _NOT_REPORTED),
+    "vad_pyannote_segmentation": _parameters(None, _NOT_REPORTED),
+    "vad_pyannote_brouhaha": _parameters(None, _NOT_REPORTED),
+}
+
+
+def parameter_documentation(spec) -> ParameterDocumentation:
+    """Return explicitly audited docs metadata for one canonical model spec."""
+    try:
+        documentation = PARAMETER_DOCUMENTATION[spec.model_type]
+    except KeyError as error:
+        raise ValueError(f"Model {spec.model_type!r} needs explicit parameter documentation.") from error
+    if not isinstance(documentation, ParameterDocumentation):
+        raise TypeError(f"Parameter documentation for {spec.model_type!r} has an invalid contract.")
+    return documentation
+
+
 _HUGGING_FACE_OVERRIDES = {
     "vui": (
         "fluxions/vui",

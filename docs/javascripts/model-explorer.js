@@ -86,6 +86,11 @@
       const capabilities = new Set(
         (card.dataset.capabilities || "").split(" ").filter(Boolean),
       );
+      const parameterCountValue = card.dataset.parameterCount;
+      const parsedParameterCount = parameterCountValue === undefined
+        || parameterCountValue.trim() === ""
+        ? null
+        : Number(parameterCountValue);
       const languageSearch = languages
         .map((code) => languageNames.get(code.toLowerCase()) || "")
         .join(" ");
@@ -93,6 +98,8 @@
         card,
         name: card.dataset.name || "",
         task: card.dataset.task || "",
+        parameters: card.dataset.parameterBand || "",
+        parameterCount: Number.isFinite(parsedParameterCount) ? parsedParameterCount : null,
         training: card.dataset.training || "",
         trainingRank: Number(card.dataset.trainingRank || 0),
         checkpoint: card.dataset.checkpoint || "",
@@ -114,6 +121,7 @@
       query: "model_q",
       language: "model_language",
       task: "model_task",
+      parameters: "model_parameters",
       training: "model_training",
       checkpoint: "model_checkpoint",
       license: "model_license",
@@ -174,7 +182,14 @@
       const queryTokens = normalize(state.query).split(" ").filter(Boolean);
       if (!queryTokens.every((token) => model.search.includes(token))) return false;
       if (!modelSupportsLanguage(model, state.selects.language)) return false;
-      for (const key of ["task", "training", "checkpoint", "license", "architecture"]) {
+      for (const key of [
+        "task",
+        "parameters",
+        "training",
+        "checkpoint",
+        "license",
+        "architecture",
+      ]) {
         if (state.selects[key] && model[key] !== state.selects[key]) return false;
       }
       if (!state.features.every((feature) => model.capabilities.has(feature))) return false;
@@ -185,7 +200,19 @@
     const compareModels = (left, right, order) => {
       const byName = left.name.localeCompare(right.name);
       if (order === "languages") return right.languageCount - left.languageCount || byName;
+      if (order === "languages-asc") return left.languageCount - right.languageCount || byName;
       if (order === "task") return left.task.localeCompare(right.task) || byName;
+      if (order === "parameters-desc" || order === "parameters-asc") {
+        const leftUnknown = left.parameterCount === null;
+        const rightUnknown = right.parameterCount === null;
+        if (leftUnknown && rightUnknown) return byName;
+        if (leftUnknown) return 1;
+        if (rightUnknown) return -1;
+        const parameterOrder = order === "parameters-desc"
+          ? right.parameterCount - left.parameterCount
+          : left.parameterCount - right.parameterCount;
+        return parameterOrder || byName;
+      }
       if (order === "training") return left.trainingRank - right.trainingRank || byName;
       return byName;
     };

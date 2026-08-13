@@ -16,7 +16,13 @@ sys.path.insert(0, str(REPOSITORY_ROOT))
 sys.path.insert(0, str(SCRIPTS_ROOT))
 
 from documentation_references import MODEL_REFERENCES, Reference  # noqa: E402
-from model_documentation import TASK_LABELS, TASK_ORDER, checkpoint_documentation, inference_profile  # noqa: E402
+from model_documentation import (  # noqa: E402
+    TASK_LABELS,
+    TASK_ORDER,
+    checkpoint_documentation,
+    inference_profile,
+    parameter_documentation,
+)
 
 from voicehub import list_model_specs  # noqa: E402
 from voicehub.models.language_support import model_language_support  # noqa: E402
@@ -71,6 +77,15 @@ CATALOG_LICENSE_LABELS = {
     "review": "Review required",
     "checkpoint-specific": "Checkpoint-specific",
 }
+CATALOG_PARAMETER_BANDS = (
+    ("weightless", "Weightless", lambda count: count == 0),
+    ("under-100m", "Under 100M", lambda count: count is not None and 0 < count < 100_000_000),
+    ("100m-499m", "100M–499M", lambda count: count is not None and 100_000_000 <= count < 500_000_000),
+    ("500m-999m", "500M–999M", lambda count: count is not None and 500_000_000 <= count < 1_000_000_000),
+    ("1b-2.9b", "1B–2.9B", lambda count: count is not None and 1_000_000_000 <= count < 3_000_000_000),
+    ("3b-plus", "3B or more", lambda count: count is not None and count >= 3_000_000_000),
+    ("not-reported", "Not reported", lambda count: count is None),
+)
 
 
 def _value(value) -> str:
@@ -671,6 +686,27 @@ def _catalog_license_kind(spec) -> str:
     return "review"
 
 
+def _catalog_parameter_band(count: int | None) -> str:
+    """Return the stable filter band for a documented parameter count."""
+    for value, _label, matches in CATALOG_PARAMETER_BANDS:
+        if matches(count):
+            return value
+    raise ValueError(f"No catalog parameter band accepts {count!r}.")
+
+
+def _format_parameter_count(count: int | None) -> str:
+    """Format one exact count for compact card display."""
+    if count is None:
+        return "Not reported"
+    if count == 0:
+        return "Weightless"
+    for threshold, suffix in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
+        if count >= threshold:
+            value = f"{count / threshold:.1f}".rstrip("0").rstrip(".")
+            return f"{value}{suffix}"
+    return str(count)
+
+
 def _render_catalog_options(options) -> str:
     """Render select options with registry-derived result counts."""
     return "\n".join(
@@ -703,6 +739,12 @@ def _render_catalog_checkbox(*, name: str, value: str, label: str, count: int) -
 def _render_catalog_card(spec) -> str:
     """Render one semantic, filter-ready model result card."""
     checkpoint = checkpoint_documentation(spec)
+    parameter = parameter_documentation(spec)
+    parameter_band = _catalog_parameter_band(parameter.count)
+    parameter_count = "" if parameter.count is None else str(parameter.count)
+    parameter_label = _format_parameter_count(parameter.count)
+    parameter_title = (
+        parameter.note if parameter.count is None else f"{parameter.count:,} parameters. {parameter.note}")
     support = model_language_support(spec)
     training = spec.training.support.value
     license_kind = _catalog_license_kind(spec)
@@ -713,7 +755,7 @@ def _render_catalog_card(spec) -> str:
         "voice-activity-detection": "VAD",
     }[task]
     language_codes = support.codes
-    preview_codes = language_codes[:5]
+    preview_codes = language_codes[:3]
     language_preview = "".join(f'<code>{html.escape(code)}</code>' for code in preview_codes)
     if support.kind == "not-text-conditioned":
         language_preview = '<span class="vh-model-card__neutral-language">Language-neutral</span>'
@@ -723,7 +765,7 @@ def _render_catalog_card(spec) -> str:
 
     filter_capabilities = tuple((label, capability) for label, capability in CATALOG_FEATURE_FILTERS
                                 if capability in spec.capabilities)
-    visible_capabilities = filter_capabilities[:3]
+    visible_capabilities = filter_capabilities[:2]
     capability_chips = "".join(f'<span>{html.escape(label)}</span>' for label, _ in visible_capabilities)
     if len(filter_capabilities) > len(visible_capabilities):
         capability_chips += (
@@ -759,6 +801,7 @@ def _render_catalog_card(spec) -> str:
         CATALOG_TRAINING_LABELS[training],
         CATALOG_CHECKPOINT_LABELS[checkpoint.provider],
         CATALOG_LICENSE_LABELS[license_kind],
+        parameter_label,
     )
     summary = inference_profile(spec).summary
     training_rank = {
@@ -772,6 +815,8 @@ def _render_catalog_card(spec) -> str:
       data-name="{html.escape(spec.display_name.casefold(), quote=True)}"
       data-model-type="{html.escape(spec.model_type, quote=True)}"
       data-task="{html.escape(task, quote=True)}"
+      data-parameter-count="{parameter_count}"
+      data-parameter-band="{parameter_band}"
       data-training="{html.escape(training, quote=True)}"
       data-training-rank="{training_rank}"
       data-checkpoint="{html.escape(checkpoint.provider, quote=True)}"
@@ -784,7 +829,12 @@ def _render_catalog_card(spec) -> str:
       data-resources="{html.escape(' '.join(resources), quote=True)}"
       data-search="{html.escape(' '.join(search_values), quote=True)}">
       <div class="vh-model-card__topline">
-        <span class="vh-model-badge vh-model-badge--{task_short.casefold()}">{task_short}</span>
+        <div class="vh-model-card__identity">
+          <span class="vh-model-badge vh-model-badge--{task_short.casefold()}">{task_short}</span>
+          <span class="vh-model-card__parameters"
+            title="{html.escape(parameter_title, quote=True)}"
+            aria-label="{html.escape(parameter_title, quote=True)}">{html.escape(parameter_label)}</span>
+        </div>
         <span class="vh-model-card__training">{html.escape(CATALOG_TRAINING_LABELS[training])}</span>
       </div>
       <div class="vh-model-card__heading">
@@ -795,8 +845,6 @@ def _render_catalog_card(spec) -> str:
       <dl class="vh-model-card__metadata">
         <div><dt>Architecture</dt><dd><code>{html.escape(architecture)}</code></dd></div>
         <div><dt>Languages</dt><dd class="vh-model-card__languages">{language_preview}</dd></div>
-        <div><dt>Checkpoint</dt><dd>{html.escape(CATALOG_CHECKPOINT_LABELS[checkpoint.provider])}</dd></div>
-        <div><dt>License</dt><dd>{html.escape(CATALOG_LICENSE_LABELS[license_kind])}</dd></div>
       </dl>
       <div class="vh-model-card__features" aria-label="Capabilities">{capability_chips}</div>
       <footer class="vh-model-card__actions">{' '.join(actions)}</footer>
@@ -812,6 +860,9 @@ def render_index(specs) -> str:
     license_counts = Counter(_catalog_license_kind(spec) for spec in specs)
     architecture_counts = Counter(spec.architecture or "provider-owned" for spec in specs)
     language_counts = Counter(code for spec in specs for code in model_language_support(spec).codes)
+    parameter_counts = {spec.model_type: parameter_documentation(spec).count for spec in specs}
+    parameter_band_counts = Counter(
+        _catalog_parameter_band(parameter_counts[spec.model_type]) for spec in specs)
     cards = "\n".join(
         _render_catalog_card(spec)
         for spec in sorted(specs, key=lambda spec: (spec.display_name.casefold(), spec.model_type)))
@@ -847,6 +898,8 @@ def render_index(specs) -> str:
     architecture_options = _render_catalog_options(
         (value, value, count)
         for value, count in sorted(architecture_counts.items(), key=lambda item: item[0].casefold()))
+    parameter_options = _render_catalog_options(
+        (value, label, parameter_band_counts[value]) for value, label, _matches in CATALOG_PARAMETER_BANDS)
     language_select = _render_catalog_select(
         "language",
         "Language",
@@ -854,7 +907,12 @@ def render_index(specs) -> str:
         '<option value="not-text-conditioned">Language-neutral (VAD)</option>',
     )
     task_select = _render_catalog_select(
-        "task", "Task", '<option value="">Any task</option>\n' + task_options)
+        "task", "Model type", '<option value="">Any model type</option>\n' + task_options)
+    parameter_select = _render_catalog_select(
+        "parameters",
+        "Parameters",
+        '<option value="">Any model size</option>\n' + parameter_options,
+    )
     training_select = _render_catalog_select(
         "training",
         "Training",
@@ -886,8 +944,8 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
     <div class="vh-model-explorer__hero-copy">
       <p class="vh-model-explorer__eyebrow">Model discovery</p>
       <h2 id="vh-model-explorer-title">Find the right speech model</h2>
-      <p>Search the complete VoiceHub catalog by language, task, training path,
-      architecture, checkpoint source, license, and production capability.</p>
+      <p>Compare every VoiceHub model by type, reported parameters, language,
+      training path, architecture, license, and production capability.</p>
     </div>
     <dl class="vh-model-explorer__stats" aria-label="Catalog summary">
       <div><dt>{len(specs)}</dt><dd>models</dd></div>
@@ -914,6 +972,7 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
       <div class="vh-model-filters__quick" aria-label="Quick filters">
         {language_select}
         {task_select}
+        {parameter_select}
         {training_select}
       </div>
 
@@ -945,7 +1004,7 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
 
   <div class="vh-model-results__toolbar">
     <div>
-      <p class="vh-model-results__count" role="status" aria-live="polite">
+      <p class="vh-model-results__count" role="status" aria-live="polite" aria-atomic="true">
         <strong data-vh-model-result-count>{len(specs)}</strong>
         <span data-vh-model-result-label>models</span>
       </p>
@@ -956,8 +1015,11 @@ description: Search and filter every registered VoiceHub TTS, ASR, and VAD model
       <label for="vh-model-sort">Sort</label>
       <select id="vh-model-sort" name="sort" data-vh-model-sort>
         <option value="name">Name A–Z</option>
-        <option value="languages">Language coverage</option>
-        <option value="task">Task</option>
+        <option value="task">Model type</option>
+        <option value="parameters-desc">Parameters · largest first</option>
+        <option value="parameters-asc">Parameters · smallest first</option>
+        <option value="languages">Supported languages · most first</option>
+        <option value="languages-asc">Supported languages · fewest first</option>
         <option value="training">Training readiness</option>
       </select>
     </div>

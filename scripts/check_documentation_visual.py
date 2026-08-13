@@ -200,6 +200,11 @@ MODEL_INDEX_HEADINGS = (
     ("H2", "Search the registry in Python"),
 )
 MODEL_INDEX_TOC = ("Search the registry in Python", )
+MODEL_INDEX_MINIMUM_INTERSECTING_CARDS = {
+    "desktop": 3,
+    "tablet": 2,
+    "mobile": 1,
+}
 SPEECHT5_ROUTE = "models/providers/speecht5/index.html"
 SPEECHT5_HEADINGS = (
     ("H1", "SpeechT5"),
@@ -1867,7 +1872,7 @@ def _validate_installation_code_copy(page: Page, case: str, key: str) -> None:
     _validate_code_copy(page, f"{case} / Installation code copy", key, wait_for_idle=True)
 
 
-def _validate_model_index_state(page: Page, case: str) -> None:
+def _validate_model_index_state(page: Page, case: str, viewport: dict[str, Any]) -> None:
     state = page.evaluate(
         r"""() => {
           const content = document.querySelector(".md-content__inner");
@@ -1889,10 +1894,24 @@ def _validate_model_index_state(page: Page, case: str) -> None:
             enhanced: explorer?.dataset.enhanced,
             cardCount: cards.length,
             visibleCardCount: cards.filter(card => !card.hidden).length,
+            intersectingCardCount: cards.filter(card => {
+              if (card.hidden) return false;
+              const bounds = card.getBoundingClientRect();
+              const style = getComputedStyle(card);
+              return bounds.width > 0 && bounds.height > 0 &&
+                bounds.right > 0 && bounds.left < innerWidth &&
+                bounds.bottom > 0 && bounds.top < innerHeight &&
+                style.display !== "none" && style.visibility !== "hidden";
+            }).length,
             resultCount: explorer?.querySelector("[data-vh-model-result-count]")?.textContent,
             filterSelectNames: Array.from(
               explorer?.querySelectorAll("[data-vh-model-select]") || []
             ).map(select => select.name),
+            sortOptionValues: Array.from(
+              explorer?.querySelector("[data-vh-model-sort]")?.options || []
+            ).map(option => option.value),
+            parameterCounts: cards.map(card => card.getAttribute("data-parameter-count")),
+            parameterBands: cards.map(card => card.getAttribute("data-parameter-band")),
             featureFilterCount: explorer?.querySelectorAll(
               'input[data-vh-model-checkbox][name="feature"]'
             ).length || 0,
@@ -1922,14 +1941,50 @@ def _validate_model_index_state(page: Page, case: str) -> None:
             f"{case}: model explorer state is enhanced={state['enhanced']!r}, "
             f"cards={state['cardCount']!r}, visible={state['visibleCardCount']!r}; "
             "expected 'true', 68, and 68.")
+    minimum_intersections = MODEL_INDEX_MINIMUM_INTERSECTING_CARDS[viewport["name"]]
+    if state["intersectingCardCount"] < minimum_intersections:
+        raise DocumentationVisualError(
+            f"{case}: only {state['intersectingCardCount']!r} model cards intersect the "
+            f"initial viewport; expected at least {minimum_intersections!r}.")
     if state["resultCount"] != "68":
         raise DocumentationVisualError(
             f"{case}: model explorer result count is {state['resultCount']!r}, expected '68'.")
-    expected_selects = ("language", "task", "training", "checkpoint", "license", "architecture")
+    expected_selects = (
+        "language",
+        "task",
+        "parameters",
+        "training",
+        "checkpoint",
+        "license",
+        "architecture",
+    )
     if tuple(state["filterSelectNames"]) != expected_selects:
         raise DocumentationVisualError(
             f"{case}: model explorer selects are {state['filterSelectNames']!r}, "
             f"expected {expected_selects!r}.")
+    expected_sorts = (
+        "name",
+        "task",
+        "parameters-desc",
+        "parameters-asc",
+        "languages",
+        "languages-asc",
+        "training",
+    )
+    if tuple(state["sortOptionValues"]) != expected_sorts:
+        raise DocumentationVisualError(
+            f"{case}: model explorer sort options are {state['sortOptionValues']!r}, "
+            f"expected {expected_sorts!r}.")
+    if any(value is None for value in state["parameterCounts"]):
+        raise DocumentationVisualError(f"{case}: a model card has no parameter-count attribute.")
+    if any(not value for value in state["parameterBands"]):
+        raise DocumentationVisualError(f"{case}: a model card has no parameter-band value.")
+    declared_parameter_counts = [value for value in state["parameterCounts"] if value != ""]
+    if not declared_parameter_counts or not any(value == "" for value in state["parameterCounts"]):
+        raise DocumentationVisualError(
+            f"{case}: parameter metadata must exercise both declared and unknown counts.")
+    if any(not value.isdigit() for value in declared_parameter_counts):
+        raise DocumentationVisualError(f"{case}: model-card parameter counts are not non-negative integers.")
     if state["featureFilterCount"] != 11 or state["resourceFilterCount"] != 2:
         raise DocumentationVisualError(
             f"{case}: model explorer checkbox counts are "
@@ -2048,6 +2103,7 @@ def _validate_model_explorer_filters(page: Page, case: str) -> None:
     count = explorer.locator("[data-vh-model-result-count]")
     language = explorer.locator('select[name="language"]')
     task = explorer.locator('select[name="task"]')
+    parameters_select = explorer.locator('select[name="parameters"]')
     query = explorer.locator("[data-vh-model-query]")
     feature = explorer.locator('input[name="feature"][value="voice-cloning"]')
     details = explorer.locator(".vh-model-filters__advanced")
@@ -2093,12 +2149,67 @@ def _validate_model_explorer_filters(page: Page, case: str) -> None:
     if not advanced_count.is_hidden():
         raise DocumentationVisualError(
             f"{case}: advanced-filter count remains visible after clearing filters.")
-    explorer.locator("[data-vh-model-sort]").select_option("languages")
+
+    parameter_options = parameters_select.locator("option").evaluate_all(
+        "options => options.map(option => option.value).filter(Boolean)")
+    if not parameter_options:
+        raise DocumentationVisualError(f"{case}: parameter filter has no selectable bands.")
+    for selected_parameter_band in parameter_options:
+        parameters_select.select_option(selected_parameter_band)
+        parameter_filtered_cards = explorer.locator(".vh-model-card:not([hidden])")
+        if parameter_filtered_cards.count() == 0:
+            raise DocumentationVisualError(
+                f"{case}: parameter band {selected_parameter_band!r} returned no models.")
+        filtered_bands = parameter_filtered_cards.evaluate_all(
+            "cards => cards.map(card => card.dataset.parameterBand)")
+        if any(value != selected_parameter_band for value in filtered_bands):
+            raise DocumentationVisualError(
+                f"{case}: parameter filter {selected_parameter_band!r} returned bands "
+                f"{filtered_bands!r}.")
+        parameter_url_state = page.evaluate(
+            "() => Object.fromEntries(new URLSearchParams(location.search).entries())")
+        if parameter_url_state != {"model_parameters": selected_parameter_band}:
+            raise DocumentationVisualError(f"{case}: parameter-filter URL state is {parameter_url_state!r}.")
+    parameters_select.select_option("")
+    page.wait_for_function("element => element.textContent === '68'", arg=count.element_handle())
+
+    sort = explorer.locator("[data-vh-model-sort]")
+    sort.select_option("languages")
     first_card = explorer.locator(".vh-model-card:not([hidden])").first
     if (first_card.get_attribute("data-model-type") != "omnivoice" or
             first_card.get_attribute("data-language-count") != "646"):
         raise DocumentationVisualError(f"{case}: language-coverage sorting did not place OmniVoice first.")
-    explorer.locator("[data-vh-model-sort]").select_option("name")
+    sort.select_option("languages-asc")
+    language_counts = explorer.locator(".vh-model-card:not([hidden])").evaluate_all(
+        "cards => cards.map(card => Number(card.dataset.languageCount))")
+    if language_counts != sorted(language_counts):
+        raise DocumentationVisualError(f"{case}: ascending language-coverage order is {language_counts!r}.")
+
+    sort.select_option("task")
+    task_order = explorer.locator(".vh-model-card:not([hidden])").evaluate_all(
+        "cards => cards.map(card => [card.dataset.task, card.dataset.name])")
+    if task_order != sorted(task_order):
+        raise DocumentationVisualError(f"{case}: task sorting order is invalid.")
+
+    for sort_value, reverse in (("parameters-desc", True), ("parameters-asc", False)):
+        sort.select_option(sort_value)
+        parameter_order = explorer.locator(".vh-model-card:not([hidden])").evaluate_all(
+            "cards => cards.map(card => ({ modelType: card.dataset.modelType, "
+            "count: card.dataset.parameterCount }))")
+        unknown_index = next(
+            (index for index, model in enumerate(parameter_order) if model["count"] == ""),
+            None,
+        )
+        if unknown_index is None:
+            raise DocumentationVisualError(f"{case}: {sort_value} did not expose an unknown parameter count.")
+        if any(model["count"] != "" for model in parameter_order[unknown_index:]):
+            raise DocumentationVisualError(
+                f"{case}: {sort_value} placed a known parameter count after an unknown one.")
+        known_counts = [int(model["count"]) for model in parameter_order[:unknown_index]]
+        if known_counts != sorted(known_counts, reverse=reverse):
+            raise DocumentationVisualError(
+                f"{case}: {sort_value} produced parameter counts {known_counts!r}.")
+    sort.select_option("name")
 
 
 def _validate_speecht5_state(page: Page, case: str) -> None:
@@ -3816,7 +3927,7 @@ def validate_site(
                                 _validate_installation_state(page, case)
                                 installation_cases += 1
                             if relative_path == MODEL_INDEX_ROUTE:
-                                _validate_model_index_state(page, case)
+                                _validate_model_index_state(page, case, viewport)
                                 model_index_cases += 1
                             if relative_path == INFERENCE_ROUTE:
                                 _validate_inference_state(page, case)
