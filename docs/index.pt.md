@@ -34,22 +34,6 @@ description: Documentação do VoiceHub para inferência TTS unificada, prepara�
   <span class="vh-doc-teaser__audio">ÁUDIO</span>
 </div>
 
-<section class="vh-home-models" aria-labelledby="vh-home-models-title">
-  <p class="vh-home-models__eyebrow">Catálogo de modelos</p>
-  <h2 id="vh-home-models-title">Encontre um modelo para seu idioma e sua tarefa</h2>
-  <p class="vh-home-models__description">Pesquise todas as 68 integrações de TTS, ASR e VAD por idioma, recurso, caminho de treinamento, licença, arquitetura e origem do checkpoint.</p>
-  <p class="vh-home-models__actions">
-    <a class="vh-home-models__primary" href="models/providers/">Explorar todos os modelos <span aria-hidden="true">→</span></a>
-    <a class="vh-home-models__secondary" href="models/training-support/">Comparar suporte de treinamento</a>
-  </p>
-  <ul class="vh-home-models__stats" aria-label="Resumo do registro de modelos">
-    <li><strong>68</strong><span>Modelos</span></li>
-    <li><strong>34</strong><span>TTS</span></li>
-    <li><strong>23</strong><span>ASR</span></li>
-    <li><strong>11</strong><span>VAD</span></li>
-  </ul>
-</section>
-
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="Status da integração contínua do VoiceHub">
@@ -78,8 +62,7 @@ regras de propriedade de parâmetros e de exportação.
 O registro contém **34 integrações TTS**, **23 provedores ASR** e **11 provedores
 VAD**. O suporte a ajuste fino depende do checkpoint e do ambiente de execução;
 uma integração de inferência não implica que seu artefato atual do VoiceHub
-seja diferenciável. Consulte o [catálogo TTS](models/index.md), a
-[matriz de treinamento TTS](models/training-support.md) e a
+seja diferenciável. Consulte a [matriz de treinamento TTS](models/training-support.md) e a
 [matriz de suporte ASR/VAD](models/asr-vad-support.md) para selecionar uma
 integração.
 
@@ -127,15 +110,6 @@ de dados e áudio gerado podem estar sujeitos a termos distintos.
     retome checkpoints completos e salve artefatos portáteis.
 
     [Guia de treinamento](guides/training.md)
-
--   **Modelos**
-
-    ---
-
-    Compare as entradas TTS do registro, checkpoints padrão, recursos,
-    procedência do código-fonte e restrições.
-
-    [Catálogo de modelos](models/index.md)
 
 -   **Suporte a treinamento**
 

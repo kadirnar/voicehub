@@ -34,22 +34,6 @@ description: وثائق VoiceHub للاستدلال الموحّد لأنظمة 
   <span class="vh-doc-teaser__audio">صوت</span>
 </div>
 
-<section class="vh-home-models" aria-labelledby="vh-home-models-title">
-  <p class="vh-home-models__eyebrow">دليل النماذج</p>
-  <h2 id="vh-home-models-title">اعثر على نموذج يناسب لغتك ومهمتك</h2>
-  <p class="vh-home-models__description">ابحث في جميع تكاملات TTS وASR وVAD البالغ عددها 68 حسب اللغة والإمكانات ومسار التدريب والترخيص والبنية ومصدر checkpoint.</p>
-  <p class="vh-home-models__actions">
-    <a class="vh-home-models__primary" href="models/providers/">استكشف جميع النماذج <span aria-hidden="true">→</span></a>
-    <a class="vh-home-models__secondary" href="models/training-support/">قارن دعم التدريب</a>
-  </p>
-  <ul class="vh-home-models__stats" aria-label="ملخص سجل النماذج">
-    <li><strong>68</strong><span>النماذج</span></li>
-    <li><strong>34</strong><span>TTS</span></li>
-    <li><strong>23</strong><span>ASR</span></li>
-    <li><strong>11</strong><span>VAD</span></li>
-  </ul>
-</section>
-
 <p class="vh-badges">
   <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
     <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="حالة التكامل المستمر لـ VoiceHub">
@@ -77,7 +61,6 @@ sequence-to-sequence، ونماذج flow-matching والانتشار، والن�
 يضم registry **34 تكامل TTS** و**23 مزوّدي ASR** و**11 مزوّدي VAD**. يعتمد دعم
 الضبط الدقيق على نقطة التحقق وبيئة التشغيل تحديدًا؛ فوجود تكامل للاستدلال لا
 يعني أن artifact الحالي الخاص به في VoiceHub قابل للاشتقاق. استخدم
-[دليل نماذج TTS](models/index.md) و
 [مصفوفة تدريب TTS](models/training-support.md) و
 [مصفوفة دعم ASR/VAD](models/asr-vad-support.md) لاختيار التكامل المناسب.
 
@@ -125,15 +108,6 @@ sequence-to-sequence، ونماذج flow-matching والانتشار، والن�
     واستأنف العمل من نقاط تحقق كاملة، واحفظ artifacts قابلة للنقل.
 
     [دليل التدريب](guides/training.md)
-
--   **النماذج**
-
-    ---
-
-    قارن إدخالات TTS في registry ونقاط التحقق الافتراضية والقدرات ومصدر
-    الشيفرة والقيود.
-
-    [دليل النماذج](models/index.md)
 
 -   **دعم التدريب**
 

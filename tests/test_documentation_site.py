@@ -1226,7 +1226,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "## Learn",
             ),
         )
-        self.assertEqual(source.count("-   **"), 13)
+        self.assertEqual(source.count("-   **"), 12)
         for fragment in (
                 "[Inference](guides/inference.md)",
                 "[Trainer](guides/trainer.md)",
@@ -1237,10 +1237,6 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "**34 TTS backends**",
                 "**23 ASR providers**",
                 "**11 VAD providers**",
-                '<section class="vh-home-models"',
-                'href="models/providers/"',
-                'href="models/training-support/"',
-                "Find a model for your language and task",
                 '<div class="grid cards" markdown>',
                 "https://github.com/kadirnar/voicehub/actions/workflows/ci.yml",
                 "https://github.com/kadirnar/voicehub/actions/workflows/docs.yml",
@@ -1249,6 +1245,9 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, normalized_source)
+        self.assertNotIn("vh-home-models", source)
+        self.assertNotIn("Find a model for your language and task", source)
+        self.assertNotIn("models/index.md", source)
 
         checker = DOCUMENTATION_VISUAL_CHECK_PATH.read_text(encoding="utf-8")
         for fragment in (
@@ -1264,6 +1263,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, checker)
+        self.assertNotIn('    "/models/",', checker)
 
     def test_installation_matches_current_transformers_workflow(self):
         source = INSTALLATION_PATH.read_text(encoding="utf-8")
@@ -2629,12 +2629,10 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 self.assertTrue(localized_home.is_file())
                 localized_source = localized_home.read_text(encoding="utf-8")
                 self.assertIn('<div class="vh-doc-home" markdown>', localized_source)
-                self.assertIn('<section class="vh-home-models"', localized_source)
-                self.assertIn('href="models/providers/"', localized_source)
-                self.assertIn('href="models/training-support/"', localized_source)
-                for count in (68, 34, 23, 11):
-                    self.assertIn(f"<strong>{count}</strong>", localized_source)
+                self.assertNotIn("vh-home-models", localized_source)
                 self.assertIn('<div class="grid cards" markdown>', localized_source)
+                self.assertEqual(localized_source.count("-   **"), 9)
+                self.assertNotIn("models/index.md", localized_source)
 
     def test_homepages_keep_the_transformers_shell_visible(self):
         parity_inventory = (DOCS_ROOT / "project" / "transformers-parity.md").read_text(encoding="utf-8")
@@ -2646,6 +2644,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         for homepage in homepages:
             with self.subTest(homepage=homepage):
                 source = homepage.read_text(encoding="utf-8")
+                self.assertNotIn("models/index.md", source)
                 frontmatter = source.split("---\n", 2)[1]
                 self.assertNotIn("hide:", frontmatter)
                 self.assertNotIn("navigation", frontmatter)
@@ -3949,19 +3948,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             f"**{counts['voice-activity-detection']} VAD providers**",
             homepage,
         )
-        self.assertIn(f"<strong>{len(specs)}</strong><span>Models</span>", homepage)
-        self.assertIn(
-            f"<strong>{counts['text-to-speech']}</strong><span>TTS</span>",
-            homepage,
-        )
-        self.assertIn(
-            f"<strong>{counts['automatic-speech-recognition']}</strong><span>ASR</span>",
-            homepage,
-        )
-        self.assertIn(
-            f"<strong>{counts['voice-activity-detection']}</strong><span>VAD</span>",
-            homepage,
-        )
+        self.assertNotIn("vh-home-models", homepage)
 
     def test_inference_registry_uses_the_default_installation(self):
         from voicehub import list_model_specs
