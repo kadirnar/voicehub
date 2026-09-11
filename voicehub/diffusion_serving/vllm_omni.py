@@ -7,7 +7,7 @@ from importlib import import_module, metadata, util
 from types import ModuleType
 from typing import Any
 
-from voicehub.models.registry import normalize_model_type
+from voicehub.registry import normalize_model_type
 
 _DISTRIBUTION_NAMES = ("vllm-omni", "vllm_omni")
 _REGISTRY_MODULE = "vllm_omni.diffusion.registry"

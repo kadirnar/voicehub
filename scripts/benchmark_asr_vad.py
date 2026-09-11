@@ -318,7 +318,7 @@ def _load_audio(path: str):
 def _strategy(args: argparse.Namespace, strategy_name: str | None):
     if strategy_name is None:
         return None
-    from voicehub import TorchCompileInferenceStrategy
+    from voicehub.inference_strategy import TorchCompileInferenceStrategy
 
     return TorchCompileInferenceStrategy(
         backend=args.compile_backend,

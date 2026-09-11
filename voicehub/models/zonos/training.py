@@ -12,11 +12,11 @@ import torch
 from torch import Tensor
 from torch.nn import functional as F
 
-from voicehub.architectures.zonos.checkpoint import save_zonos_pretrained
-from voicehub.architectures.zonos.metadata import NATIVE_ZONOS_FORMAT
-from voicehub.architectures.zonos.modeling import ZonosForCausalLM
 from voicehub.checkpointing import save_safetensors
-from voicehub.modeling_outputs import TTSTrainingOutput
+from voicehub.models.zonos.native.checkpoint import save_zonos_pretrained
+from voicehub.models.zonos.native.metadata import NATIVE_ZONOS_FORMAT
+from voicehub.models.zonos.native.modeling import ZonosForCausalLM
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.training.adapters import CausalLMTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 

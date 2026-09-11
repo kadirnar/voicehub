@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2110.07205" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/microsoft/SpeechT5" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling_speecht5.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/speecht5.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -108,7 +108,7 @@ integration. This page is generated from its registry contract. [Open the `speec
 
 - **Paper:** [SpeechT5: Unified-Modal Encoder-Decoder Pre-Training for Spoken Language Processing](https://arxiv.org/abs/2110.07205)
 - **Upstream GitHub:** [SpeechT5](https://github.com/microsoft/SpeechT5)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling_speecht5.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling.py)
 
 ## Configuration
 
@@ -194,8 +194,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.speecht5.modeling_speecht5.SpeechT5ForTextToSpeech` |
-| Configuration | `voicehub.models.speecht5.configuration_speecht5.SpeechT5Config` |
+| Implementation | `voicehub.models.speecht5.modeling.SpeechT5ForTextToSpeech` |
+| Configuration | `voicehub.models.speecht5.configuration.SpeechT5Config` |
 | Source provenance | `voicehub/models/speecht5/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -220,7 +220,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `SpeechT5Config`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/configuration_speecht5.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -239,7 +239,7 @@ SpeechT5Config(**config_kwargs)
 
 ### `SpeechT5ForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling_speecht5.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/speecht5/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

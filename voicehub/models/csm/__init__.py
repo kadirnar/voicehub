@@ -5,29 +5,29 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from voicehub.architectures.csm import CSMArchitectureConfig, CSMModel
-    from voicehub.models.csm.configuration_csm import CSMConfig
-    from voicehub.models.csm.inference import CSMTTS, CSMForTextToSpeech
+    from voicehub.models.csm.configuration import CSMConfig
+    from voicehub.models.csm.modeling import CSMTTS, CSMForTextToSpeech
+    from voicehub.models.csm.native import CSMArchitectureConfig, CSMModel
 
 _PUBLIC_IMPORTS = {
     "CSMArchitectureConfig": (
-        "voicehub.architectures.csm.configuration",
+        "voicehub.models.csm.native.configuration",
         "CSMArchitectureConfig",
     ),
     "CSMModel": (
-        "voicehub.architectures.csm.modeling",
+        "voicehub.models.csm.native.modeling",
         "CSMModel",
     ),
     "CSMConfig": (
-        "voicehub.models.csm.configuration_csm",
+        "voicehub.models.csm.configuration",
         "CSMConfig",
     ),
     "CSMForTextToSpeech": (
-        "voicehub.models.csm.inference",
+        "voicehub.models.csm.modeling",
         "CSMForTextToSpeech",
     ),
     "CSMTTS": (
-        "voicehub.models.csm.inference",
+        "voicehub.models.csm.modeling",
         "CSMTTS",
     ),
 }

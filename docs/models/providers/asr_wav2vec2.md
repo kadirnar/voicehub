@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2006.11477" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/facebookresearch/fairseq" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/modeling_asr_wav2vec2.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_wav2vec2.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -106,7 +106,7 @@ integration. This page is generated from its registry contract. [Open the `asr_w
 
 - **Paper:** [wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations](https://arxiv.org/abs/2006.11477)
 - **Upstream GitHub:** [fairseq](https://github.com/facebookresearch/fairseq)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/modeling_asr_wav2vec2.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/modeling.py)
 
 ## Configuration
 
@@ -192,8 +192,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_wav2vec2.modeling_asr_wav2vec2.Wav2Vec2ForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_wav2vec2.configuration_asr_wav2vec2.Wav2Vec2ASRConfig` |
+| Implementation | `voicehub.models.asr_wav2vec2.modeling.Wav2Vec2ForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_wav2vec2.configuration.Wav2Vec2ASRConfig` |
 | Source provenance | No integration-specific bundled `SOURCE.json` is declared for this registry entry. |
 | License | Checkpoint-specific |
 
@@ -218,7 +218,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `Wav2Vec2ASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/configuration_asr_wav2vec2.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -237,7 +237,7 @@ Wav2Vec2ASRConfig(**config_kwargs)
 
 ### `Wav2Vec2ForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/modeling_asr_wav2vec2.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wav2vec2/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

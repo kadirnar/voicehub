@@ -4,8 +4,8 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.conversationtts.decoder import ConversationRMSNorm, build_llama32_decoder
-from voicehub.models.conversationtts.configuration_conversationtts import ConversationTTSConfig
+from voicehub.models.conversationtts.configuration import ConversationTTSConfig
+from voicehub.models.conversationtts.native.decoder import ConversationRMSNorm, build_llama32_decoder
 from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.Text2ID.text_tokenizer import TextTokenizer
 
 PROJECT_ROOT = Path(__file__).parents[1]

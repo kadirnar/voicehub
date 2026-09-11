@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/neuphonic/neutts" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/neutts/modeling_neutts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/neutts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/neutts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -110,7 +110,7 @@ integration. This page is generated from its registry contract. [Open the `neutt
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [NeuTTS](https://github.com/neuphonic/neutts)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/neutts/modeling_neutts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/neutts/modeling.py)
 
 ## Configuration
 
@@ -196,8 +196,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.neutts.modeling_neutts.NeuTTSForTextToSpeech` |
-| Configuration | `voicehub.models.neutts.configuration_neutts.NeuTTSConfig` |
+| Implementation | `voicehub.models.neutts.modeling.NeuTTSForTextToSpeech` |
+| Configuration | `voicehub.models.neutts.configuration.NeuTTSConfig` |
 | Source provenance | `voicehub/models/neutts/source/SOURCE.json` |
 | License | [NeuTTS-Open-License-1.0](https://github.com/neuphonic/neutts) |
 
@@ -222,7 +222,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `NeuTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/neutts/configuration_neutts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/neutts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -241,7 +241,7 @@ NeuTTSConfig(**config_kwargs)
 
 ### `NeuTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/neutts/modeling_neutts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/neutts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

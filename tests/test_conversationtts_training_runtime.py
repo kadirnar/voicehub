@@ -6,22 +6,23 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from voicehub import Trainer, TrainingArguments
-from voicehub.architectures.conversationtts.checkpoint import (
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.conversationtts.inference import ConversationTTSConfig, ConversationTTSForTextToSpeech
+from voicehub.models.conversationtts.native.checkpoint import (
     export_conversationtts_checkpoint,
     load_conversationtts_checkpoint,
 )
-from voicehub.architectures.conversationtts.processing import (
+from voicehub.models.conversationtts.native.processing import (
     ConversationTTSProtocol,
     build_conversationtts_sequence,
     collate_conversationtts_sequences,
 )
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.models.conversationtts.inference import ConversationTTSConfig, ConversationTTSForTextToSpeech
 from voicehub.models.conversationtts.runtime import resume_for_inference
 from voicehub.registry import get_model_spec
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.contracts import TrainingSupport
 from voicehub.training.specs import get_training_spec
+from voicehub.training.trainer import Trainer
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
@@ -48,7 +49,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
             checkpoint = Path(directory) / "checkpoint.pt"
             checkpoint.touch()
             with patch(
-                    "voicehub.architectures.conversationtts.checkpoint.torch.load",
+                    "voicehub.models.conversationtts.native.checkpoint.torch.load",
                     loader,
             ):
                 report = resume_for_inference(
@@ -77,7 +78,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
             checkpoint = Path(directory) / "checkpoint.pt"
             checkpoint.touch()
             with patch(
-                    "voicehub.architectures.conversationtts.checkpoint.torch.load",
+                    "voicehub.models.conversationtts.native.checkpoint.torch.load",
                     loader,
             ):
                 report = load_conversationtts_checkpoint(
@@ -102,7 +103,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
             checkpoint.touch()
             with (
                     patch(
-                        "voicehub.architectures.conversationtts.checkpoint."
+                        "voicehub.models.conversationtts.native.checkpoint."
                         "torch.load",
                         loader,
                     ),
@@ -127,7 +128,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
             checkpoint.touch()
             with (
                     patch(
-                        "voicehub.architectures.conversationtts.checkpoint."
+                        "voicehub.models.conversationtts.native.checkpoint."
                         "torch.load",
                         loader,
                     ),
@@ -148,7 +149,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
             checkpoint.touch()
             with (
                     patch(
-                        "voicehub.architectures.conversationtts.checkpoint."
+                        "voicehub.models.conversationtts.native.checkpoint."
                         "torch.load",
                         loader,
                     ),
@@ -175,7 +176,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
             checkpoint.touch()
             with (
                     patch(
-                        "voicehub.architectures.conversationtts.checkpoint."
+                        "voicehub.models.conversationtts.native.checkpoint."
                         "torch.load",
                         loader,
                     ),
@@ -280,7 +281,7 @@ class ConversationTTSProcessingTests(unittest.TestCase):
         self.assertEqual(batch["labels"][1, 3].tolist(), [10, 10])
 
     def test_framed_batch_runs_through_the_native_two_level_objective(self):
-        from voicehub.architectures.conversationtts.decoder import build_llama32_decoder
+        from voicehub.models.conversationtts.native.decoder import build_llama32_decoder
         from voicehub.models.conversationtts.source.conversationtts.models import model_new
 
         def tiny_decoder():
@@ -517,7 +518,7 @@ class ConversationTTSTrainingRuntimeTests(unittest.TestCase):
             imported.append(name)
             if name == "torch":
                 return self.torch
-            if name == "voicehub.architectures.conversationtts.modeling":
+            if name == "voicehub.models.conversationtts.native.modeling":
                 return self.model_module
             if name.endswith("inference.generator"):
                 return self.generator_module
@@ -529,12 +530,12 @@ class ConversationTTSTrainingRuntimeTests(unittest.TestCase):
         with (
                 patch(
                     "voicehub.models.conversationtts."
-                    "modeling_conversationtts.import_optional",
+                    "modeling.import_optional",
                     side_effect=import_runtime,
                 ),
                 patch(
                     "voicehub.models.conversationtts."
-                    "modeling_conversationtts.resume_for_inference",
+                    "modeling.resume_for_inference",
                     side_effect=restore_checkpoint,
                 ),
                 patch.object(

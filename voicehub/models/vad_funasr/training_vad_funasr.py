@@ -314,7 +314,7 @@ class NativeFSMNVADTrainingAdapter(FrameClassificationTrainingAdapter):
         return FSMNVADTrainingDataset(records, **kwargs)
 
     def recipe_resume_configuration(self) -> Mapping[str, Any]:
-        from voicehub.architectures.fsmn_vad.metadata import FUNASR_HF_REVISION, FUNASR_SOURCE_REVISION
+        from voicehub.models.vad_funasr.native.metadata import FUNASR_HF_REVISION, FUNASR_SOURCE_REVISION
 
         configuration = dict(super().recipe_resume_configuration())
         configuration.update({

@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/suno-ai/bark" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/modeling_bark.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/bark.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -104,7 +104,7 @@ integration. This page is generated from its registry contract. [Open the `bark`
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Bark](https://github.com/suno-ai/bark)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/modeling_bark.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/modeling.py)
 
 ## Configuration
 
@@ -193,9 +193,9 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.bark.modeling_bark.BarkForTextToSpeech` |
-| Configuration | `voicehub.models.bark.configuration_bark.BarkConfig` |
-| Source provenance | `voicehub/architectures/bark/SOURCE.json` |
+| Implementation | `voicehub.models.bark.modeling.BarkForTextToSpeech` |
+| Configuration | `voicehub.models.bark.configuration.BarkConfig` |
+| Source provenance | `voicehub/models/bark/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -219,7 +219,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `BarkConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/configuration_bark.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -238,7 +238,7 @@ BarkConfig(**config_kwargs)
 
 ### `BarkForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/modeling_bark.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/bark/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/1911.01255" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/pyannote/pyannote-audio" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/modeling_vad_pyannote_segmentation.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/vad_pyannote_segmentation.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -101,7 +101,7 @@ The public VAD contract does not select a spoken language; validate checkpoint a
 
 - **Paper:** [pyannote.audio: neural building blocks for speaker diarization](https://arxiv.org/abs/1911.01255)
 - **Upstream GitHub:** [pyannote.audio](https://github.com/pyannote/pyannote-audio)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/modeling_vad_pyannote_segmentation.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/modeling.py)
 
 ## Configuration
 
@@ -181,9 +181,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.vad_pyannote_segmentation.modeling_vad_pyannote_segmentation.PyannoteSegmentationVADForVoiceActivityDetection` |
-| Configuration | `voicehub.models.vad_pyannote_segmentation.configuration_vad_pyannote_segmentation.PyannoteSegmentationVADConfig` |
-| Source provenance | `voicehub/architectures/pyannet/SOURCE.json` |
+| Implementation | `voicehub.models.vad_pyannote_segmentation.modeling.PyannoteSegmentationVADForVoiceActivityDetection` |
+| Configuration | `voicehub.models.vad_pyannote_segmentation.configuration.PyannoteSegmentationVADConfig` |
+| Source provenance | `voicehub/models/vad_pyannote/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -207,7 +207,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `PyannoteSegmentationVADConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/configuration_vad_pyannote_segmentation.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -226,7 +226,7 @@ PyannoteSegmentationVADConfig(**config_kwargs)
 
 ### `PyannoteSegmentationVADForVoiceActivityDetection`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/modeling_vad_pyannote_segmentation.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_segmentation/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

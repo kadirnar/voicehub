@@ -25,7 +25,7 @@ from scripts.scaffold_model import (
     scaffold_files,
 )
 from voicehub.models.manifests import discover_builtin_model_manifests
-from voicehub.models.registry import discover_manifest_model_specs
+from voicehub.registry import discover_manifest_model_specs
 from voicehub.training.specs import discover_manifest_training_specs
 
 
@@ -67,9 +67,10 @@ class ModelScaffoldTests(unittest.TestCase):
             "tts": "TEXT_TO_SPEECH",
             "asr": "AUTOMATIC_SPEECH_RECOGNITION",
             "vad": "VOICE_ACTIVITY_DETECTION",
+            "codec": "AUDIO_CODEC",
         }[task]
         model_class = "AuroraTTS" + task_template.model_suffix
-        model_path = root / "voicehub/models/auroratts/modeling_auroratts.py"
+        model_path = root / "voicehub/models/auroratts/modeling.py"
         model_path.write_text(
             model_path.read_text(encoding="utf-8").replace(
                 f"IMPLEMENTATION_STATUS = {IMPLEMENTATION_STATUS!r}",
@@ -90,18 +91,18 @@ class ModelScaffoldTests(unittest.TestCase):
                 _MODEL_SPECS = (
                     ModelSpec(
                         "auroratts",
-                        "voicehub.models.auroratts.modeling_auroratts",
+                        "voicehub.models.auroratts.modeling",
                         {model_class!r},
                         "acme/aurora-base",
                         capabilities=({task_template.task!r},),
-                        config_module="voicehub.models.auroratts.configuration_auroratts",
+                        config_module="voicehub.models.auroratts.configuration",
                         config_class="AuroraTTSConfig",
                         task=SpeechTask.{task_enum},
                     ),
                 )
                 _BUILTIN_MODEL_ALIASES = {{"aurora-tts": "auroratts"}}
                 ''')
-        registry_path = root / "voicehub/models/registry.py"
+        registry_path = root / "voicehub/models/catalog.py"
         registry_path.write_text(registry_source, encoding="utf-8")
         if training_source is None:
             training_source = textwrap.dedent(
@@ -149,10 +150,13 @@ class ModelScaffoldTests(unittest.TestCase):
                 "components=()",
             ),
         }
+        expected["codec"] = (
+            "PreTrainedCodecModel", "_encode", "_decode", "AutoModelForAudioCodec.register(",
+            "TrainingFamily.AUDIO_CODEC")
         required_paths = {
             Path("voicehub/models/auroratts/__init__.py"),
-            Path("voicehub/models/auroratts/configuration_auroratts.py"),
-            Path("voicehub/models/auroratts/modeling_auroratts.py"),
+            Path("voicehub/models/auroratts/configuration.py"),
+            Path("voicehub/models/auroratts/modeling.py"),
             Path("voicehub/models/auroratts/runtime.py"),
             Path("voicehub/models/auroratts/registration.py"),
             Path("voicehub/models/auroratts/model-integration.json"),
@@ -264,7 +268,7 @@ class ModelScaffoldTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            registry_path = root / "voicehub/models/registry.py"
+            registry_path = root / "voicehub/models/catalog.py"
             registry_path.write_text("MODEL_SPECS = ()\n", encoding="utf-8")
 
             errors = "\n".join(check_model_scaffold(root, "auroratts"))
@@ -302,7 +306,7 @@ class ModelScaffoldTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self._complete_scaffold(root)
-            (root / "voicehub/models/registry.py").unlink()
+            (root / "voicehub/models/catalog.py").unlink()
             (root / "voicehub/training/specs.py").unlink()
 
             self.assertEqual(check_model_scaffold(root, "auroratts"), ())
@@ -378,10 +382,10 @@ class ModelScaffoldTests(unittest.TestCase):
             _MODEL_SPECS = (
                 ModelSpec(
                     "auroratts",
-                    "voicehub.models.auroratts.modeling_auroratts",
+                    "voicehub.models.auroratts.modeling",
                     "AuroraTTSForTextToSpeech",
                     "acme/aurora-base",
-                    config_module="voicehub.models.auroratts.configuration_auroratts",
+                    config_module="voicehub.models.auroratts.configuration",
                     config_class="AuroraTTSConfig",
                 ),
             )
@@ -426,7 +430,7 @@ class ModelScaffoldTests(unittest.TestCase):
                     "_BUILTIN_TRAINING_SPECS = (\n" + textwrap.indent(first.training_spec, "    ") + ")\n")
                 ast.parse(registry_source, filename="generated-registry.py")
                 ast.parse(training_source, filename="generated-training.py")
-                (root / "voicehub/models/registry.py").write_text(
+                (root / "voicehub/models/catalog.py").write_text(
                     registry_source,
                     encoding="utf-8",
                 )
@@ -555,7 +559,7 @@ class ModelScaffoldTests(unittest.TestCase):
                 json.dumps(manifest, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
-            (root / "voicehub/models/registry.py").write_text(
+            (root / "voicehub/models/catalog.py").write_text(
                 "_MODEL_SPECS = ()\n_BUILTIN_MODEL_ALIASES = {}\n",
                 encoding="utf-8",
             )
@@ -587,7 +591,7 @@ class ModelScaffoldTests(unittest.TestCase):
                 import json
                 import sys
                 from pathlib import Path
-                from voicehub.models.registry import discover_manifest_model_specs
+                from voicehub.registry import discover_manifest_model_specs
                 from voicehub.training.specs import discover_manifest_training_specs
 
                 root = Path({str(root / "voicehub/models")!r})
@@ -834,7 +838,7 @@ class ModelScaffoldTests(unittest.TestCase):
         output = stdout.getvalue()
         self.assertEqual(result, 0)
         self.assertEqual(before, after)
-        self.assertIn("voicehub/models/registry.py :: _MODEL_SPECS", output)
+        self.assertIn("voicehub/models/catalog.py :: _MODEL_SPECS", output)
         self.assertIn("voicehub/training/specs.py :: _BUILTIN_TRAINING_SPECS", output)
         self.assertIn("SpeechTask.AUTOMATIC_SPEECH_RECOGNITION", output)
         self.assertIn("'aurora-tts': 'auroratts'", output)

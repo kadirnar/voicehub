@@ -196,7 +196,7 @@ def load_higgs_training_backend(
     **kwargs: Any,
 ):
     """Compatibility loader returning the native cache-free runtime."""
-    from voicehub.architectures.higgs_audio_v2.runtime import load_higgs_audio_v2_runtime
+    from voicehub.models.higgstts.native.runtime import load_higgs_audio_v2_runtime
 
     return load_higgs_audio_v2_runtime(
         model_name_or_path,
@@ -209,7 +209,7 @@ def load_higgs_training_backend(
 
 def __getattr__(name: str) -> Any:
     if name == "HiggsTrainingBackend":
-        from voicehub.architectures.higgs_audio_v2.runtime import HiggsAudioV2Runtime
+        from voicehub.models.higgstts.native.runtime import HiggsAudioV2Runtime
 
         return HiggsAudioV2Runtime
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

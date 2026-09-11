@@ -402,7 +402,7 @@ class NativeTENVADTrainingAdapter(FrameClassificationTrainingAdapter):
         labels,
         context,
     ):
-        from voicehub.architectures.ten_vad.objective import ten_vad_binary_cross_entropy
+        from voicehub.models.vad_ten.native.objective import ten_vad_binary_cross_entropy
 
         self._require_predictions_and_labels(predictions, labels)
         return ten_vad_binary_cross_entropy(

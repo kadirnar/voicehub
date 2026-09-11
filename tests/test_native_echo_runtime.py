@@ -4,10 +4,10 @@ import unittest
 
 import torch
 
-from voicehub.architectures import get_architecture_spec
 from voicehub.models.echo.model import EchoDiT
 from voicehub.models.echo.sampling import _assign_validated_state, _discard_blockwise_only_modules
 from voicehub.registry import get_model_spec
+from voicehub.runtime import get_architecture_spec
 
 
 def _tiny_echo() -> EchoDiT:

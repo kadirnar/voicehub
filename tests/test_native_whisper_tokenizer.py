@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from voicehub.architectures.whisper.tokenization import (
+from voicehub.models.asr_whisper_native.native.tokenization import (
     LANGUAGES,
     TIMESTAMP_COUNT,
     WhisperTokenizer,
@@ -389,7 +389,8 @@ class HuggingFaceWhisperTokenizerTests(unittest.TestCase):
 class WhisperTokenizerDependencyTests(unittest.TestCase):
 
     def test_module_imports_only_standard_library_and_voicehub(self):
-        module_path = (Path(__file__).parents[1] / "voicehub/architectures/whisper/tokenization.py")
+        module_path = (
+            Path(__file__).parents[1] / "voicehub/models/asr_whisper_native/native/tokenization.py")
         tree = ast.parse(module_path.read_text(encoding="utf-8"))
         external = set()
         standard_roots = {

@@ -15,7 +15,9 @@ from unittest.mock import Mock
 
 import torch
 
-from voicehub.architectures.espnet_transformer.checkpoint import (
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
+from voicehub.hub import resolve_pretrained_file, write_json_file
+from voicehub.models.asr_espnet.native.checkpoint import (
     NATIVE_ESPNET_FILENAME,
     NATIVE_ESPNET_FORMAT,
     NATIVE_ESPNET_LM_FILENAME,
@@ -25,9 +27,9 @@ from voicehub.architectures.espnet_transformer.checkpoint import (
     native_espnet_lm_tensor_shapes,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.espnet_transformer.configuration import ESPnetLibriSpeechTransformerConfig
-from voicehub.architectures.espnet_transformer.decoding import ESPnetCTCPrefixScorer, ESPnetJointBeamSearch
-from voicehub.architectures.espnet_transformer.metadata import (
+from voicehub.models.asr_espnet.native.configuration import ESPnetLibriSpeechTransformerConfig
+from voicehub.models.asr_espnet.native.decoding import ESPnetCTCPrefixScorer, ESPnetJointBeamSearch
+from voicehub.models.asr_espnet.native.metadata import (
     ESPNET_ASR_STATE_VALUES,
     ESPNET_ASR_TENSOR_COUNT,
     ESPNET_ASR_TENSOR_FINGERPRINT,
@@ -41,15 +43,13 @@ from voicehub.architectures.espnet_transformer.metadata import (
     ESPNET_SOURCE_REVISION,
     ESPNET_TOKEN_LIST_SHA256,
 )
-from voicehub.architectures.espnet_transformer.modeling import (
+from voicehub.models.asr_espnet.native.modeling import (
     ESPnetLibriSpeechTransformerForASR,
     ESPnetSequentialRNNLanguageModel,
 )
-from voicehub.architectures.espnet_transformer.registration import create_espnet_architecture_spec
-from voicehub.architectures.espnet_transformer.tokenization import ESPnetLibriSpeechTokenizer
-from voicehub.architectures.espnet_transformer.training import NativeESPnetASRTrainingAdapter
-from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.hub import resolve_pretrained_file, write_json_file
+from voicehub.models.asr_espnet.native.registration import create_espnet_architecture_spec
+from voicehub.models.asr_espnet.native.tokenization import ESPnetLibriSpeechTokenizer
+from voicehub.models.asr_espnet.native.training import NativeESPnetASRTrainingAdapter
 from voicehub.models.asr_native.configuration import ESPnetASRConfig
 from voicehub.models.asr_native.espnet import ESPnetASRForSpeechRecognition
 from voicehub.training import ASRDataset, get_training_spec
@@ -177,7 +177,7 @@ def _write_native_artifact(root: Path):
         encoding="utf-8",
     )
     values = config.to_dict()
-    values["architectures"] = [
+    values['architectures'] = [
         "ESPnetASRForSpeechRecognition",
         "ESPnetLibriSpeechTransformerForASR",
     ]
@@ -189,8 +189,8 @@ def _write_native_artifact(root: Path):
 class NativeESPnetArchitectureTests(unittest.TestCase):
 
     def test_shared_registry_and_trainer_select_the_native_recipe(self):
-        from voicehub.architectures import get_architecture_spec
         from voicehub.registry import get_model_spec
+        from voicehub.runtime import get_architecture_spec
         from voicehub.training.recipes import BUILTIN_MODEL_ADAPTERS
         from voicehub.training.specs import get_training_spec
 
@@ -206,7 +206,7 @@ class NativeESPnetArchitectureTests(unittest.TestCase):
         self.assertEqual(training.default_phase, "speech_recognition")
         self.assertEqual(
             training.adapter_factory,
-            ("voicehub.architectures.espnet_transformer.training:"
+            ("voicehub.models.asr_espnet.native.training:"
              "NativeESPnetASRTrainingAdapter"),
         )
         self.assertEqual(

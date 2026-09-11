@@ -15,8 +15,12 @@ except ModuleNotFoundError:  # pragma: no cover - optional test environment
     nn = None
 
 if torch is not None:
-    from voicehub.architectures.kokoro.albert import KokoroAlbertModel
-    from voicehub.architectures.kokoro.checkpoint import (
+    from voicehub.checkpointing.errors import CheckpointCompatibilityError
+    from voicehub.models.kokoro.artifacts import resolve_kokoro_artifacts
+    from voicehub.models.kokoro.model import KModel
+    from voicehub.models.kokoro.modeling import KOKORO_SAMPLE_RATE, KokoroConfig, KokoroForTextToSpeech
+    from voicehub.models.kokoro.native.albert import KokoroAlbertModel
+    from voicehub.models.kokoro.native.checkpoint import (
         KOKORO_CHECKPOINT_REVISION,
         KOKORO_LEGACY_PARAMETER_COUNT,
         KOKORO_LEGACY_TENSOR_COUNT,
@@ -26,12 +30,8 @@ if torch is not None:
         load_native_kokoro_voice,
         save_native_kokoro_checkpoint,
     )
-    from voicehub.architectures.kokoro.configuration import KokoroAlbertConfig
-    from voicehub.architectures.kokoro.registration import KOKORO_SOURCE_REVISION, create_kokoro_architecture_spec
-    from voicehub.checkpointing.errors import CheckpointCompatibilityError
-    from voicehub.models.kokoro.artifacts import resolve_kokoro_artifacts
-    from voicehub.models.kokoro.inference import KOKORO_SAMPLE_RATE, KokoroConfig, KokoroForTextToSpeech
-    from voicehub.models.kokoro.model import KModel
+    from voicehub.models.kokoro.native.configuration import KokoroAlbertConfig
+    from voicehub.models.kokoro.native.registration import KOKORO_SOURCE_REVISION, create_kokoro_architecture_spec
     from voicehub.models.kokoro.pipeline import (
         GraphemeFallbackFrontend,
         KokoroFrontendError,

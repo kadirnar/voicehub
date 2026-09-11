@@ -7,8 +7,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from voicehub.architectures.ten_vad.checkpoint import NATIVE_TEN_VAD_FILENAME, convert_ten_vad_onnx_checkpoint
 from voicehub.hub import resolve_pretrained_file
+from voicehub.models.vad_ten.native.checkpoint import NATIVE_TEN_VAD_FILENAME, convert_ten_vad_onnx_checkpoint
 from voicehub.path_utils import is_explicit_local_path
 
 

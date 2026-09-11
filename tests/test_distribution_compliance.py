@@ -32,10 +32,10 @@ class DistributionComplianceTests(unittest.TestCase):
     def test_compliance_inventory_covers_manifests_licenses_and_notices(self):
         files = set(self.distribution.compliance_package_files(PROJECT_ROOT))
 
-        self.assertIn("voicehub/architectures/bark/SOURCE.json", files)
-        self.assertIn("voicehub/architectures/bark/THIRD_PARTY_LICENSE", files)
-        self.assertIn("voicehub/architectures/medasr/MODEL_TERMS_NOTICE", files)
-        self.assertIn("voicehub/architectures/vibevoice/source/THIRD_PARTY_NOTICES.md", files)
+        self.assertIn("voicehub/models/bark/native/SOURCE.json", files)
+        self.assertIn("voicehub/models/bark/native/THIRD_PARTY_LICENSE", files)
+        self.assertIn("voicehub/models/asr_medasr/native/MODEL_TERMS_NOTICE", files)
+        self.assertIn("voicehub/models/vibevoice/native/source/THIRD_PARTY_NOTICES.md", files)
         self.assertEqual(
             {path
              for path in files if path.endswith("SOURCE.json")},

@@ -13,10 +13,9 @@ import torch
 from torch import nn
 
 from voicehub.auto import AutoConfig, AutoModelForTextToSpeech
-from voicehub.base_model import BaseTTSModel
-from voicehub.configuration_utils import VoiceHubConfig
-from voicehub.modeling_outputs import TTSOutput
-from voicehub.modeling_utils import PreTrainedTTSModel
+from voicehub.configuration import VoiceHubConfig
+from voicehub.models.base import BaseTTSModel
+from voicehub.models.tts import PreTrainedTTSModel
 from voicehub.optimization import (
     OptimizationCapabilities,
     OptimizationCompatibilityError,
@@ -35,11 +34,12 @@ from voicehub.optimization import (
     list_tts_optimization_support,
     resolve_tts_optimization,
 )
+from voicehub.outputs import TTSOutput
 from voicehub.registry import list_model_specs
 from voicehub.tasks import SpeechTask
-from voicehub.trainer import Trainer
-from voicehub.trainer_utils import OPTIMIZATION_MANIFEST_NAME
-from voicehub.training_args import TrainingArguments
+from voicehub.training.arguments import TrainingArguments
+from voicehub.training.trainer import Trainer
+from voicehub.training.utils import OPTIMIZATION_MANIFEST_NAME
 
 
 def _context(

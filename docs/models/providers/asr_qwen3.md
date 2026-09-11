@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/QwenLM/Qwen3-ASR" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling_asr_qwen3.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_qwen3.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -108,7 +108,7 @@ The same checkpoint also names Anhui, Dongbei, Fujian, Gansu, Guizhou, Hebei, He
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Qwen3-ASR](https://github.com/QwenLM/Qwen3-ASR)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling_asr_qwen3.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling.py)
 
 ## Configuration
 
@@ -194,9 +194,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_qwen3.modeling_asr_qwen3.Qwen3ASRForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_qwen3.configuration_asr_qwen3.Qwen3ASRConfig` |
-| Source provenance | `voicehub/architectures/qwen3_asr/SOURCE.json` |
+| Implementation | `voicehub.models.asr_qwen3.modeling.Qwen3ASRForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_qwen3.configuration.Qwen3ASRConfig` |
+| Source provenance | `voicehub/models/asr_qwen3/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -220,7 +220,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `Qwen3ASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/configuration_asr_qwen3.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -239,7 +239,7 @@ Qwen3ASRConfig(**config_kwargs)
 
 ### `Qwen3ASRForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling_asr_qwen3.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_qwen3/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

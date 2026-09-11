@@ -1,4 +1,4 @@
-"""Declarative, framework-lazy training profiles for audio architectures."""
+"""Declarative, framework-lazy training profiles for audio runtime."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from typing import Any
 from voicehub.dependencies import normalize_import_path
 from voicehub.errors import UnknownModelError
 from voicehub.models.manifests import BuiltinModelManifest, discover_builtin_model_manifests
-from voicehub.models.registry import get_model_spec, normalize_model_type
+from voicehub.registry import get_model_spec, normalize_model_type
 from voicehub.tasks import SpeechTask
 from voicehub.training.contracts import (
     TrainingContext,
@@ -44,6 +44,7 @@ class TrainingFamily(str, Enum):
     RNNT = "rnnt"
     TDT = "tdt"
     AUDIO_CLASSIFICATION = "audio-classification"
+    AUDIO_CODEC = "audio-codec"
     FRAME_CLASSIFICATION = "frame-classification"
     NATIVE_ASR_DISPATCH = "native-asr-dispatch"
     UPSTREAM_NATIVE = "upstream-native"
@@ -536,7 +537,7 @@ _BUILTIN_TRAINING_SPECS = (
         adapter_factory="voicehub.models.orpheustts.training:OrpheusTrainingAdapter",
         module_paths=("model", ),
         component_paths=("model", ),
-        source_entrypoints=("voicehub.architectures.causal_lm.modeling:"
+        source_entrypoints=("voicehub.models.causal_lm.native.modeling:"
                             "CausalLMForCausalLM.forward", ),
         dataset_factory=("voicehub.models.orpheustts.training:"
                          "build_training_dataset"),
@@ -561,7 +562,7 @@ _BUILTIN_TRAINING_SPECS = (
         adapter_factory="voicehub.models.dia.training:DiaTrainingAdapter",
         module_paths=("model", ),
         component_paths=("model", ),
-        source_entrypoints=("voicehub.architectures.dia.modeling:"
+        source_entrypoints=("voicehub.models.dia.native.modeling:"
                             "DiaForConditionalGeneration.forward", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -781,9 +782,9 @@ _BUILTIN_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         source_entrypoints=(
-            "voicehub.architectures.conversationtts.modeling:"
+            "voicehub.models.conversationtts.native.modeling:"
             "ConversationTTSModel.forward",
-            "voicehub.architectures.conversationtts.processing:"
+            "voicehub.models.conversationtts.native.processing:"
             "build_conversationtts_sequence",
             "voicehub.models.conversationtts.training:"
             "ConversationTTSTrainingAdapter",
@@ -863,7 +864,7 @@ _BUILTIN_TRAINING_SPECS = (
         component_paths=("model", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.causal_lm.modeling:"
+            "voicehub.models.causal_lm.native.modeling:"
             "CausalLMForCausalLM.forward",
             "voicehub.models.llasa.training:LlasaSFTDataset",
             "voicehub.models.llasa.training:LlasaTrainingAdapter",
@@ -917,9 +918,9 @@ _BUILTIN_TRAINING_SPECS = (
             "model.hifigan.discriminator",
         ),
         source_entrypoints=(
-            "voicehub.architectures.cosyvoice_native.modeling:"
+            "voicehub.models.cosyvoice.native.modeling:"
             "CosyVoiceNativeModel.forward",
-            "voicehub.models.cosyvoice_native.training_cosyvoice:"
+            "voicehub.models.cosyvoice.training_cosyvoice:"
             "CosyVoiceTrainingAdapter",
         ),
         native_training=True,
@@ -1000,7 +1001,7 @@ _BUILTIN_TRAINING_SPECS = (
             "training_model.s2.discriminator",
         ),
         source_entrypoints=(
-            "voicehub.architectures.gptsovits.training:"
+            "voicehub.models.gptsovits.native.training:"
             "GPTSoVITSStagedTrainingModel",
             "voicehub.models.gptsovits.training:"
             "GPTSoVITSTrainingAdapter",
@@ -1076,7 +1077,7 @@ _BUILTIN_TRAINING_SPECS = (
             "training_model.duration_discriminator",
         ),
         source_entrypoints=(
-            "voicehub.architectures.melotts.training:"
+            "voicehub.models.melotts.native.training:"
             "MeloTTSTrainingModel",
             "voicehub.models.melotts.training:"
             "MeloTTSTrainingAdapter",
@@ -1175,7 +1176,7 @@ _BUILTIN_TRAINING_SPECS = (
         ),
         regression_loss="l1",
         source_entrypoints=(
-            "voicehub.architectures.openvoice.modeling:"
+            "voicehub.models.openvoice.native.modeling:"
             "OpenVoiceToneColorConverter.forward",
             "voicehub.models.openvoice.training:"
             "OpenVoiceTrainingAdapter",
@@ -1216,7 +1217,7 @@ _BUILTIN_TRAINING_SPECS = (
         component_paths=("model.language_model", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.causal_lm.modeling:"
+            "voicehub.models.causal_lm.native.modeling:"
             "CausalLMForCausalLM.forward",
             "voicehub.models.outetts.training:OuteTTSSFTDataset",
         ),
@@ -1269,7 +1270,7 @@ _BUILTIN_TRAINING_SPECS = (
             },
         },
         source_entrypoints=(
-            "voicehub.architectures.parlertts.modeling:"
+            "voicehub.models.parlertts.native.modeling:"
             "ParlerTTSForConditionalGeneration.forward", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -1287,7 +1288,7 @@ _BUILTIN_TRAINING_SPECS = (
             "training_model.msd",
         ),
         source_entrypoints=(
-            "voicehub.architectures.styletts2.training:"
+            "voicehub.models.styletts2.native.training:"
             "StyleTTS2TrainingModel.forward",
             "voicehub.models.styletts2.training:"
             "StyleTTS2TrainingAdapter",
@@ -1353,24 +1354,24 @@ _BUILTIN_TRAINING_SPECS = (
         "mosstts",
         TrainingFamily.CAUSAL_LM,
         dataset_spec_factory="voicehub.training.data_contracts:build_mosstts_dataset_spec",
-        adapter_factory="voicehub.architectures.mosstts.training:NativeMossTTSTrainingAdapter",
+        adapter_factory="voicehub.models.mosstts.native.training:NativeMossTTSTrainingAdapter",
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.mosstts.modeling:"
+            "voicehub.models.mosstts.native.modeling:"
             "MossDelayModel.forward",
-            "voicehub.architectures.mosstts.modeling:"
+            "voicehub.models.mosstts.native.modeling:"
             "MossOldLocalModel.forward",
-            "voicehub.architectures.mosstts.modeling:"
+            "voicehub.models.mosstts.native.modeling:"
             "MossLocalV15Model.forward",
-            "voicehub.architectures.mosstts.modeling:"
+            "voicehub.models.mosstts.native.modeling:"
             "MossRealtimeModel.forward",
-            "voicehub.architectures.mosstts.processing:"
+            "voicehub.models.mosstts.native.processing:"
             "MossTTSProcessor.build_training_record",
-            "voicehub.architectures.mosstts.runtime:"
+            "voicehub.models.mosstts.native.runtime:"
             "MossTTSRuntime.prepare_training_batch",
-            "voicehub.architectures.mosstts.training:"
+            "voicehub.models.mosstts.native.training:"
             "NativeMossTTSTrainingAdapter",
         ),
         native_training=True,
@@ -1437,7 +1438,7 @@ _BUILTIN_TRAINING_SPECS = (
         native_training=True,
         training_default_model_name_or_path=("Qwen/Qwen3-TTS-12Hz-1.7B-Base"),
         source_entrypoints=(
-            "voicehub.architectures.qwen3_tts.modeling:"
+            "voicehub.models.qwen3tts.native.modeling:"
             "Qwen3TTSForConditionalGeneration.forward",
             "voicehub.models.qwen3tts.training:Qwen3TTSSFTDataset",
         ),
@@ -1475,9 +1476,9 @@ _BUILTIN_TRAINING_SPECS = (
         component_paths=("model.model", ),
         label_names=("target_latent", "duration_target"),
         source_entrypoints=(
-            "voicehub.architectures.irodoritts.modeling:"
+            "voicehub.models.irodoritts.native.modeling:"
             "TextToLatentRFDiT.forward",
-            "voicehub.architectures.irodoritts.training:"
+            "voicehub.models.irodoritts.native.training:"
             "irodori_training_step",
             "voicehub.models.irodoritts.training:"
             "NativeIrodoriTrainingAdapter",
@@ -1568,7 +1569,7 @@ _BUILTIN_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", "audio_codes", "audio_values"),
-        source_entrypoints=("voicehub.architectures.zonos2.modeling:"
+        source_entrypoints=("voicehub.models.zonos2.native.modeling:"
                             "Zonos2ForCausalLM.forward", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -1635,7 +1636,7 @@ _BUILTIN_TRAINING_SPECS = (
             "model.feat_encoder",
             "model.feat_decoder",
         ),
-        source_entrypoints=("voicehub.architectures.voxcpm2.modeling:"
+        source_entrypoints=("voicehub.models.voxcpm.native.modeling:"
                             "VoxCPM2Model.forward", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -1665,7 +1666,7 @@ _BUILTIN_TRAINING_SPECS = (
         adapter_factory="voicehub.models.omnivoice.training:OmniVoiceTrainingAdapter",
         module_paths=("model", ),
         component_paths=("model", ),
-        source_entrypoints=("voicehub.architectures.omnivoice.modeling:"
+        source_entrypoints=("voicehub.models.omnivoice.native.modeling:"
                             "OmniVoiceModel.forward", ),
         native_training=True,
         separate_optimizers=False,
@@ -1704,7 +1705,7 @@ _BUILTIN_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         source_entrypoints=(
-            "voicehub.architectures.higgs_audio_v2.modeling:"
+            "voicehub.models.higgstts.native.modeling:"
             "HiggsAudioV2ForConditionalGeneration.forward", ),
         native_training=True,
         separate_optimizers=False,
@@ -1759,7 +1760,7 @@ _BUILTIN_TRAINING_SPECS = (
         "xtts",
         TrainingFamily.COMPOSITE,
         dataset_spec_factory="voicehub.training.data_contracts:build_xtts_dataset_spec",
-        adapter_factory="voicehub.models.xtts_native.training_xtts:XTTSTrainingAdapter",
+        adapter_factory="voicehub.models.xtts.training_xtts:XTTSTrainingAdapter",
         module_paths=("model.gpt", ),
         component_paths=("model.gpt", ),
         loss_weights=(
@@ -1767,8 +1768,8 @@ _BUILTIN_TRAINING_SPECS = (
             ("mel_ce", 1.0),
         ),
         source_entrypoints=(
-            "voicehub.architectures.xtts2.gpt:XTTS2GPT.forward",
-            "voicehub.models.xtts_native.training_xtts:"
+            "voicehub.models.xtts.native.gpt:XTTS2GPT.forward",
+            "voicehub.models.xtts.training_xtts:"
             "XTTSTrainingAdapter",
             "TTS/tts/layers/xtts/trainer/gpt_trainer.py",
         ),
@@ -1866,7 +1867,7 @@ _BUILTIN_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         source_entrypoints=(
-            "voicehub.architectures.fishtts.modeling:"
+            "voicehub.models.fishtts.native.modeling:"
             "FishS2ForConditionalGeneration.forward",
             "voicehub.models.fishtts.training:"
             "FishSpeechTrainingAdapter.compute_source_losses",
@@ -1896,10 +1897,10 @@ _BUILTIN_TRAINING_SPECS = (
         component_paths=("model", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.csm.modeling:CSMModel.forward",
-            "voicehub.architectures.csm.processing:"
+            "voicehub.models.csm.native.modeling:CSMModel.forward",
+            "voicehub.models.csm.native.processing:"
             "CSMProcessor.training_batch",
-            "voicehub.architectures.csm.mimi:load_mimi",
+            "voicehub.models.csm.native.mimi:load_mimi",
         ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -1923,7 +1924,7 @@ _BUILTIN_TRAINING_SPECS = (
         component_paths=("model.backbone", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.neutts.modeling:"
+            "voicehub.models.neutts.native.modeling:"
             "NeuTTSBackbone.forward",
             "voicehub.models.neutts.training:NeuTTSSFTDataset",
         ),
@@ -1952,7 +1953,7 @@ _BUILTIN_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         source_entrypoints=(
-            "voicehub.architectures.supertonic.runtime:"
+            "voicehub.models.supertonic.native.runtime:"
             "NativeSupertonicRuntime.fine_tuning_loss", ),
         native_training=True,
         support=TrainingSupport.PREPROCESSED,
@@ -2021,9 +2022,9 @@ _BUILTIN_TRAINING_SPECS = (
             "training_model.discriminator",
         ),
         source_entrypoints=(
-            "voicehub.architectures.inflecttts.training:"
+            "voicehub.models.inflecttts.native.training:"
             "InflectV2TrainingModel.generator_objective",
-            "voicehub.architectures.inflecttts.training:"
+            "voicehub.models.inflecttts.native.training:"
             "InflectV2TrainingModel.discriminator_objective",
             "voicehub.models.inflecttts.training:"
             "InflectTTSTrainingAdapter",
@@ -2103,7 +2104,7 @@ _BUILTIN_TRAINING_SPECS = (
         "bark",
         TrainingFamily.COMPOSITE,
         dataset_spec_factory="voicehub.training.data_contracts:build_bark_dataset_spec",
-        adapter_factory="voicehub.architectures.bark.training:BarkTrainingAdapter",
+        adapter_factory="voicehub.models.bark.native.training:BarkTrainingAdapter",
         module_paths=("training_model.semantic", ),
         component_paths=(
             "training_model.semantic",
@@ -2112,10 +2113,10 @@ _BUILTIN_TRAINING_SPECS = (
         ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.bark.modeling:BarkModel",
-            "voicehub.architectures.bark.training:"
+            "voicehub.models.bark.native.modeling:BarkModel",
+            "voicehub.models.bark.native.training:"
             "BarkTrainingAdapter",
-            "voicehub.architectures.bark.training:"
+            "voicehub.models.bark.native.training:"
             "BarkTokenObjective",
         ),
         native_training=True,
@@ -2257,10 +2258,10 @@ _BUILTIN_TRAINING_SPECS = (
         ),
         label_names=("audio_values", ),
         source_entrypoints=(
-            "voicehub.architectures.vits.modeling.VitsModel",
-            "voicehub.architectures.vits.frontend.VitsTokenizer",
-            "voicehub.architectures.vits.training.VitsAcousticFrontend",
-            "voicehub.architectures.vits.training.VitsAdversarialTrainingModel",
+            "voicehub.models.vits.native.modeling.VitsModel",
+            "voicehub.models.vits.native.frontend.VitsTokenizer",
+            "voicehub.models.vits.native.training.VitsAcousticFrontend",
+            "voicehub.models.vits.native.training.VitsAdversarialTrainingModel",
             "voicehub.models.vits.training.NativeVitsGeneratorTrainingAdapter",
         ),
         optimization_profile_factory=("voicehub.training.tts_optimization:VITSOptimizationConfig"),
@@ -2616,11 +2617,11 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         component_paths=("model", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.whisper.WhisperModel",
-            "voicehub.architectures.wav2vec2.Wav2Vec2ForCTC",
-            "voicehub.architectures.hubert.HubertForCTC",
-            "voicehub.architectures.wavlm.WavLMForCTC",
-            ("voicehub.architectures.moonshine."
+            "voicehub.models.asr_whisper_native.native.WhisperModel",
+            "voicehub.models.asr_wav2vec2.native.Wav2Vec2ForCTC",
+            "voicehub.models.asr_hubert.native.HubertForCTC",
+            "voicehub.models.asr_wavlm.native.WavLMForCTC",
+            ("voicehub.models.asr_moonshine.native."
              "MoonshineForConditionalGeneration"),
         ),
         native_training=True,
@@ -2640,7 +2641,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_whisper",
         TrainingFamily.SPEECH_SEQ2SEQ,
-        "voicehub.architectures.whisper.WhisperModel",
+        "voicehub.models.asr_whisper_native.native.WhisperModel",
         adapter_factory=(
             "voicehub.models.asr_whisper_native.training_asr_whisper_native:NativeWhisperTrainingAdapter"),
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_whisper_dataset_spec"),
@@ -2649,7 +2650,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_tiron",
         TrainingFamily.SPEECH_SEQ2SEQ,
-        "voicehub.architectures.whisper.WhisperModel",
+        "voicehub.models.asr_whisper_native.native.WhisperModel",
         adapter_factory=(
             "voicehub.models.asr_whisper_native.training_asr_whisper_native:NativeWhisperTrainingAdapter"),
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_tiron_dataset_spec"),
@@ -2658,7 +2659,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_qwen3",
         TrainingFamily.SPEECH_SEQ2SEQ,
-        ("voicehub.architectures.qwen3_asr.modeling."
+        ("voicehub.models.asr_qwen3.native.modeling."
          "Qwen3ASRForConditionalGeneration"),
         adapter_factory="voicehub.models.asr_qwen3.training_asr_qwen3:NativeQwen3ASRTrainingAdapter",
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_qwen3_dataset_spec"),
@@ -2679,7 +2680,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.vibevoice.modeling:"
+            "voicehub.models.vibevoice.native.modeling:"
             "VibeVoiceASRForConditionalGeneration",
             "voicehub.models.asr_vibevoice.training_asr_vibevoice:"
             "NativeVibeVoiceASRTrainingAdapter",
@@ -2731,7 +2732,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.granite_speech.modeling:"
+            "voicehub.models.asr_granite_speech.native.modeling:"
             "GraniteSpeechForConditionalGeneration",
             "voicehub.models.asr_granite_speech."
             "training_asr_granite_speech:"
@@ -2779,7 +2780,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.parakeet_tdt.modeling:ParakeetForTDT",
+            "voicehub.models.asr_parakeet_tdt.native.modeling:ParakeetForTDT",
             "voicehub.models.asr_parakeet_tdt."
             "training_asr_parakeet_tdt:"
             "NativeParakeetTDTTrainingAdapter",
@@ -2826,7 +2827,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.nemotron_asr.modeling:"
+            "voicehub.models.asr_nemotron.native.modeling:"
             "Nemotron3_5ASRForRNNT",
             "voicehub.models.asr_nemotron.training_asr_nemotron:"
             "NativeNemotronASRTrainingAdapter",
@@ -2875,7 +2876,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.cohere_asr.modeling:"
+            "voicehub.models.asr_cohere.native.modeling:"
             "CohereAsrForConditionalGeneration",
             "voicehub.models.asr_cohere.training_asr_cohere:"
             "NativeCohereASRTrainingAdapter",
@@ -2920,7 +2921,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.medasr.modeling:MedASRForCTC",
+            "voicehub.models.asr_medasr.native.modeling:MedASRForCTC",
             "voicehub.models.asr_medasr.training_asr_medasr:"
             "NativeMedASRTrainingAdapter",
         ),
@@ -2950,7 +2951,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_wav2vec2",
         TrainingFamily.CTC,
-        "voicehub.architectures.wav2vec2.Wav2Vec2ForCTC",
+        "voicehub.models.asr_wav2vec2.native.Wav2Vec2ForCTC",
         adapter_factory="voicehub.models.asr_wav2vec2.training_asr_wav2vec2:NativeWav2Vec2TrainingAdapter",
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_wav2vec2_dataset_spec"),
         field_schemas=_WAVEFORM_ASR_FIELD_SCHEMAS,
@@ -2958,7 +2959,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_hubert",
         TrainingFamily.CTC,
-        "voicehub.architectures.hubert.HubertForCTC",
+        "voicehub.models.asr_hubert.native.HubertForCTC",
         adapter_factory="voicehub.models.asr_hubert.training_asr_hubert:NativeHubertTrainingAdapter",
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_hubert_dataset_spec"),
         field_schemas=_WAVEFORM_ASR_FIELD_SCHEMAS,
@@ -2966,7 +2967,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_wavlm",
         TrainingFamily.CTC,
-        "voicehub.architectures.wavlm.WavLMForCTC",
+        "voicehub.models.asr_wavlm.native.WavLMForCTC",
         adapter_factory="voicehub.models.asr_wavlm.training_asr_wavlm:NativeWavLMTrainingAdapter",
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_wavlm_dataset_spec"),
         field_schemas=_WAVEFORM_ASR_FIELD_SCHEMAS,
@@ -2974,7 +2975,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_moonshine",
         TrainingFamily.SPEECH_SEQ2SEQ,
-        "voicehub.architectures.moonshine.MoonshineForConditionalGeneration",
+        "voicehub.models.asr_moonshine.native.MoonshineForConditionalGeneration",
         adapter_factory="voicehub.models.asr_moonshine.training_asr_moonshine:NativeMoonshineTrainingAdapter",
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_moonshine_dataset_spec"),
         field_schemas=_WAVEFORM_ASR_FIELD_SCHEMAS,
@@ -2996,7 +2997,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.seamless_m4t_v2.modeling:"
+            "voicehub.models.asr_seamless_m4t_v2.native.modeling:"
             "SeamlessM4Tv2ForSpeechToText",
             "voicehub.models.asr_seamless_m4t_v2."
             "training_asr_seamless_m4t_v2:"
@@ -3031,7 +3032,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_faster_whisper",
         TrainingFamily.SPEECH_SEQ2SEQ,
-        "voicehub.architectures.whisper.WhisperModel",
+        "voicehub.models.asr_whisper_native.native.WhisperModel",
         adapter_factory=(
             "voicehub.models.asr_whisper_native.training_asr_whisper_native:NativeWhisperTrainingAdapter"),
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_faster_whisper_dataset_spec"),
@@ -3040,7 +3041,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_whisperx",
         TrainingFamily.SPEECH_SEQ2SEQ,
-        "voicehub.architectures.whisper.WhisperModel",
+        "voicehub.models.asr_whisper_native.native.WhisperModel",
         adapter_factory=(
             "voicehub.models.asr_whisper_native.training_asr_whisper_native:NativeWhisperTrainingAdapter"),
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_whisperx_dataset_spec"),
@@ -3049,7 +3050,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_openai_whisper",
         TrainingFamily.SPEECH_SEQ2SEQ,
-        "voicehub.architectures.whisper.WhisperModel",
+        "voicehub.models.asr_whisper_native.native.WhisperModel",
         adapter_factory=(
             "voicehub.models.asr_whisper_native.training_asr_whisper_native:NativeWhisperTrainingAdapter"),
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_openai_whisper_dataset_spec"),
@@ -3058,7 +3059,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _transformers_asr_preset_profile(
         "asr_nemo",
         TrainingFamily.CTC,
-        "voicehub.architectures.nemo_ctc.modeling.NeMoQuartzNetForCTC",
+        "voicehub.models.asr_nemo.native.modeling.NeMoQuartzNetForCTC",
         adapter_factory="voicehub.models.asr_nemo.training_asr_nemo:NativeNeMoCTCTrainingAdapter",
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_nemo_dataset_spec"),
         field_schemas=_NEMO_CTC_FIELD_SCHEMAS,
@@ -3072,7 +3073,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("tokens_eos", "ctc_tokens"),
-        source_entrypoints=("voicehub.architectures.speechbrain_asr.modeling."
+        source_entrypoints=("voicehub.models.asr_speechbrain.native.modeling."
                             "SpeechBrainCRDNNForASR", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -3100,13 +3101,13 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _profile(
         "asr_funasr",
         TrainingFamily.CTC,
-        adapter_factory="voicehub.architectures.sensevoice.training:NativeSenseVoiceTrainingAdapter",
+        adapter_factory="voicehub.models.asr_funasr.native.training:NativeSenseVoiceTrainingAdapter",
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_funasr_dataset_spec"),
         task=SpeechTask.AUTOMATIC_SPEECH_RECOGNITION,
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", ),
-        source_entrypoints=("voicehub.architectures.sensevoice.modeling:"
+        source_entrypoints=("voicehub.models.asr_funasr.native.modeling:"
                             "SenseVoiceSmallForCTC.forward", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -3157,18 +3158,18 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
     _profile(
         "asr_espnet",
         TrainingFamily.SPEECH_SEQ2SEQ,
-        adapter_factory="voicehub.architectures.espnet_transformer.training:NativeESPnetASRTrainingAdapter",
+        adapter_factory="voicehub.models.asr_espnet.native.training:NativeESPnetASRTrainingAdapter",
         dataset_spec_factory=("voicehub.training.asr_data_contracts:build_asr_espnet_dataset_spec"),
         task=SpeechTask.AUTOMATIC_SPEECH_RECOGNITION,
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.espnet_transformer.modeling:"
+            "voicehub.models.asr_espnet.native.modeling:"
             "ESPnetLibriSpeechTransformerForASR.forward",
-            "voicehub.architectures.espnet_transformer.training:"
+            "voicehub.models.asr_espnet.native.training:"
             "prepare_espnet_training_batch",
-            "voicehub.architectures.espnet_transformer.training:"
+            "voicehub.models.asr_espnet.native.training:"
             "NativeESPnetASRTrainingAdapter",
         ),
         native_training=True,
@@ -3217,7 +3218,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", ),
-        source_entrypoints=("voicehub.architectures.wenet_u2pp.modeling.WeNetU2PPForASR", ),
+        source_entrypoints=("voicehub.models.asr_wenet.native.modeling.WeNetU2PPForASR", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
         phases=(
@@ -3245,9 +3246,9 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         component_paths=("model", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.wav2vec2."
+            "voicehub.models.asr_wav2vec2.native."
             "Wav2Vec2ForSequenceClassification",
-            "voicehub.architectures.wav2vec2."
+            "voicehub.models.asr_wav2vec2.native."
             "Wav2Vec2ForAudioFrameClassification",
         ),
         native_training=True,
@@ -3273,7 +3274,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", ),
-        source_entrypoints=("voicehub.architectures.silero_vad.SileroVADModel", ),
+        source_entrypoints=("voicehub.models.vad_silero.native.SileroVADModel", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
         phases=(
@@ -3307,7 +3308,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", "y"),
-        source_entrypoints=("voicehub.architectures.pyannet.PyanNet", ),
+        source_entrypoints=("voicehub.models.vad_pyannote.native.PyanNet", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
         phases=(
@@ -3335,7 +3336,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", ),
-        source_entrypoints=("voicehub.architectures.speechbrain_vad."
+        source_entrypoints=("voicehub.models.vad_speechbrain.native."
                             "SpeechBrainCRDNNVADModel", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -3363,7 +3364,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", ),
-        source_entrypoints=("voicehub.architectures.marblenet_vad.MarbleNetVADModel", ),
+        source_entrypoints=("voicehub.models.vad_nemo.native.MarbleNetVADModel", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
         phases=(
@@ -3390,7 +3391,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", ),
-        source_entrypoints=("voicehub.architectures.fsmn_vad.FSMNVADModel", ),
+        source_entrypoints=("voicehub.models.vad_funasr.native.FSMNVADModel", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
         phases=(
@@ -3425,8 +3426,8 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         component_paths=("model", ),
         label_names=("labels", ),
         source_entrypoints=(
-            "voicehub.architectures.ten_vad.TENVADModel",
-            "voicehub.architectures.silero_vad.SileroVADModel",
+            "voicehub.models.vad_ten.native.TENVADModel",
+            "voicehub.models.vad_silero.native.SileroVADModel",
         ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -3454,7 +3455,7 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         module_paths=("model", ),
         component_paths=("model", ),
         label_names=("labels", "y"),
-        source_entrypoints=("voicehub.architectures.pyannet.PyanNet", ),
+        source_entrypoints=("voicehub.models.vad_pyannote.native.PyanNet", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
         phases=(
@@ -3482,8 +3483,8 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
         component_paths=("model", ),
         label_names=("labels", "y"),
         source_entrypoints=(
-            "voicehub.architectures.pyannet.PyanNet",
-            "voicehub.architectures.pyannet.objective.pyannet_loss",
+            "voicehub.models.vad_pyannote.native.PyanNet",
+            "voicehub.models.vad_pyannote.native.objective.pyannet_loss",
         ),
         native_training=True,
         separate_optimizers=False,
@@ -3512,6 +3513,16 @@ _BUILTIN_AUDIO_INPUT_TRAINING_SPECS = (
 )
 
 _BUILTIN_TRAINING_SPECS += _BUILTIN_AUDIO_INPUT_TRAINING_SPECS
+
+# Standalone codec inference is public. Neural codec training remains available
+# through the native graphs; no Trainer recipe is implied by registration.
+_BUILTIN_TRAINING_SPECS += tuple(
+    ModelTrainingSpec(
+        model_type=model_type,
+        family="audio-codec",
+        task=SpeechTask.AUDIO_CODEC,
+        support=TrainingSupport.INFERENCE_ONLY,
+    ) for model_type in ("dac", "encodec"))
 
 _DISCOVERED_MANIFEST_TRAINING_SPECS = discover_manifest_training_specs()
 _CENTRAL_TRAINING_MODEL_TYPES = {spec.model_type for spec in _BUILTIN_TRAINING_SPECS}

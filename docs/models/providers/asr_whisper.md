@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2212.04356" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/openai/whisper" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling_asr_whisper_native.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_whisper.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -108,7 +108,7 @@ integration. This page is generated from its registry contract. [Open the `asr_w
 
 - **Paper:** [Robust Speech Recognition via Large-Scale Weak Supervision](https://arxiv.org/abs/2212.04356)
 - **Upstream GitHub:** [Whisper](https://github.com/openai/whisper)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling_asr_whisper_native.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling.py)
 
 ## Configuration
 
@@ -194,8 +194,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_whisper_native.modeling_asr_whisper_native.WhisperForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_whisper_native.configuration_asr_whisper_native.WhisperASRConfig` |
+| Implementation | `voicehub.models.asr_whisper_native.modeling.WhisperForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_whisper_native.configuration.WhisperASRConfig` |
 | Source provenance | No integration-specific bundled `SOURCE.json` is declared for this registry entry. |
 | License | Checkpoint-specific |
 
@@ -220,7 +220,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `WhisperASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/configuration_asr_whisper_native.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -239,7 +239,7 @@ WhisperASRConfig(**config_kwargs)
 
 ### `WhisperForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling_asr_whisper_native.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_whisper_native/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

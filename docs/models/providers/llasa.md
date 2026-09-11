@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/zhenye234/LLaSA_training" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/llasa/modeling_llasa.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/llasa/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/llasa.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -110,7 +110,7 @@ integration. This page is generated from its registry contract. [Open the `llasa
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [LLaSA training](https://github.com/zhenye234/LLaSA_training)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/llasa/modeling_llasa.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/llasa/modeling.py)
 
 ## Configuration
 
@@ -196,8 +196,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.llasa.modeling_llasa.LlasaForTextToSpeech` |
-| Configuration | `voicehub.models.llasa.configuration_llasa.LlasaConfig` |
+| Implementation | `voicehub.models.llasa.modeling.LlasaForTextToSpeech` |
+| Configuration | `voicehub.models.llasa.configuration.LlasaConfig` |
 | Source provenance | `voicehub/models/llasa/source/SOURCE.json` |
 | License | [CC-BY-NC-4.0](https://huggingface.co/HKUSTAudio/xcodec2) |
 
@@ -222,7 +222,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `LlasaConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/llasa/configuration_llasa.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/llasa/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -241,7 +241,7 @@ LlasaConfig(**config_kwargs)
 
 ### `LlasaForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/llasa/modeling_llasa.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/llasa/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

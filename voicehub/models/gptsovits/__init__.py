@@ -6,15 +6,15 @@ from importlib import import_module
 
 _EXPORTS = {
     "GPTSoVITSConfig": (
-        "voicehub.models.gptsovits.configuration_gptsovits",
+        "voicehub.models.gptsovits.configuration",
         "GPTSoVITSConfig",
     ),
     "GPTSoVITSForTextToSpeech": (
-        "voicehub.models.gptsovits.inference",
+        "voicehub.models.gptsovits.modeling",
         "GPTSoVITSForTextToSpeech",
     ),
     "GPTSoVITSTTS": (
-        "voicehub.models.gptsovits.inference",
+        "voicehub.models.gptsovits.modeling",
         "GPTSoVITSTTS",
     ),
 }

@@ -14,7 +14,6 @@ from unittest.mock import patch
 import torch
 from torch import nn
 
-from voicehub.architectures.chatterbox.registration import create_chatterbox_architecture_spec
 from voicehub.models.chatterbox.checkpoint import (
     CHECKPOINT_REVISION,
     export_module_safetensors,
@@ -29,6 +28,7 @@ from voicehub.models.chatterbox.models.t3.llama_configs import LLAMA_CONFIGS
 from voicehub.models.chatterbox.models.t3.modules.cond_enc import T3Cond
 from voicehub.models.chatterbox.models.tokenizers import EnTokenizer
 from voicehub.models.chatterbox.models.voice_encoder import VoiceEncoder
+from voicehub.models.chatterbox.native.registration import create_chatterbox_architecture_spec
 from voicehub.models.chatterbox.training import ChatterboxTrainingAdapter, resize_t3_text_vocabulary
 from voicehub.models.chatterbox.watermark import NativePerthWatermarker
 from voicehub.training.contracts import TrainingContext

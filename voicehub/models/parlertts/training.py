@@ -8,9 +8,9 @@ from typing import Any
 
 import torch
 
-from voicehub.architectures.parlertts.checkpoint import export_parlertts_checkpoint
-from voicehub.architectures.parlertts.modeling import ParlerTTSForConditionalGeneration
 from voicehub.hub import read_json_file, write_json_file
+from voicehub.models.parlertts.native.checkpoint import export_parlertts_checkpoint
+from voicehub.models.parlertts.native.modeling import ParlerTTSForConditionalGeneration
 from voicehub.training.adapters import Seq2SeqTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 

@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.irodoritts."
 _EXPORTS = {
-    "IrodoriTTS": _PACKAGE + "inference",
-    "IrodoriTTSConfig": _PACKAGE + "inference",
-    "IrodoriTTSForTextToSpeech": _PACKAGE + "inference",
+    "IrodoriTTS": _PACKAGE + "modeling",
+    "IrodoriTTSConfig": _PACKAGE + "modeling",
+    "IrodoriTTSForTextToSpeech": _PACKAGE + "modeling",
     "NativeIrodoriTrainingAdapter": _PACKAGE + "training",
 }
 

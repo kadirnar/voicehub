@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/TrelisResearch/tiron" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/modeling_asr_tiron.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_tiron.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -106,7 +106,7 @@ integration. This page is generated from its registry contract. [Open the `asr_t
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Tiron](https://github.com/TrelisResearch/tiron)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/modeling_asr_tiron.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/modeling.py)
 
 ## Configuration
 
@@ -192,8 +192,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_tiron.modeling_asr_tiron.TironForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_tiron.configuration_asr_tiron.TironASRConfig` |
+| Implementation | `voicehub.models.asr_tiron.modeling.TironForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_tiron.configuration.TironASRConfig` |
 | Source provenance | `voicehub/models/asr_tiron/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -218,7 +218,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `TironASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/configuration_asr_tiron.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -237,7 +237,7 @@ TironASRConfig(**config_kwargs)
 
 ### `TironForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/modeling_asr_tiron.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_tiron/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

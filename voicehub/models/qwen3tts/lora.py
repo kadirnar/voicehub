@@ -272,7 +272,7 @@ def save_qwen3_tts_lora_adapter(
         {
             "format": QWEN3_TTS_LORA_ADAPTER_FORMAT,
             "format_version": QWEN3_TTS_LORA_ADAPTER_VERSION,
-            "base_model": base_model,
+            'base_model': base_model,
             "rank": config.rank,
             "alpha": config.alpha,
             "dropout": config.dropout,
@@ -325,7 +325,7 @@ def load_qwen3_tts_lora_adapter(
                          f"{format_version!r}.")
     expected_manifest_keys = {
         "alpha",
-        "base_model",
+        'base_model',
         "dropout",
         "format",
         "format_version",
@@ -373,7 +373,7 @@ def load_qwen3_tts_lora_adapter(
         raise ValueError(
             "Qwen3-TTS LoRA adapter public target topology does not match "
             "the active training configuration.")
-    base_model = manifest.get("base_model")
+    base_model = manifest.get('base_model')
     if base_model is not None and (not isinstance(base_model, str) or not base_model.strip()):
         raise TypeError("Qwen3-TTS LoRA adapter `base_model` must be a non-empty "
                         "string or null.")

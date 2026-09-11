@@ -7,10 +7,6 @@ from types import MappingProxyType
 
 import torch
 
-from voicehub.architectures.supertonic.checkpoint import load_supertonic_native_weights, save_supertonic_native_weights
-from voicehub.architectures.supertonic.configuration import SupertonicArchitectureConfig
-from voicehub.architectures.supertonic.frontend import SupertonicUnicodeProcessor
-from voicehub.architectures.supertonic.runtime import NativeSupertonicRuntime
 from voicehub.checkpointing import (
     ONNXAttribute,
     ONNXGraph,
@@ -20,8 +16,12 @@ from voicehub.checkpointing import (
     ONNXValueInfo,
     save_safetensors,
 )
-from voicehub.models.supertonic.configuration_supertonic import SUPERTONIC_SAMPLE_RATE, SupertonicConfig
-from voicehub.models.supertonic.inference import SupertonicForTextToSpeech
+from voicehub.models.supertonic.configuration import SUPERTONIC_SAMPLE_RATE, SupertonicConfig
+from voicehub.models.supertonic.modeling import SupertonicForTextToSpeech
+from voicehub.models.supertonic.native.checkpoint import load_supertonic_native_weights, save_supertonic_native_weights
+from voicehub.models.supertonic.native.configuration import SupertonicArchitectureConfig
+from voicehub.models.supertonic.native.frontend import SupertonicUnicodeProcessor
+from voicehub.models.supertonic.native.runtime import NativeSupertonicRuntime
 from voicehub.models.supertonic.training import SupertonicTrainingAdapter
 from voicehub.training.contracts import TrainingSupport
 from voicehub.training.specs import get_training_spec

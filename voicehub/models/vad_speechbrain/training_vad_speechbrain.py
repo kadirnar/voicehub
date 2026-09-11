@@ -257,7 +257,7 @@ class NativeSpeechBrainVADTrainingAdapter(FrameClassificationTrainingAdapter):
         return SpeechBrainVADTrainingDataset(records, **kwargs)
 
     def recipe_resume_configuration(self) -> Mapping[str, Any]:
-        from voicehub.architectures.speechbrain_vad.metadata import (
+        from voicehub.models.vad_speechbrain.native.metadata import (
             SPEECHBRAIN_TRAINING_SOURCE_REVISION,
             SPEECHBRAIN_VAD_REVISION,
         )

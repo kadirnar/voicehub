@@ -4,12 +4,6 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from voicehub.architectures import (
-    ArchitectureCapabilities,
-    ArchitectureSpec,
-    register_architecture_spec,
-    unregister_architecture_spec,
-)
 from voicehub.diffusion_serving import (
     DiffusionServingBackend,
     DiffusionServingCompatibilityError,
@@ -21,7 +15,13 @@ from voicehub.diffusion_serving import (
     resolve_diffusion_tts_backend,
 )
 from voicehub.llm_serving import LLMBackend, LLMBackendConfig, LLMBackendTransport
-from voicehub.models.registry import ModelSpec, register_model_spec, unregister_model_spec
+from voicehub.registry import ModelSpec, register_model_spec, unregister_model_spec
+from voicehub.runtime import (
+    ArchitectureCapabilities,
+    ArchitectureSpec,
+    register_architecture_spec,
+    unregister_architecture_spec,
+)
 
 
 class DiffusionServingCapabilityTests(unittest.TestCase):

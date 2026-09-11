@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/edwko/OuteTTS" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/outetts/modeling_outetts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/outetts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/outetts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -103,7 +103,7 @@ integration. This page is generated from its registry contract. [Open the `outet
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [OuteTTS](https://github.com/edwko/OuteTTS)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/outetts/modeling_outetts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/outetts/modeling.py)
 
 ## Configuration
 
@@ -190,8 +190,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.outetts.modeling_outetts.OuteTTSForTextToSpeech` |
-| Configuration | `voicehub.models.outetts.configuration_outetts.OuteTTSConfig` |
+| Implementation | `voicehub.models.outetts.modeling.OuteTTSForTextToSpeech` |
+| Configuration | `voicehub.models.outetts.configuration.OuteTTSConfig` |
 | Source provenance | `voicehub/models/outetts/source/SOURCE.json` |
 | License | [CC-BY-NC-SA-4.0](https://huggingface.co/OuteAI/Llama-OuteTTS-1.0-1B) |
 
@@ -216,7 +216,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `OuteTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/outetts/configuration_outetts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/outetts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -235,7 +235,7 @@ OuteTTSConfig(**config_kwargs)
 
 ### `OuteTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/outetts/modeling_outetts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/outetts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

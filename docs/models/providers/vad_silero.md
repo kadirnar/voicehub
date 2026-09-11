@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/snakers4/silero-vad" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/modeling_vad_silero.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/vad_silero.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -100,7 +100,7 @@ The public VAD contract does not select a spoken language; validate checkpoint a
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Silero VAD](https://github.com/snakers4/silero-vad)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/modeling_vad_silero.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/modeling.py)
 
 ## Configuration
 
@@ -180,8 +180,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.vad_silero.modeling_vad_silero.SileroVADForVoiceActivityDetection` |
-| Configuration | `voicehub.models.vad_silero.configuration_vad_silero.SileroVADConfig` |
+| Implementation | `voicehub.models.vad_silero.modeling.SileroVADForVoiceActivityDetection` |
+| Configuration | `voicehub.models.vad_silero.configuration.SileroVADConfig` |
 | Source provenance | No integration-specific bundled `SOURCE.json` is declared for this registry entry. |
 | License | Checkpoint-specific |
 
@@ -206,7 +206,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `SileroVADConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/configuration_vad_silero.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -225,7 +225,7 @@ SileroVADConfig(**config_kwargs)
 
 ### `SileroVADForVoiceActivityDetection`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/modeling_vad_silero.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_silero/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

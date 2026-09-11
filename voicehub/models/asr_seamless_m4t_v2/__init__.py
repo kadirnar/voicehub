@@ -8,8 +8,8 @@ from typing import Any
 _PACKAGE = "voicehub.models.asr_seamless_m4t_v2."
 _EXPORTS = {
     "NativeSeamlessM4Tv2TrainingAdapter": (_PACKAGE + "training_asr_seamless_m4t_v2"),
-    "SeamlessM4Tv2ASRConfig": (_PACKAGE + "configuration_asr_seamless_m4t_v2"),
-    "SeamlessM4Tv2ForSpeechRecognition": (_PACKAGE + "modeling_asr_seamless_m4t_v2"),
+    "SeamlessM4Tv2ASRConfig": (_PACKAGE + "configuration"),
+    "SeamlessM4Tv2ForSpeechRecognition": (_PACKAGE + "modeling"),
 }
 
 __all__ = sorted(_EXPORTS)

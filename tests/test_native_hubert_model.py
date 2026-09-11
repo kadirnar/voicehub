@@ -10,7 +10,7 @@ except ModuleNotFoundError:
     torch = None
 
 if torch is not None:
-    from voicehub.architectures.hubert import (
+    from voicehub.models.asr_hubert.native import (
         FACEBOOK_HUBERT_LARGE_LS960_FT_HEADER_FINGERPRINT,
         FACEBOOK_HUBERT_LARGE_LS960_FT_REVISION,
         FACEBOOK_HUBERT_LARGE_LS960_FT_SAFETENSORS_REVISION,
@@ -24,7 +24,7 @@ if torch is not None:
         native_hubert_tensor_shapes,
         safetensors_header_fingerprint,
     )
-    from voicehub.architectures.wav2vec2.modeling import Wav2Vec2EncoderLayerStableLayerNorm
+    from voicehub.models.asr_wav2vec2.native.modeling import Wav2Vec2EncoderLayerStableLayerNorm
 
 
 def _tiny_config(**overrides):
@@ -68,7 +68,7 @@ class HubertConfigurationTests(unittest.TestCase):
     def test_official_large_configuration_preserves_stable_layer_norm(self):
         config = HubertConfig.from_dict({
             "model_type": "hubert",
-            "architectures": ["HubertForCTC"],
+            'architectures': ["HubertForCTC"],
             "vocab_size": 32,
             "hidden_size": 1024,
             "num_hidden_layers": 24,
@@ -91,7 +91,7 @@ class HubertConfigurationTests(unittest.TestCase):
         self.assertEqual(config.feature_output_length(16_000), 49)
         self.assertEqual(config.to_dict()["model_type"], "hubert")
         self.assertEqual(
-            config.to_dict()["architectures"],
+            config.to_dict()['architectures'],
             ["HubertForCTC"],
         )
 
@@ -296,7 +296,7 @@ class HubertCheckpointTests(unittest.TestCase):
             )
 
     def test_native_files_import_no_external_architecture_runtime(self):
-        package = (Path(__file__).resolve().parents[1] / "voicehub" / "architectures" / "hubert")
+        package = (Path(__file__).resolve().parents[1] / 'voicehub/models/asr_hubert/native')
         forbidden = {"numpy", "safetensors", "tokenizers", "transformers"}
         violations = []
         for path in package.glob("*.py"):

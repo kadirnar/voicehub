@@ -7,26 +7,16 @@ import unittest
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from voicehub import (
-    ASRDataset,
-    DefaultDataCollator,
-    EarlyStoppingCallback,
-    IntervalStrategy,
-    ModelTrainingSpec,
-    SpeechTask,
-    SpeechTrainingOutput,
-    Trainer,
-    TrainerCallback,
-    TrainerControl,
-    TrainerState,
-    TrainingArguments,
-    TrainingFamily,
-    TrainingSupport,
-    TTSTrainingOutput,
-)
-from voicehub.trainer_utils import EpochRandomSampler
+from voicehub import SpeechTask
+from voicehub.outputs import SpeechTrainingOutput, TTSTrainingOutput
+from voicehub.training import ASRDataset, ModelTrainingSpec, TrainingFamily, TrainingSupport
 from voicehub.training.adapters import BaseTrainingAdapter
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.asr_datasets import EpochGroupedBatchSampler
+from voicehub.training.callbacks import EarlyStoppingCallback, TrainerCallback, TrainerControl, TrainerState
+from voicehub.training.data_collator import DefaultDataCollator
+from voicehub.training.trainer import Trainer
+from voicehub.training.utils import EpochRandomSampler, IntervalStrategy
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
@@ -454,9 +444,8 @@ class TrainerApiTests(unittest.TestCase):
 
     def test_public_trainer_import_remains_framework_lazy(self):
         script = (
-            "import sys;"
-            "from voicehub import Trainer, TrainingArguments;"
-            "print('torch' in sys.modules, 'numpy' in sys.modules)")
+            "import sys;from voicehub.training import Trainer, TrainingArguments;print('torch' in sys.modules, 'numpy' in sys.modules)"
+        )
         completed = subprocess.run(
             [sys.executable, "-c", script],
             check=True,

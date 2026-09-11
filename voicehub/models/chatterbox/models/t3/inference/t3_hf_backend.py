@@ -10,7 +10,7 @@ from __future__ import annotations
 import torch
 from torch import nn
 
-from voicehub.architectures.causal_lm.modeling import CausalLMOutput
+from voicehub.models.causal_lm.native.modeling import CausalLMOutput
 
 
 class T3HuggingfaceBackend(nn.Module):

@@ -22,7 +22,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/fluxions-ai/vui" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/modeling_vui.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 </div>
 </details>
 </div>
@@ -103,7 +103,7 @@ integration. This page is generated from its registry contract.
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Vui](https://github.com/fluxions-ai/vui)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/modeling_vui.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/modeling.py)
 
 ## Configuration
 
@@ -188,8 +188,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.vui.modeling_vui.VuiForTextToSpeech` |
-| Configuration | `voicehub.models.vui.configuration_vui.VuiConfig` |
+| Implementation | `voicehub.models.vui.modeling.VuiForTextToSpeech` |
+| Configuration | `voicehub.models.vui.configuration.VuiConfig` |
 | Source provenance | `voicehub/models/vui/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -214,7 +214,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `VuiConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/configuration_vui.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -233,7 +233,7 @@ VuiConfig(**config_kwargs)
 
 ### `VuiForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/modeling_vui.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vui/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

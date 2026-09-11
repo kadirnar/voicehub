@@ -19,7 +19,7 @@ class FSMNVADStreamingSession:
     ) -> None:
         import torch
 
-        from voicehub.architectures.fsmn_vad.inference import FSMNVADDecoder
+        from voicehub.models.vad_funasr.native.inference import FSMNVADDecoder
 
         if wrapper.model is None or wrapper.native_config is None:
             raise RuntimeError("FSMN VAD must be loaded before streaming.")
@@ -83,7 +83,7 @@ class FSMNVADStreamingSession:
     def _process(self, *, final: bool) -> tuple[float, ...]:
         import torch
 
-        from voicehub.architectures.fsmn_vad.inference import frame_decibels
+        from voicehub.models.vad_funasr.native.inference import frame_decibels
 
         model = self.wrapper.model
         features = model.frontend(
@@ -160,8 +160,8 @@ class FSMNVADStreamingSession:
         """Finalize right-context padding and return one normalized output."""
         import torch
 
-        from voicehub.modeling_outputs import SpeechSegment, VADOutput
-        from voicehub.models.vad_funasr.modeling_vad_funasr import _postprocess_segments
+        from voicehub.models.vad_funasr.modeling import _postprocess_segments
+        from voicehub.outputs import SpeechSegment, VADOutput
 
         with self._lock:
             if self._result is not None:
@@ -207,7 +207,7 @@ class FSMNVADStreamingSession:
     def reset(self) -> None:
         import torch
 
-        from voicehub.architectures.fsmn_vad.inference import FSMNVADDecoder
+        from voicehub.models.vad_funasr.native.inference import FSMNVADDecoder
 
         with self._lock:
             if self._closed:

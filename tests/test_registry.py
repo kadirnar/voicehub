@@ -8,7 +8,7 @@ import warnings
 from importlib import import_module
 from pathlib import Path
 
-from voicehub import AutoInferenceModel, PreTrainedTTSModel, list_model_specs
+from voicehub import AutoModelForTextToSpeech, PreTrainedTTSModel, list_model_specs
 from voicehub.components import MODEL_COMPONENTS, components_for_model
 from voicehub.dependencies import import_optional
 from voicehub.errors import OptionalDependencyError, UnknownModelError
@@ -91,7 +91,7 @@ class RegistryTests(unittest.TestCase):
 
     def test_registry_exposes_display_names_without_changing_canonical_keys(self):
         specs = list_model_specs(task=None)
-        self.assertEqual(len(specs), 68)
+        self.assertEqual(len(specs), 70)
         for spec in specs:
             with self.subTest(model_type=spec.model_type):
                 self.assertTrue(spec.display_name[0].isupper())
@@ -99,7 +99,7 @@ class RegistryTests(unittest.TestCase):
                 self.assertEqual(get_model_spec(spec.model_type).model_type, spec.model_type)
 
     def test_all_issue_models_are_registered(self):
-        registered = {spec.model_type for spec in AutoInferenceModel.available_models()}
+        registered = {spec.model_type for spec in AutoModelForTextToSpeech.available_models()}
         self.assertTrue((ISSUE_MODEL_TYPES | CURRENT_MODEL_TYPES).issubset(registered))
 
     def test_aliases_resolve_to_canonical_model(self):
@@ -128,25 +128,25 @@ class RegistryTests(unittest.TestCase):
             get_model_spec("not-a-real-model")
 
     def test_all_backends_use_base_and_construct_without_loading(self):
-        for spec in AutoInferenceModel.available_models():
+        for spec in AutoModelForTextToSpeech.available_models():
             model_type = spec.model_type
             with self.subTest(model_type=model_type):
-                model = AutoInferenceModel.from_pretrained(model_type)
+                model = AutoModelForTextToSpeech.from_pretrained(model_type=model_type)
                 self.assertIsInstance(model, PreTrainedTTSModel)
                 self.assertFalse(model.is_loaded)
 
     def test_all_public_classes_follow_transformers_naming_contract(self):
         constructor_parameters = None
-        for spec in AutoInferenceModel.available_models():
+        for spec in AutoModelForTextToSpeech.available_models():
             with self.subTest(model_type=spec.model_type):
                 self.assertEqual(
                     spec.module,
-                    f"voicehub.models.{spec.model_type}.modeling_{spec.model_type}",
+                    f"voicehub.models.{spec.model_type}.modeling",
                 )
                 self.assertEqual(
                     spec.config_module,
                     f"voicehub.models.{spec.model_type}."
-                    f"configuration_{spec.model_type}",
+                    f"configuration",
                 )
                 module = import_module(spec.module)
                 model_class = getattr(module, spec.class_name)
@@ -251,7 +251,7 @@ class RegistryTests(unittest.TestCase):
         source_path = REPOSITORY_ROOT / "voicehub" / "components" / "registry.py"
         source = source_path.read_text(encoding="utf-8")
         tree = ast.parse(source)
-        model_types = {spec.model_type for spec in AutoInferenceModel.available_models()}
+        model_types = {spec.model_type for spec in AutoModelForTextToSpeech.available_models()}
         provider_keyed_dicts = []
         for node in ast.walk(tree):
             if not isinstance(node, ast.Dict):

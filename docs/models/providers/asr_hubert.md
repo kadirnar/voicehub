@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2106.07447" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/facebookresearch/fairseq" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/modeling_asr_hubert.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_hubert.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -106,7 +106,7 @@ integration. This page is generated from its registry contract. [Open the `asr_h
 
 - **Paper:** [HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction](https://arxiv.org/abs/2106.07447)
 - **Upstream GitHub:** [fairseq](https://github.com/facebookresearch/fairseq)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/modeling_asr_hubert.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/modeling.py)
 
 ## Configuration
 
@@ -192,8 +192,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_hubert.modeling_asr_hubert.HubertForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_hubert.configuration_asr_hubert.HubertASRConfig` |
+| Implementation | `voicehub.models.asr_hubert.modeling.HubertForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_hubert.configuration.HubertASRConfig` |
 | Source provenance | No integration-specific bundled `SOURCE.json` is declared for this registry entry. |
 | License | Checkpoint-specific |
 
@@ -218,7 +218,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `HubertASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/configuration_asr_hubert.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -237,7 +237,7 @@ HubertASRConfig(**config_kwargs)
 
 ### `HubertForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/modeling_asr_hubert.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_hubert/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

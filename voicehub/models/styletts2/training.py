@@ -10,7 +10,7 @@ import torch
 from torch import Tensor
 from torch.nn import functional
 
-from voicehub.architectures.styletts2.training import StyleTTS2TrainingModel
+from voicehub.models.styletts2.native.training import StyleTTS2TrainingModel
 from voicehub.training.adapters import VITSTrainingAdapter
 from voicehub.training.datasets import SpeechDataset
 

@@ -8,7 +8,7 @@ from pathlib import Path
 import torch
 
 from tests._moonshine_test_utils import tiny_moonshine_config, tiny_tokenizer_document
-from voicehub.architectures.moonshine import (
+from voicehub.models.asr_moonshine.native import (
     USEFULSENSORS_MOONSHINE_BASE_HEADER_FINGERPRINT,
     USEFULSENSORS_MOONSHINE_BASE_REVISION,
     USEFULSENSORS_MOONSHINE_TINY_HEADER_FINGERPRINT,
@@ -104,7 +104,7 @@ class MoonshineConfigurationAndCheckpointTests(unittest.TestCase):
         self.assertEqual(spec.capabilities.checkpoint_formats, ("safetensors", ))
         self.assertEqual(
             spec.checkpoint_adapter.path,
-            "voicehub.architectures.moonshine.checkpoint:"
+            "voicehub.models.asr_moonshine.native.checkpoint:"
             "HuggingFaceMoonshineCheckpointAdapter",
         )
         self.assertTrue(spec.capabilities.supports_optimization("compile"))

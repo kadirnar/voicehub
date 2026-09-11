@@ -13,14 +13,14 @@ from typing import Any
 
 import torch
 
-from voicehub.architectures.kokoro.checkpoint import (
+from voicehub.hub import resolve_pretrained_file
+from voicehub.models.kokoro.native.checkpoint import (
     KOKORO_CHECKPOINT_REVISION,
     import_legacy_kokoro_checkpoint,
     import_legacy_kokoro_voice,
     load_native_kokoro_checkpoint,
     load_native_kokoro_voice,
 )
-from voicehub.hub import resolve_pretrained_file
 
 from .artifacts import KokoroArtifacts, resolve_kokoro_artifacts
 from .model import KModel

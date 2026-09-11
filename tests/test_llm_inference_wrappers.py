@@ -6,17 +6,17 @@ from unittest.mock import Mock, patch
 
 import torch
 
-from voicehub.architectures.mosstts.codec import MossCodecDecodeOutput
-from voicehub.architectures.mosstts.runtime import MossTTSRuntime
-from voicehub.models.csm.inference import CSMForTextToSpeech
-from voicehub.models.fishtts.inference import FishTTSForTextToSpeech
+from voicehub.models.csm.modeling import CSMForTextToSpeech
+from voicehub.models.fishtts.modeling import FishTTSForTextToSpeech
 from voicehub.models.higgstts.inference import HiggsTTSForTextToSpeech
-from voicehub.models.llasa.inference import LlasaForTextToSpeech
-from voicehub.models.mosstts.inference import MossTTSConfig, MossTTSForTextToSpeech
-from voicehub.models.neutts.inference import NeuTTSForTextToSpeech
-from voicehub.models.orpheustts.inference import OrpheusTTSForTextToSpeech
+from voicehub.models.llasa.modeling import LlasaForTextToSpeech
+from voicehub.models.mosstts.modeling import MossTTSConfig, MossTTSForTextToSpeech
+from voicehub.models.mosstts.native.codec import MossCodecDecodeOutput
+from voicehub.models.mosstts.native.runtime import MossTTSRuntime
+from voicehub.models.neutts.modeling import NeuTTSForTextToSpeech
+from voicehub.models.orpheustts.modeling import OrpheusTTSForTextToSpeech
 from voicehub.models.outetts.inference import OuteTTSConfig, OuteTTSForTextToSpeech
-from voicehub.models.qwen3tts.inference import Qwen3TTSConfig, Qwen3TTSForTextToSpeech
+from voicehub.models.qwen3tts.modeling import Qwen3TTSConfig, Qwen3TTSForTextToSpeech
 
 
 class _TokenRow:
@@ -407,7 +407,7 @@ class WrapperHelperTests(unittest.TestCase):
         )
 
         with patch(
-                "voicehub.architectures.mosstts.runtime.load_mosstts_runtime",
+                "voicehub.models.mosstts.native.runtime.load_mosstts_runtime",
                 return_value=runtime,
         ) as load_runtime:
             model._load_pretrained_model()
@@ -503,7 +503,7 @@ class WrapperHelperTests(unittest.TestCase):
             ))
 
         with patch(
-                "voicehub.models.mosstts.inference.seeded_inference",
+                "voicehub.models.mosstts.modeling.seeded_inference",
                 return_value=nullcontext(11),
         ):
             output = model._generate("hello")
@@ -545,7 +545,7 @@ class WrapperHelperTests(unittest.TestCase):
         model.model = backend
 
         with patch(
-                "voicehub.models.qwen3tts.inference.seeded_inference",
+                "voicehub.models.qwen3tts.modeling.seeded_inference",
                 return_value=nullcontext(19),
         ):
             output = model.generate("hello", mode="auto", instruct="calm")
@@ -585,7 +585,7 @@ class WrapperHelperTests(unittest.TestCase):
         model.model = backend
 
         with patch(
-                "voicehub.models.qwen3tts.inference.seeded_inference",
+                "voicehub.models.qwen3tts.modeling.seeded_inference",
                 return_value=nullcontext(7),
         ):
             output = model.generate(

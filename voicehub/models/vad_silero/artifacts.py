@@ -7,16 +7,16 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from voicehub.architectures.silero_vad.checkpoint import (
-    OfficialSileroVADSafeTensorsCheckpointAdapter,
-    OfficialSileroVADTorchScriptCheckpointAdapter,
-    native_silero_vad_tensor_names,
-)
-from voicehub.architectures.silero_vad.configuration import SileroVADConfig as NativeSileroVADConfig
 from voicehub.checkpointing.adapters import CheckpointAdapter
 from voicehub.checkpointing.safetensors import SafeTensorReader
 from voicehub.checkpointing.transforms import CopyTensor, TensorPlan
 from voicehub.hub import resolve_pretrained_file
+from voicehub.models.vad_silero.native.checkpoint import (
+    OfficialSileroVADSafeTensorsCheckpointAdapter,
+    OfficialSileroVADTorchScriptCheckpointAdapter,
+    native_silero_vad_tensor_names,
+)
+from voicehub.models.vad_silero.native.configuration import SileroVADConfig as NativeSileroVADConfig
 from voicehub.path_utils import is_explicit_local_path
 
 NATIVE_SILERO_VAD_FORMAT = "voicehub-native-silero-vad-v1"

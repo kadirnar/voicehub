@@ -296,7 +296,7 @@ class XCodec2Config:
         }
         output.pop("rope_theta")
         output["semantic_model_config"] = self.semantic_model_config.to_dict()
-        output["architectures"] = ["Xcodec2Model"]
+        output['architectures'] = ["Xcodec2Model"]
         return output
 
 

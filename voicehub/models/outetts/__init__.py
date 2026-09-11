@@ -6,7 +6,7 @@ from importlib import import_module
 
 _EXPORTS = {
     "OuteTTSConfig": (
-        "voicehub.models.outetts.configuration_outetts",
+        "voicehub.models.outetts.configuration",
         "OuteTTSConfig",
     ),
     "OuteTTSForTextToSpeech": (

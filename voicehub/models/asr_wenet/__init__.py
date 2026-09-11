@@ -5,8 +5,8 @@ from importlib import import_module
 _PACKAGE = "voicehub.models.asr_wenet."
 _EXPORTS = {
     "NativeWeNetU2PPTrainingAdapter": _PACKAGE + "training_asr_wenet",
-    "WeNetASRConfig": _PACKAGE + "configuration_asr_wenet",
-    "WeNetASRForSpeechRecognition": _PACKAGE + "modeling_asr_wenet",
+    "WeNetASRConfig": _PACKAGE + "configuration",
+    "WeNetASRForSpeechRecognition": _PACKAGE + "modeling",
 }
 
 __all__ = list(_EXPORTS)

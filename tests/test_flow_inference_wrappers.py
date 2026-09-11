@@ -6,15 +6,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from voicehub.models.chatterbox.inference import ChatterboxConfig, ChatterboxForTextToSpeech
+from voicehub.models.chatterbox.modeling import ChatterboxConfig, ChatterboxForTextToSpeech
 from voicehub.models.conversationtts.inference import ConversationTTSConfig, ConversationTTSForTextToSpeech
-from voicehub.models.cosyvoice.inference import CosyVoiceConfig, CosyVoiceForTextToSpeech
-from voicehub.models.dia.inference import DiaConfig, DiaForTextToSpeech
-from voicehub.models.echo.inference import EchoTTSConfig, EchoTTSForTextToSpeech
-from voicehub.models.f5tts.inference import F5TTSConfig, F5TTSForTextToSpeech
-from voicehub.models.irodoritts.inference import IrodoriTTSConfig, IrodoriTTSForTextToSpeech
-from voicehub.models.omnivoice.inference import OmniVoiceConfig, OmniVoiceForTextToSpeech
-from voicehub.models.voxcpm.inference import VoxCPMConfig, VoxCPMForTextToSpeech
+from voicehub.models.cosyvoice.modeling import CosyVoiceConfig, CosyVoiceForTextToSpeech
+from voicehub.models.dia.modeling import DiaConfig, DiaForTextToSpeech
+from voicehub.models.echo.modeling import EchoTTSConfig, EchoTTSForTextToSpeech
+from voicehub.models.f5tts.modeling import F5TTSConfig, F5TTSForTextToSpeech
+from voicehub.models.irodoritts.modeling import IrodoriTTSConfig, IrodoriTTSForTextToSpeech
+from voicehub.models.omnivoice.modeling import OmniVoiceConfig, OmniVoiceForTextToSpeech
+from voicehub.models.voxcpm.modeling import VoxCPMConfig, VoxCPMForTextToSpeech
 
 
 @contextmanager
@@ -411,7 +411,7 @@ class FlowInferenceLoaderTests(unittest.TestCase):
         runtime = SimpleNamespace(model=object(), sample_rate=24_000)
         model = CosyVoiceForTextToSpeech(device="cpu")
         with patch(
-                "voicehub.architectures.cosyvoice_native.runtime."
+                "voicehub.models.cosyvoice.native.runtime."
                 "load_cosyvoice_runtime",
                 return_value=runtime,
         ) as loader:

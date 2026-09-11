@@ -10,9 +10,9 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from voicehub.audio import load_audio
-from voicehub.base_model import BaseSpeechModel
-from voicehub.modeling_outputs import ASROutput, ASRSegment, ASRWord
+from voicehub.models.base import BaseSpeechModel
 from voicehub.models.native_utils import resolve_cpu_cuda_device
+from voicehub.outputs import ASROutput, ASRSegment, ASRWord
 
 _DEFAULT_INFERENCE_OPTIONS = {
     "task": "transcribe",

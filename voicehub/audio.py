@@ -8,7 +8,7 @@ from numbers import Integral
 from pathlib import Path
 from typing import Any
 
-from voicehub.base_model import BaseSpeechModel
+from voicehub.models.base import BaseSpeechModel
 
 
 @dataclass(frozen=True)

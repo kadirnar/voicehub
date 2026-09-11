@@ -8,8 +8,9 @@ from unittest import mock
 
 import torch
 
-from voicehub.architectures import ArchitectureRegistry
-from voicehub.architectures.causal_lm import (
+from voicehub.checkpointing import CheckpointCompatibilityError
+from voicehub.generation import GenerationConfig
+from voicehub.models.causal_lm.native import (
     REFERENCE_CAUSAL_LM_CHECKPOINTS,
     TRANSFORMERS_CAUSAL_LM_REVISION,
     CausalLMConfig,
@@ -26,8 +27,7 @@ from voicehub.architectures.causal_lm import (
     native_causal_lm_tensor_shapes,
     register_causal_lm_architecture,
 )
-from voicehub.checkpointing import CheckpointCompatibilityError
-from voicehub.generation import GenerationConfig
+from voicehub.runtime import ArchitectureRegistry
 
 
 def _tiny_config(config_type, **overrides):
@@ -563,8 +563,8 @@ class CausalLMCheckpointTests(unittest.TestCase):
                 )
 
     def test_explicit_sharded_snapshot_index_keeps_logical_shard_directory(self):
-        from voicehub.architectures.causal_lm.checkpoint import open_causal_lm_tensor_source
         from voicehub.checkpointing import save_safetensors
+        from voicehub.models.causal_lm.native.checkpoint import open_causal_lm_tensor_source
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -648,10 +648,10 @@ class CausalLMRegistrationTests(unittest.TestCase):
         code = """
 import json
 import sys
-import voicehub.architectures
+import voicehub.runtime
 print(json.dumps({
-    "registered": "causal-lm" in voicehub.architectures.ARCHITECTURES,
-    "modeling": "voicehub.architectures.causal_lm.modeling" in sys.modules,
+    "registered": "causal-lm" in voicehub.runtime.ARCHITECTURES,
+    "modeling": "voicehub.models.causal_lm.native.modeling" in sys.modules,
 }))
 """
         result = subprocess.run(

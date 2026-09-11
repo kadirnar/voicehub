@@ -11,26 +11,26 @@ from unittest.mock import Mock, patch
 import torch
 from torch import nn
 
-from voicehub.architectures.parakeet_tdt.artifacts import ParakeetTDTArtifacts, resolve_parakeet_tdt_artifacts
-from voicehub.architectures.parakeet_tdt.checkpoint import (
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.asr_parakeet_tdt import ParakeetTDTASRConfig, ParakeetTDTForSpeechRecognition
+from voicehub.models.asr_parakeet_tdt.native.artifacts import ParakeetTDTArtifacts, resolve_parakeet_tdt_artifacts
+from voicehub.models.asr_parakeet_tdt.native.checkpoint import (
     ParakeetTDTCheckpointAdapter,
     native_parakeet_tdt_tensor_shapes,
     parakeet_tdt_header_fingerprint,
 )
-from voicehub.architectures.parakeet_tdt.configuration import ParakeetEncoderConfig, ParakeetTDTConfig
-from voicehub.architectures.parakeet_tdt.decoding import decode_tdt_sequence
-from voicehub.architectures.parakeet_tdt.loss import tdt_loss
-from voicehub.architectures.parakeet_tdt.metadata import PARAKEET_TDT_CHECKPOINTS, PARAKEET_TRANSFORMERS_REVISION
-from voicehub.architectures.parakeet_tdt.modeling import ParakeetEncoderOutput, ParakeetForTDT
-from voicehub.architectures.parakeet_tdt.processing import ParakeetFeatureExtractor, ParakeetProcessor
-from voicehub.architectures.parakeet_tdt.runtime import (
+from voicehub.models.asr_parakeet_tdt.native.configuration import ParakeetEncoderConfig, ParakeetTDTConfig
+from voicehub.models.asr_parakeet_tdt.native.decoding import decode_tdt_sequence
+from voicehub.models.asr_parakeet_tdt.native.loss import tdt_loss
+from voicehub.models.asr_parakeet_tdt.native.metadata import PARAKEET_TDT_CHECKPOINTS, PARAKEET_TRANSFORMERS_REVISION
+from voicehub.models.asr_parakeet_tdt.native.modeling import ParakeetEncoderOutput, ParakeetForTDT
+from voicehub.models.asr_parakeet_tdt.native.processing import ParakeetFeatureExtractor, ParakeetProcessor
+from voicehub.models.asr_parakeet_tdt.native.runtime import (
     ParakeetTDTRuntime,
     load_parakeet_tdt_runtime,
     save_parakeet_tdt_runtime,
 )
-from voicehub.architectures.parakeet_tdt.tokenization import ParakeetTokenizer, ParakeetTokenizerAssets
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.models.asr_parakeet_tdt import ParakeetTDTASRConfig, ParakeetTDTForSpeechRecognition
+from voicehub.models.asr_parakeet_tdt.native.tokenization import ParakeetTokenizer, ParakeetTokenizerAssets
 from voicehub.models.asr_parakeet_tdt.training_asr_parakeet_tdt import NativeParakeetTDTTrainingAdapter
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.training.auto import AutoTrainingAdapter
@@ -170,7 +170,7 @@ class NativeParakeetTDTTests(unittest.TestCase):
         command = (
             "import sys; "
             "import voicehub.models.asr_parakeet_tdt as provider; "
-            "import voicehub.architectures.parakeet_tdt as architecture; "
+            "import voicehub.models.asr_parakeet_tdt.native as architecture; "
             "assert 'torch' not in sys.modules; "
             "assert 'ParakeetTDTForSpeechRecognition' in provider.__all__; "
             "assert 'NativeParakeetTDTTrainingAdapter' in provider.__all__; "
@@ -268,12 +268,12 @@ class NativeParakeetTDTTests(unittest.TestCase):
 
             with (
                     patch(
-                        "voicehub.architectures.parakeet_tdt.artifacts."
+                        "voicehub.models.asr_parakeet_tdt.native.artifacts."
                         "resolve_pretrained_file",
                         side_effect=resolve,
                     ),
                     patch(
-                        "voicehub.architectures.parakeet_tdt.artifacts."
+                        "voicehub.models.asr_parakeet_tdt.native.artifacts."
                         "get_cached_hugging_face_commit",
                         return_value=revision,
                     ),
@@ -296,12 +296,12 @@ class NativeParakeetTDTTests(unittest.TestCase):
 
             with (
                     patch(
-                        "voicehub.architectures.parakeet_tdt.artifacts."
+                        "voicehub.models.asr_parakeet_tdt.native.artifacts."
                         "resolve_pretrained_file",
                         side_effect=incoherent,
                     ),
                     patch(
-                        "voicehub.architectures.parakeet_tdt.artifacts."
+                        "voicehub.models.asr_parakeet_tdt.native.artifacts."
                         "get_cached_hugging_face_commit",
                         return_value=revision,
                     ),
@@ -318,12 +318,12 @@ class NativeParakeetTDTTests(unittest.TestCase):
             config.write_text("{}", encoding="utf-8")
             with (
                     patch(
-                        "voicehub.architectures.parakeet_tdt.artifacts."
+                        "voicehub.models.asr_parakeet_tdt.native.artifacts."
                         "resolve_pretrained_file",
                         return_value=config,
                     ),
                     patch(
-                        "voicehub.architectures.parakeet_tdt.artifacts."
+                        "voicehub.models.asr_parakeet_tdt.native.artifacts."
                         "get_cached_hugging_face_commit",
                         return_value=None,
                     ),
@@ -701,7 +701,7 @@ class NativeParakeetTDTTests(unittest.TestCase):
 
     def test_active_runtime_has_no_external_model_library_imports(self):
         root = Path(__file__).resolve().parents[1]
-        files = tuple((root / "voicehub" / "architectures" / "parakeet_tdt").glob("*.py")) + tuple(
+        files = tuple((root / 'voicehub/models/asr_parakeet_tdt/native').glob("*.py")) + tuple(
             (root / "voicehub" / "models" / "asr_parakeet_tdt").glob("*.py"))
         forbidden = {
             "huggingface_hub",

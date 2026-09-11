@@ -8,8 +8,8 @@ from typing import Any
 
 import torch
 
-from voicehub.architectures.dia.runtime import DiaRuntime, load_dia_runtime
-from voicehub.base_model import BaseSpeechModel
+from voicehub.models.base import BaseSpeechModel
+from voicehub.models.dia.native.runtime import DiaRuntime, load_dia_runtime
 
 DEFAULT_SAMPLE_RATE = 44_100
 SAMPLE_RATE_RATIO = 512

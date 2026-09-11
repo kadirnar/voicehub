@@ -15,8 +15,13 @@ from unittest.mock import Mock, patch
 
 import torch
 
-from voicehub.architectures.speechbrain_asr.artifacts import resolve_speechbrain_asr_artifacts
-from voicehub.architectures.speechbrain_asr.checkpoint import (
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
+from voicehub.hub import resolve_pretrained_file, write_json_file
+from voicehub.models.asr_native.configuration import SpeechBrainASRConfig
+from voicehub.models.asr_native.speechbrain import SpeechBrainASRForSpeechRecognition
+from voicehub.models.asr_native.speechbrain_training import NativeSpeechBrainASRTrainingAdapter
+from voicehub.models.asr_speechbrain.native.artifacts import resolve_speechbrain_asr_artifacts
+from voicehub.models.asr_speechbrain.native.checkpoint import (
     NATIVE_SPEECHBRAIN_ASR_FORMAT,
     SpeechBrainASRSafeTensorsCheckpointAdapter,
     convert_speechbrain_asr_checkpoints,
@@ -25,9 +30,9 @@ from voicehub.architectures.speechbrain_asr.checkpoint import (
     speechbrain_lm_source_tensor_mapping,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.speechbrain_asr.configuration import SpeechBrainCRDNNASRConfig
-from voicehub.architectures.speechbrain_asr.decoding import SpeechBrainRNNLMBeamSearch
-from voicehub.architectures.speechbrain_asr.metadata import (
+from voicehub.models.asr_speechbrain.native.configuration import SpeechBrainCRDNNASRConfig
+from voicehub.models.asr_speechbrain.native.decoding import SpeechBrainRNNLMBeamSearch
+from voicehub.models.asr_speechbrain.native.metadata import (
     SPEECHBRAIN_ASR_NATIVE_STATE_VALUES,
     SPEECHBRAIN_ASR_NATIVE_TENSOR_COUNT,
     SPEECHBRAIN_ASR_NATIVE_TENSOR_FINGERPRINT,
@@ -37,19 +42,14 @@ from voicehub.architectures.speechbrain_asr.metadata import (
     SPEECHBRAIN_ASR_TOKENIZER_SHA256,
     SPEECHBRAIN_ASR_TOKENIZER_SIZE,
 )
-from voicehub.architectures.speechbrain_asr.modeling import SpeechBrainCRDNNForASR
-from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.hub import resolve_pretrained_file, write_json_file
-from voicehub.models.asr_native.configuration import SpeechBrainASRConfig
-from voicehub.models.asr_native.speechbrain import SpeechBrainASRForSpeechRecognition
-from voicehub.models.asr_native.speechbrain_training import NativeSpeechBrainASRTrainingAdapter
+from voicehub.models.asr_speechbrain.native.modeling import SpeechBrainCRDNNForASR
 from voicehub.registry import get_model_spec
 from voicehub.tokenization import SentencePieceUnigramTokenizer
-from voicehub.trainer import Trainer
 from voicehub.training import ASRDataset, get_training_spec
 from voicehub.training.adapters import BaseTrainingAdapter
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.specs import TrainingFamily, TrainingSupport
-from voicehub.training_args import TrainingArguments
+from voicehub.training.trainer import Trainer
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -153,7 +153,7 @@ def _write_native_artifact(directory: Path) -> SpeechBrainCRDNNForASR:
     )
     values = config.to_dict()
     values.update({
-        "architectures": [
+        'architectures': [
             "SpeechBrainASRForSpeechRecognition",
             "SpeechBrainCRDNNForASR",
         ],
@@ -244,7 +244,7 @@ class NativeSpeechBrainArchitectureTests(unittest.TestCase):
                     return_value=(states, rounded_lengths, relative_lengths),
                 ),
                 patch(
-                    "voicehub.architectures.speechbrain_asr.modeling."
+                    "voicehub.models.asr_speechbrain.native.modeling."
                     "functional.ctc_loss",
                     return_value=zero_loss,
                 ) as ctc_loss,
@@ -260,7 +260,7 @@ class NativeSpeechBrainArchitectureTests(unittest.TestCase):
                     "encode",
                     return_value=(states, rounded_lengths, relative_lengths),
                 ),
-                patch("voicehub.architectures.speechbrain_asr.modeling."
+                patch("voicehub.models.asr_speechbrain.native.modeling."
                       "functional.ctc_loss", ) as ctc_loss,
         ):
             output = model(**inputs, epoch=config.number_of_ctc_epochs + 1)
@@ -539,7 +539,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             _write_native_artifact(native)
 
             with patch(
-                    "voicehub.architectures.speechbrain_asr.artifacts."
+                    "voicehub.models.asr_speechbrain.native.artifacts."
                     "resolve_pretrained_file",
                     return_value=root / "asr.ckpt",
             ) as resolver:

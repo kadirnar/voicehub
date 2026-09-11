@@ -8,8 +8,8 @@ from typing import Any
 _PACKAGE = "voicehub.models.asr_nemotron."
 _EXPORTS = {
     "NativeNemotronASRTrainingAdapter": _PACKAGE + "training_asr_nemotron",
-    "NemotronASRConfig": _PACKAGE + "configuration_asr_nemotron",
-    "NemotronForSpeechRecognition": _PACKAGE + "modeling_asr_nemotron",
+    "NemotronASRConfig": _PACKAGE + "configuration",
+    "NemotronForSpeechRecognition": _PACKAGE + "modeling",
 }
 
 __all__ = sorted(_EXPORTS)

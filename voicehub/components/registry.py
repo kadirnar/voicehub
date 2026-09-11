@@ -67,7 +67,7 @@ class _ModelComponents(Mapping[str, tuple[str, ...]]):
 
     def __getitem__(self, model_type: str) -> tuple[str, ...]:
         from voicehub.errors import UnknownModelError
-        from voicehub.models.registry import get_model_spec
+        from voicehub.registry import get_model_spec
 
         try:
             components = get_model_spec(model_type).components
@@ -78,12 +78,12 @@ class _ModelComponents(Mapping[str, tuple[str, ...]]):
         return components
 
     def __iter__(self) -> Iterator[str]:
-        from voicehub.models.registry import list_model_specs
+        from voicehub.registry import list_model_specs
 
         return iter(tuple(sorted(spec.model_type for spec in list_model_specs() if spec.components)))
 
     def __len__(self) -> int:
-        from voicehub.models.registry import list_model_specs
+        from voicehub.registry import list_model_specs
 
         return sum(bool(spec.components) for spec in list_model_specs())
 

@@ -247,7 +247,7 @@ SPEECHT5_ACTIONS = (
     (
         "source",
         "https://github.com/kadirnar/voicehub/blob/main/"
-        "voicehub/models/speecht5/modeling_speecht5.py",
+        "voicehub/models/speecht5/modeling.py",
     ),
     (
         "colab",
@@ -365,10 +365,10 @@ MODEL_API_HEADINGS = (
     ("H2", "Loading, saving, and sharing"),
 )
 MODEL_API_SOURCE_TARGETS = (
-    "https://github.com/kadirnar/voicehub/blob/main/voicehub/modeling_utils.py",
-    "https://github.com/kadirnar/voicehub/blob/main/voicehub/modeling_utils.py",
-    "https://github.com/kadirnar/voicehub/blob/main/voicehub/audio_modeling_utils.py",
-    "https://github.com/kadirnar/voicehub/blob/main/voicehub/modeling_outputs.py",
+    "https://github.com/kadirnar/voicehub/blob/main/voicehub/models/tts.py",
+    "https://github.com/kadirnar/voicehub/blob/main/voicehub/models/tts.py",
+    "https://github.com/kadirnar/voicehub/blob/main/voicehub/models/audio.py",
+    "https://github.com/kadirnar/voicehub/blob/main/voicehub/outputs.py",
 )
 MODEL_API_INTERNAL_TARGETS = (
     "/models/providers/",
@@ -2350,9 +2350,9 @@ def _validate_speecht5_state(page: Page, case: str, viewport: dict[str, Any]) ->
             "Configuration",
             "heading":
             "SpeechT5Config",
-            "source": (
-                "https://github.com/kadirnar/voicehub/blob/main/"
-                "voicehub/models/speecht5/configuration_speecht5.py"),
+            "source":
+            ("https://github.com/kadirnar/voicehub/blob/main/"
+             "voicehub/models/speecht5/configuration.py"),
             "signature": ["SpeechT5Config(**config_kwargs)"],
             "parameterHeading":
             "Parameters",
@@ -2365,9 +2365,9 @@ def _validate_speecht5_state(page: Page, case: str, viewport: dict[str, Any]) ->
             "Model",
             "heading":
             "SpeechT5ForTextToSpeech",
-            "source": (
-                "https://github.com/kadirnar/voicehub/blob/main/"
-                "voicehub/models/speecht5/modeling_speecht5.py"),
+            "source":
+            ("https://github.com/kadirnar/voicehub/blob/main/"
+             "voicehub/models/speecht5/modeling.py"),
             "signature": [
                 "AutoModelForTextToSpeech.from_pretrained(",
                 "pretrained_model_name_or_path,",

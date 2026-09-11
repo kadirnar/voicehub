@@ -8,20 +8,20 @@ import torch
 from torch import nn
 
 from tests.test_native_supertonic_runtime import _runtime
-from voicehub.architectures.chatterbox.registration import create_chatterbox_architecture_spec
-from voicehub.architectures.styletts2.registration import create_styletts2_architecture_spec
-from voicehub.architectures.styletts2.runtime import StyleTTS2Runtime
-from voicehub.architectures.styletts2.sampling import StyleTTS2DiffusionSampler
-from voicehub.architectures.supertonic.frontend import SupertonicStyle
-from voicehub.architectures.supertonic.registration import create_supertonic_architecture_spec
 from voicehub.models.chatterbox.models.s3gen.flow_matching import ConditionalCFM
+from voicehub.models.chatterbox.native.registration import create_chatterbox_architecture_spec
 from voicehub.models.chatterbox.tts import ChatterboxTTS
+from voicehub.models.styletts2.native.registration import create_styletts2_architecture_spec
+from voicehub.models.styletts2.native.runtime import StyleTTS2Runtime
+from voicehub.models.styletts2.native.sampling import StyleTTS2DiffusionSampler
 from voicehub.models.styletts2.source.styletts2.Modules.diffusion.sampler import (
     ADPM2Sampler,
     KarrasSchedule,
     KDiffusion,
     LogNormalDistribution,
 )
+from voicehub.models.supertonic.native.frontend import SupertonicStyle
+from voicehub.models.supertonic.native.registration import create_supertonic_architecture_spec
 from voicehub.optimization import (
     OptimizationContext,
     TTSOptimizationCompatibilityError,

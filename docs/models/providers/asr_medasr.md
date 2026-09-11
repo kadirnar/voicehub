@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/google-health/medasr" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_medasr/modeling_asr_medasr.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_medasr/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_medasr.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -104,7 +104,7 @@ integration. This page is generated from its registry contract. [Open the `asr_m
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [MedASR](https://github.com/google-health/medasr)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_medasr/modeling_asr_medasr.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_medasr/modeling.py)
 
 ## Configuration
 
@@ -190,9 +190,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_medasr.modeling_asr_medasr.MedASRForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_medasr.configuration_asr_medasr.MedASRConfig` |
-| Source provenance | `voicehub/architectures/medasr/SOURCE.json` |
+| Implementation | `voicehub.models.asr_medasr.modeling.MedASRForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_medasr.configuration.MedASRConfig` |
+| Source provenance | `voicehub/models/asr_medasr/native/SOURCE.json` |
 | License | [health-ai-developer-foundations](https://huggingface.co/google/medasr) |
 
 Access requires accepting Google's Health AI Developer Foundations terms. Review the healthcare-specific use restrictions before fine-tuning or deployment. Commercial use: **review required**.
@@ -216,7 +216,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `MedASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_medasr/configuration_asr_medasr.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_medasr/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -235,7 +235,7 @@ MedASRConfig(**config_kwargs)
 
 ### `MedASRForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_medasr/modeling_asr_medasr.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_medasr/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

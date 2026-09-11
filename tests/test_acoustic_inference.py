@@ -12,22 +12,22 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from voicehub.models.chatterbox.inference import ChatterboxForTextToSpeech
-from voicehub.models.f5tts.inference import F5TTSForTextToSpeech
-from voicehub.models.gptsovits.inference import GPTSoVITSForTextToSpeech
-from voicehub.models.inflecttts.inference import InflectTTSForTextToSpeech
-from voicehub.models.kokoro.inference import KokoroForTextToSpeech
-from voicehub.models.melotts.inference import MeloTTSForTextToSpeech
-from voicehub.models.neutts.inference import NeuTTSForTextToSpeech
-from voicehub.models.openvoice.inference import OpenVoiceForTextToSpeech
-from voicehub.models.parlertts.inference import ParlerTTSForTextToSpeech
-from voicehub.models.styletts2.inference import StyleTTS2ForTextToSpeech
-from voicehub.models.supertonic.inference import SupertonicForTextToSpeech
-from voicehub.models.vibevoice.inference import VibeVoiceForTextToSpeech
-from voicehub.models.vui.inference import VuiForTextToSpeech
-from voicehub.models.xtts.inference import XTTSForTextToSpeech
-from voicehub.models.zonos2.inference import Zonos2Config, Zonos2ForTextToSpeech
-from voicehub.models.zonos.inference import ZonosForTextToSpeech
+from voicehub.models.chatterbox.modeling import ChatterboxForTextToSpeech
+from voicehub.models.f5tts.modeling import F5TTSForTextToSpeech
+from voicehub.models.gptsovits.modeling import GPTSoVITSForTextToSpeech
+from voicehub.models.inflecttts.modeling import InflectTTSForTextToSpeech
+from voicehub.models.kokoro.modeling import KokoroForTextToSpeech
+from voicehub.models.melotts.modeling import MeloTTSForTextToSpeech
+from voicehub.models.neutts.modeling import NeuTTSForTextToSpeech
+from voicehub.models.openvoice.modeling import OpenVoiceForTextToSpeech
+from voicehub.models.parlertts.modeling import ParlerTTSForTextToSpeech
+from voicehub.models.styletts2.modeling import StyleTTS2ForTextToSpeech
+from voicehub.models.supertonic.modeling import SupertonicForTextToSpeech
+from voicehub.models.vibevoice.modeling import VibeVoiceForTextToSpeech
+from voicehub.models.vui.modeling import VuiForTextToSpeech
+from voicehub.models.xtts.modeling import XTTSForTextToSpeech
+from voicehub.models.zonos2.modeling import Zonos2Config, Zonos2ForTextToSpeech
+from voicehub.models.zonos.modeling import ZonosForTextToSpeech
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
@@ -406,7 +406,7 @@ class InferenceHelperTests(unittest.TestCase):
         model.device = "cpu"
 
         with patch(
-                "voicehub.models.gptsovits.inference.import_optional",
+                "voicehub.models.gptsovits.modeling.import_optional",
                 return_value=fake_runtime,
         ):
             model._load_pretrained_model()
@@ -433,11 +433,11 @@ class InferenceHelperTests(unittest.TestCase):
 
         with (
                 patch(
-                    "voicehub.models.gptsovits.inference.secrets.randbelow",
+                    "voicehub.models.gptsovits.modeling.secrets.randbelow",
                     return_value=1234,
                 ),
                 patch(
-                    "voicehub.models.gptsovits.inference.seeded_inference",
+                    "voicehub.models.gptsovits.modeling.seeded_inference",
                     return_value=nullcontext(1234),
                 ),
         ):
@@ -546,7 +546,7 @@ class InferenceHelperTests(unittest.TestCase):
         source_embedding = torch.zeros(1, 256, 1)
         target_embedding = torch.ones(1, 256, 1)
         with patch(
-                "voicehub.models.openvoice.inference.seeded_inference",
+                "voicehub.models.openvoice.modeling.seeded_inference",
                 return_value=nullcontext(31),
         ) as seeded:
             output = model._generate(
@@ -584,7 +584,7 @@ class InferenceHelperTests(unittest.TestCase):
     def test_supertonic_trims_each_chunk_before_concatenation(self):
         import torch
 
-        from voicehub.architectures.supertonic.runtime import NativeSupertonicRuntime
+        from voicehub.models.supertonic.native.runtime import NativeSupertonicRuntime
 
         runtime = SimpleNamespace(
             sample_rate=10,
@@ -604,7 +604,7 @@ class InferenceHelperTests(unittest.TestCase):
             ], )
 
         with patch(
-                "voicehub.architectures.supertonic.runtime.chunk_text",
+                "voicehub.models.supertonic.native.runtime.chunk_text",
                 return_value=("first", "second"),
         ):
             waveform, duration = NativeSupertonicRuntime.synthesize(
@@ -895,7 +895,7 @@ class InferenceHelperTests(unittest.TestCase):
         )
 
         with patch(
-                "voicehub.models.xtts_native.modeling_xtts.seeded_inference",
+                "voicehub.models.xtts.modeling.seeded_inference",
                 return_value=nullcontext(37),
         ) as seeded:
             output = model._generate(
@@ -922,7 +922,7 @@ class InferenceHelperTests(unittest.TestCase):
         model = Zonos2ForTextToSpeech(device="cuda:1")
         model.device = "cuda:1"
         with patch(
-                "voicehub.models.zonos2.inference."
+                "voicehub.models.zonos2.modeling."
                 "NativeZonos2Runtime.from_pretrained",
                 return_value=runtime,
         ) as load_runtime:
@@ -946,7 +946,7 @@ class InferenceHelperTests(unittest.TestCase):
         model.artifacts = SimpleNamespace(safe_conversion=False)
 
         with patch(
-                "voicehub.models.zonos2.inference.seeded_inference",
+                "voicehub.models.zonos2.modeling.seeded_inference",
                 return_value=nullcontext(41),
         ) as seeded:
             output = model._generate("hello")
@@ -999,7 +999,7 @@ class InferenceHelperTests(unittest.TestCase):
         model.device = "cpu"
 
         with patch(
-                "voicehub.models.zonos2.inference."
+                "voicehub.models.zonos2.modeling."
                 "NativeZonos2Runtime.from_pretrained",
                 return_value=runtime,
         ) as load_runtime:
@@ -1082,7 +1082,7 @@ class InferenceHelperTests(unittest.TestCase):
                 np.asarray([0.1], dtype=np.float32),
             )), )
         with patch(
-                "voicehub.models.inflecttts.inference.seeded_inference",
+                "voicehub.models.inflecttts.modeling.seeded_inference",
                 return_value=nullcontext(7),
         ) as seeded:
             inflect._generate("hello", seed=7)
@@ -1096,7 +1096,7 @@ class InferenceHelperTests(unittest.TestCase):
         styletts.device = "cpu"
         styletts.model = SimpleNamespace(generate=Mock(return_value=np.asarray([0.1], dtype=np.float32)), )
         with patch(
-                "voicehub.models.styletts2.inference.seeded_inference",
+                "voicehub.models.styletts2.modeling.seeded_inference",
                 return_value=nullcontext(11),
         ):
             output = styletts._generate("hello", seed=11)
@@ -1114,7 +1114,7 @@ class InferenceHelperTests(unittest.TestCase):
             last_seed=13,
         )
         with patch(
-                "voicehub.models.neutts.inference.seeded_inference",
+                "voicehub.models.neutts.modeling.seeded_inference",
                 return_value=nullcontext(13),
         ):
             output = neutts._generate(

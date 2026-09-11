@@ -8,24 +8,24 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures import get_architecture_spec
-from voicehub.architectures.fsmn_vad.checkpoint import (
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
+from voicehub.hub import write_json_file
+from voicehub.models.vad_funasr import FSMNVADTrainingDataset, FunASRVADConfig, FunASRVADForVoiceActivityDetection
+from voicehub.models.vad_funasr.native.checkpoint import (
     FSMNVADSafeTensorsCheckpointAdapter,
     convert_funasr_fsmn_checkpoint,
 )
-from voicehub.architectures.fsmn_vad.configuration import FSMNVADConfig
-from voicehub.architectures.fsmn_vad.frontend import FSMNVADFrontend
-from voicehub.architectures.fsmn_vad.inference import FSMNVADDecoder
-from voicehub.architectures.fsmn_vad.metadata import (
+from voicehub.models.vad_funasr.native.configuration import FSMNVADConfig
+from voicehub.models.vad_funasr.native.frontend import FSMNVADFrontend
+from voicehub.models.vad_funasr.native.inference import FSMNVADDecoder
+from voicehub.models.vad_funasr.native.metadata import (
     FUNASR_HF_REVISION,
     FUNASR_MODEL_SHA256,
     FUNASR_OFFICIAL_TENSOR_FINGERPRINT,
 )
-from voicehub.architectures.fsmn_vad.modeling import FSMNVADModel
-from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.hub import write_json_file
-from voicehub.models.vad_funasr import FSMNVADTrainingDataset, FunASRVADConfig, FunASRVADForVoiceActivityDetection
+from voicehub.models.vad_funasr.native.modeling import FSMNVADModel
 from voicehub.registry import get_model_spec
+from voicehub.runtime import get_architecture_spec
 from voicehub.training import get_training_spec
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

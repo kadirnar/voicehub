@@ -949,7 +949,7 @@ def build_asr_seamless_m4t_v2_dataset_spec() -> ASRDatasetSpec:
         "SeamlessM4T-v2 multilingual speech-to-text records.",
         homogeneous_batch_fields=(("target_language", "language"), ),
         field_aliases=(("target_lang", "target_language"), ),
-        record_normalizer=("voicehub.architectures.seamless_m4t_v2.data:normalize_record"),
+        record_normalizer=("voicehub.models.asr_seamless_m4t_v2.native.data:normalize_record"),
         record_normalizer_phase="before-aliases",
     )
 
@@ -1059,7 +1059,7 @@ def build_asr_funasr_dataset_spec() -> ASRDatasetSpec:
             ("text_language", "language"),
             ("with_or_wo_itn", "use_itn"),
         ),
-        record_normalizer=("voicehub.architectures.sensevoice.data:normalize_record"),
+        record_normalizer=("voicehub.models.asr_funasr.native.data:normalize_record"),
     )
 
 

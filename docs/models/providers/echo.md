@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/jordandare/echo-tts" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/echo/modeling_echo.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/echo/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/echo.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -106,7 +106,7 @@ The release card and reference implementation demonstrate English prompts and do
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Echo-TTS](https://github.com/jordandare/echo-tts)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/echo/modeling_echo.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/echo/modeling.py)
 
 ## Configuration
 
@@ -191,8 +191,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.echo.modeling_echo.EchoTTSForTextToSpeech` |
-| Configuration | `voicehub.models.echo.configuration_echo.EchoTTSConfig` |
+| Implementation | `voicehub.models.echo.modeling.EchoTTSForTextToSpeech` |
+| Configuration | `voicehub.models.echo.configuration.EchoTTSConfig` |
 | Source provenance | `voicehub/models/echo/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -217,7 +217,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `EchoTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/echo/configuration_echo.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/echo/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -236,7 +236,7 @@ EchoTTSConfig(**config_kwargs)
 
 ### `EchoTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/echo/modeling_echo.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/echo/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

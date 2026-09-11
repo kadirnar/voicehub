@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from voicehub.architectures.outetts.metadata import OUTETTS_TRAINING_SOURCE, OUTETTS_TRAINING_SOURCE_REVISION
-from voicehub.architectures.outetts.prompting import OuteTTSPromptProcessor, SpeakerProfile
+from voicehub.models.outetts.native.metadata import OUTETTS_TRAINING_SOURCE, OUTETTS_TRAINING_SOURCE_REVISION
+from voicehub.models.outetts.native.prompting import OuteTTSPromptProcessor, SpeakerProfile
 from voicehub.training.data import CausalTokenCollator
 from voicehub.training.recipes import CodecCausalLMTrainingAdapter
 

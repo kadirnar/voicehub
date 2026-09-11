@@ -7,11 +7,11 @@ from typing import Any
 
 _EXPORTS = {
     "OpenVoiceConfig": (
-        "voicehub.models.openvoice.configuration_openvoice",
+        "voicehub.models.openvoice.configuration",
         "OpenVoiceConfig",
     ),
     "OpenVoiceForTextToSpeech": (
-        "voicehub.models.openvoice.inference",
+        "voicehub.models.openvoice.modeling",
         "OpenVoiceForTextToSpeech",
     ),
     "OpenVoiceTrainingAdapter": (
@@ -23,7 +23,7 @@ _EXPORTS = {
         "OpenVoiceTrainingCollator",
     ),
     "OpenVoiceTTS": (
-        "voicehub.models.openvoice.inference",
+        "voicehub.models.openvoice.modeling",
         "OpenVoiceTTS",
     ),
 }

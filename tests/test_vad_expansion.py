@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from voicehub.audio_modeling_utils import PreTrainedVADModel
+from voicehub.models.audio import PreTrainedVADModel
 from voicehub.models.vad_auditok import AuditokVADConfig, AuditokVADForVoiceActivityDetection
 from voicehub.models.vad_pyannote_brouhaha import (
     PyannoteBrouhahaVADConfig,
@@ -220,10 +220,10 @@ class AuditokVADRuntimeTests(unittest.TestCase):
 def _native_ten_artifact(directory: str | Path) -> Path:
     import torch
 
-    from voicehub.architectures.ten_vad.checkpoint import NATIVE_TEN_VAD_FILENAME, NATIVE_TEN_VAD_FORMAT
-    from voicehub.architectures.ten_vad.configuration import TENVADConfig
-    from voicehub.architectures.ten_vad.modeling import TENVADModel
     from voicehub.checkpointing import save_safetensors
+    from voicehub.models.vad_ten.native.checkpoint import NATIVE_TEN_VAD_FILENAME, NATIVE_TEN_VAD_FORMAT
+    from voicehub.models.vad_ten.native.configuration import TENVADConfig
+    from voicehub.models.vad_ten.native.modeling import TENVADModel
 
     destination = Path(directory)
     config = TENVADConfig()
@@ -252,9 +252,9 @@ class SherpaONNXVADRuntimeTests(unittest.TestCase):
     def test_silero_scorer_preserves_native_frame_and_state_contract(self):
         import torch
 
-        from voicehub.architectures.silero_vad.configuration import SileroVADConfig
-        from voicehub.architectures.silero_vad.modeling import SileroVADModel
         from voicehub.models.vad_sherpa_onnx.streaming import NativeSileroScorer
+        from voicehub.models.vad_silero.native.configuration import SileroVADConfig
+        from voicehub.models.vad_silero.native.modeling import SileroVADModel
 
         torch.manual_seed(29)
         native = SileroVADModel(SileroVADConfig()).eval()

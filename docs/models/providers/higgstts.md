@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/boson-ai/higgs-audio" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/higgstts/modeling_higgstts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/higgstts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/higgstts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -110,7 +110,7 @@ integration. This page is generated from its registry contract. [Open the `higgs
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Higgs Audio](https://github.com/boson-ai/higgs-audio)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/higgstts/modeling_higgstts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/higgstts/modeling.py)
 
 ## Configuration
 
@@ -196,8 +196,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.higgstts.modeling_higgstts.HiggsTTSForTextToSpeech` |
-| Configuration | `voicehub.models.higgstts.configuration_higgstts.HiggsTTSConfig` |
+| Implementation | `voicehub.models.higgstts.modeling.HiggsTTSForTextToSpeech` |
+| Configuration | `voicehub.models.higgstts.configuration.HiggsTTSConfig` |
 | Source provenance | `voicehub/models/higgstts/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -222,7 +222,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `HiggsTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/higgstts/configuration_higgstts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/higgstts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -241,7 +241,7 @@ HiggsTTSConfig(**config_kwargs)
 
 ### `HiggsTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/higgstts/modeling_higgstts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/higgstts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

@@ -5,15 +5,11 @@ import sys
 import unittest
 from pathlib import Path
 
-from voicehub.models.cosyvoice import (
-    CosyVoiceConfig,
-    CosyVoiceForTextToSpeech,
-    CosyVoiceTrainingAdapter,
-    CosyVoiceTrainingCollator,
-    CosyVoiceTTS,
-)
-from voicehub.models.cosyvoice_native import CosyVoiceConfig as NativeCosyVoiceConfig
-from voicehub.models.cosyvoice_native import CosyVoiceForTextToSpeech as NativeCosyVoiceForTextToSpeech
+from voicehub.models.cosyvoice import CosyVoiceConfig
+from voicehub.models.cosyvoice import CosyVoiceConfig as NativeCosyVoiceConfig
+from voicehub.models.cosyvoice import CosyVoiceForTextToSpeech
+from voicehub.models.cosyvoice import CosyVoiceForTextToSpeech as NativeCosyVoiceForTextToSpeech
+from voicehub.models.cosyvoice import CosyVoiceTrainingAdapter, CosyVoiceTrainingCollator, CosyVoiceTTS
 from voicehub.registry import get_model_spec
 from voicehub.training.specs import get_training_spec
 
@@ -31,11 +27,11 @@ class CosyVoicePublicRuntimeTests(unittest.TestCase):
         self.assertIs(CosyVoiceTTS, CosyVoiceForTextToSpeech)
         self.assertEqual(
             CosyVoiceTrainingAdapter.__module__,
-            "voicehub.models.cosyvoice_native.training_cosyvoice",
+            "voicehub.models.cosyvoice.training_cosyvoice",
         )
         self.assertEqual(
             CosyVoiceTrainingCollator.__module__,
-            "voicehub.models.cosyvoice_native.training_cosyvoice",
+            "voicehub.models.cosyvoice.training_cosyvoice",
         )
 
     def test_public_package_is_dependency_lazy(self):

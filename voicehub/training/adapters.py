@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from voicehub.dependencies import import_optional
-from voicehub.modeling_outputs import SpeechTrainingOutput, TTSTrainingOutput
+from voicehub.outputs import SpeechTrainingOutput, TTSTrainingOutput
 from voicehub.tasks import SpeechTask
 from voicehub.training.collators import DataCollatorForAudioTraining
 from voicehub.training.contracts import TrainingContext, TrainingPhaseKind, TrainingPhaseSpec, TrainingSupport
@@ -229,7 +229,7 @@ class BaseTrainingAdapter:
             "recipe_version": self.RECIPE_VERSION,
             "recipe_kind": self.spec.recipe_kind.value,
             "phases": [phase.name for phase in self.spec.phases],
-            "base_model": getattr(config, "name_or_path", None),
+            'base_model': getattr(config, "name_or_path", None),
             "training_default_model": (self.spec.training_default_model_name_or_path),
             "source_entrypoints": list(self.spec.source_entrypoints),
             "checkpoint_semantics": {

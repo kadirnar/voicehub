@@ -32,7 +32,7 @@ class ProviderIndependencePolicyTests(unittest.TestCase):
         expected = {
             path
             for path in PACKAGE_ROOT.rglob("*.py")
-            if path.relative_to(PACKAGE_ROOT).parts[0] not in {"architectures", "models"}
+            if path.relative_to(PACKAGE_ROOT).parts[0] not in {'architectures', "models"}
         }
 
         self.assertEqual(discovered, expected)
@@ -67,7 +67,7 @@ class ProviderIndependencePolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "voicehub"
             (root / "models" / "auroratts").mkdir(parents=True)
-            (root / "architectures" / "auroratts").mkdir(parents=True)
+            (root / "models/auroratts/native").mkdir(parents=True)
             (root / "metadata.py").write_text(
                 "declaration = ModelSpec(model_type='auroratts')\n",
                 encoding="utf-8",
@@ -94,7 +94,7 @@ class ProviderIndependencePolicyTests(unittest.TestCase):
             (root / "shared.py").write_text(branch_source, encoding="utf-8")
             for local_path in (
                     root / "models" / "auroratts" / "runtime.py",
-                    root / "architectures" / "auroratts" / "modeling.py",
+                    root / "models/auroratts/native/modeling.py",
             ):
                 local_path.write_text(branch_source, encoding="utf-8")
 

@@ -6,7 +6,6 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.f5tts.audio import htk_mel_filter_bank as f5_htk_bank
 from voicehub.components.audio.vocoders.vocos.configuration import parse_vocos_yaml
 from voicehub.components.audio.vocoders.vocos.dataset import DataConfig, VocosDataset
 from voicehub.components.audio.vocoders.vocos.discriminators import (
@@ -20,6 +19,7 @@ from voicehub.components.audio.vocoders.vocos.models import VocosBackbone
 from voicehub.components.audio.vocoders.vocos.modules import AdaLayerNorm
 from voicehub.components.audio.vocoders.vocos.pretrained import Vocos
 from voicehub.components.audio.vocoders.vocos.spectral_ops import IMDCT, MDCT
+from voicehub.models.f5tts.native.audio import htk_mel_filter_bank as f5_htk_bank
 from voicehub.policies.architecture_dependencies import inspect_native_imports
 from voicehub.processing import htk_mel_filter_bank, save_pcm_wave
 

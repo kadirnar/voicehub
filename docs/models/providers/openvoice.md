@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2312.01479" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/myshell-ai/OpenVoice" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/modeling_openvoice.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/openvoice.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -111,7 +111,7 @@ integration. This page is generated from its registry contract. [Open the `openv
 
 - **Paper:** [OpenVoice: Versatile Instant Voice Cloning](https://arxiv.org/abs/2312.01479)
 - **Upstream GitHub:** [OpenVoice](https://github.com/myshell-ai/OpenVoice)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/modeling_openvoice.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/modeling.py)
 
 ## Configuration
 
@@ -197,8 +197,8 @@ This profile uses model-specific phases; inspect and honor each phase boundary. 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.openvoice.modeling_openvoice.OpenVoiceForTextToSpeech` |
-| Configuration | `voicehub.models.openvoice.configuration_openvoice.OpenVoiceConfig` |
+| Implementation | `voicehub.models.openvoice.modeling.OpenVoiceForTextToSpeech` |
+| Configuration | `voicehub.models.openvoice.configuration.OpenVoiceConfig` |
 | Source provenance | `voicehub/models/openvoice/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -223,7 +223,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `OpenVoiceConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/configuration_openvoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -242,7 +242,7 @@ OpenVoiceConfig(**config_kwargs)
 
 ### `OpenVoiceForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/modeling_openvoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/openvoice/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

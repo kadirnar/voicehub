@@ -6,14 +6,14 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from voicehub.models.asr_whisper_native.configuration_asr_whisper_native import WhisperASRConfig
-    from voicehub.models.asr_whisper_native.modeling_asr_whisper_native import WhisperForSpeechRecognition
+    from voicehub.models.asr_whisper_native.configuration import WhisperASRConfig
+    from voicehub.models.asr_whisper_native.modeling import WhisperForSpeechRecognition
     from voicehub.models.asr_whisper_native.training_asr_whisper_native import NativeWhisperTrainingAdapter
 
 _PUBLIC_COMPONENTS = {
     "NativeWhisperTrainingAdapter": ("voicehub.models.asr_whisper_native.training_asr_whisper_native"),
-    "WhisperASRConfig": ("voicehub.models.asr_whisper_native.configuration_asr_whisper_native"),
-    "WhisperForSpeechRecognition": ("voicehub.models.asr_whisper_native.modeling_asr_whisper_native"),
+    "WhisperASRConfig": ("voicehub.models.asr_whisper_native.configuration"),
+    "WhisperForSpeechRecognition": ("voicehub.models.asr_whisper_native.modeling"),
 }
 
 

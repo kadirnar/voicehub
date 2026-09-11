@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from voicehub.dependencies import import_optional
-from voicehub.modeling_outputs import TTSTrainingOutput
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.training.adapters import CausalLMTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 from voicehub.training.recipes import SourceRecipeTrainingAdapter

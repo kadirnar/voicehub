@@ -1,6 +1,6 @@
 """Compatibility exports for VoiceHub's native Dia layers."""
 
-from voicehub.architectures.dia.modeling import (
+from voicehub.models.dia.native.modeling import (
     DiaCrossAttention,
     DiaDecoder,
     DiaDecoderLayer,

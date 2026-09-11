@@ -5,8 +5,8 @@ from math import isfinite
 from numbers import Integral, Real
 from pathlib import Path
 
-from voicehub.configuration_utils import VoiceHubConfig
-from voicehub.models.asr_whisper_native.configuration_asr_whisper_native import WhisperASRConfig
+from voicehub.configuration import VoiceHubConfig
+from voicehub.models.asr_whisper_native.configuration import WhisperASRConfig
 
 _SECRET_OPTIONS = frozenset({
     "access_token",

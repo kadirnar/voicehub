@@ -1,7 +1,7 @@
 import importlib.util
 import unittest
 
-from voicehub.modeling_outputs import SpeechTrainingOutput, TTSTrainingOutput
+from voicehub.outputs import SpeechTrainingOutput, TTSTrainingOutput
 from voicehub.registry import ModelSpec, register_model_spec, unregister_model_spec
 from voicehub.tasks import SpeechTask
 from voicehub.training.adapters import (

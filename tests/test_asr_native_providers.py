@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import numpy as np
 
-from voicehub.modeling_outputs import ASROutput
 from voicehub.models.asr_native._shared import normalize_asr_result
 from voicehub.models.asr_native.configuration import (
     ESPnetASRConfig,
@@ -31,6 +30,7 @@ from voicehub.models.asr_native.speechbrain import SpeechBrainASRForSpeechRecogn
 from voicehub.models.asr_native.wenet import WeNetASRForSpeechRecognition
 from voicehub.models.asr_native.whisperx import WhisperXForSpeechRecognition
 from voicehub.models.asr_whisper_native import NativeWhisperTrainingAdapter, WhisperForSpeechRecognition
+from voicehub.outputs import ASROutput
 from voicehub.registry import get_model_spec
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -302,7 +302,7 @@ class WhisperProviderInferenceTests(unittest.TestCase):
         self.assertTrue(adapter.spec.native_training)
         self.assertEqual(
             adapter.spec.source_entrypoints,
-            ("voicehub.architectures.whisper.WhisperModel", ),
+            ("voicehub.models.asr_whisper_native.native.WhisperModel", ),
         )
 
     def test_whisperx_alias_uses_the_native_trainable_graph(self):
@@ -466,7 +466,7 @@ class NativeToolkitInferenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SenseVoiceSmall artifact"):
             model._validate_architecture({
                 "model_type": "paraformer",
-                "architectures": ["Paraformer"],
+                'architectures': ["Paraformer"],
             })
         with self.assertRaisesRegex(ValueError, "hotwords"):
             model._validate_request(

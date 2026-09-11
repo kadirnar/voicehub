@@ -141,12 +141,10 @@ python -m pip install "voicehub[training] @ git+https://github.com/kadirnar/voic
 Start with one step on a speaker-disjoint split:
 
 ```python
-from voicehub import (
-    ASRDataset,
-    AutoModelForSpeechRecognition,
-    Trainer,
-    TrainingArguments,
-)
+from voicehub.training import ASRDataset
+from voicehub import AutoModelForSpeechRecognition
+from voicehub.training.trainer import Trainer
+from voicehub.training.arguments import TrainingArguments
 
 model = AutoModelForSpeechRecognition.from_pretrained(
     "facebook/wav2vec2-base-960h",

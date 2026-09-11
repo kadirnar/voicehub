@@ -10,7 +10,7 @@ except ModuleNotFoundError:
     torch = None
 
 if torch is not None:
-    from voicehub.architectures.wavlm import (
+    from voicehub.models.asr_wavlm.native import (
         MICROSOFT_WAVLM_SOURCE_REVISION,
         TRANSFORMERS_WAVLM_REVISION,
         WAVLM_BASE_PLUS_CTC_HEADER_FINGERPRINT,
@@ -71,7 +71,7 @@ class WavLMConfigurationTests(unittest.TestCase):
     def test_official_ctc_configuration_preserves_relative_position_fields(self):
         config = WavLMConfig.from_dict({
             "model_type": "wavlm",
-            "architectures": ["WavLMForCTC"],
+            'architectures': ["WavLMForCTC"],
             "vocab_size": 31,
             "hidden_size": 768,
             "num_hidden_layers": 12,
@@ -88,7 +88,7 @@ class WavLMConfigurationTests(unittest.TestCase):
         self.assertEqual(config.max_bucket_distance, 800)
         self.assertEqual(config.inputs_to_logits_ratio, 320)
         self.assertEqual(config.to_dict()["model_type"], "wavlm")
-        self.assertEqual(config.to_dict()["architectures"], ["WavLMForCTC"])
+        self.assertEqual(config.to_dict()['architectures'], ["WavLMForCTC"])
 
     def test_unsupported_graph_variants_and_invalid_buckets_are_rejected(self):
         cases = (
@@ -397,7 +397,7 @@ class WavLMCheckpointTests(unittest.TestCase):
             )
 
     def test_native_files_import_no_external_architecture_runtime(self):
-        package = (Path(__file__).resolve().parents[1] / "voicehub" / "architectures" / "wavlm")
+        package = (Path(__file__).resolve().parents[1] / 'voicehub/models/asr_wavlm/native')
         forbidden = {
             "huggingface_hub",
             "numpy",

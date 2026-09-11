@@ -5,13 +5,13 @@ from __future__ import annotations
 from importlib import import_module
 
 _EXPORTS = {
-    "MossTTS": "voicehub.models.mosstts.inference",
-    "MossTTSConfig": "voicehub.models.mosstts.inference",
-    "MossTTSForTextToSpeech": "voicehub.models.mosstts.inference",
-    "MossPreencodedDataset": "voicehub.architectures.mosstts.training",
-    "MossTTSDataset": "voicehub.architectures.mosstts.training",
-    "NativeMossAudioCodec": "voicehub.architectures.mosstts.codec",
-    "NativeMossTTSTrainingAdapter": "voicehub.architectures.mosstts.training",
+    "MossTTS": "voicehub.models.mosstts.modeling",
+    "MossTTSConfig": "voicehub.models.mosstts.modeling",
+    "MossTTSForTextToSpeech": "voicehub.models.mosstts.modeling",
+    "MossPreencodedDataset": "voicehub.models.mosstts.native.training",
+    "MossTTSDataset": "voicehub.models.mosstts.native.training",
+    "NativeMossAudioCodec": "voicehub.models.mosstts.native.codec",
+    "NativeMossTTSTrainingAdapter": "voicehub.models.mosstts.native.training",
 }
 
 __all__ = sorted(_EXPORTS)

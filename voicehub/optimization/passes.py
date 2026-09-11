@@ -509,7 +509,7 @@ class OptimizationPassManager:
             raise TypeError("`context` must be an OptimizationContext.")
         architecture = None
         if context.architecture is not None:
-            from voicehub.architectures import get_architecture_spec
+            from voicehub.runtime import get_architecture_spec
 
             architecture = get_architecture_spec(context.architecture)
             if context.architecture != architecture.architecture_id:

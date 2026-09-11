@@ -22,8 +22,8 @@ from voicehub.optimization import (
     TorchCompileUnavailableError,
     inspect_torch_compile,
 )
-from voicehub.trainer import Trainer
-from voicehub.training_args import TrainingArguments
+from voicehub.training.arguments import TrainingArguments
+from voicehub.training.trainer import Trainer
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 if TORCH_AVAILABLE:
@@ -608,7 +608,7 @@ class TorchCompileOptimizationTests(unittest.TestCase):
                 ), ), )
 
     def test_f5_runtime_compiles_boundaries_used_by_infer(self):
-        from voicehub.architectures.f5tts.runtime import NativeF5TTSRuntime
+        from voicehub.models.f5tts.native.runtime import NativeF5TTSRuntime
 
         class Flow(nn.Module):
 
@@ -752,7 +752,7 @@ class TorchCompileOptimizationTests(unittest.TestCase):
         self.assertEqual(tuple(runtime.state_dict()), original_keys)
 
     def test_neutts_rejects_inference_compile_and_keeps_training_compile(self):
-        from voicehub.architectures.neutts.modeling import NeuTTSRuntime
+        from voicehub.models.neutts.native.modeling import NeuTTSRuntime
 
         class Backbone(nn.Module):
 
@@ -847,8 +847,8 @@ class TorchCompileOptimizationTests(unittest.TestCase):
         self.assertEqual(tuple(runtime.state_dict()), original_keys)
 
     def test_qwen_runtime_routes_selectors_and_compile_into_synthesis(self):
-        from voicehub.architectures.qwen3_tts.runtime import NativeQwen3TTSRuntime
         from voicehub.kernels import KernelBackend
+        from voicehub.models.qwen3tts.native.runtime import NativeQwen3TTSRuntime
         from voicehub.neural.backends import FlashAttention4Policy
 
         class Talker(nn.Module):

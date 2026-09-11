@@ -22,7 +22,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2306.07691" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/yl4579/StyleTTS2" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/modeling_styletts2.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 </div>
 </details>
 </div>
@@ -108,7 +108,7 @@ integration. This page is generated from its registry contract.
 
 - **Paper:** [StyleTTS 2: Towards Human-Level Text-to-Speech through Style Diffusion](https://arxiv.org/abs/2306.07691)
 - **Upstream GitHub:** [StyleTTS 2](https://github.com/yl4579/StyleTTS2)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/modeling_styletts2.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/modeling.py)
 
 ## Configuration
 
@@ -194,8 +194,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.styletts2.modeling_styletts2.StyleTTS2ForTextToSpeech` |
-| Configuration | `voicehub.models.styletts2.configuration_styletts2.StyleTTS2Config` |
+| Implementation | `voicehub.models.styletts2.modeling.StyleTTS2ForTextToSpeech` |
+| Configuration | `voicehub.models.styletts2.configuration.StyleTTS2Config` |
 | Source provenance | `voicehub/models/styletts2/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -220,7 +220,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `StyleTTS2Config`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/configuration_styletts2.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -239,7 +239,7 @@ StyleTTS2Config(**config_kwargs)
 
 ### `StyleTTS2ForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/modeling_styletts2.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/styletts2/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

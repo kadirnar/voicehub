@@ -8,12 +8,12 @@ from pathlib import Path
 import torch
 from torch import Tensor
 
-from voicehub.architectures.dac.checkpoint import (
+from voicehub.models.dac.native.checkpoint import (
     DESCRIPT_DAC_44KHZ_REVISION,
     HuggingFaceDacCheckpointAdapter,
 )
-from voicehub.architectures.dac.configuration import DacConfig
-from voicehub.architectures.dac.modeling import DacModel
+from voicehub.models.dac.native.configuration import DacConfig
+from voicehub.models.dac.native.modeling import DacModel
 from voicehub.checkpointing import SafeTensorReader
 from voicehub.hub import read_json_file, resolve_pretrained_file
 from voicehub.processing.waveform import resample_waveform

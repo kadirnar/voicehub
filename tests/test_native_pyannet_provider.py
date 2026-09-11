@@ -7,13 +7,16 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.pyannet.checkpoint import (
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
+from voicehub.hub import write_json_file
+from voicehub.models.vad_pyannote import PyannoteVADConfig, PyannoteVADForVoiceActivityDetection
+from voicehub.models.vad_pyannote.native.checkpoint import (
     PyanNetSafeTensorsCheckpointAdapter,
     convert_pyannote_lightning_checkpoint,
 )
-from voicehub.architectures.pyannet.configuration import PyanNetConfig
-from voicehub.architectures.pyannet.inference import PyanNetFrameInference
-from voicehub.architectures.pyannet.modeling import (
+from voicehub.models.vad_pyannote.native.configuration import PyanNetConfig
+from voicehub.models.vad_pyannote.native.inference import PyanNetFrameInference
+from voicehub.models.vad_pyannote.native.modeling import (
     C50_MAX_DB,
     C50_MIN_DB,
     SNR_MAX_DB,
@@ -21,10 +24,7 @@ from voicehub.architectures.pyannet.modeling import (
     ParametricSincFilterbank,
     PyanNet,
 )
-from voicehub.architectures.pyannet.powerset import Powerset
-from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.hub import write_json_file
-from voicehub.models.vad_pyannote import PyannoteVADConfig, PyannoteVADForVoiceActivityDetection
+from voicehub.models.vad_pyannote.native.powerset import Powerset
 from voicehub.models.vad_pyannote_brouhaha import (
     PyannoteBrouhahaVADConfig,
     PyannoteBrouhahaVADForVoiceActivityDetection,

@@ -4,8 +4,8 @@ import unittest
 
 import torch
 
-from voicehub.architectures import ArchitectureRegistry, register_builtin_architectures
-from voicehub.architectures.dac.checkpoint import (
+from voicehub.checkpointing.transforms import CopyTensor
+from voicehub.models.dac.native.checkpoint import (
     DESCRIPT_DAC_44KHZ_HEADER_FINGERPRINT,
     HuggingFaceDacCheckpointAdapter,
     WeightNormalizedTensor,
@@ -13,9 +13,9 @@ from voicehub.architectures.dac.checkpoint import (
     huggingface_dac_tensor_names,
     huggingface_dac_tensor_shapes,
 )
-from voicehub.architectures.dac.configuration import DacConfig
-from voicehub.architectures.dac.modeling import DacModel
-from voicehub.checkpointing.transforms import CopyTensor
+from voicehub.models.dac.native.configuration import DacConfig
+from voicehub.models.dac.native.modeling import DacModel
+from voicehub.runtime import ArchitectureRegistry, register_builtin_architectures
 
 
 class NativeDACModelTests(unittest.TestCase):
@@ -34,7 +34,7 @@ class NativeDACModelTests(unittest.TestCase):
 
     def test_published_configuration_derivations_are_validated(self):
         values = {
-            "architectures": ["DacModel"],
+            'architectures': ["DacModel"],
             "codebook_dim": 8,
             "codebook_size": 1_024,
             "decoder_hidden_size": 1_536,

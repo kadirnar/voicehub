@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.configuration_utils import reject_serialized_secrets
+from voicehub.configuration import reject_serialized_secrets
 from voicehub.hub import read_json_file, write_json_file
 
 VUI_NATIVE_FORMAT = "voicehub-vui"

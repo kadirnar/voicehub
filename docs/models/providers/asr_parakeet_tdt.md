@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/NVIDIA/NeMo" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling_asr_parakeet_tdt.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_parakeet_tdt.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -104,7 +104,7 @@ integration. This page is generated from its registry contract. [Open the `asr_p
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [NVIDIA NeMo](https://github.com/NVIDIA/NeMo)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling_asr_parakeet_tdt.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling.py)
 
 ## Configuration
 
@@ -190,9 +190,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_parakeet_tdt.modeling_asr_parakeet_tdt.ParakeetTDTForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_parakeet_tdt.configuration_asr_parakeet_tdt.ParakeetTDTASRConfig` |
-| Source provenance | `voicehub/architectures/parakeet_tdt/SOURCE.json` |
+| Implementation | `voicehub.models.asr_parakeet_tdt.modeling.ParakeetTDTForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_parakeet_tdt.configuration.ParakeetTDTASRConfig` |
+| Source provenance | `voicehub/models/asr_parakeet_tdt/native/SOURCE.json` |
 | License | [CC-BY-4.0](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) |
 
 The pinned Parakeet TDT checkpoint and derivatives require CC-BY-4.0 attribution. The VoiceHub-owned architecture port is audited against Apache-2.0 Transformers and NeMo source. Commercial use: **allowed by the registered terms**.
@@ -216,7 +216,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `ParakeetTDTASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/configuration_asr_parakeet_tdt.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -235,7 +235,7 @@ ParakeetTDTASRConfig(**config_kwargs)
 
 ### `ParakeetTDTForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling_asr_parakeet_tdt.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_parakeet_tdt/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

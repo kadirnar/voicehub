@@ -10,13 +10,13 @@ from pathlib import Path
 import torch
 
 from voicehub import AutoConfig, AutoModelForSpeechRecognition
-from voicehub.architectures.whisper import WhisperConfig, WhisperModel
-from voicehub.architectures.whisper.checkpoint import huggingface_whisper_tensor_mapping
-from voicehub.architectures.whisper.tokenization import build_openai_whisper_special_tokens
 from voicehub.checkpointing import save_safetensors
 from voicehub.models.asr_tiron import TironASRConfig, TironForSpeechRecognition
 from voicehub.models.asr_tiron.metadata import SPEAKER_TOKEN_IDS, TIRON_CHECKPOINT_REVISION, TIRON_HARNESS_REVISION
 from voicehub.models.asr_whisper_native import NativeWhisperTrainingAdapter
+from voicehub.models.asr_whisper_native.native import WhisperConfig, WhisperModel
+from voicehub.models.asr_whisper_native.native.checkpoint import huggingface_whisper_tensor_mapping
+from voicehub.models.asr_whisper_native.native.tokenization import build_openai_whisper_special_tokens
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.tokenization import encode_gpt2_token
 from voicehub.training.auto import AutoTrainingAdapter
@@ -114,7 +114,7 @@ def _tiny_tiron_artifact(root: Path):
     )
     reference = WhisperModel(config)
     values = config.to_dict()
-    values["architectures"] = ["WhisperForConditionalGeneration"]
+    values['architectures'] = ["WhisperForConditionalGeneration"]
     (root / "config.json").write_text(
         json.dumps(values),
         encoding="utf-8",

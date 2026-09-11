@@ -11,15 +11,15 @@ from types import SimpleNamespace
 import torch
 from torch import nn
 
-from voicehub.architectures.causal_lm import LlamaConfig, LlamaForCausalLM
+from voicehub.models.causal_lm.native import LlamaConfig, LlamaForCausalLM
 from voicehub.models.llasa.artifacts import LLASA_MULTILINGUAL_REVISION, XCODEC2_HF_REVISION, resolve_xcodec2_artifacts
 from voicehub.models.llasa.checkpoint import (
     REFERENCE_LLASSA_CHECKPOINT,
     REFERENCE_XCODEC2_CHECKPOINT,
     REFERENCE_XCODEC2_TENSOR_SHAPES,
 )
-from voicehub.models.llasa.configuration_llasa import LlasaConfig
-from voicehub.models.llasa.inference import LlasaForTextToSpeech
+from voicehub.models.llasa.configuration import LlasaConfig
+from voicehub.models.llasa.modeling import LlasaForTextToSpeech
 from voicehub.models.llasa.tokenization_llasa import (
     BOS_TOKEN,
     END_HEADER_TOKEN,
@@ -179,8 +179,8 @@ class _FakeLanguageModel:
 class LlasaDependencyAndProvenanceTests(unittest.TestCase):
 
     def test_registry_and_training_contract_expose_native_end_to_end_support(self):
-        from voicehub.architectures import get_architecture_spec
         from voicehub.registry import get_model_spec
+        from voicehub.runtime import get_architecture_spec
         from voicehub.training.recipes import BUILTIN_MODEL_ADAPTERS
         from voicehub.training.specs import get_training_spec
 
@@ -213,8 +213,8 @@ class LlasaDependencyAndProvenanceTests(unittest.TestCase):
         public_files = (
             "artifacts.py",
             "checkpoint.py",
-            "configuration_llasa.py",
-            "inference.py",
+            "configuration.py",
+            "modeling.py",
             "tokenization_llasa.py",
             "training.py",
             "xcodec2.py",

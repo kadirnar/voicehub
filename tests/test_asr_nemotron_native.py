@@ -14,16 +14,16 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - optional at import time
     torch = None
 
-from voicehub.architectures.nemotron_asr.artifacts import resolve_nemotron_asr_artifacts
-from voicehub.architectures.nemotron_asr.configuration import NemotronASRArchitectureConfig, NemotronEncoderConfig
-from voicehub.architectures.nemotron_asr.metadata import (
+from voicehub.models.asr_nemotron import NemotronASRConfig, NemotronForSpeechRecognition
+from voicehub.models.asr_nemotron.native.artifacts import resolve_nemotron_asr_artifacts
+from voicehub.models.asr_nemotron.native.configuration import NemotronASRArchitectureConfig, NemotronEncoderConfig
+from voicehub.models.asr_nemotron.native.metadata import (
     NEMOTRON_ASR_HEADER_FINGERPRINT,
     NEMOTRON_ASR_PARAMETER_COUNT,
     NEMOTRON_ASR_REVISION,
     NEMOTRON_ASR_TENSOR_COUNT,
 )
-from voicehub.architectures.nemotron_asr.tokenization import NemotronASRTokenizer
-from voicehub.models.asr_nemotron import NemotronASRConfig, NemotronForSpeechRecognition
+from voicehub.models.asr_nemotron.native.tokenization import NemotronASRTokenizer
 from voicehub.models.asr_nemotron.training_asr_nemotron import NativeNemotronASRTrainingAdapter
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.training.auto import AutoTrainingAdapter
@@ -243,7 +243,7 @@ class NemotronNativeArchitectureTests(unittest.TestCase):
         self.assertTrue(all(entrypoint.startswith("voicehub.") for entrypoint in spec.source_entrypoints))
 
     def test_official_meta_inventory_matches_audited_checkpoint(self):
-        from voicehub.architectures.nemotron_asr.checkpoint import (
+        from voicehub.models.asr_nemotron.native.checkpoint import (
             native_nemotron_asr_tensor_shapes,
             nemotron_asr_header_fingerprint,
         )
@@ -265,7 +265,7 @@ class NemotronNativeArchitectureTests(unittest.TestCase):
         )
 
     def test_native_rnnt_forward_and_backward_are_finite(self):
-        from voicehub.architectures.nemotron_asr.modeling import Nemotron3_5ASRForRNNT
+        from voicehub.models.asr_nemotron.native.modeling import Nemotron3_5ASRForRNNT
 
         model = Nemotron3_5ASRForRNNT(_tiny_config())
         model.gradient_checkpointing_enable()
@@ -286,9 +286,9 @@ class NemotronNativeArchitectureTests(unittest.TestCase):
         self.assertTrue(all(torch.isfinite(gradient).all() for gradient in gradients))
 
     def test_checkpoint_streaming_assignment_rebuilds_meta_buffer(self):
-        from voicehub.architectures.nemotron_asr.checkpoint import NemotronASRCheckpointAdapter
-        from voicehub.architectures.nemotron_asr.modeling import Nemotron3_5ASRForRNNT
         from voicehub.checkpointing import SafeTensorReader, save_safetensors
+        from voicehub.models.asr_nemotron.native.checkpoint import NemotronASRCheckpointAdapter
+        from voicehub.models.asr_nemotron.native.modeling import Nemotron3_5ASRForRNNT
 
         config = _tiny_config()
         original = Nemotron3_5ASRForRNNT(config)
@@ -317,9 +317,9 @@ class NemotronNativeArchitectureTests(unittest.TestCase):
         )
 
     def test_checkpoint_preflight_rejects_invalid_tensor_kinds_atomically(self):
-        from voicehub.architectures.nemotron_asr.checkpoint import NemotronASRCheckpointAdapter
-        from voicehub.architectures.nemotron_asr.modeling import Nemotron3_5ASRForRNNT
         from voicehub.checkpointing.errors import CheckpointCompatibilityError
+        from voicehub.models.asr_nemotron.native.checkpoint import NemotronASRCheckpointAdapter
+        from voicehub.models.asr_nemotron.native.modeling import Nemotron3_5ASRForRNNT
 
         config = _tiny_config()
         original = Nemotron3_5ASRForRNNT(config)
@@ -371,10 +371,10 @@ class NemotronNativeArchitectureTests(unittest.TestCase):
                 self.assertTrue(all(tensor.device.type == "meta" for tensor in target.state_dict().values()))
 
     def test_custom_safetensors_dtype_preflight_is_atomic(self):
-        from voicehub.architectures.nemotron_asr.checkpoint import NemotronASRCheckpointAdapter
-        from voicehub.architectures.nemotron_asr.modeling import Nemotron3_5ASRForRNNT
         from voicehub.checkpointing import SafeTensorReader, save_safetensors
         from voicehub.checkpointing.errors import CheckpointCompatibilityError
+        from voicehub.models.asr_nemotron.native.checkpoint import NemotronASRCheckpointAdapter
+        from voicehub.models.asr_nemotron.native.modeling import Nemotron3_5ASRForRNNT
 
         config = _tiny_config()
         original = Nemotron3_5ASRForRNNT(config)
@@ -504,7 +504,7 @@ class NemotronTokenizerAndProviderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "RNN-T"):
             NemotronASRArchitectureConfig.from_dict(values)
         values = NemotronASRArchitectureConfig().to_dict()
-        values["architectures"] = ["ParakeetForTDT"]
+        values['architectures'] = ["ParakeetForTDT"]
         with self.assertRaisesRegex(ValueError, "Nemotron3_5AsrForRNNT"):
             NemotronASRArchitectureConfig.from_dict(values)
 
@@ -530,7 +530,7 @@ class NemotronTokenizerAndProviderTests(unittest.TestCase):
         )
 
     def test_generation_configuration_is_bound_to_native_graph(self):
-        from voicehub.architectures.nemotron_asr.runtime import validate_nemotron_asr_generation_config
+        from voicehub.models.asr_nemotron.native.runtime import validate_nemotron_asr_generation_config
 
         config = _tiny_config()
         valid = {
@@ -575,7 +575,7 @@ class NemotronTokenizerAndProviderTests(unittest.TestCase):
                 )
 
     def test_registration_does_not_claim_unverified_optimizations(self):
-        from voicehub.architectures.nemotron_asr.registration import create_nemotron_asr_architecture_spec
+        from voicehub.models.asr_nemotron.native.registration import create_nemotron_asr_architecture_spec
 
         spec = create_nemotron_asr_architecture_spec()
         self.assertEqual(

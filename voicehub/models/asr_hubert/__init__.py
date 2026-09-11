@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.asr_hubert."
 _EXPORTS = {
-    "HubertASRConfig": _PACKAGE + "configuration_asr_hubert",
-    "HubertForSpeechRecognition": _PACKAGE + "modeling_asr_hubert",
-    "HubertProcessor": _PACKAGE + "processing_asr_hubert",
+    "HubertASRConfig": _PACKAGE + "configuration",
+    "HubertForSpeechRecognition": _PACKAGE + "modeling",
+    "HubertProcessor": _PACKAGE + "processing",
     "NativeHubertTrainingAdapter": _PACKAGE + "training_asr_hubert",
 }
 

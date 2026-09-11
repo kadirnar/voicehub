@@ -6,21 +6,21 @@ from types import SimpleNamespace
 import torch
 from torch import nn
 
-from voicehub.architectures.bark.modeling import BarkModel
-from voicehub.architectures.csm.modeling import CSMModel
-from voicehub.architectures.fishtts.modeling import FishS2ForConditionalGeneration
-from voicehub.architectures.irodoritts.runtime import InferenceRuntime
-from voicehub.architectures.melotts.runtime import MeloTTSRuntime
-from voicehub.architectures.neutts.modeling import NeuTTSRuntime
-from voicehub.architectures.outetts.runtime import OuteTTSRuntime
-from voicehub.architectures.styletts2.runtime import StyleTTS2Runtime
-from voicehub.architectures.supertonic.runtime import NativeSupertonicRuntime
-from voicehub.architectures.voxcpm2.modeling import VoxCPM2Model
-from voicehub.architectures.xtts2.modeling import XTTS2Model
+from voicehub.models.bark.native.modeling import BarkModel
 from voicehub.models.chatterbox.tts import ChatterboxTTS
+from voicehub.models.csm.native.modeling import CSMModel
+from voicehub.models.fishtts.native.modeling import FishS2ForConditionalGeneration
+from voicehub.models.irodoritts.native.runtime import InferenceRuntime
 from voicehub.models.kokoro.model import KModel
+from voicehub.models.melotts.native.runtime import MeloTTSRuntime
+from voicehub.models.neutts.native.modeling import NeuTTSRuntime
+from voicehub.models.outetts.native.runtime import OuteTTSRuntime
 from voicehub.models.speecht5.native_modeling import SpeechT5ForTextToSpeechModel
+from voicehub.models.styletts2.native.runtime import StyleTTS2Runtime
+from voicehub.models.supertonic.native.runtime import NativeSupertonicRuntime
+from voicehub.models.voxcpm.native.modeling import VoxCPM2Model
 from voicehub.models.vui.model import Vui
+from voicehub.models.xtts.native.modeling import XTTS2Model
 from voicehub.optimization.protocols import OptimizationCompileTarget
 
 

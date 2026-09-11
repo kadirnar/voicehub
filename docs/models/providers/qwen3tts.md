@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2601.15621" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/QwenLM/Qwen3-TTS" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/modeling_qwen3tts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/qwen3tts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -105,7 +105,7 @@ integration. This page is generated from its registry contract. [Open the `qwen3
 
 - **Paper:** [Qwen3-TTS Technical Report](https://arxiv.org/abs/2601.15621)
 - **Upstream GitHub:** [Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/modeling_qwen3tts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/modeling.py)
 
 ## Configuration
 
@@ -191,8 +191,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.qwen3tts.modeling_qwen3tts.Qwen3TTSForTextToSpeech` |
-| Configuration | `voicehub.models.qwen3tts.configuration_qwen3tts.Qwen3TTSConfig` |
+| Implementation | `voicehub.models.qwen3tts.modeling.Qwen3TTSForTextToSpeech` |
+| Configuration | `voicehub.models.qwen3tts.configuration.Qwen3TTSConfig` |
 | Source provenance | `voicehub/models/qwen3tts/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -217,7 +217,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `Qwen3TTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/configuration_qwen3tts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -236,7 +236,7 @@ Qwen3TTSConfig(**config_kwargs)
 
 ### `Qwen3TTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/modeling_qwen3tts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/qwen3tts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

@@ -165,7 +165,7 @@ class NativeVitsGeneratorTrainingAdapter(VITSTrainingAdapter):
                     "`training_acoustic_config`. MMS-TTS checkpoint metadata "
                     "does not publish its FFT, hop, window, mel, or segment "
                     "training settings.")
-            from voicehub.architectures.vits.training import VitsAcousticConfig
+            from voicehub.models.vits.native.training import VitsAcousticConfig
 
             VitsAcousticConfig.from_mapping(acoustic)
         super().validate_support()

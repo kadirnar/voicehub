@@ -14,15 +14,15 @@ from voicehub import (
     ASRSegment,
     ASRWord,
     AudioInput,
-    AudioProcessor,
     PreTrainedASRModel,
-    SpeechSegment,
     SpeechTask,
     VADInferenceConfig,
     VADOutput,
     load_audio,
 )
-from voicehub.configuration_utils import VoiceHubConfig
+from voicehub.configuration import VoiceHubConfig
+from voicehub.outputs import SpeechSegment
+from voicehub.processing.processor import AudioProcessor
 from voicehub.vad_utils import frame_probabilities_to_segments, merge_speech_segments
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -592,7 +592,7 @@ class SpeechArtifactLifecycleTests(unittest.TestCase):
             fake_torch = SimpleNamespace(load=lambda *args, **kwargs: unsafe_state)
 
             with patch(
-                    "voicehub.audio_modeling_utils.import_module",
+                    "voicehub.model.import_module",
                     return_value=fake_torch,
             ), self.assertRaisesRegex(
                     ValueError,
@@ -606,7 +606,7 @@ class SpeechArtifactLifecycleTests(unittest.TestCase):
 
             fake_torch.load = lambda *args, **kwargs: safe_state
             with patch(
-                    "voicehub.audio_modeling_utils.import_module",
+                    "voicehub.model.import_module",
                     return_value=fake_torch,
             ):
                 model.load()

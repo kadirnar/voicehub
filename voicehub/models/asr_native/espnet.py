@@ -8,11 +8,11 @@ from numbers import Integral
 from pathlib import Path
 from typing import Any
 
-from voicehub.audio_modeling_utils import PreTrainedASRModel
 from voicehub.hub import read_json_file, write_json_file
-from voicehub.modeling_outputs import ASROutput
 from voicehub.models.asr_native.configuration import ESPnetASRConfig
+from voicehub.models.audio import PreTrainedASRModel
 from voicehub.models.native_utils import resolve_cpu_cuda_device
+from voicehub.outputs import ASROutput
 
 _ENGLISH_ALIASES = frozenset({"en", "eng", "english"})
 
@@ -102,7 +102,7 @@ class ESPnetASRForSpeechRecognition(PreTrainedASRModel):
             raise ValueError(
                 "Native ESPnet supports only the audited LibriSpeech "
                 f"Transformer e18 graph, not {architecture!r}.")
-        architectures = values.get("architectures", ())
+        architectures = values.get('architectures', ())
         if isinstance(architectures, str):
             architectures = (architectures, )
         supported = {
@@ -117,14 +117,14 @@ class ESPnetASRForSpeechRecognition(PreTrainedASRModel):
     def _load_pretrained_model(self) -> None:
         import torch
 
-        from voicehub.architectures.espnet_transformer.artifacts import resolve_espnet_artifacts
-        from voicehub.architectures.espnet_transformer.checkpoint import (
+        from voicehub.models.asr_espnet.native.artifacts import resolve_espnet_artifacts
+        from voicehub.models.asr_espnet.native.checkpoint import (
             ESPnetASRSafeTensorsCheckpointAdapter,
             load_native_espnet_models,
         )
-        from voicehub.architectures.espnet_transformer.configuration import ESPnetLibriSpeechTransformerConfig
-        from voicehub.architectures.espnet_transformer.decoding import ESPnetJointBeamSearch
-        from voicehub.architectures.espnet_transformer.tokenization import ESPnetLibriSpeechTokenizer
+        from voicehub.models.asr_espnet.native.configuration import ESPnetLibriSpeechTransformerConfig
+        from voicehub.models.asr_espnet.native.decoding import ESPnetJointBeamSearch
+        from voicehub.models.asr_espnet.native.tokenization import ESPnetLibriSpeechTokenizer
 
         source = self.config.name_or_path or self.default_model_name_or_path
         artifacts = resolve_espnet_artifacts(
@@ -324,7 +324,7 @@ class ESPnetASRForSpeechRecognition(PreTrainedASRModel):
         *,
         phase: str,
     ) -> dict[str, Any]:
-        from voicehub.architectures.espnet_transformer.training import prepare_espnet_training_batch
+        from voicehub.models.asr_espnet.native.training import prepare_espnet_training_batch
 
         if self.model is None:
             self.load_for_training()
@@ -338,13 +338,13 @@ class ESPnetASRForSpeechRecognition(PreTrainedASRModel):
         return None
 
     def _save_pretrained(self, save_directory: Path) -> None:
-        from voicehub.architectures.espnet_transformer.checkpoint import (
+        from voicehub.checkpointing import save_safetensors
+        from voicehub.models.asr_espnet.native.checkpoint import (
             NATIVE_ESPNET_FILENAME,
             NATIVE_ESPNET_FORMAT,
             NATIVE_ESPNET_LM_FILENAME,
         )
-        from voicehub.architectures.espnet_transformer.metadata import ESPNET_REVISION, ESPNET_SOURCE_REVISION
-        from voicehub.checkpointing import save_safetensors
+        from voicehub.models.asr_espnet.native.metadata import ESPNET_REVISION, ESPNET_SOURCE_REVISION
 
         if (self.model is None or self.language_model is None or self.native_config is None or
                 self.tokenizer is None):
@@ -370,7 +370,7 @@ class ESPnetASRForSpeechRecognition(PreTrainedASRModel):
         self.tokenizer.save_pretrained(save_directory)
         values = self.native_config.to_dict()
         values.update({
-            "architectures": [
+            'architectures': [
                 "ESPnetASRForSpeechRecognition",
                 "ESPnetLibriSpeechTransformerForASR",
             ],

@@ -1,9 +1,17 @@
 ---
 description: Release checklist, verification matrix, and current candidate report for VoiceHub 0.3.
-release: 0.3.0
+release: 0.4.0
 ---
 
 # VoiceHub 0.3 release readiness
+
+!!! note "0.4 architecture rewrite"
+
+    The current source is 0.4.0. See the [migration guide](migration-0.4.md).
+    The 0.3 report below is historical evidence. Its benchmark and CI results
+    do not validate this rewrite. Current release gates remain pending until
+    evidence is recorded for the exact new candidate.
+
 
 This is the authoritative release-candidate checklist for VoiceHub 0.3.0.
 It separates locally reproducible checks, cross-platform CI, real-checkpoint
@@ -192,7 +200,7 @@ activated, one strict source-only parse requires every package facade,
 bundled license text before it derives the lazy `ModelSpec`, aliases,
 capabilities, components, checkpoint, and task; the same manifest produces an
 honest inference-only `ModelTrainingSpec`. No model package or PyTorch module is
-imported, and neither `voicehub/models/registry.py` nor
+imported, and neither `voicehub/registry.py` nor
 `voicehub/training/specs.py` needs a model entry. A richer training claim must
 use an explicit profile, while simultaneous manifest and legacy central
 declarations fail as three actionable duplicate errors. The focused scaffold

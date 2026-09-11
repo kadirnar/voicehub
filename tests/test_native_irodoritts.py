@@ -14,21 +14,21 @@ from unittest.mock import patch
 import torch
 from torch import nn
 
-from voicehub.architectures.irodoritts.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.irodoritts.modeling import IrodoriTTSForTextToSpeech
+from voicehub.models.irodoritts.native.checkpoint import (
     irodori_header_fingerprint,
     load_irodori_safetensors,
     native_irodori_tensor_shapes,
     save_irodori_safetensors,
 )
-from voicehub.architectures.irodoritts.codec import load_digest_gated_codec_payload
-from voicehub.architectures.irodoritts.configuration import IrodoriModelConfig
-from voicehub.architectures.irodoritts.metadata import IRODORI_CHECKPOINTS, IRODORI_CODEC_CHECKPOINT
-from voicehub.architectures.irodoritts.modeling import TextToLatentRFDiT
-from voicehub.architectures.irodoritts.tokenization import IrodoriTokenizer
-from voicehub.architectures.irodoritts.training import IrodoriBatchProcessor, irodori_training_step
-from voicehub.checkpointing import save_safetensors
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.models.irodoritts.inference import IrodoriTTSForTextToSpeech
+from voicehub.models.irodoritts.native.codec import load_digest_gated_codec_payload
+from voicehub.models.irodoritts.native.configuration import IrodoriModelConfig
+from voicehub.models.irodoritts.native.metadata import IRODORI_CHECKPOINTS, IRODORI_CODEC_CHECKPOINT
+from voicehub.models.irodoritts.native.modeling import TextToLatentRFDiT
+from voicehub.models.irodoritts.native.tokenization import IrodoriTokenizer
+from voicehub.models.irodoritts.native.training import IrodoriBatchProcessor, irodori_training_step
 from voicehub.registry import get_model_spec
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -173,7 +173,7 @@ class NativeIrodoriTests(unittest.TestCase):
                 "-c",
                 (
                     "import sys; "
-                    "import voicehub.architectures.irodoritts; "
+                    "import voicehub.models.irodoritts.native; "
                     "import voicehub.models.irodoritts; "
                     "print('torch' in sys.modules)"),
             ],
@@ -367,7 +367,7 @@ class NativeIrodoriTests(unittest.TestCase):
                 },
             }
             with patch(
-                    "voicehub.architectures.irodoritts.codec.torch.load",
+                    "voicehub.models.irodoritts.native.codec.torch.load",
                     return_value=payload,
             ) as loader:
                 with self.assertRaisesRegex(ValueError, "Refusing to unpickle"):
@@ -518,7 +518,7 @@ class NativeIrodoriTests(unittest.TestCase):
                 device="cpu",
             )
             with patch(
-                    "voicehub.models.irodoritts.inference.resolve_pretrained_file",
+                    "voicehub.models.irodoritts.modeling.resolve_pretrained_file",
                     return_value=codec,
             ) as resolver:
                 _, sample_rate = wrapper._build_runtime(runtime_module)
@@ -533,7 +533,7 @@ class NativeIrodoriTests(unittest.TestCase):
                         return_value=checkpoint,
                     ),
                     patch(
-                        "voicehub.models.irodoritts.inference.resolve_pretrained_file",
+                        "voicehub.models.irodoritts.modeling.resolve_pretrained_file",
                         return_value=codec,
                     ),
             ):

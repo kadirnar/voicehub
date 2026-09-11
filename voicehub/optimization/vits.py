@@ -60,8 +60,8 @@ class VITSModelOptimizationSupport:
 def list_vits_model_optimization_support() -> tuple[VITSModelOptimizationSupport, ...]:
     """List registered models marked by architecture traits, not name
     checks."""
-    from voicehub.architectures import get_architecture_spec
-    from voicehub.models.registry import list_model_specs
+    from voicehub.registry import list_model_specs
+    from voicehub.runtime import get_architecture_spec
 
     output = []
     for model in list_model_specs(task=SpeechTask.TEXT_TO_SPEECH):
@@ -95,7 +95,7 @@ def get_vits_model_optimization_support(model_type: str, ) -> VITSModelOptimizat
     """Return one registered VITS model's support or fail explicitly."""
     if not isinstance(model_type, str) or not model_type.strip():
         raise ValueError("`model_type` must be a non-empty string.")
-    from voicehub.models.registry import get_model_spec
+    from voicehub.registry import get_model_spec
 
     canonical = get_model_spec(model_type).model_type
     for support in list_vits_model_optimization_support():

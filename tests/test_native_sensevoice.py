@@ -13,17 +13,19 @@ from types import SimpleNamespace
 import torch
 from torch.nn import functional
 
-from voicehub.architectures.sensevoice.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.hub import resolve_pretrained_file
+from voicehub.models.asr_funasr.native.checkpoint import (
     NATIVE_SENSEVOICE_FORMAT,
     SenseVoiceSafeTensorsCheckpointAdapter,
     load_native_sensevoice_model,
     native_sensevoice_tensor_shapes,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.sensevoice.configuration import SenseVoiceSmallConfig
-from voicehub.architectures.sensevoice.decoding import ctc_forced_align, ctc_greedy_tokens
-from voicehub.architectures.sensevoice.frontend import load_sensevoice_cmvn, low_frame_rate_stack
-from voicehub.architectures.sensevoice.metadata import (
+from voicehub.models.asr_funasr.native.configuration import SenseVoiceSmallConfig
+from voicehub.models.asr_funasr.native.decoding import ctc_forced_align, ctc_greedy_tokens
+from voicehub.models.asr_funasr.native.frontend import load_sensevoice_cmvn, low_frame_rate_stack
+from voicehub.models.asr_funasr.native.metadata import (
     FUNASR_SOURCE_REVISION,
     SENSEVOICE_REPOSITORY,
     SENSEVOICE_REVISION,
@@ -34,16 +36,14 @@ from voicehub.architectures.sensevoice.metadata import (
     SENSEVOICE_TOKENIZER_SHA256,
     SENSEVOICE_TOKENIZER_SIZE,
 )
-from voicehub.architectures.sensevoice.modeling import (
+from voicehub.models.asr_funasr.native.modeling import (
     MultiHeadedAttentionSANM,
     SenseVoiceSmallForCTC,
     SinusoidalPositionEncoder,
 )
-from voicehub.architectures.sensevoice.registration import create_sensevoice_architecture_spec
-from voicehub.architectures.sensevoice.tokenization import SenseVoiceTokenizer, rich_transcription_postprocess
-from voicehub.architectures.sensevoice.training import NativeSenseVoiceTrainingAdapter
-from voicehub.checkpointing import save_safetensors
-from voicehub.hub import resolve_pretrained_file
+from voicehub.models.asr_funasr.native.registration import create_sensevoice_architecture_spec
+from voicehub.models.asr_funasr.native.tokenization import SenseVoiceTokenizer, rich_transcription_postprocess
+from voicehub.models.asr_funasr.native.training import NativeSenseVoiceTrainingAdapter
 from voicehub.models.asr_native.configuration import FunASRConfig
 from voicehub.models.asr_native.funasr import FunASRForSpeechRecognition
 from voicehub.training.specs import TrainingFamily, get_training_spec
@@ -226,7 +226,7 @@ class NativeSenseVoiceTests(unittest.TestCase):
     def test_public_path_has_no_external_model_runtime_imports(self):
         root = Path(__file__).resolve().parents[1]
         files = [
-            *sorted((root / "voicehub" / "architectures" / "sensevoice").glob("*.py")),
+            *sorted((root / 'voicehub/models/asr_funasr/native').glob("*.py")),
             root / "voicehub" / "models" / "asr_native" / "funasr.py",
         ]
         forbidden = {
@@ -271,8 +271,7 @@ class NativeSenseVoiceTests(unittest.TestCase):
         )
         self.assertEqual(shapes["ctc.ctc_lo.weight"], (25_055, 512))
         self.assertEqual(shapes["embed.weight"], (16, 560))
-        source = (
-            Path(__file__).resolve().parents[1] / "voicehub" / "architectures" / "sensevoice" / "SOURCE.json")
+        source = (Path(__file__).resolve().parents[1] / 'voicehub/models/asr_funasr/native/SOURCE.json')
         metadata = json.loads(source.read_text(encoding="utf-8"))
         self.assertEqual(metadata["source"]["revision"], FUNASR_SOURCE_REVISION)
         self.assertEqual(
@@ -481,7 +480,7 @@ class NativeSenseVoiceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "only a VoiceHub"):
             wrapper._validate_architecture({
                 "model_type": "paraformer",
-                "architectures": ["Paraformer"],
+                'architectures': ["Paraformer"],
             })
 
     @unittest.skipUnless(

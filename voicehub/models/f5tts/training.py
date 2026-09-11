@@ -126,7 +126,7 @@ class F5TTSTrainingAdapter(
     def save_pretrained(self, save_directory) -> None:
         """Export EMA weights when enabled, otherwise explicit raw weights."""
         self.setup()
-        from voicehub.architectures.f5tts.checkpoint import export_f5tts_checkpoint
+        from voicehub.models.f5tts.native.checkpoint import export_f5tts_checkpoint
 
         destination = Path(save_directory)
         destination.mkdir(parents=True, exist_ok=True)

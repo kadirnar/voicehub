@@ -21,7 +21,7 @@ class NativeDiaTests(unittest.TestCase):
 
     @staticmethod
     def dia_config():
-        from voicehub.architectures.dia.configuration import DiaArchitectureConfig, DiaDecoderConfig, DiaEncoderConfig
+        from voicehub.models.dia.native.configuration import DiaArchitectureConfig, DiaDecoderConfig, DiaEncoderConfig
 
         return DiaArchitectureConfig(
             encoder_config=DiaEncoderConfig(
@@ -57,7 +57,7 @@ class NativeDiaTests(unittest.TestCase):
 
     @staticmethod
     def dac_config():
-        from voicehub.architectures.dac.configuration import DacConfig
+        from voicehub.models.dac.native.configuration import DacConfig
 
         return DacConfig(
             encoder_hidden_size=4,
@@ -73,9 +73,9 @@ class NativeDiaTests(unittest.TestCase):
     def write_artifact(cls, root: Path):
         import torch
 
-        from voicehub.architectures.dac.modeling import DacModel
-        from voicehub.architectures.dia.modeling import DiaForConditionalGeneration
         from voicehub.checkpointing import save_safetensors
+        from voicehub.models.dac.native.modeling import DacModel
+        from voicehub.models.dia.native.modeling import DiaForConditionalGeneration
 
         root.mkdir(parents=True, exist_ok=True)
         dia_config = cls.dia_config()
@@ -145,9 +145,9 @@ print(*[
         self.assertEqual(result.stdout.strip(), "False False False")
 
     def test_public_checkpoint_inventory_is_exact(self):
-        from voicehub.architectures.dia.checkpoint import dia_header_fingerprint, native_dia_tensor_shapes
-        from voicehub.architectures.dia.configuration import DiaArchitectureConfig
-        from voicehub.architectures.dia.metadata import (
+        from voicehub.models.dia.native.checkpoint import dia_header_fingerprint, native_dia_tensor_shapes
+        from voicehub.models.dia.native.configuration import DiaArchitectureConfig
+        from voicehub.models.dia.native.metadata import (
             NARI_DIA_HEADER_FINGERPRINT,
             NARI_DIA_PARAMETER_COUNT,
             NARI_DIA_TENSOR_COUNT,
@@ -168,7 +168,7 @@ print(*[
     def test_tokenizer_and_delay_protocol_are_deterministic(self):
         import torch
 
-        from voicehub.architectures.dia.processing import DiaByteTokenizer, DiaProcessor
+        from voicehub.models.dia.native.processing import DiaByteTokenizer, DiaProcessor
 
         tokenizer = DiaByteTokenizer(max_length=32)
         self.assertEqual(
@@ -212,7 +212,7 @@ print(*[
     def test_full_teacher_forced_backward_reaches_every_parameter(self):
         import torch
 
-        from voicehub.architectures.dia.modeling import DiaForConditionalGeneration
+        from voicehub.models.dia.native.modeling import DiaForConditionalGeneration
 
         model = DiaForConditionalGeneration(self.dia_config())
         output = model(
@@ -235,7 +235,7 @@ print(*[
     def test_strict_safetensors_load_export_and_reload(self):
         import torch
 
-        from voicehub.architectures.dia.runtime import load_dia_runtime
+        from voicehub.models.dia.native.runtime import load_dia_runtime
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "source"
@@ -297,7 +297,7 @@ print(*[
     def test_training_collator_encodes_audio_and_freezes_codec(self):
         import torch
 
-        from voicehub.architectures.dia.runtime import load_dia_runtime
+        from voicehub.models.dia.native.runtime import load_dia_runtime
         from voicehub.models.dia.training import DiaTrainingCollator
 
         with tempfile.TemporaryDirectory() as directory:
@@ -340,7 +340,7 @@ print(*[
     def test_public_wrapper_is_native_and_rejects_legacy(self):
         import torch
 
-        from voicehub.models.dia.inference import DiaConfig, DiaForTextToSpeech
+        from voicehub.models.dia.modeling import DiaConfig, DiaForTextToSpeech
 
         with self.assertRaisesRegex(ValueError, "native"):
             DiaConfig(backend="transformers")
@@ -386,7 +386,7 @@ print(*[
         wrapper._dia_runtime = runtime
         wrapper._loaded_backend = "native"
         with patch(
-                "voicehub.models.dia.inference.seeded_inference",
+                "voicehub.models.dia.modeling.seeded_inference",
                 return_value=nullcontext(17),
         ):
             output = wrapper._generate(
@@ -403,9 +403,9 @@ print(*[
     def test_malformed_checkpoint_is_rejected_before_assignment(self):
         import torch
 
-        from voicehub.architectures.dia.checkpoint import HuggingFaceDiaCheckpointAdapter
-        from voicehub.architectures.dia.modeling import DiaForConditionalGeneration
         from voicehub.checkpointing.errors import CheckpointCompatibilityError
+        from voicehub.models.dia.native.checkpoint import HuggingFaceDiaCheckpointAdapter
+        from voicehub.models.dia.native.modeling import DiaForConditionalGeneration
 
         config = self.dia_config()
         source = DiaForConditionalGeneration(config)

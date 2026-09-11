@@ -83,7 +83,7 @@ field aliases, resolves audio paths relative to the manifest, and validates
 the selected model's declared record variants:
 
 ```python
-from voicehub import TTSDataset
+from voicehub.training import TTSDataset
 
 records = TTSDataset.from_manifest(
     "data/manifest.jsonl",
@@ -222,7 +222,7 @@ architecture contract when building a reusable corpus, or a model contract
 before starting a run:
 
 ```python
-from voicehub import get_tts_dataset_spec
+from voicehub.training import get_tts_dataset_spec
 
 contract = get_tts_dataset_spec("f5tts")
 print(contract.architecture)       # diffusion
@@ -439,7 +439,7 @@ reference waveforms, but do not mix present and missing embeddings within one
 batch.
 
 ```python
-from voicehub import DataCollatorForTTSTraining, TTSFieldSchema
+from voicehub.training import DataCollatorForTTSTraining, TTSFieldSchema
 
 collator = DataCollatorForTTSTraining(
     field_schemas={

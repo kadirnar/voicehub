@@ -11,7 +11,7 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.activations import ACT2FN
 from transformers.utils import logging
 
-from .configuration_vibevoice import VibeVoiceDiffusionHeadConfig
+from .configuration import VibeVoiceDiffusionHeadConfig
 
 
 logger = logging.get_logger(__name__)

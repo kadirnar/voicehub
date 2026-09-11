@@ -61,7 +61,7 @@ def validate_source_metadata(version: str, repository_root: Path = REPOSITORY_RO
     required_fragments = (
         'name = "voicehub"',
         'dynamic = ["version"]',
-        'description = "A unified inference and training interface for TTS, ASR, and VAD models"',
+        'description = "A unified inference and training interface for TTS, ASR, VAD, and audio codec models"',
         'version = { attr = "voicehub.__version__" }',
         'requires-python = ">=3.10"',
     )
@@ -138,6 +138,8 @@ def validate_documentation_version(version: str, repository_root: Path = REPOSIT
     for root in (repository_root / "README.md", repository_root / "docs"):
         paths = (root, ) if root.is_file() else tuple(root.rglob("*.md"))
         for path in paths:
+            if path == repository_root / "docs/project/release-readiness.md":
+                continue  # Historical artifact hashes keep the version that produced them.
             documented_wheel_versions.update(WHEEL_VERSION_PATTERN.findall(path.read_text(encoding="utf-8")))
     if documented_wheel_versions - {version}:
         raise ReleaseCheckError(
@@ -378,6 +380,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tag", help="Expected release tag, for example v0.3.0.")
     parser.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="Check development packaging without claiming current checkpoint or benchmark evidence.",
+    )
+    parser.add_argument(
         "--require-tag-at-head",
         action="store_true",
         help="Require --tag to exist and point at the checked-out commit.",
@@ -397,12 +404,17 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     options = parse_args()
+    if options.metadata_only and (options.tag or options.require_tag_at_head or options.pypi_policy):
+        raise ReleaseCheckError("--metadata-only cannot be used for tag or publication checks.")
     version = source_version()
     report: dict[str, Any] = {"version": version}
 
     validate_source_metadata(version)
-    report["benchmark_files"] = validate_benchmark_versions(version)
-    report["layered_evidence"] = validate_layered_evidence()
+    if options.metadata_only:
+        report["checkpoint_evidence"] = "not evaluated (metadata-only)"
+    else:
+        report["benchmark_files"] = validate_benchmark_versions(version)
+        report["layered_evidence"] = validate_layered_evidence()
     validate_documentation_version(version)
     report["source_metadata"] = "passed"
     report["documentation_version"] = "passed"

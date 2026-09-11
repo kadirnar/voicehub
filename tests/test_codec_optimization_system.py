@@ -8,10 +8,6 @@ from unittest import mock
 import torch
 from torch import nn
 
-from voicehub.architectures.cosyvoice_native.flow import CosyVoiceFlowMatchingModel
-from voicehub.architectures.cosyvoice_native.vocoder import CosyVoiceHiFTGenerator
-from voicehub.architectures.qwen3_tts.codec import Qwen3TTSSpeechDecoder
-from voicehub.architectures.voxcpm2.codec import VoxCPMAudioVAE
 from voicehub.components.audio.codecs.base import (
     AudioCodec,
     DenseCodecCodes,
@@ -23,7 +19,11 @@ from voicehub.components.audio.codecs.dac.model.dac import DAC
 from voicehub.kernels import KernelBackend, cute_dsl_capability
 from voicehub.models.chatterbox.models.s3gen.s3gen import S3Token2Wav
 from voicehub.models.chatterbox.models.s3tokenizer.model_v2 import S3TokenizerV2
+from voicehub.models.cosyvoice.native.flow import CosyVoiceFlowMatchingModel
+from voicehub.models.cosyvoice.native.vocoder import CosyVoiceHiFTGenerator
 from voicehub.models.csm.source.moshi.models.compression import MimiModel
+from voicehub.models.qwen3tts.native.codec import Qwen3TTSSpeechDecoder
+from voicehub.models.voxcpm.native.codec import VoxCPMAudioVAE
 from voicehub.models.xtts.source.TTS.tts.layers.xtts.hifigan_decoder import HifiDecoder
 from voicehub.optimization.capabilities import OptimizationContext
 from voicehub.optimization.codecs import (

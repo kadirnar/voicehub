@@ -58,7 +58,7 @@ class ASRVADBenchmarkScriptTests(unittest.TestCase):
 
         result = json.loads(completed.stdout)
         self.assertEqual(result["provider_count"], 34)
-        self.assertEqual(result["runtime"]["voicehub_version"], "0.3.0")
+        self.assertEqual(result["runtime"]["voicehub_version"], "0.4.0")
         self.assertEqual(result["passed"], 34)
         self.assertEqual(result["failed"], 0)
         self.assertEqual(

@@ -7,8 +7,8 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.parlertts."
 _EXPORTS = {
-    "ParlerTTSConfig": _PACKAGE + "configuration_parlertts",
-    "ParlerTTSForTextToSpeech": _PACKAGE + "inference",
+    "ParlerTTSConfig": _PACKAGE + "configuration",
+    "ParlerTTSForTextToSpeech": _PACKAGE + "modeling",
 }
 
 __all__ = sorted(_EXPORTS)

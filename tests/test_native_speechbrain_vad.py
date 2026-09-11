@@ -8,23 +8,6 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures import get_architecture_spec
-from voicehub.architectures.speechbrain_vad.checkpoint import (
-    NATIVE_SPEECHBRAIN_VAD_FORMAT,
-    SpeechBrainVADSafeTensorsCheckpointAdapter,
-    convert_speechbrain_vad_checkpoint,
-    speechbrain_source_tensor_mapping,
-)
-from voicehub.architectures.speechbrain_vad.configuration import SpeechBrainCRDNNVADConfig
-from voicehub.architectures.speechbrain_vad.inference import SpeechBrainVADInference
-from voicehub.architectures.speechbrain_vad.metadata import (
-    SPEECHBRAIN_TRAINING_SOURCE_REVISION,
-    SPEECHBRAIN_VAD_CHECKPOINT_LICENSE,
-    SPEECHBRAIN_VAD_MODEL_SHA256,
-    SPEECHBRAIN_VAD_REVISION,
-    SPEECHBRAIN_VAD_TENSOR_FINGERPRINT,
-)
-from voicehub.architectures.speechbrain_vad.modeling import SpeechBrainCRDNNVADModel
 from voicehub.checkpointing import SafeTensorReader, save_safetensors
 from voicehub.hub import write_json_file
 from voicehub.models.vad_speechbrain import (
@@ -32,7 +15,24 @@ from voicehub.models.vad_speechbrain import (
     SpeechBrainVADConfig,
     SpeechBrainVADForVoiceActivityDetection,
 )
+from voicehub.models.vad_speechbrain.native.checkpoint import (
+    NATIVE_SPEECHBRAIN_VAD_FORMAT,
+    SpeechBrainVADSafeTensorsCheckpointAdapter,
+    convert_speechbrain_vad_checkpoint,
+    speechbrain_source_tensor_mapping,
+)
+from voicehub.models.vad_speechbrain.native.configuration import SpeechBrainCRDNNVADConfig
+from voicehub.models.vad_speechbrain.native.inference import SpeechBrainVADInference
+from voicehub.models.vad_speechbrain.native.metadata import (
+    SPEECHBRAIN_TRAINING_SOURCE_REVISION,
+    SPEECHBRAIN_VAD_CHECKPOINT_LICENSE,
+    SPEECHBRAIN_VAD_MODEL_SHA256,
+    SPEECHBRAIN_VAD_REVISION,
+    SPEECHBRAIN_VAD_TENSOR_FINGERPRINT,
+)
+from voicehub.models.vad_speechbrain.native.modeling import SpeechBrainCRDNNVADModel
 from voicehub.registry import get_model_spec
+from voicehub.runtime import get_architecture_spec
 from voicehub.training import AutoTrainingAdapter, get_training_spec
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

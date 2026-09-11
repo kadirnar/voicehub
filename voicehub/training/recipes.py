@@ -13,7 +13,7 @@ from typing import Any
 
 from voicehub.dependencies import resolve_import_path
 from voicehub.errors import OptionalDependencyError
-from voicehub.modeling_outputs import TTSTrainingOutput
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.training.adapters import BaseTrainingAdapter, CausalLMTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 

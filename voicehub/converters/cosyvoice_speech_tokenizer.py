@@ -8,14 +8,14 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.cosyvoice_native.checkpoint import (
+from voicehub.checkpointing.errors import CheckpointCompatibilityError, CheckpointIntegrityError
+from voicehub.models.cosyvoice.native.checkpoint import (
     _audited_speech_tokenizer_state,
     export_cosyvoice_checkpoint,
     inspect_cosyvoice_checkpoint,
 )
-from voicehub.architectures.cosyvoice_native.metadata import COSYVOICE3_SPEECH_TOKENIZER_FILE
-from voicehub.architectures.cosyvoice_native.speech_tokenizer import CosyVoiceSpeechTokenizer
-from voicehub.checkpointing.errors import CheckpointCompatibilityError, CheckpointIntegrityError
+from voicehub.models.cosyvoice.native.metadata import COSYVOICE3_SPEECH_TOKENIZER_FILE
+from voicehub.models.cosyvoice.native.speech_tokenizer import CosyVoiceSpeechTokenizer
 
 
 def _sha256(path: Path) -> str:

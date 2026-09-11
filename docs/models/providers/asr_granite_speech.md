@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/ibm-granite/granite-speech-models" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_granite_speech/modeling_asr_granite_speech.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_granite_speech/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_granite_speech.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -107,7 +107,7 @@ These are ASR input languages; Italian and Mandarin are documented as translatio
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Granite Speech models](https://github.com/ibm-granite/granite-speech-models)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_granite_speech/modeling_asr_granite_speech.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_granite_speech/modeling.py)
 
 ## Configuration
 
@@ -193,9 +193,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_granite_speech.modeling_asr_granite_speech.GraniteSpeechForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_granite_speech.configuration_asr_granite_speech.GraniteSpeechASRConfig` |
-| Source provenance | `voicehub/architectures/granite_speech/SOURCE.json` |
+| Implementation | `voicehub.models.asr_granite_speech.modeling.GraniteSpeechForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_granite_speech.configuration.GraniteSpeechASRConfig` |
+| Source provenance | `voicehub/models/asr_granite_speech/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -219,7 +219,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `GraniteSpeechASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_granite_speech/configuration_asr_granite_speech.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_granite_speech/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -238,7 +238,7 @@ GraniteSpeechASRConfig(**config_kwargs)
 
 ### `GraniteSpeechForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_granite_speech/modeling_asr_granite_speech.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_granite_speech/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

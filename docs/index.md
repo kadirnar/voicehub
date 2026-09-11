@@ -1,5 +1,5 @@
 ---
-description: VoiceHub documentation for unified TTS, ASR, and VAD inference, data preparation, and architecture-aware fine-tuning.
+description: VoiceHub documentation for unified TTS, ASR, VAD, and codec inference, data preparation, and architecture-aware fine-tuning.
 ---
 
 <div class="vh-doc-home" markdown>
@@ -12,7 +12,7 @@ description: VoiceHub documentation for unified TTS, ASR, and VAD inference, dat
 
 <p class="vh-doc-tagline">
   One speech model lifecycle for inference, data preparation, and
-  architecture-aware fine-tuning across modern TTS, ASR, and VAD families.
+  architecture-aware fine-tuning across modern TTS, ASR, VAD, and codec families.
 </p>
 
 <div class="vh-doc-teaser" role="img" aria-label="Text passes through a VoiceHub model adapter and becomes an audio waveform">
@@ -57,14 +57,14 @@ flow-matching and diffusion models, audio/frame classifiers, VITS-style
 adversarial systems, and upstream-native pipelines keep their own
 conditioning, objectives, parameter ownership, and export rules.
 
-The registry contains **68 integrations**: **34 TTS backends**, **23 ASR
-providers**, and **11 VAD providers**. Fine-tuning support is checkpoint- and
+The registry contains **70 integrations**: **34 TTS backends**, **23 ASR
+providers**, **11 VAD providers**, and **2 codecs**. Fine-tuning support is checkpoint- and
 runtime-specific; an
 inference integration does not imply that its current VoiceHub artifact is
 differentiable. Use the [TTS training matrix](models/training-support.md) and
 [ASR/VAD support matrix](models/asr-vad-support.md) to select an integration.
 
-Model source and every built-in TTS, ASR, and VAD inference runtime are
+Model source and every built-in TTS, ASR, VAD, and codec inference runtime are
 installed with VoiceHub. Checkpoint weights are downloaded lazily or provided
 as local paths. Add only `voicehub[training]` for fine-tuning and reporting.
 The Apache-2.0 license covers VoiceHub itself; integrated source, checkpoints,
@@ -102,7 +102,7 @@ engineers. Its main design principles are:
 ## Learn
 
 Start with the [Quickstart](getting-started/quickstart.md) for the shortest
-working TTS, ASR, and VAD paths. Continue with a focused guide or reference
+working TTS, ASR, VAD, and codec paths. Continue with a focused guide or reference
 below when you need deeper lifecycle, training, optimization, or contribution
 details.
 

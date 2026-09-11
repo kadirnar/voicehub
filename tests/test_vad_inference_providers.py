@@ -13,7 +13,7 @@ import torch
 from voicehub.models.vad_silero import SileroVADConfig, SileroVADForVoiceActivityDetection
 from voicehub.models.vad_transformers import TransformersVADConfig, TransformersVADForVoiceActivityDetection
 from voicehub.models.vad_webrtc import WebRTCVADConfig, WebRTCVADForVoiceActivityDetection
-from voicehub.models.vad_webrtc.modeling_vad_webrtc import _pcm16_samples
+from voicehub.models.vad_webrtc.modeling import _pcm16_samples
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -163,7 +163,7 @@ class SileroVADInferenceTests(unittest.TestCase):
                     return_value=("safetensors", "voicehub-native-silero-vad"),
                 ),
                 patch(
-                    "voicehub.architectures.silero_vad.modeling.SileroVADModel",
+                    "voicehub.models.vad_silero.native.modeling.SileroVADModel",
                     Runtime,
                 ),
         ):
@@ -177,7 +177,7 @@ class SileroVADInferenceTests(unittest.TestCase):
     def test_native_silero_maps_controls_and_returns_frame_scores(self):
         import torch
 
-        from voicehub.architectures.silero_vad.configuration import SileroVADConfig as NativeSileroVADConfig
+        from voicehub.models.vad_silero.native.configuration import SileroVADConfig as NativeSileroVADConfig
 
         captured = {}
 
@@ -225,7 +225,7 @@ class SileroVADInferenceTests(unittest.TestCase):
     def test_native_silero_frame_scores_are_direct_model_probabilities(self):
         import torch
 
-        from voicehub.architectures.silero_vad.configuration import SileroVADConfig as NativeSileroVADConfig
+        from voicehub.models.vad_silero.native.configuration import SileroVADConfig as NativeSileroVADConfig
 
         model = SileroVADForVoiceActivityDetection(
             SileroVADConfig(),
@@ -308,7 +308,7 @@ class WebRTCVADInferenceTests(unittest.TestCase):
                 return decisions[len(self.calls) - 1]
 
         with patch(
-                "voicehub.models.vad_webrtc.modeling_vad_webrtc."
+                "voicehub.models.vad_webrtc.modeling."
                 "NativeWebRTCVAD",
                 NativeRuntime,
         ):

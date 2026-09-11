@@ -12,9 +12,9 @@ from unittest.mock import patch
 import torch
 
 from voicehub import AutoConfig, AutoModelForSpeechRecognition, get_model_spec
-from voicehub.architectures.wavlm import WavLMConfig, WavLMForCTC, resolve_wavlm_artifacts
 from voicehub.checkpointing import save_safetensors
 from voicehub.models.asr_wavlm import NativeWavLMTrainingAdapter, WavLMASRConfig, WavLMForSpeechRecognition
+from voicehub.models.asr_wavlm.native import WavLMConfig, WavLMForCTC, resolve_wavlm_artifacts
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.specs import get_training_spec
 
@@ -161,7 +161,7 @@ print(json.dumps({name: name in sys.modules for name in names}))
 
         wrapper = WavLMForSpeechRecognition(device="cpu")
         with patch(
-                "voicehub.architectures.wavlm.artifacts."
+                "voicehub.models.asr_wavlm.native.artifacts."
                 "resolve_wavlm_artifacts",
                 side_effect=ResolutionReached,
         ) as resolver:
@@ -278,7 +278,7 @@ print(json.dumps({name: name in sys.modules for name in names}))
             adapter.save_pretrained(export)
             exported = json.loads((export / "config.json").read_text(encoding="utf-8"), )
             self.assertEqual(exported["model_type"], "asr_wavlm")
-            self.assertEqual(exported["architectures"], ["WavLMForCTC"])
+            self.assertEqual(exported['architectures'], ["WavLMForCTC"])
             self.assertEqual(
                 exported["voicehub_checkpoint_format"],
                 "native-wavlm-ctc-v1",
@@ -355,17 +355,17 @@ print(json.dumps({name: name in sys.modules for name in names}))
 
         self.assertEqual(
             model_spec.module,
-            "voicehub.models.asr_wavlm.modeling_asr_wavlm",
+            "voicehub.models.asr_wavlm.modeling",
         )
         self.assertEqual(
             model_spec.config_module,
-            "voicehub.models.asr_wavlm.configuration_asr_wavlm",
+            "voicehub.models.asr_wavlm.configuration",
         )
         self.assertTrue(model_spec.is_voicehub_native)
         self.assertEqual(model_spec.architecture, "wavlm")
         self.assertEqual(
             training_spec.source_entrypoints,
-            ("voicehub.architectures.wavlm.WavLMForCTC", ),
+            ("voicehub.models.asr_wavlm.native.WavLMForCTC", ),
         )
 
     def test_external_runtime_and_pickle_options_are_rejected(self):

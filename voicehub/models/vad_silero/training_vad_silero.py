@@ -414,7 +414,7 @@ class NativeSileroVADTrainingAdapter(FrameClassificationTrainingAdapter):
         labels,
         context,
     ):
-        from voicehub.architectures.silero_vad.objective import silero_vad_binary_cross_entropy
+        from voicehub.models.vad_silero.native.objective import silero_vad_binary_cross_entropy
 
         self._require_predictions_and_labels(predictions, labels)
         return silero_vad_binary_cross_entropy(

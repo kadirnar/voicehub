@@ -1,12 +1,28 @@
-"""VoiceHub-native NVIDIA MarbleNet VAD integration."""
+"""Lazy exports for the vad_nemo model family."""
 
-from voicehub.models.vad_nemo.configuration_vad_nemo import NeMoVADConfig
-from voicehub.models.vad_nemo.modeling_vad_nemo import NeMoVADForVoiceActivityDetection
-from voicehub.models.vad_nemo.training_vad_nemo import MarbleNetVADTrainingDataset, NativeMarbleNetVADTrainingAdapter
+from importlib import import_module
 
-__all__ = [
-    "MarbleNetVADTrainingDataset",
-    "NativeMarbleNetVADTrainingAdapter",
-    "NeMoVADConfig",
-    "NeMoVADForVoiceActivityDetection",
-]
+_EXPORTS = {
+    'NeMoVADConfig': ('voicehub.models.vad_nemo.configuration', 'NeMoVADConfig'),
+    'NeMoVADForVoiceActivityDetection':
+    ('voicehub.models.vad_nemo.modeling', 'NeMoVADForVoiceActivityDetection'),
+    'MarbleNetVADTrainingDataset':
+    ('voicehub.models.vad_nemo.training_vad_nemo', 'MarbleNetVADTrainingDataset'),
+    'NativeMarbleNetVADTrainingAdapter':
+    ('voicehub.models.vad_nemo.training_vad_nemo', 'NativeMarbleNetVADTrainingAdapter')
+}
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name):
+    try:
+        module_name, attribute = _EXPORTS[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted((*globals(), *_EXPORTS))

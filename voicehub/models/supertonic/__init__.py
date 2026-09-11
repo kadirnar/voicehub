@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.supertonic."
 _EXPORTS = {
-    "SupertonicConfig": _PACKAGE + "configuration_supertonic",
-    "SupertonicForTextToSpeech": _PACKAGE + "inference",
-    "SupertonicTTS": _PACKAGE + "inference",
+    "SupertonicConfig": _PACKAGE + "configuration",
+    "SupertonicForTextToSpeech": _PACKAGE + "modeling",
+    "SupertonicTTS": _PACKAGE + "modeling",
 }
 
 __all__ = sorted(_EXPORTS)

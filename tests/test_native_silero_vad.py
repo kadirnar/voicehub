@@ -11,8 +11,7 @@ except ModuleNotFoundError:
     torch = None
 
 if torch is not None:
-    from voicehub.architectures.registry import ArchitectureRegistry
-    from voicehub.architectures.silero_vad import (
+    from voicehub.models.vad_silero.native import (
         OFFICIAL_SILERO_VAD_16K_HEADER_FINGERPRINT,
         OFFICIAL_SILERO_VAD_REVISION,
         OfficialSileroVADSafeTensorsCheckpointAdapter,
@@ -33,6 +32,7 @@ if torch is not None:
         silero_vad_binary_cross_entropy,
         tensor_inventory_fingerprint,
     )
+    from voicehub.runtime.registry import ArchitectureRegistry
 
 
 @unittest.skipUnless(torch is not None, "Native Silero VAD uses PyTorch")
@@ -389,7 +389,7 @@ class SileroVADRegistrationTests(unittest.TestCase):
         self.assertTrue(spec.capabilities.supports_task("voice-activity-detection"))
         self.assertEqual(
             spec.model_builder.path,
-            "voicehub.architectures.silero_vad.modeling:SileroVADModel",
+            "voicehub.models.vad_silero.native.modeling:SileroVADModel",
         )
         self.assertEqual(
             spec.get_component_reference("torchscript-checkpoint-adapter").attribute,
@@ -408,10 +408,10 @@ class SileroVADRegistrationTests(unittest.TestCase):
     def test_registration_import_does_not_load_graph_or_checkpoint_modules(self):
         script = (
             "import sys; "
-            "import voicehub.architectures.silero_vad.registration as r; "
+            "import voicehub.models.vad_silero.native.registration as r; "
             "r.create_silero_vad_architecture_spec(); "
-            "print(int('voicehub.architectures.silero_vad.modeling' in "
-            "sys.modules), int('voicehub.architectures.silero_vad.checkpoint' "
+            "print(int('voicehub.models.vad_silero.native.modeling' in "
+            "sys.modules), int('voicehub.models.vad_silero.native.checkpoint' "
             "in sys.modules))")
         result = subprocess.run(
             [sys.executable, "-c", script],

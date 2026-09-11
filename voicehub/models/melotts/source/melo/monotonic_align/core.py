@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from voicehub.architectures.vits.alignment import maximum_path
+from voicehub.models.vits.native.alignment import maximum_path
 
 
 def maximum_path_jit(

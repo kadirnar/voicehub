@@ -3,9 +3,9 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from voicehub.architectures.fishtts.configuration import FishS2Config
-from voicehub.architectures.fishtts.modeling import FishS2ForConditionalGeneration
-from voicehub.models.fishtts.inference import FishTTSConfig, FishTTSForTextToSpeech
+from voicehub.models.fishtts.modeling import FishTTSConfig, FishTTSForTextToSpeech
+from voicehub.models.fishtts.native.configuration import FishS2Config
+from voicehub.models.fishtts.native.modeling import FishS2ForConditionalGeneration
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 

@@ -10,39 +10,39 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.causal_lm import Qwen2Config
-from voicehub.architectures.vibevoice.checkpoint import VibeVoiceCheckpointAdapter, build_vibevoice_model
-from voicehub.architectures.vibevoice.configuration import (
+from voicehub.checkpointing import CheckpointCompatibilityError, ShardedSafeTensorReader, save_safetensors
+from voicehub.hub import write_json_file
+from voicehub.models.asr_vibevoice import VibeVoiceASRConfig as ProviderConfig
+from voicehub.models.asr_vibevoice import VibeVoiceForSpeechRecognition
+from voicehub.models.asr_vibevoice.training_asr_vibevoice import NativeVibeVoiceASRTrainingAdapter
+from voicehub.models.causal_lm.native import Qwen2Config
+from voicehub.models.vibevoice import VibeVoiceForTextToSpeech
+from voicehub.models.vibevoice.native.checkpoint import VibeVoiceCheckpointAdapter, build_vibevoice_model
+from voicehub.models.vibevoice.native.configuration import (
     VibeVoiceASRConfig,
     VibeVoiceASRTokenizerConfig,
     VibeVoiceDiffusionConfig,
     VibeVoiceLegacyTokenizerConfig,
     VibeVoiceTTSConfig,
 )
-from voicehub.architectures.vibevoice.diffusion import VibeVoiceDiffusionHead, VibeVoiceDPMSolver
-from voicehub.architectures.vibevoice.metadata import (
+from voicehub.models.vibevoice.native.diffusion import VibeVoiceDiffusionHead, VibeVoiceDPMSolver
+from voicehub.models.vibevoice.native.metadata import (
     VIBEVOICE_ASR_REPOSITORY,
     VIBEVOICE_CHECKPOINTS,
     VIBEVOICE_REALTIME_REPOSITORY,
     VIBEVOICE_TTS_REPOSITORY,
 )
-from voicehub.architectures.vibevoice.modeling import (
+from voicehub.models.vibevoice.native.modeling import (
     VibeVoiceASRForConditionalGeneration,
     VibeVoiceForConditionalGeneration,
     VibeVoiceRealtimeForConditionalGeneration,
 )
-from voicehub.architectures.vibevoice.registration import (
+from voicehub.models.vibevoice.native.registration import (
     create_vibevoice_asr_architecture_spec,
     create_vibevoice_tts_architecture_spec,
 )
-from voicehub.architectures.vibevoice.runtime import load_vibevoice_runtime, save_vibevoice_runtime
-from voicehub.architectures.vibevoice.tokenization import VIBEVOICE_TOKEN_IDS
-from voicehub.checkpointing import CheckpointCompatibilityError, ShardedSafeTensorReader, save_safetensors
-from voicehub.hub import write_json_file
-from voicehub.models.asr_vibevoice import VibeVoiceASRConfig as ProviderConfig
-from voicehub.models.asr_vibevoice import VibeVoiceForSpeechRecognition
-from voicehub.models.asr_vibevoice.training_asr_vibevoice import NativeVibeVoiceASRTrainingAdapter
-from voicehub.models.vibevoice import VibeVoiceForTextToSpeech
+from voicehub.models.vibevoice.native.runtime import load_vibevoice_runtime, save_vibevoice_runtime
+from voicehub.models.vibevoice.native.tokenization import VIBEVOICE_TOKEN_IDS
 from voicehub.optimization.diffusion_sampling import DiffusionSamplingConfig, DiffusionSamplingMixin
 from voicehub.tokenization.assets import encode_gpt2_token
 from voicehub.training import AutoTrainingAdapter, get_training_spec
@@ -239,7 +239,7 @@ class NativeVibeVoiceTests(unittest.TestCase):
     def test_provider_discovery_does_not_import_torch(self):
         command = (
             "import sys; "
-            "import voicehub.architectures.vibevoice as architectures; "
+            "import voicehub.models.vibevoice.native as architectures; "
             "import voicehub.models.asr_vibevoice as asr; "
             "import voicehub.models.vibevoice as tts; "
             "assert 'torch' not in sys.modules; "
@@ -255,9 +255,7 @@ class NativeVibeVoiceTests(unittest.TestCase):
         )
 
     def test_source_and_checkpoint_inventories_are_pinned(self):
-        source = (
-            Path(__file__).resolve().parents[1] / "voicehub" / "architectures" / "vibevoice" / "source" /
-            "SOURCE.json")
+        source = (Path(__file__).resolve().parents[1] / 'voicehub/models/vibevoice/native/source/SOURCE.json')
         metadata = json.loads(source.read_text(encoding="utf-8"))
         self.assertEqual(
             metadata["implementation_sources"][0]["revision"],
@@ -283,9 +281,9 @@ class NativeVibeVoiceTests(unittest.TestCase):
     def test_native_modules_do_not_import_external_model_runtimes(self):
         root = Path(__file__).resolve().parents[1]
         files = [
-            *(root / "voicehub" / "architectures" / "vibevoice").glob("*.py"),
+            *(root / 'voicehub/models/vibevoice/native').glob("*.py"),
             *(root / "voicehub" / "models" / "asr_vibevoice").glob("*.py"),
-            root / "voicehub" / "models" / "vibevoice" / "inference.py",
+            root / 'voicehub/models/vibevoice/modeling.py',
             root / "voicehub" / "models" / "vibevoice" / "training.py",
         ]
         forbidden = {

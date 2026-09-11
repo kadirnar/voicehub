@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2407.05407" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/FunAudioLLM/CosyVoice" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling_cosyvoice.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/cosyvoice.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -113,7 +113,7 @@ The card additionally names Guangdong, Minnan, Sichuan, Dongbei, Shan3xi, Shan1x
 
 - **Paper:** [CosyVoice: Multi-Lingual Large Voice Generation Model](https://arxiv.org/abs/2407.05407)
 - **Upstream GitHub:** [CosyVoice](https://github.com/FunAudioLLM/CosyVoice)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling_cosyvoice.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling.py)
 
 ## Configuration
 
@@ -202,8 +202,8 @@ This profile uses model-specific phases; inspect and honor each phase boundary. 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.cosyvoice.modeling_cosyvoice.CosyVoiceForTextToSpeech` |
-| Configuration | `voicehub.models.cosyvoice.configuration_cosyvoice.CosyVoiceConfig` |
+| Implementation | `voicehub.models.cosyvoice.modeling.CosyVoiceForTextToSpeech` |
+| Configuration | `voicehub.models.cosyvoice.configuration.CosyVoiceConfig` |
 | Source provenance | `voicehub/models/cosyvoice/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -228,7 +228,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `CosyVoiceConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/configuration_cosyvoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -247,7 +247,7 @@ CosyVoiceConfig(**config_kwargs)
 
 ### `CosyVoiceForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling_cosyvoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

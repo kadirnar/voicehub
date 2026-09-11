@@ -6,8 +6,8 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
-    "MeloTTSConfig": ("voicehub.models.melotts.configuration_melotts"),
-    "MeloTTSForTextToSpeech": "voicehub.models.melotts.inference",
+    "MeloTTSConfig": ("voicehub.models.melotts.configuration"),
+    "MeloTTSForTextToSpeech": "voicehub.models.melotts.modeling",
     "MeloTTSTrainingAdapter": "voicehub.models.melotts.training",
     "MeloTTSTrainingCollator": "voicehub.models.melotts.training",
 }

@@ -13,7 +13,7 @@ from voicehub.auto import (
     AutoModelForVoiceActivityDetection,
     AutoProcessor,
 )
-from voicehub.processing_utils import VoiceHubProcessor
+from voicehub.processing.processor import VoiceHubProcessor
 
 
 class AutoModelConfigKwargsTests(unittest.TestCase):
@@ -124,7 +124,7 @@ class AutoModelConfigKwargsTests(unittest.TestCase):
                         return_value=config_path,
                     ) as discovery_resolver,
                     patch(
-                        "voicehub.configuration_utils.resolve_pretrained_file",
+                        "voicehub.configuration.resolve_pretrained_file",
                         return_value=config_path,
                     ) as concrete_resolver,
             ):
@@ -326,7 +326,7 @@ class AutoModelConfigKwargsTests(unittest.TestCase):
     def test_auto_processor_missing_remote_artifact_falls_back_to_constructor(self):
         config = AutoConfig.for_model("kokoro")
         with patch(
-                "voicehub.processing_utils.resolve_pretrained_file",
+                "voicehub.processing.processor.resolve_pretrained_file",
                 side_effect=FileNotFoundError("processor config is absent"),
         ) as resolve_file:
             processor = AutoProcessor.from_pretrained(

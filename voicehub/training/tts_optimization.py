@@ -13,11 +13,11 @@ from dataclasses import asdict, dataclass, replace
 from typing import TYPE_CHECKING, Any, cast
 
 from voicehub.dependencies import resolve_import_path
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.data_contracts import TTSDataArchitecture, get_tts_dataset_spec
 from voicehub.training.specs import get_training_spec
 from voicehub.training.tts_batching import TTSBatchingConfig, TTSBatchingStrategy
 from voicehub.training.tts_datasets import TTSDataset
-from voicehub.training_args import TrainingArguments
 
 if TYPE_CHECKING:
     from voicehub.optimization import OptimizationPass

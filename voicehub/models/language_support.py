@@ -525,18 +525,18 @@ def model_language_support(spec) -> ModelLanguageSupport:
             _LANGUAGE_NOTES.get(model_type),
         )
     if model_type in _WHISPER_MODEL_TYPES:
-        from voicehub.architectures.whisper.tokenization import LANGUAGES
+        from voicehub.models.asr_whisper_native.native.tokenization import LANGUAGES
 
         # The tokenizer recognizes Cantonese, but the default OpenAI checkpoint
         # cards enumerate the other language abbreviations only.
         codes = tuple(code for code in LANGUAGES if code != "yue")
         return ModelLanguageSupport("enumerated", codes)
     if model_type == "omnivoice":
-        from voicehub.architectures.omnivoice.languages import OMNIVOICE_LANGUAGE_CODES
+        from voicehub.models.omnivoice.native.languages import OMNIVOICE_LANGUAGE_CODES
 
         return ModelLanguageSupport("enumerated", OMNIVOICE_LANGUAGE_CODES)
     if model_type == "asr_qwen3":
-        from voicehub.architectures.qwen3_asr.languages import LANGUAGE_CODES
+        from voicehub.models.asr_qwen3.native.languages import LANGUAGE_CODES
 
         return ModelLanguageSupport(
             "enumerated",
@@ -544,16 +544,21 @@ def model_language_support(spec) -> ModelLanguageSupport:
             _LANGUAGE_NOTES[model_type],
         )
     if model_type == "asr_cohere":
-        from voicehub.architectures.cohere_asr.configuration import SUPPORTED_LANGUAGES
+        from voicehub.models.asr_cohere.native.configuration import SUPPORTED_LANGUAGES
 
         return ModelLanguageSupport("enumerated", tuple(SUPPORTED_LANGUAGES))
     if model_type == "asr_seamless_m4t_v2":
-        from voicehub.architectures.seamless_m4t_v2.languages import SEAMLESS_M4T_V2_LANGUAGE_TO_ID
+        from voicehub.models.asr_seamless_m4t_v2.native.languages import SEAMLESS_M4T_V2_LANGUAGE_TO_ID
 
         return ModelLanguageSupport(
             "enumerated",
             tuple(SEAMLESS_M4T_V2_LANGUAGE_TO_ID),
             "These are output-language prompts supported by the audited S2T checkpoint.",
+        )
+    if spec.task is SpeechTask.AUDIO_CODEC:
+        return ModelLanguageSupport(
+            "not-text-conditioned",
+            note="Audio codecs encode waveforms without selecting a text language.",
         )
     if spec.task is SpeechTask.VOICE_ACTIVITY_DETECTION:
         return ModelLanguageSupport(

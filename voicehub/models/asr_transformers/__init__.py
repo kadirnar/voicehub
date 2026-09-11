@@ -1,9 +1,24 @@
-"""Universal Transformers speech-recognition integration."""
+"""Lazy exports for the asr_transformers model family."""
 
-from voicehub.models.asr_transformers.configuration_asr_transformers import TransformersASRConfig
-from voicehub.models.asr_transformers.modeling_asr_transformers import TransformersASRForSpeechRecognition
+from importlib import import_module
 
-__all__ = [
-    "TransformersASRConfig",
-    "TransformersASRForSpeechRecognition",
-]
+_EXPORTS = {
+    'TransformersASRConfig': ('voicehub.models.asr_transformers.configuration', 'TransformersASRConfig'),
+    'TransformersASRForSpeechRecognition':
+    ('voicehub.models.asr_transformers.modeling', 'TransformersASRForSpeechRecognition')
+}
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name):
+    try:
+        module_name, attribute = _EXPORTS[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted((*globals(), *_EXPORTS))

@@ -8,9 +8,9 @@ from typing import Any
 _PACKAGE = "voicehub.models.asr_wavlm."
 _EXPORTS = {
     "NativeWavLMTrainingAdapter": _PACKAGE + "training_asr_wavlm",
-    "WavLMASRConfig": _PACKAGE + "configuration_asr_wavlm",
-    "WavLMForSpeechRecognition": _PACKAGE + "modeling_asr_wavlm",
-    "WavLMProcessor": _PACKAGE + "processing_asr_wavlm",
+    "WavLMASRConfig": _PACKAGE + "configuration",
+    "WavLMForSpeechRecognition": _PACKAGE + "modeling",
+    "WavLMProcessor": _PACKAGE + "processing",
 }
 
 __all__ = sorted(_EXPORTS)

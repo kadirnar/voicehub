@@ -6,15 +6,15 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from voicehub.architectures.fsmn_vad.checkpoint import NATIVE_FSMN_VAD_FILENAME, convert_funasr_fsmn_checkpoint
-from voicehub.architectures.fsmn_vad.metadata import (
+from voicehub.hub import resolve_pretrained_file
+from voicehub.models.vad_funasr.native.checkpoint import NATIVE_FSMN_VAD_FILENAME, convert_funasr_fsmn_checkpoint
+from voicehub.models.vad_funasr.native.metadata import (
     FUNASR_CMVN_SHA256,
     FUNASR_HF_REPOSITORY,
     FUNASR_HF_REVISION,
     FUNASR_MODEL_SHA256,
     FUNASR_MODELSCOPE_REPOSITORY,
 )
-from voicehub.hub import resolve_pretrained_file
 from voicehub.path_utils import is_explicit_local_path
 
 _OFFICIAL_ALIASES = frozenset({

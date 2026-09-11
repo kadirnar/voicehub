@@ -6,14 +6,14 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from voicehub.models.asr_tiron.configuration_asr_tiron import TironASRConfig
+    from voicehub.models.asr_tiron.configuration import TironASRConfig
     from voicehub.models.asr_tiron.constraints import TironConstraintLogitsProcessor
-    from voicehub.models.asr_tiron.modeling_asr_tiron import TironForSpeechRecognition
+    from voicehub.models.asr_tiron.modeling import TironForSpeechRecognition
 
 _PUBLIC_COMPONENTS = {
-    "TironASRConfig": ("voicehub.models.asr_tiron.configuration_asr_tiron"),
+    "TironASRConfig": ("voicehub.models.asr_tiron.configuration"),
     "TironConstraintLogitsProcessor": ("voicehub.models.asr_tiron.constraints"),
-    "TironForSpeechRecognition": ("voicehub.models.asr_tiron.modeling_asr_tiron"),
+    "TironForSpeechRecognition": ("voicehub.models.asr_tiron.modeling"),
 }
 
 

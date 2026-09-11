@@ -11,12 +11,12 @@ import torch
 
 from tests._moonshine_test_utils import write_tiny_moonshine_artifact
 from voicehub import AutoConfig, AutoModelForSpeechRecognition, get_model_spec
-from voicehub.architectures.moonshine import resolve_moonshine_artifacts
 from voicehub.models.asr_moonshine import (
     MoonshineASRConfig,
     MoonshineForSpeechRecognition,
     NativeMoonshineTrainingAdapter,
 )
+from voicehub.models.asr_moonshine.native import resolve_moonshine_artifacts
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.specs import get_training_spec
 
@@ -221,13 +221,13 @@ print(json.dumps({name: name in sys.modules for name in names}))
 
         self.assertEqual(
             spec.module,
-            "voicehub.models.asr_moonshine.modeling_asr_moonshine",
+            "voicehub.models.asr_moonshine.modeling",
         )
         self.assertIn("voicehub-native", spec.capabilities)
         self.assertEqual(spec.architecture, "moonshine")
         self.assertEqual(
             training.source_entrypoints,
-            ("voicehub.architectures.moonshine."
+            ("voicehub.models.asr_moonshine.native."
              "MoonshineForConditionalGeneration", ),
         )
 

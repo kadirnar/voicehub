@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-_MODEL_LOCAL_DIRECTORIES = frozenset({"architectures", "models"})
+_MODEL_LOCAL_DIRECTORIES = frozenset({"models"})
 
 
 @dataclass(frozen=True, order=True)
@@ -89,7 +89,7 @@ class _ProviderBranchVisitor(ast.NodeVisitor):
 def _registered_provider_names() -> frozenset[str]:
     """Read canonical names and live aliases from the dependency-light
     registry."""
-    from voicehub.models.registry import MODEL_ALIASES, list_model_specs
+    from voicehub.registry import MODEL_ALIASES, list_model_specs
 
     return frozenset({
         *(spec.model_type for spec in list_model_specs(task=None)),

@@ -8,29 +8,23 @@ from unittest import mock
 
 import torch
 
-from voicehub.architectures.cosyvoice_native.checkpoint import export_cosyvoice_checkpoint, load_cosyvoice_checkpoint
-from voicehub.architectures.cosyvoice_native.configuration import CosyVoiceArchitectureConfig
-from voicehub.architectures.cosyvoice_native.metadata import (
-    COSYVOICE3_SPEECH_TOKENIZER_FILE,
-    S3TOKENIZER_SOURCE_REVISION,
-)
-from voicehub.architectures.cosyvoice_native.modeling import CosyVoiceNativeModel
-from voicehub.architectures.cosyvoice_native.runtime import CosyVoiceNativeRuntime, load_cosyvoice_runtime
-from voicehub.architectures.cosyvoice_native.speech_tokenizer import (
-    CosyVoiceSpeechTokenizer,
-    CosyVoiceSpeechTokenizerConfig,
-)
-from voicehub.architectures.cosyvoice_native.tokenization import (
+from voicehub.checkpointing.errors import CheckpointIntegrityError
+from voicehub.converters.cosyvoice_speech_tokenizer import convert_audited_cosyvoice_speech_tokenizer
+from voicehub.models.cosyvoice.configuration import CosyVoiceConfig
+from voicehub.models.cosyvoice.modeling import CosyVoiceForTextToSpeech
+from voicehub.models.cosyvoice.native.checkpoint import export_cosyvoice_checkpoint, load_cosyvoice_checkpoint
+from voicehub.models.cosyvoice.native.configuration import CosyVoiceArchitectureConfig
+from voicehub.models.cosyvoice.native.metadata import COSYVOICE3_SPEECH_TOKENIZER_FILE, S3TOKENIZER_SOURCE_REVISION
+from voicehub.models.cosyvoice.native.modeling import CosyVoiceNativeModel
+from voicehub.models.cosyvoice.native.runtime import CosyVoiceNativeRuntime, load_cosyvoice_runtime
+from voicehub.models.cosyvoice.native.speech_tokenizer import CosyVoiceSpeechTokenizer, CosyVoiceSpeechTokenizerConfig
+from voicehub.models.cosyvoice.native.tokenization import (
     END_OF_PROMPT,
     END_OF_TEXT,
     IM_END,
     IM_START,
     CosyVoiceTextTokenizer,
 )
-from voicehub.checkpointing.errors import CheckpointIntegrityError
-from voicehub.converters.cosyvoice_speech_tokenizer import convert_audited_cosyvoice_speech_tokenizer
-from voicehub.models.cosyvoice_native.configuration_cosyvoice import CosyVoiceConfig
-from voicehub.models.cosyvoice_native.modeling_cosyvoice import CosyVoiceForTextToSpeech
 from voicehub.optimization import TorchCompileCapabilityReport, TTSOptimizationConfig
 from voicehub.optimization.codecs import (
     CodecOptimizationConfig,

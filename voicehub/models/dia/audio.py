@@ -6,7 +6,7 @@ from collections.abc import Sequence
 
 from torch import Tensor
 
-from voicehub.architectures.dia.processing import DiaProcessor
+from voicehub.models.dia.native.processing import DiaProcessor
 
 
 def build_delay_indices(

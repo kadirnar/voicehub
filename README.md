@@ -5,7 +5,11 @@
 </div>
 
 VoiceHub provides one API for text-to-speech (TTS), speech recognition (ASR),
-and voice activity detection (VAD). It supports Python 3.10–3.12.
+voice activity detection (VAD), and audio codecs. It supports Python 3.10–3.12.
+
+Version 0.4 uses one shared model lifecycle and keeps each native graph beside
+its model adapter. See the [architecture](docs/concepts/architecture.md) and
+[breaking-change migration guide](docs/project/migration-0.4.md).
 
 ## Install
 
@@ -44,10 +48,32 @@ See the [TTS capabilities](https://kadirnar.github.io/voicehub/models/tts-capabi
 and [ASR/VAD support](https://kadirnar.github.io/voicehub/models/asr-vad-support/)
 tables for task-specific inputs.
 
+## Four tasks
+
+| Task      | Model method                      | Factory                              |
+| --------- | --------------------------------- | ------------------------------------ |
+| TTS       | `generate(text)`                  | `AutoModelForTextToSpeech`           |
+| STT / ASR | `transcribe(audio)`               | `AutoModelForSpeechRecognition`      |
+| VAD       | `detect(audio)`                   | `AutoModelForVoiceActivityDetection` |
+| Codec     | `encode(audio)` / `decode(codes)` | `AutoModelForAudioCodec`             |
+
+`AutoModel` loads any registered task. All factories share `from_pretrained`,
+`from_config`, lazy loading, and `save_pretrained`.
+
+```python
+from voicehub import AutoModel, list_model_specs
+
+print([spec.model_type for spec in list_model_specs(task="codec")])
+codec = AutoModel.from_pretrained("descript/dac_44khz", model_type="dac", device="cpu")
+encoded = codec.encode("speech.wav")
+reconstructed = codec.decode(encoded)
+print(reconstructed.audio.shape, reconstructed.sample_rate)
+```
+
 ## Train
 
 ```python
-from voicehub import get_training_spec
+from voicehub.training import get_training_spec
 
 spec = get_training_spec("dia")
 print(spec.support.value, spec.family_name)
@@ -60,7 +86,7 @@ matrix.
 ## Optimize
 
 ```python
-from voicehub import TTSOptimizationConfig
+from voicehub.optimization import TTSOptimizationConfig
 
 result = model.optimize(
     TTSOptimizationConfig(

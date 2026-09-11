@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from voicehub.modeling_outputs import ASROutput, ASRSegment, ASRWord
 from voicehub.models.asr_native.configuration import WhisperXConfig
 from voicehub.models.asr_native.whisper_compat import normalize_whisper_source
-from voicehub.models.asr_whisper_native.modeling_asr_whisper_native import WhisperForSpeechRecognition
+from voicehub.models.asr_whisper_native.modeling import WhisperForSpeechRecognition
+from voicehub.outputs import ASROutput, ASRSegment, ASRWord
 
 
 class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
@@ -54,7 +54,7 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
         )
 
     def _alignment_model_source(self, language: str) -> str:
-        from voicehub.architectures.ctc_alignment.metadata import DEFAULT_ALIGNMENT_MODELS
+        from voicehub.neural.ctc_alignment.metadata import DEFAULT_ALIGNMENT_MODELS
 
         configured = self.config.alignment_model_path
         if configured is not None:
@@ -146,7 +146,7 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
         waveform: Any,
         language: str,
     ) -> tuple[ASRSegment, ...]:
-        from voicehub.architectures.ctc_alignment import align_ctc_transcript
+        from voicehub.neural.ctc_alignment import align_ctc_transcript
 
         runtime = self._load_alignment_model(language)
         tokenizer = runtime.ctc_processor.tokenizer
@@ -215,7 +215,7 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
         max_new_tokens: int | None = None,
         hotwords: str | tuple[str, ...] | list[str] | None = None,
     ) -> ASROutput:
-        from voicehub.architectures.ctc_alignment.metadata import WHISPERX_REVISION
+        from voicehub.neural.ctc_alignment.metadata import WHISPERX_REVISION
         from voicehub.processing.waveform import load_native_audio
 
         should_align = self.config.align_output or return_timestamps == "word"

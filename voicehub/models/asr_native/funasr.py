@@ -8,11 +8,11 @@ from numbers import Integral, Real
 from pathlib import Path
 from typing import Any
 
-from voicehub.audio_modeling_utils import PreTrainedASRModel
 from voicehub.hub import read_json_file, write_json_file
-from voicehub.modeling_outputs import ASROutput, ASRSegment
 from voicehub.models.asr_native.configuration import FunASRConfig
+from voicehub.models.audio import PreTrainedASRModel
 from voicehub.models.native_utils import resolve_cpu_cuda_device
+from voicehub.outputs import ASROutput, ASRSegment
 
 _LANGUAGE_ALIASES = {
     "auto": "auto",
@@ -284,7 +284,7 @@ class FunASRForSpeechRecognition(PreTrainedASRModel):
                 "Native FunASR compatibility supports only a VoiceHub "
                 "SenseVoiceSmall artifact; found model type "
                 f"{model_type or '<missing>'!r}.")
-        architectures = values.get("architectures", ())
+        architectures = values.get('architectures', ())
         if isinstance(architectures, str):
             architectures = (architectures, )
         supported = {
@@ -298,14 +298,14 @@ class FunASRForSpeechRecognition(PreTrainedASRModel):
                 f"architecture(s): {', '.join(map(str, architectures))}.")
 
     def _load_pretrained_model(self) -> None:
-        from voicehub.architectures.sensevoice.artifacts import resolve_sensevoice_artifacts
-        from voicehub.architectures.sensevoice.checkpoint import (
+        from voicehub.models.asr_funasr.native.artifacts import resolve_sensevoice_artifacts
+        from voicehub.models.asr_funasr.native.checkpoint import (
             SenseVoiceSafeTensorsCheckpointAdapter,
             load_native_sensevoice_model,
         )
-        from voicehub.architectures.sensevoice.configuration import SenseVoiceSmallConfig
-        from voicehub.architectures.sensevoice.frontend import SenseVoiceFrontend
-        from voicehub.architectures.sensevoice.tokenization import SenseVoiceTokenizer
+        from voicehub.models.asr_funasr.native.configuration import SenseVoiceSmallConfig
+        from voicehub.models.asr_funasr.native.frontend import SenseVoiceFrontend
+        from voicehub.models.asr_funasr.native.tokenization import SenseVoiceTokenizer
 
         self._validate_composed_options()
         source = self.config.name_or_path or self.default_model_name_or_path
@@ -416,7 +416,7 @@ class FunASRForSpeechRecognition(PreTrainedASRModel):
     ) -> ASROutput:
         import torch
 
-        from voicehub.architectures.sensevoice.decoding import ctc_greedy_tokens, sensevoice_word_timestamps
+        from voicehub.models.asr_funasr.native.decoding import ctc_greedy_tokens, sensevoice_word_timestamps
         from voicehub.processing.waveform import load_native_audio
 
         resolved_language, timestamps = self._validate_request(
@@ -767,18 +767,18 @@ class FunASRForSpeechRecognition(PreTrainedASRModel):
         return None
 
     def _save_pretrained(self, save_directory: Path) -> None:
-        from voicehub.architectures.sensevoice.checkpoint import (
+        from voicehub.checkpointing import save_safetensors
+        from voicehub.models.asr_funasr.native.checkpoint import (
             NATIVE_SENSEVOICE_CMVN,
             NATIVE_SENSEVOICE_FILENAME,
             NATIVE_SENSEVOICE_FORMAT,
             NATIVE_SENSEVOICE_TOKENIZER,
         )
-        from voicehub.architectures.sensevoice.metadata import (
+        from voicehub.models.asr_funasr.native.metadata import (
             FUNASR_SOURCE_REVISION,
             SENSEVOICE_MODEL_LICENSE,
             SENSEVOICE_REVISION,
         )
-        from voicehub.checkpointing import save_safetensors
 
         if (self.model is None or self.native_config is None or self.tokenizer is None or
                 self.frontend is None):
@@ -819,7 +819,7 @@ class FunASRForSpeechRecognition(PreTrainedASRModel):
             )
         values = self.native_config.to_dict()
         values.update({
-            "architectures": [
+            'architectures': [
                 "FunASRForSpeechRecognition",
                 "SenseVoiceSmallForCTC",
             ],

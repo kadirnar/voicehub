@@ -193,7 +193,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
 | Implementation | `voicehub.models.asr_nemo.NeMoASRForSpeechRecognition` |
 | Configuration | `voicehub.models.asr_nemo.NeMoASRConfig` |
-| Source provenance | `voicehub/architectures/nemo_ctc/SOURCE.json` |
+| Source provenance | `voicehub/models/asr_nemo/native/SOURCE.json` |
 | License | [NVIDIA-NGC-Terms](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/nemo/models/stt_en_quartznet15x5) |
 
 The QuartzNet checkpoint is governed by the NVIDIA NGC Terms of Use; the VoiceHub-owned architecture code is Apache-2.0. Commercial use: **review required**.

@@ -15,6 +15,7 @@ from enum import Enum
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPOSITORY_ROOT))
 PACKAGE_ROOT = REPOSITORY_ROOT / "voicehub"
 ROOT_INIT_PATH = PACKAGE_ROOT / "__init__.py"
 OUTPUT_PATH = REPOSITORY_ROOT / "docs" / "reference" / "public-api.md"
@@ -70,9 +71,9 @@ def _literal_assignment(tree: ast.Module, name: str):
 
 def _root_export_metadata() -> tuple[tuple[str, ...], dict[str, str], set[str]]:
     tree = ast.parse(ROOT_INIT_PATH.read_text(encoding="utf-8"), filename=str(ROOT_INIT_PATH))
-    exports = tuple(_literal_assignment(tree, "__all__"))
-    lazy_exports = dict(_literal_assignment(tree, "_LAZY_ROOT_EXPORTS"))
-    source_modules: dict[str, str] = {"__version__": "voicehub"}
+    lazy_exports = dict(_literal_assignment(tree, "_EXPORTS"))
+    exports = tuple(sorted(lazy_exports))
+    source_modules: dict[str, str] = {}
 
     for node in tree.body:
         if not isinstance(node, ast.ImportFrom) or node.module is None:
@@ -100,11 +101,10 @@ def _category_for(module_name: str, export_name: str) -> str:
         return "Package metadata"
     if module_name.startswith((
             "voicehub.auto",
-            "voicehub.automodel",
-            "voicehub.configuration_utils",
-            "voicehub.modeling_utils",
-            "voicehub.models.registry",
-            "voicehub.processing_utils",
+            "voicehub.configuration",
+            "voicehub.models.tts",
+            "voicehub.registry",
+            "voicehub.processing.processor",
             "voicehub.registry",
             "voicehub.pipelines",
             "voicehub.tasks",
@@ -112,10 +112,10 @@ def _category_for(module_name: str, export_name: str) -> str:
         return "Configuration, factories, and models"
     if module_name.startswith((
             "voicehub.audio",
-            "voicehub.data_collator",
-            "voicehub.generation_configuration",
+            "voicehub.training.data_collator",
+            "voicehub.generation.configuration",
             "voicehub.inference_configuration",
-            "voicehub.modeling_outputs",
+            "voicehub.outputs",
     )):
         return "Inputs and normalized outputs"
     if module_name.startswith((
@@ -125,8 +125,8 @@ def _category_for(module_name: str, export_name: str) -> str:
     )):
         return "Inference and serving"
     if module_name.startswith((
-            "voicehub.integrations",
-            "voicehub.trainer",
+            "voicehub.training.integrations",
+            "voicehub.training.trainer",
             "voicehub.training",
     )):
         return "Training"

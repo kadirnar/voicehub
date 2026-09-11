@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/nari-labs/dia" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/modeling_dia.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/dia.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -101,7 +101,7 @@ integration. This page is generated from its registry contract. [Open the `dia` 
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Dia](https://github.com/nari-labs/dia)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/modeling_dia.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/modeling.py)
 
 ## Configuration
 
@@ -187,9 +187,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.dia.modeling_dia.DiaForTextToSpeech` |
-| Configuration | `voicehub.models.dia.configuration_dia.DiaConfig` |
-| Source provenance | `voicehub/architectures/dia/SOURCE.json` |
+| Implementation | `voicehub.models.dia.modeling.DiaForTextToSpeech` |
+| Configuration | `voicehub.models.dia.configuration.DiaConfig` |
+| Source provenance | `voicehub/models/dia/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -213,7 +213,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `DiaConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/configuration_dia.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -232,7 +232,7 @@ DiaConfig(**config_kwargs)
 
 ### `DiaForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/modeling_dia.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/dia/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

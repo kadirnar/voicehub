@@ -195,7 +195,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
 | Implementation | `voicehub.models.asr_native.funasr.FunASRForSpeechRecognition` |
 | Configuration | `voicehub.models.asr_native.configuration.FunASRConfig` |
-| Source provenance | `voicehub/architectures/sensevoice/SOURCE.json` |
+| Source provenance | `voicehub/models/asr_funasr/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.

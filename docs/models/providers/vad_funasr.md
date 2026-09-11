@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2305.11013" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/modelscope/FunASR" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/modeling_vad_funasr.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/vad_funasr.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -101,7 +101,7 @@ The public VAD contract does not select a spoken language; validate checkpoint a
 
 - **Paper:** [FunASR: A Fundamental End-to-End Speech Recognition Toolkit](https://arxiv.org/abs/2305.11013)
 - **Upstream GitHub:** [FunASR](https://github.com/modelscope/FunASR)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/modeling_vad_funasr.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/modeling.py)
 
 ## Configuration
 
@@ -181,9 +181,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.vad_funasr.modeling_vad_funasr.FunASRVADForVoiceActivityDetection` |
-| Configuration | `voicehub.models.vad_funasr.configuration_vad_funasr.FunASRVADConfig` |
-| Source provenance | `voicehub/architectures/fsmn_vad/SOURCE.json` |
+| Implementation | `voicehub.models.vad_funasr.modeling.FunASRVADForVoiceActivityDetection` |
+| Configuration | `voicehub.models.vad_funasr.configuration.FunASRVADConfig` |
+| Source provenance | `voicehub/models/vad_funasr/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -207,7 +207,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `FunASRVADConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/configuration_vad_funasr.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -226,7 +226,7 @@ FunASRVADConfig(**config_kwargs)
 
 ### `FunASRVADForVoiceActivityDetection`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/modeling_vad_funasr.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_funasr/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

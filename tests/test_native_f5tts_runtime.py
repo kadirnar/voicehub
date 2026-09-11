@@ -11,16 +11,18 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.f5tts.audio import F5MelSpectrogram
-from voicehub.architectures.f5tts.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.models.f5tts.modeling import F5TTSConfig, F5TTSForTextToSpeech
+from voicehub.models.f5tts.native.audio import F5MelSpectrogram
+from voicehub.models.f5tts.native.checkpoint import (
     convert_legacy_f5tts_checkpoint,
     export_f5tts_checkpoint,
     load_f5tts_checkpoint,
     load_vocos_checkpoint,
 )
-from voicehub.architectures.f5tts.configuration import F5TTSArchitectureConfig
-from voicehub.architectures.f5tts.frontend import F5Vocabulary, NativeF5TextFrontend
-from voicehub.architectures.f5tts.metadata import (
+from voicehub.models.f5tts.native.configuration import F5TTSArchitectureConfig
+from voicehub.models.f5tts.native.frontend import F5Vocabulary, NativeF5TextFrontend
+from voicehub.models.f5tts.native.metadata import (
     F5TTS_CHECKPOINT_LICENSE,
     F5TTS_CHECKPOINT_REVISION,
     F5TTS_SOURCE_REVISION,
@@ -29,17 +31,15 @@ from voicehub.architectures.f5tts.metadata import (
     VOCOS_CHECKPOINT_REVISION,
     VOCOS_SOURCE_REVISION,
 )
-from voicehub.architectures.f5tts.modeling import F5ConditionalFlowMatcher
-from voicehub.architectures.f5tts.modules import RotaryEmbedding, apply_rotary_position_embedding
-from voicehub.architectures.f5tts.registration import create_f5tts_architecture_spec
-from voicehub.architectures.f5tts.runtime import NativeF5TTSRuntime
-from voicehub.architectures.f5tts.vocoder import ISTFTHead, NativeVocos
-from voicehub.checkpointing import save_safetensors
-from voicehub.models.f5tts.inference import F5TTSConfig, F5TTSForTextToSpeech
-from voicehub.trainer import Trainer
+from voicehub.models.f5tts.native.modeling import F5ConditionalFlowMatcher
+from voicehub.models.f5tts.native.modules import RotaryEmbedding, apply_rotary_position_embedding
+from voicehub.models.f5tts.native.registration import create_f5tts_architecture_spec
+from voicehub.models.f5tts.native.runtime import NativeF5TTSRuntime
+from voicehub.models.f5tts.native.vocoder import ISTFTHead, NativeVocos
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.recipes import F5TTSTrainingAdapter
 from voicehub.training.specs import get_training_spec
-from voicehub.training_args import TrainingArguments
+from voicehub.training.trainer import Trainer
 
 
 def _tiny_config() -> F5TTSArchitectureConfig:
@@ -70,7 +70,7 @@ class NativeF5TTSRuntimeTests(unittest.TestCase):
     def test_registration_is_lazy_and_records_distinct_artifact_license(self):
         code = (
             "import json,sys;"
-            "from voicehub.architectures.f5tts.registration import "
+            "from voicehub.models.f5tts.native.registration import "
             "create_f5tts_architecture_spec;"
             "s=create_f5tts_architecture_spec();"
             "print(json.dumps({'torch': 'torch' in sys.modules,"
@@ -370,9 +370,9 @@ class NativeF5TTSRuntimeTests(unittest.TestCase):
         )
 
         with (
-                patch("voicehub.models.f5tts.inference.resolve_f5tts_artifacts", ) as resolver,
+                patch("voicehub.models.f5tts.modeling.resolve_f5tts_artifacts", ) as resolver,
                 patch(
-                    "voicehub.models.f5tts.inference.resolve_torch_dtype",
+                    "voicehub.models.f5tts.modeling.resolve_torch_dtype",
                     return_value=torch.float16,
                 ),
                 self.assertRaisesRegex(

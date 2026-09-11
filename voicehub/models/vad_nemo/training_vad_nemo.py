@@ -458,7 +458,7 @@ class NativeMarbleNetVADTrainingAdapter(FrameClassificationTrainingAdapter):
         return torch.optim.lr_scheduler.LambdaLR(optimizer, schedule)
 
     def recipe_resume_configuration(self) -> Mapping[str, Any]:
-        from voicehub.architectures.marblenet_vad.metadata import MARBLENET_VAD_REVISION, NEMO_SOURCE_REVISION
+        from voicehub.models.vad_nemo.native.metadata import MARBLENET_VAD_REVISION, NEMO_SOURCE_REVISION
 
         configuration = dict(super().recipe_resume_configuration())
         configuration.update({

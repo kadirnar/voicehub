@@ -4,8 +4,8 @@ from importlib import import_module
 
 _PACKAGE = "voicehub.models.asr_nemo."
 _EXPORTS = {
-    "NeMoASRConfig": _PACKAGE + "configuration_asr_nemo",
-    "NeMoASRForSpeechRecognition": _PACKAGE + "modeling_asr_nemo",
+    "NeMoASRConfig": _PACKAGE + "configuration",
+    "NeMoASRForSpeechRecognition": _PACKAGE + "modeling",
     "NativeNeMoCTCTrainingAdapter": _PACKAGE + "training_asr_nemo",
 }
 

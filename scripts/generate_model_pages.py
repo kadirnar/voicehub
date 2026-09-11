@@ -115,6 +115,16 @@ def _render_call_arguments(arguments: tuple[str, ...], *, indent: int = 4) -> st
 def _inference_code(spec) -> str:
     checkpoint, _ = _checkpoint(spec)
     profile = inference_profile(spec)
+    if spec.task.value == "audio-codec":
+        source = "checkpoints/encodec/model.safetensors" if spec.model_type == "encodec" else checkpoint
+        return f'''from voicehub import AutoModelForAudioCodec
+
+model = AutoModelForAudioCodec.from_pretrained(
+    {source!r}, model_type={spec.model_type!r}, device="cpu",
+)
+encoded = model.encode("speech.wav")
+reconstructed = model.decode(encoded)
+print(encoded.length, reconstructed.sample_rate, reconstructed.audio.shape)'''
     if spec.task.value == "text-to-speech":
         if not profile.high_level_supported:
             return f'''from voicehub import AutoModelForTextToSpeech
@@ -240,6 +250,7 @@ def _factory_name(spec) -> str:
         "text-to-speech": "AutoModelForTextToSpeech",
         "automatic-speech-recognition": "AutoModelForSpeechRecognition",
         "voice-activity-detection": "AutoModelForVoiceActivityDetection",
+        "audio-codec": "AutoModelForAudioCodec",
     }[spec.task.value]
 
 
@@ -248,6 +259,7 @@ def _output_name(spec) -> str:
         "text-to-speech": "TTSOutput",
         "automatic-speech-recognition": "ASROutput",
         "voice-activity-detection": "VADOutput",
+        "audio-codec": "CodecOutput",
     }[spec.task.value]
 
 
@@ -281,7 +293,7 @@ def _source_record_path(spec) -> Path | None:
         roots.extend(
             root for reference in architecture.component_references.values()
             for root in _module_source_roots(reference.module))
-    roots.append(REPOSITORY_ROOT / "voicehub" / "architectures" / (spec.architecture or ""))
+    roots.append(REPOSITORY_ROOT / "voicehub" / 'architectures' / (spec.architecture or ""))
 
     candidates = []
     seen = set()

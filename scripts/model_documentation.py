@@ -16,6 +16,7 @@ TASK_LABELS = {
     "text-to-speech": "Text to speech",
     "automatic-speech-recognition": "Automatic speech recognition",
     "voice-activity-detection": "Voice activity detection",
+    "audio-codec": "Audio codecs",
 }
 TASK_ORDER = tuple(TASK_LABELS)
 
@@ -108,6 +109,8 @@ def _parameters(count: int | None, note: str) -> ParameterDocumentation:
 # Safetensors totals are used only when the repository API supplies an exact total
 # for the registry default.
 PARAMETER_DOCUMENTATION = {
+    "dac": _parameters(None, _NOT_REPORTED),
+    "encodec": _parameters(None, _NOT_REPORTED),
     "orpheustts": _parameters(3_782_986_752, _HF_COUNT),
     "dia": _parameters(1_611_160_576, _NATIVE_COUNT),
     "vui": _parameters(None, _NOT_REPORTED),
@@ -210,6 +213,9 @@ _HUGGING_FACE_OVERRIDES = {
 }
 
 _NO_HUGGING_FACE_REASON = {
+    "encodec": (
+        "Use a VoiceHub native Safetensors export or an explicitly trusted pinned Meta release; "
+        "the codec loader does not interpret Hugging Face Transformers checkpoints."),
     "asr_nemo": (
         "No canonical Hugging Face repository for the exact audited QuartzNet15x5 release; "
         "VoiceHub resolves the pinned NeMo/NGC artifact instead."),
@@ -896,6 +902,25 @@ INFERENCE_PROFILES = {
         arguments=("threshold=0.5", "min_speech_duration_ms=100", "return_frames=True"),
     ),
 }
+
+INFERENCE_PROFILES.update({
+    "dac":
+    InferenceProfile(
+        task="audio-codec",
+        summary="Encode mono audio into discrete codebooks and reconstruct its original sample length.",
+        input_note=(
+            "Use a PCM WAVE path or a tensor with an explicit sampling_rate. "
+            "Output codes retain the original length."),
+    ),
+    "encodec":
+    InferenceProfile(
+        task="audio-codec",
+        summary="Encode audio while preserving segmented scales and channel information.",
+        input_note=(
+            "Load a native Safetensors export. The pinned official .th import "
+            "requires explicit trust_official_pickle configuration."),
+    ),
+})
 
 
 def inference_profile(spec) -> InferenceProfile:

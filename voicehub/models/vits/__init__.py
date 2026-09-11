@@ -7,13 +7,13 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.vits."
 _EXPORTS = {
-    "MmsTTSForTextToSpeech": _PACKAGE + "inference",
+    "MmsTTSForTextToSpeech": _PACKAGE + "modeling",
     "NativeVitsAdversarialTrainingAdapter": _PACKAGE + "training",
     "NativeVitsGeneratorTrainingAdapter": _PACKAGE + "training",
-    "VitsConfig": _PACKAGE + "configuration_vits",
-    "VitsForTextToSpeech": _PACKAGE + "modeling_vits",
+    "VitsConfig": _PACKAGE + "configuration",
+    "VitsForTextToSpeech": _PACKAGE + "modeling",
     "VitsReconstructionTrainingAdapter": _PACKAGE + "training",
-    "VitsTTS": _PACKAGE + "inference",
+    "VitsTTS": _PACKAGE + "modeling",
 }
 
 __all__ = sorted(_EXPORTS)

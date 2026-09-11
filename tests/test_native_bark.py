@@ -16,7 +16,8 @@ class NativeBarkTests(unittest.TestCase):
 
     @staticmethod
     def _tiny_config():
-        from voicehub.architectures.bark.configuration import (
+        from voicehub.components.audio.codecs.encodec import EncodecConfig
+        from voicehub.models.bark.native.configuration import (
             BarkArchitectureConfig,
             BarkCoarseConfig,
             BarkCoarseGenerationConfig,
@@ -26,7 +27,6 @@ class NativeBarkTests(unittest.TestCase):
             BarkSemanticConfig,
             BarkSemanticGenerationConfig,
         )
-        from voicehub.components.audio.codecs.encodec import EncodecConfig
 
         architecture = BarkArchitectureConfig(
             semantic=BarkSemanticConfig(
@@ -111,18 +111,18 @@ class NativeBarkTests(unittest.TestCase):
     def test_pinned_graph_matches_exact_remote_archive_inventory(self):
         import torch
 
-        from voicehub.architectures.bark.checkpoint import (
+        from voicehub.models.bark.native.checkpoint import (
             provider_state_dict,
             tensor_inventory_fingerprint,
             verify_native_graph_contract,
         )
-        from voicehub.architectures.bark.configuration import BarkArchitectureConfig
-        from voicehub.architectures.bark.metadata import (
+        from voicehub.models.bark.native.configuration import BarkArchitectureConfig
+        from voicehub.models.bark.native.metadata import (
             BARK_INVENTORY_FINGERPRINT,
             BARK_STATE_VALUES,
             BARK_TENSOR_COUNT,
         )
-        from voicehub.architectures.bark.modeling import BarkModel
+        from voicehub.models.bark.native.modeling import BarkModel
 
         with torch.device("meta"):
             model = BarkModel(BarkArchitectureConfig())
@@ -146,8 +146,8 @@ class NativeBarkTests(unittest.TestCase):
     def test_causal_and_fine_objectives_are_differentiable(self):
         import torch
 
-        from voicehub.architectures.bark.modeling import BarkModel
-        from voicehub.architectures.bark.training import BarkTrainingModel
+        from voicehub.models.bark.native.modeling import BarkModel
+        from voicehub.models.bark.native.training import BarkTrainingModel
 
         architecture, generation = self._tiny_config()
         model = BarkModel(architecture, generation_config=generation)
@@ -174,7 +174,7 @@ class NativeBarkTests(unittest.TestCase):
     def test_causal_cache_matches_full_prefix_and_coarse_ranges_alternate(self):
         import torch
 
-        from voicehub.architectures.bark.modeling import BarkModel
+        from voicehub.models.bark.native.modeling import BarkModel
 
         architecture, generation = self._tiny_config()
         model = BarkModel(architecture, generation_config=generation).eval()
@@ -206,12 +206,12 @@ class NativeBarkTests(unittest.TestCase):
     def test_safe_export_reconstructs_config_and_exact_state(self):
         import torch
 
-        from voicehub.architectures.bark.checkpoint import (
+        from voicehub.models.bark.native.checkpoint import (
             load_bark_model_from_safetensors,
             provider_state_dict,
             save_bark_safetensors,
         )
-        from voicehub.architectures.bark.modeling import BarkModel
+        from voicehub.models.bark.native.modeling import BarkModel
 
         torch.manual_seed(9)
         architecture, generation = self._tiny_config()
@@ -240,7 +240,7 @@ class NativeBarkTests(unittest.TestCase):
     def test_tiny_end_to_end_generation_decodes_with_native_encodec(self):
         import torch
 
-        from voicehub.architectures.bark.modeling import BarkModel
+        from voicehub.models.bark.native.modeling import BarkModel
 
         architecture, generation = self._tiny_config()
         model = BarkModel(
@@ -266,9 +266,9 @@ class NativeBarkTests(unittest.TestCase):
     def test_safe_loader_rejects_incomplete_namespace(self):
         import torch
 
-        from voicehub.architectures.bark.checkpoint import load_bark_safetensors, provider_state_dict
-        from voicehub.architectures.bark.modeling import BarkModel
         from voicehub.checkpointing import save_safetensors
+        from voicehub.models.bark.native.checkpoint import load_bark_safetensors, provider_state_dict
+        from voicehub.models.bark.native.modeling import BarkModel
 
         architecture, generation = self._tiny_config()
         model = BarkModel(architecture, generation_config=generation)
@@ -285,7 +285,7 @@ class NativeBarkTests(unittest.TestCase):
     def test_wordpiece_and_numpy_prompt_loading_need_no_provider(self):
         import torch
 
-        from voicehub.architectures.bark.processing import BarkProcessor, BarkWordPieceTokenizer, _read_npy_integer
+        from voicehub.models.bark.native.processing import BarkProcessor, BarkWordPieceTokenizer, _read_npy_integer
 
         tokenizer = BarkWordPieceTokenizer([
             "[PAD]",
@@ -329,7 +329,7 @@ class NativeBarkTests(unittest.TestCase):
         self.assertEqual(tuple(encoded["input_ids"].shape), (1, 4))
 
     def test_voice_preset_rejects_path_traversal(self):
-        from voicehub.architectures.bark.processing import BarkProcessor, BarkWordPieceTokenizer
+        from voicehub.models.bark.native.processing import BarkProcessor, BarkWordPieceTokenizer
 
         processor = BarkProcessor(
             BarkWordPieceTokenizer(["[PAD]", "[UNK]", "hello"]),
@@ -346,7 +346,7 @@ class NativeBarkTests(unittest.TestCase):
             processor.load_voice_preset("bad")
 
     def test_legacy_conversion_requires_explicit_trust_before_reading(self):
-        from voicehub.architectures.bark.checkpoint import convert_official_bark_checkpoint
+        from voicehub.models.bark.native.checkpoint import convert_official_bark_checkpoint
 
         architecture, generation = self._tiny_config()
         with self.assertRaisesRegex(PermissionError, "trust_official_pickle"):
@@ -358,7 +358,7 @@ class NativeBarkTests(unittest.TestCase):
             )
 
     def test_architecture_spec_is_native_and_truthful_about_training(self):
-        from voicehub.architectures.bark.registration import create_bark_architecture_spec
+        from voicehub.models.bark.native.registration import create_bark_architecture_spec
         from voicehub.registry import get_model_spec
         from voicehub.training.contracts import TrainingSupport
         from voicehub.training.specs import get_training_spec
@@ -400,7 +400,7 @@ class NativeBarkImportTests(unittest.TestCase):
 
     def test_native_runtime_has_no_external_model_runtime_imports(self):
         files = [
-            PROJECT_ROOT / "voicehub/architectures/bark" / name for name in (
+            PROJECT_ROOT / "voicehub/models/bark/native" / name for name in (
                 "artifacts.py",
                 "checkpoint.py",
                 "configuration.py",
@@ -417,7 +417,7 @@ class NativeBarkImportTests(unittest.TestCase):
 
     def test_source_manifest_is_pinned(self):
         source = json.loads(
-            (PROJECT_ROOT / "voicehub/architectures/bark/SOURCE.json").read_text(encoding="utf-8"))
+            (PROJECT_ROOT / "voicehub/models/bark/native/SOURCE.json").read_text(encoding="utf-8"))
         self.assertEqual(
             source["checkpoint"]["revision"],
             "1dbd7a128513b8ae4a4e2130fed57b7ac9da5bcd",

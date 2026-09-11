@@ -1,6 +1,6 @@
 """Stable public fine-tuning imports for native MOSS-TTS."""
 
-from voicehub.architectures.mosstts.training import MossPreencodedDataset, MossTTSDataset, NativeMossTTSTrainingAdapter
+from voicehub.models.mosstts.native.training import MossPreencodedDataset, MossTTSDataset, NativeMossTTSTrainingAdapter
 
 MossTTSTrainingAdapter = NativeMossTTSTrainingAdapter
 

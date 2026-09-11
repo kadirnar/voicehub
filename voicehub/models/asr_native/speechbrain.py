@@ -7,11 +7,11 @@ from numbers import Integral
 from pathlib import Path
 from typing import Any
 
-from voicehub.audio_modeling_utils import PreTrainedASRModel
 from voicehub.hub import read_json_file, write_json_file
-from voicehub.modeling_outputs import ASROutput
 from voicehub.models.asr_native.configuration import SpeechBrainASRConfig
+from voicehub.models.audio import PreTrainedASRModel
 from voicehub.models.native_utils import resolve_cpu_cuda_device
+from voicehub.outputs import ASROutput
 
 _ENGLISH_ALIASES = frozenset({"en", "eng", "english"})
 
@@ -91,7 +91,7 @@ class SpeechBrainASRForSpeechRecognition(PreTrainedASRModel):
             raise ValueError(
                 "SpeechBrain ASR artifact architecture mismatch: expected "
                 f"'speechbrain-crdnn-asr', found {architecture!r}.")
-        architectures = values.get("architectures", ())
+        architectures = values.get('architectures', ())
         if isinstance(architectures, str):
             architectures = (architectures, )
         if architectures and not any(str(name) in {
@@ -106,15 +106,15 @@ class SpeechBrainASRForSpeechRecognition(PreTrainedASRModel):
     def _load_pretrained_model(self) -> None:
         import torch
 
-        from voicehub.architectures.speechbrain_asr.artifacts import resolve_speechbrain_asr_artifacts
-        from voicehub.architectures.speechbrain_asr.checkpoint import (
+        from voicehub.checkpointing import SafeTensorReader
+        from voicehub.models.asr_speechbrain.native.artifacts import resolve_speechbrain_asr_artifacts
+        from voicehub.models.asr_speechbrain.native.checkpoint import (
             NATIVE_SPEECHBRAIN_ASR_FORMAT,
             SpeechBrainASRSafeTensorsCheckpointAdapter,
         )
-        from voicehub.architectures.speechbrain_asr.configuration import SpeechBrainCRDNNASRConfig
-        from voicehub.architectures.speechbrain_asr.decoding import SpeechBrainRNNLMBeamSearch
-        from voicehub.architectures.speechbrain_asr.modeling import SpeechBrainCRDNNForASR
-        from voicehub.checkpointing import SafeTensorReader
+        from voicehub.models.asr_speechbrain.native.configuration import SpeechBrainCRDNNASRConfig
+        from voicehub.models.asr_speechbrain.native.decoding import SpeechBrainRNNLMBeamSearch
+        from voicehub.models.asr_speechbrain.native.modeling import SpeechBrainCRDNNForASR
         from voicehub.tokenization import SentencePieceUnigramTokenizer
 
         source = self.config.name_or_path or self.default_model_name_or_path
@@ -325,15 +325,15 @@ class SpeechBrainASRForSpeechRecognition(PreTrainedASRModel):
         return None
 
     def _save_pretrained(self, save_directory: Path) -> None:
-        from voicehub.architectures.speechbrain_asr.checkpoint import (
+        from voicehub.checkpointing import save_safetensors
+        from voicehub.models.asr_speechbrain.native.checkpoint import (
             NATIVE_SPEECHBRAIN_ASR_FILENAME,
             NATIVE_SPEECHBRAIN_ASR_FORMAT,
         )
-        from voicehub.architectures.speechbrain_asr.metadata import (
+        from voicehub.models.asr_speechbrain.native.metadata import (
             SPEECHBRAIN_ASR_REVISION,
             SPEECHBRAIN_ASR_SOURCE_REVISION,
         )
-        from voicehub.checkpointing import save_safetensors
 
         if (self.model is None or self.native_config is None or self.tokenizer is None):
             self.load()
@@ -350,7 +350,7 @@ class SpeechBrainASRForSpeechRecognition(PreTrainedASRModel):
         self.tokenizer.save_pretrained(save_directory)
         values = self.native_config.to_dict()
         values.update({
-            "architectures": [
+            'architectures': [
                 "SpeechBrainASRForSpeechRecognition",
                 "SpeechBrainCRDNNForASR",
             ],

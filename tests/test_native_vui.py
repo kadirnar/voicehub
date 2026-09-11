@@ -41,6 +41,7 @@ class NativeVuiTests(unittest.TestCase):
             "hashlib",
             "html",
             "io",
+            "importlib",
             "logging",
             "math",
             "os",
@@ -60,7 +61,7 @@ class NativeVuiTests(unittest.TestCase):
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     imports = [alias.name for alias in node.names]
-                elif isinstance(node, ast.ImportFrom) and node.module:
+                elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
                     imports = [node.module]
                 else:
                     continue
@@ -143,7 +144,7 @@ class NativeVuiTests(unittest.TestCase):
         self.assertIsNone(artifacts.revision)
 
     def test_registry_formats_match_the_complete_native_checkpoint_lifecycle(self):
-        from voicehub.architectures.vui.registration import create_vui_architecture_spec
+        from voicehub.models.vui.native.registration import create_vui_architecture_spec
         from voicehub.registry import get_model_spec
 
         capabilities = create_vui_architecture_spec().capabilities
@@ -165,7 +166,7 @@ class NativeVuiTests(unittest.TestCase):
     def test_native_safetensors_export_round_trips_model_codec_and_configs(self):
         from voicehub.checkpointing import SafeTensorReader, save_safetensors
         from voicehub.models.vui.checkpoint import VUI_NATIVE_CODEC_FILENAME, VUI_NATIVE_MODEL_FILENAME
-        from voicehub.models.vui.inference import VuiForTextToSpeech
+        from voicehub.models.vui.modeling import VuiForTextToSpeech
 
         model_config = Config(
             name="tiny-roundtrip",

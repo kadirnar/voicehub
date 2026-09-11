@@ -10,10 +10,10 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 import voicehub.models.csm.training as csm_training
-from voicehub.models.csm.inference import CSMForTextToSpeech
+from voicehub.models.csm.modeling import CSMForTextToSpeech
 from voicehub.models.csm.training import CSMTrainingBackend, CSMTrainingCollator, prepare_csm_training_inputs
-from voicehub.trainer import Trainer
-from voicehub.training_args import TrainingArguments
+from voicehub.training.arguments import TrainingArguments
+from voicehub.training.trainer import Trainer
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -229,7 +229,7 @@ class CSMTrainingBackendTests(unittest.TestCase):
         )
 
         with patch(
-                "voicehub.architectures.csm.runtime.load_csm_runtime",
+                "voicehub.models.csm.native.runtime.load_csm_runtime",
                 return_value=runtime,
         ) as loader:
             backend = csm_training.load_csm_training_backend(
@@ -513,7 +513,7 @@ class CSMWrapperBackendSelectionTests(unittest.TestCase):
 
         model = CSMForTextToSpeech(device="cpu")
         with patch(
-                "voicehub.models.csm.inference.load_csm_runtime",
+                "voicehub.models.csm.modeling.load_csm_runtime",
                 return_value=runtime,
         ) as loader:
             model._load_pretrained_model()

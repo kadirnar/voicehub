@@ -3,23 +3,17 @@ import tempfile
 import unittest
 from unittest.mock import PropertyMock, patch
 
-from voicehub import (
-    AutoInferenceModel,
+from voicehub import AutoModelForTextToSpeech, PreTrainedTTSModel, TTSOutput, VoiceHubConfig
+from voicehub.training import (
     AutoTrainingAdapter,
     DataCollatorForTTSTraining,
     ModelTrainingSpec,
-    PreTrainedTTSModel,
-    Trainer,
-    TrainerCallback,
-    TrainingArguments,
     TrainingFamily,
     TrainingPhaseKind,
     TrainingPhaseSpec,
     TrainingRecipeKind,
     TrainingSupport,
-    TTSOutput,
     VITSTrainingAdapter,
-    VoiceHubConfig,
     get_training_spec,
     list_training_specs,
 )
@@ -30,8 +24,11 @@ from voicehub.training.adapters import (
     FlowMatchingTrainingAdapter,
     Seq2SeqTrainingAdapter,
 )
+from voicehub.training.arguments import TrainingArguments
+from voicehub.training.callbacks import TrainerCallback
 from voicehub.training.optimization import OptimizerBundle
 from voicehub.training.strategy import TorchTrainingStrategy
+from voicehub.training.trainer import Trainer
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
@@ -48,13 +45,13 @@ EXPECTED_ADAPTERS = {
 class TrainingProfileTests(unittest.TestCase):
 
     def test_every_registered_model_has_one_training_profile(self):
-        registered = {spec.model_type for spec in AutoInferenceModel.available_models()}
+        registered = {spec.model_type for spec in AutoModelForTextToSpeech.available_models()}
         profiled = {spec.model_type for spec in list_training_specs()}
         self.assertEqual(profiled, registered)
         self.assertEqual(len(profiled), 34)
 
     def test_registry_connects_models_to_training_profiles(self):
-        for model_spec in AutoInferenceModel.available_models():
+        for model_spec in AutoModelForTextToSpeech.available_models():
             with self.subTest(model_type=model_spec.model_type):
                 training_spec = model_spec.training
                 self.assertEqual(training_spec.model_type, model_spec.model_type)
@@ -76,10 +73,10 @@ class TrainingProfileTests(unittest.TestCase):
         self.assertTrue(represented.issubset(families))
 
     def test_all_lazy_models_resolve_an_adapter_without_loading(self):
-        for model_spec in AutoInferenceModel.available_models():
+        for model_spec in AutoModelForTextToSpeech.available_models():
             with self.subTest(model_type=model_spec.model_type):
-                model = AutoInferenceModel.from_pretrained(
-                    model_spec.model_type,
+                model = AutoModelForTextToSpeech.from_pretrained(
+                    model_type=model_spec.model_type,
                     device="cpu",
                 )
                 adapter = model.get_training_adapter()

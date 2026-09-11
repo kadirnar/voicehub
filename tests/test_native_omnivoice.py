@@ -12,15 +12,17 @@ from types import SimpleNamespace
 import torch
 from torch.nn import functional
 
-from voicehub.architectures.omnivoice.checkpoint import (
+from voicehub.models.omnivoice.configuration import OmniVoiceConfig
+from voicehub.models.omnivoice.modeling import OmniVoiceForTextToSpeech
+from voicehub.models.omnivoice.native.checkpoint import (
     export_omnivoice_checkpoint,
     load_omnivoice_checkpoint,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.omnivoice.codec import HiggsAudioV2Tokenizer
-from voicehub.architectures.omnivoice.configuration import HiggsAudioV2Config, OmniVoiceArchitectureConfig
-from voicehub.architectures.omnivoice.generation import OmniVoiceGenerationConfig, OmniVoiceGenerator, OmniVoicePrompt
-from voicehub.architectures.omnivoice.metadata import (
+from voicehub.models.omnivoice.native.codec import HiggsAudioV2Tokenizer
+from voicehub.models.omnivoice.native.configuration import HiggsAudioV2Config, OmniVoiceArchitectureConfig
+from voicehub.models.omnivoice.native.generation import OmniVoiceGenerationConfig, OmniVoiceGenerator, OmniVoicePrompt
+from voicehub.models.omnivoice.native.metadata import (
     HIGGS_AUDIO_V2_HEADER_FINGERPRINT,
     HIGGS_AUDIO_V2_PARAMETER_COUNT,
     HIGGS_AUDIO_V2_TENSOR_COUNT,
@@ -29,8 +31,8 @@ from voicehub.architectures.omnivoice.metadata import (
     OMNIVOICE_MODEL_TENSOR_COUNT,
     OMNIVOICE_UPSTREAM_REVISION,
 )
-from voicehub.architectures.omnivoice.modeling import OmniVoiceModel
-from voicehub.architectures.omnivoice.processing import (
+from voicehub.models.omnivoice.native.modeling import OmniVoiceModel
+from voicehub.models.omnivoice.native.processing import (
     DENOISE,
     END_OF_TEXT,
     IM_END,
@@ -45,10 +47,8 @@ from voicehub.architectures.omnivoice.processing import (
     OmniVoiceSampleProcessor,
     OmniVoiceTokenizer,
 )
-from voicehub.architectures.omnivoice.runtime import OmniVoiceRuntime
-from voicehub.models.omnivoice_native.configuration_omnivoice import OmniVoiceConfig
-from voicehub.models.omnivoice_native.modeling_omnivoice import OmniVoiceForTextToSpeech
-from voicehub.models.omnivoice_native.training_omnivoice import OmniVoiceTrainingAdapter
+from voicehub.models.omnivoice.native.runtime import OmniVoiceRuntime
+from voicehub.models.omnivoice.training_omnivoice import OmniVoiceTrainingAdapter
 from voicehub.tokenization import ByteBPETokenizer
 from voicehub.training.contracts import TrainingPhaseSpec, TrainingSupport
 from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
@@ -114,7 +114,7 @@ def _training_spec() -> ModelTrainingSpec:
         component_paths=("model", ),
         loss_keys=("loss", ),
         prediction_keys=("logits", ),
-        source_entrypoints=("voicehub.architectures.omnivoice.modeling:OmniVoiceModel.forward", ),
+        source_entrypoints=("voicehub.models.omnivoice.native.modeling:OmniVoiceModel.forward", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
         phases=(phase, ),
@@ -126,8 +126,8 @@ class NativeOmniVoiceDependencyTests(unittest.TestCase):
 
     def test_native_files_do_not_import_external_model_runtimes(self):
         roots = (
-            PROJECT_ROOT / "voicehub" / "architectures" / "omnivoice",
-            PROJECT_ROOT / "voicehub" / "models" / "omnivoice_native",
+            PROJECT_ROOT / 'voicehub/models/omnivoice/native',
+            PROJECT_ROOT / 'voicehub/models/omnivoice',
         )
         forbidden = {
             "accelerate",
@@ -157,7 +157,7 @@ class NativeOmniVoiceDependencyTests(unittest.TestCase):
 
     def test_public_provider_import_remains_lazy(self):
         command = (
-            "import sys; import voicehub.models.omnivoice_native; "
+            "import sys; import voicehub.models.omnivoice; "
             "print('torch' in sys.modules, 'transformers' in sys.modules, "
             "'huggingface_hub' in sys.modules, 'safetensors' in sys.modules)")
         result = subprocess.run(
@@ -170,13 +170,12 @@ class NativeOmniVoiceDependencyTests(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "False False False False")
 
     def test_provenance_pins_complete_training_boundary(self):
-        source = json.loads((PROJECT_ROOT / "voicehub" / "architectures" / "omnivoice" /
-                             "SOURCE.json").read_text(encoding="utf-8"))
+        source = json.loads(
+            (PROJECT_ROOT / 'voicehub/models/omnivoice/native/SOURCE.json').read_text(encoding="utf-8"))
         self.assertEqual(source["source"]["revision"], OMNIVOICE_UPSTREAM_REVISION)
         self.assertTrue(source["training"]["full_finetuning"])
         self.assertEqual(source["training"]["audio_codebooks"], 8)
-        self.assertTrue(
-            (PROJECT_ROOT / "voicehub" / "architectures" / "omnivoice" / "THIRD_PARTY_LICENSE").is_file())
+        self.assertTrue((PROJECT_ROOT / 'voicehub/models/omnivoice/native/THIRD_PARTY_LICENSE').is_file())
 
 
 class NativeOmniVoiceInventoryTests(unittest.TestCase):

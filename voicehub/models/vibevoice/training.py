@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from voicehub.dependencies import import_optional
-from voicehub.modeling_outputs import TTSTrainingOutput
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.training.adapters import CompositeTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 from voicehub.training.datasets import SpeechDataset

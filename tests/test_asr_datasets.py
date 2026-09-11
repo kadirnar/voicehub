@@ -10,17 +10,14 @@ from unittest import mock
 
 import voicehub.training.asr_data_contracts as asr_data_contracts_module
 import voicehub.training.asr_datasets as asr_datasets_module
-from voicehub import (
+from voicehub import ASROutput, PreTrainedASRModel, SpeechTask, VoiceHubConfig
+from voicehub.training import (
     ASRDataArchitecture,
     ASRDataReadiness,
     ASRDataset,
     ASRDatasetSpec,
-    ASROutput,
     ASRRecordVariant,
     EpochGroupedBatchSampler,
-    PreTrainedASRModel,
-    SpeechTask,
-    VoiceHubConfig,
     get_asr_dataset_spec,
     get_training_spec,
     list_asr_dataset_specs,
@@ -159,13 +156,7 @@ class ASRDatasetContractTests(unittest.TestCase):
                     unregister_training_spec(model_type, missing_ok=True)
 
     def test_dataset_spec_factory_keeps_framework_imports_lazy(self):
-        code = """
-import json
-import sys
-from voicehub import get_asr_dataset_spec
-get_asr_dataset_spec('asr_qwen3')
-print(json.dumps({name: name in sys.modules for name in ('torch', 'transformers')}))
-"""
+        code = "\nimport json\nimport sys\nfrom voicehub.training import get_asr_dataset_spec\nget_asr_dataset_spec('asr_qwen3')\nprint(json.dumps({name: name in sys.modules for name in ('torch', 'transformers')}))\n"
         result = subprocess.run(
             [sys.executable, "-c", code],
             check=True,
@@ -198,7 +189,7 @@ print(json.dumps({name: name in sys.modules for name in ('torch', 'transformers'
         )
         self.assertEqual(
             sensevoice.record_normalizer,
-            "voicehub.architectures.sensevoice.data:normalize_record",
+            "voicehub.models.asr_funasr.native.data:normalize_record",
         )
         self.assertEqual(sensevoice.record_normalizer_phase, "after-aliases")
         self.assertEqual(
@@ -207,7 +198,7 @@ print(json.dumps({name: name in sys.modules for name in ('torch', 'transformers'
         )
         self.assertEqual(
             seamless.record_normalizer,
-            "voicehub.architectures.seamless_m4t_v2.data:normalize_record",
+            "voicehub.models.asr_seamless_m4t_v2.native.data:normalize_record",
         )
         self.assertEqual(seamless.record_normalizer_phase, "before-aliases")
 
@@ -288,19 +279,7 @@ print(json.dumps({name: name in sys.modules for name in ('torch', 'transformers'
                 ASRDataset([record], model_type=invalid.model_type)
 
     def test_dataset_contract_listing_keeps_normalizer_modules_lazy(self):
-        code = """
-import json
-import sys
-from voicehub import list_asr_dataset_specs
-list_asr_dataset_specs()
-print(json.dumps(sorted(
-    name for name in sys.modules
-    if name in {
-        'voicehub.architectures.sensevoice.data',
-        'voicehub.architectures.seamless_m4t_v2.data',
-    }
-)))
-"""
+        code = "\nimport json\nimport sys\nfrom voicehub.training import list_asr_dataset_specs\nlist_asr_dataset_specs()\nprint(json.dumps(sorted(\n    name for name in sys.modules\n    if name in {\n        'voicehub.models.asr_funasr.native.data',\n        'voicehub.models.asr_seamless_m4t_v2.native.data',\n    }\n)))\n"
         result = subprocess.run(
             [sys.executable, "-c", code],
             check=True,
@@ -1499,7 +1478,7 @@ class ASRPreparedRuntimeContractTests(unittest.TestCase):
         self.assertFalse(wenet.is_loaded)
 
     def test_specialized_datasets_preserve_cached_records(self):
-        from voicehub.architectures.espnet_transformer.training import ESPnetASRTrainingDataset
+        from voicehub.models.asr_espnet.native.training import ESPnetASRTrainingDataset
         from voicehub.models.asr_native.speechbrain_training import SpeechBrainASRTrainingDataset
 
         speechbrain_record = {

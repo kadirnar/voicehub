@@ -15,8 +15,6 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.catalog import register_builtin_architectures
-from voicehub.architectures.registry import ArchitectureRegistry
 from voicehub.checkpointing import save_safetensors
 from voicehub.components.audio.codecs.encodec import EncodecConfig, EncodecModel, ResidualVectorQuantization
 from voicehub.components.audio.codecs.encodec import checkpoint as checkpoint_module
@@ -33,6 +31,8 @@ from voicehub.components.audio.codecs.encodec import (
 )
 from voicehub.components.audio.codecs.encodec.metadata import ENCODEC_24KHZ_RELEASE, ENCODEC_48KHZ_RELEASE
 from voicehub.optimization.codecs import discover_codec_compile_targets
+from voicehub.runtime.catalog import register_builtin_architectures
+from voicehub.runtime.registry import ArchitectureRegistry
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ENCODEC_ROOT = (PROJECT_ROOT / "voicehub" / "components" / "audio" / "codecs" / "encodec")

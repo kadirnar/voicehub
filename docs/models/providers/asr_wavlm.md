@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2110.13900" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/microsoft/unilm" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/modeling_asr_wavlm.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_wavlm.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -106,7 +106,7 @@ integration. This page is generated from its registry contract. [Open the `asr_w
 
 - **Paper:** [WavLM: Large-Scale Self-Supervised Pre-Training for Full Stack Speech Processing](https://arxiv.org/abs/2110.13900)
 - **Upstream GitHub:** [UniLM / WavLM](https://github.com/microsoft/unilm)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/modeling_asr_wavlm.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/modeling.py)
 
 ## Configuration
 
@@ -192,8 +192,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_wavlm.modeling_asr_wavlm.WavLMForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_wavlm.configuration_asr_wavlm.WavLMASRConfig` |
+| Implementation | `voicehub.models.asr_wavlm.modeling.WavLMForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_wavlm.configuration.WavLMASRConfig` |
 | Source provenance | No integration-specific bundled `SOURCE.json` is declared for this registry entry. |
 | License | Checkpoint-specific |
 
@@ -218,7 +218,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `WavLMASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/configuration_asr_wavlm.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -237,7 +237,7 @@ WavLMASRConfig(**config_kwargs)
 
 ### `WavLMForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/modeling_asr_wavlm.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_wavlm/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

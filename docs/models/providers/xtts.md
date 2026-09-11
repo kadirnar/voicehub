@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/coqui-ai/TTS" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/modeling_xtts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/xtts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -109,7 +109,7 @@ integration. This page is generated from its registry contract. [Open the `xtts`
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Coqui TTS](https://github.com/coqui-ai/TTS)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/modeling_xtts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/modeling.py)
 
 ## Configuration
 
@@ -195,8 +195,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.xtts.modeling_xtts.XTTSForTextToSpeech` |
-| Configuration | `voicehub.models.xtts.configuration_xtts.XTTSConfig` |
+| Implementation | `voicehub.models.xtts.modeling.XTTSForTextToSpeech` |
+| Configuration | `voicehub.models.xtts.configuration.XTTSConfig` |
 | Source provenance | `voicehub/models/xtts/source/SOURCE.json` |
 | License | [CPML](https://huggingface.co/coqui/XTTS-v2) |
 
@@ -221,7 +221,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `XTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/configuration_xtts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -240,7 +240,7 @@ XTTSConfig(**config_kwargs)
 
 ### `XTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/modeling_xtts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/xtts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

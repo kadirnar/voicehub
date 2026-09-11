@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.parametrizations import weight_norm
 
-from voicehub.architectures.kokoro.albert import KokoroAlbertModel
+from voicehub.models.kokoro.native.albert import KokoroAlbertModel
 
 from .istftnet import AdainResBlk1d
 

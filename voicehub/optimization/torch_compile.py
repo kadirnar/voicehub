@@ -712,7 +712,7 @@ class TorchCompilePass(OptimizationPass):
     ) -> str | None:
         architecture = None
         if context.architecture is not None:
-            from voicehub.architectures import get_architecture_spec
+            from voicehub.runtime import get_architecture_spec
 
             architecture = get_architecture_spec(context.architecture)
         return torch_compile_architecture_incompatibility(

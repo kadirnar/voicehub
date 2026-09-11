@@ -8,8 +8,8 @@ from typing import Any
 _PACKAGE = "voicehub.models.asr_qwen3."
 _EXPORTS = {
     "NativeQwen3ASRTrainingAdapter": _PACKAGE + "training_asr_qwen3",
-    "Qwen3ASRConfig": _PACKAGE + "configuration_asr_qwen3",
-    "Qwen3ASRForSpeechRecognition": _PACKAGE + "modeling_asr_qwen3",
+    "Qwen3ASRConfig": _PACKAGE + "configuration",
+    "Qwen3ASRForSpeechRecognition": _PACKAGE + "modeling",
 }
 
 __all__ = [

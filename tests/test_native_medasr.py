@@ -13,30 +13,30 @@ from unittest.mock import Mock, patch
 
 import torch
 
-from voicehub.architectures.medasr.artifacts import _require_coherent_snapshot, resolve_medasr_artifacts
-from voicehub.architectures.medasr.checkpoint import (
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.asr_medasr.configuration import MedASRASRConfig
+from voicehub.models.asr_medasr.modeling import MedASRForSpeechRecognition
+from voicehub.models.asr_medasr.native.artifacts import _require_coherent_snapshot, resolve_medasr_artifacts
+from voicehub.models.asr_medasr.native.checkpoint import (
     MedASRCheckpointAdapter,
     medasr_header_fingerprint,
     native_medasr_tensor_dtypes,
     native_medasr_tensor_shapes,
 )
-from voicehub.architectures.medasr.configuration import MedASRConfig
-from voicehub.architectures.medasr.frontend import MedASRFeatureExtractor
-from voicehub.architectures.medasr.metadata import MEDASR_CHECKPOINT, MEDASR_MODEL_REVISION
-from voicehub.architectures.medasr.modeling import MedASRForCTC
-from voicehub.architectures.medasr.processing import MedASRProcessor
-from voicehub.architectures.medasr.tokenization import MedASRTokenizer
-from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.models.asr_medasr.configuration_asr_medasr import MedASRASRConfig
-from voicehub.models.asr_medasr.modeling_asr_medasr import MedASRForSpeechRecognition
+from voicehub.models.asr_medasr.native.configuration import MedASRConfig
+from voicehub.models.asr_medasr.native.frontend import MedASRFeatureExtractor
+from voicehub.models.asr_medasr.native.metadata import MEDASR_CHECKPOINT, MEDASR_MODEL_REVISION
+from voicehub.models.asr_medasr.native.modeling import MedASRForCTC
+from voicehub.models.asr_medasr.native.processing import MedASRProcessor
+from voicehub.models.asr_medasr.native.tokenization import MedASRTokenizer
 from voicehub.models.asr_medasr.training_asr_medasr import NativeMedASRTrainingAdapter
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.specs import get_training_spec
 
 ROOT = Path(__file__).parents[1]
-ARCHITECTURE_ROOT = ROOT / "voicehub" / "architectures" / "medasr"
+ARCHITECTURE_ROOT = ROOT / 'voicehub/models/asr_medasr/native'
 PROVIDER_ROOT = ROOT / "voicehub" / "models" / "asr_medasr"
 
 
@@ -153,7 +153,7 @@ def _write_tiny_artifact(root: Path) -> tuple[MedASRConfig, MedASRForCTC]:
         metadata={"format": "test-medasr"},
     )
     values = config.to_dict()
-    values["architectures"] = ["LasrForCTC"]
+    values['architectures'] = ["LasrForCTC"]
     _write_json(root / "config.json", values)
     _write_json(root / "tokenizer.json", _tokenizer_document())
     _write_json(
@@ -192,7 +192,7 @@ class MedASRArchitectureTests(unittest.TestCase):
     def test_package_discovery_does_not_import_torch(self):
         command = (
             "import sys; "
-            "import voicehub.architectures.medasr as architecture; "
+            "import voicehub.models.asr_medasr.native as architecture; "
             "import voicehub.models.asr_medasr as provider; "
             "assert 'torch' not in sys.modules; "
             "assert 'MedASRForCTC' in architecture.__all__; "
@@ -394,12 +394,12 @@ class MedASRProviderTests(unittest.TestCase):
             config.touch()
             with (
                     patch(
-                        "voicehub.architectures.medasr.artifacts."
+                        "voicehub.models.asr_medasr.native.artifacts."
                         "resolve_pretrained_file",
                         return_value=config,
                     ),
                     patch(
-                        "voicehub.architectures.medasr.artifacts."
+                        "voicehub.models.asr_medasr.native.artifacts."
                         "get_cached_hugging_face_commit",
                         return_value=None,
                     ),

@@ -6,9 +6,9 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
-from voicehub.architectures.causal_lm.configuration import LlamaConfig
-from voicehub.architectures.causal_lm.modeling import CausalLMModel
 from voicehub.generation.logits import process_logits
+from voicehub.models.causal_lm.native.configuration import LlamaConfig
+from voicehub.models.causal_lm.native.modeling import CausalLMModel
 from voicehub.models.chatterbox.models.t3.llama_configs import LLAMA_CONFIGS
 from voicehub.models.chatterbox.models.t3.modules.cond_enc import T3Cond, T3CondEnc
 from voicehub.models.chatterbox.models.t3.modules.learned_pos_emb import LearnedPositionEmbeddings

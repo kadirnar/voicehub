@@ -421,7 +421,7 @@ class RemainingTTSTrainingTests(unittest.TestCase):
             self.assertTrue((Path(directory) / "preprocessor_config.json").is_file())
 
     def test_vibevoice_realtime_checkpoint_fails_closed(self):
-        from voicehub.models.vibevoice.inference import VibeVoiceForTextToSpeech
+        from voicehub.models.vibevoice.modeling import VibeVoiceForTextToSpeech
 
         realtime = VibeVoiceForTextToSpeech(lazy_load=True)
         with self.assertRaisesRegex(ValueError, "non-streaming"):

@@ -81,7 +81,7 @@ EXPECTED_TRAINING_REQUIREMENTS = (
 )
 REQUIRED_DISTRIBUTION_FILES = (
     "voicehub/py.typed",
-    "voicehub/architectures/outetts/default_speaker.json",
+    "voicehub/models/outetts/native/default_speaker.json",
     "voicehub/models/conversationtts/source/conversationtts/llama3_2/tokenizer.json",
     ("voicehub/models/chatterbox/source/perth/perth_net/pretrained/implicit/"
      "perth_net_250000.pth.tar"),
@@ -249,7 +249,7 @@ class PackagingMetadataTests(unittest.TestCase):
         distributions = {_distribution_name(requirement) for requirement in self.extras["test"]}
         self.assertIn("build", distributions)
         self.assertNotIn(
-            "trainer",
+            'trainer',
             distributions,
             "Inference imports and VoiceHub's native trainer must not depend "
             "on Coqui's Python-version-limited trainer distribution.",

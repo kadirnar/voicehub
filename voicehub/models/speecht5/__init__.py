@@ -1,9 +1,23 @@
-"""VoiceHub-native SpeechT5 inference and fine-tuning."""
+"""Lazy exports for the speecht5 model family."""
 
-from voicehub.models.speecht5.configuration_speecht5 import SpeechT5Config
-from voicehub.models.speecht5.modeling_speecht5 import SpeechT5ForTextToSpeech
+from importlib import import_module
 
-__all__ = [
-    "SpeechT5Config",
-    "SpeechT5ForTextToSpeech",
-]
+_EXPORTS = {
+    'SpeechT5Config': ('voicehub.models.speecht5.configuration', 'SpeechT5Config'),
+    'SpeechT5ForTextToSpeech': ('voicehub.models.speecht5.modeling', 'SpeechT5ForTextToSpeech')
+}
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name):
+    try:
+        module_name, attribute = _EXPORTS[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted((*globals(), *_EXPORTS))

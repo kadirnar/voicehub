@@ -17,7 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 def _tiny_backbone_values(*, linear_rope: bool = False) -> dict:
     values = {
-        "architectures": ["LlamaForCausalLM"],
+        'architectures': ["LlamaForCausalLM"],
         "model_type": "llama",
         "vocab_size": 64,
         "hidden_size": 16,
@@ -59,7 +59,7 @@ class _DatasetTokenizer:
 
     @staticmethod
     def convert_tokens_to_ids(token):
-        from voicehub.architectures.neutts.tokenization import SPEECH_GENERATION_END, SPEECH_GENERATION_START
+        from voicehub.models.neutts.native.tokenization import SPEECH_GENERATION_END, SPEECH_GENERATION_START
 
         return {
             SPEECH_GENERATION_START: _DatasetTokenizer.speech_start_id,
@@ -77,7 +77,7 @@ class NativeNeuTTSTests(unittest.TestCase):
     def test_neucodec_aligns_rounding_mismatch_like_published_runtime(self):
         import torch
 
-        from voicehub.architectures.neutts.neucodec import NeuCodecModel
+        from voicehub.models.neutts.native.neucodec import NeuCodecModel
 
         semantic = torch.arange(2 * 3 * 4).reshape(2, 3, 4)
         acoustic = torch.arange(2 * 5 * 5).reshape(2, 5, 5)
@@ -105,11 +105,11 @@ class NativeNeuTTSTests(unittest.TestCase):
                 "-c",
                 (
                     "import sys; "
-                    "import voicehub.models.neutts.configuration_neutts; "
+                    "import voicehub.models.neutts.configuration; "
                     "print(*(int(name in sys.modules) for name in ("
-                    "'voicehub.models.neutts.inference', "
-                    "'voicehub.architectures.neutts.modeling', "
-                    "'voicehub.architectures.neutts.neucodec')))"),
+                    "'voicehub.models.neutts.modeling', "
+                    "'voicehub.models.neutts.native.modeling', "
+                    "'voicehub.models.neutts.native.neucodec')))"),
             ],
             cwd=PROJECT_ROOT,
             check=True,
@@ -120,8 +120,8 @@ class NativeNeuTTSTests(unittest.TestCase):
 
     def test_public_config_identity_is_canonical(self):
         from voicehub.models.neutts import NeuTTSConfig
-        from voicehub.models.neutts.configuration_neutts import NeuTTSConfig as ConfigurationNeuTTSConfig
-        from voicehub.models.neutts.inference import NeuTTSForTextToSpeech
+        from voicehub.models.neutts.configuration import NeuTTSConfig as ConfigurationNeuTTSConfig
+        from voicehub.models.neutts.modeling import NeuTTSForTextToSpeech
 
         self.assertIs(NeuTTSConfig, ConfigurationNeuTTSConfig)
         self.assertIs(
@@ -131,13 +131,12 @@ class NativeNeuTTSTests(unittest.TestCase):
 
     def test_active_runtime_has_no_provider_imports(self):
         roots = (
-            PROJECT_ROOT / "voicehub" / "architectures" / "neutts",
+            PROJECT_ROOT / 'voicehub/models/neutts/native',
             PROJECT_ROOT / "voicehub" / "models" / "neutts",
         )
         model_files = {
-            "configuration_neutts.py",
-            "inference.py",
-            "modeling_neutts.py",
+            "configuration.py",
+            "modeling.py",
             "training.py",
         }
         forbidden = {
@@ -156,8 +155,7 @@ class NativeNeuTTSTests(unittest.TestCase):
         findings = []
         for root in roots:
             candidates = (
-                root.glob("*.py") if root.name == "neutts" and root.parent.name == "architectures" else
-                (root / name for name in model_files))
+                root.glob("*.py") if root.name == "native" else (root / name for name in model_files))
             for path in candidates:
                 tree = ast.parse(path.read_text(encoding="utf-8"), path.name)
                 for node in ast.walk(tree):
@@ -174,7 +172,7 @@ class NativeNeuTTSTests(unittest.TestCase):
         self.assertEqual(findings, [])
 
     def test_provenance_and_pinned_checkpoint_contracts_are_recorded(self):
-        from voicehub.architectures.neutts.metadata import (
+        from voicehub.models.neutts.native.metadata import (
             NEUCODEC_REFERENCE,
             NEUCODEC_SOURCE_REVISION,
             NEUTTS_SOURCE_REVISION,
@@ -182,7 +180,7 @@ class NativeNeuTTSTests(unittest.TestCase):
             NEUTTS_VARIANTS,
         )
 
-        source_path = (PROJECT_ROOT / "voicehub" / "architectures" / "neutts" / "SOURCE.json")
+        source_path = (PROJECT_ROOT / 'voicehub/models/neutts/native/SOURCE.json')
         source = json.loads(source_path.read_text(encoding="utf-8"))
         codec = source["checkpoints"]["neucodec"]
 
@@ -207,7 +205,7 @@ class NativeNeuTTSTests(unittest.TestCase):
         )
 
     def test_lazy_architecture_spec_declares_truthful_native_boundaries(self):
-        from voicehub.architectures.neutts.registration import create_neutts_architecture_spec
+        from voicehub.models.neutts.native.registration import create_neutts_architecture_spec
         from voicehub.registry import get_model_spec
         from voicehub.training.contracts import TrainingSupport
         from voicehub.training.specs import get_training_spec
@@ -235,7 +233,7 @@ class NativeNeuTTSTests(unittest.TestCase):
         )
         self.assertEqual(
             spec.components["audio-codec"].path,
-            "voicehub.architectures.neutts.neucodec:NeuCodecModel",
+            "voicehub.models.neutts.native.neucodec:NeuCodecModel",
         )
         self.assertTrue(model_spec.is_voicehub_native)
         self.assertEqual(model_spec.architecture, "neutts")
@@ -247,7 +245,7 @@ class NativeNeuTTSTests(unittest.TestCase):
         )
 
     def test_artifact_boundary_rejects_unsafe_and_unpinned_formats(self):
-        from voicehub.architectures.neutts.artifacts import resolve_neucodec_artifacts, resolve_neutts_artifacts
+        from voicehub.models.neutts.native.artifacts import resolve_neucodec_artifacts, resolve_neutts_artifacts
 
         for source in (
                 "model.gguf",
@@ -277,9 +275,9 @@ class NativeNeuTTSTests(unittest.TestCase):
     def test_hugging_face_snapshot_symlinks_keep_logical_safetensors_identity(self):
         import torch
 
-        from voicehub.architectures.causal_lm.checkpoint import open_causal_lm_tensor_source
-        from voicehub.architectures.neutts.artifacts import resolve_neutts_artifacts
         from voicehub.checkpointing import SafeTensorReader, save_safetensors
+        from voicehub.models.causal_lm.native.checkpoint import open_causal_lm_tensor_source
+        from voicehub.models.neutts.native.artifacts import resolve_neutts_artifacts
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -304,9 +302,9 @@ class NativeNeuTTSTests(unittest.TestCase):
     def test_published_backbone_graphs_match_checkpoint_counts(self):
         import torch
 
-        from voicehub.architectures.neutts.configuration import NeuTTSBackboneConfig
-        from voicehub.architectures.neutts.metadata import NEUTTS_VARIANTS
-        from voicehub.architectures.neutts.modeling import NeuTTSBackbone
+        from voicehub.models.neutts.native.configuration import NeuTTSBackboneConfig
+        from voicehub.models.neutts.native.metadata import NEUTTS_VARIANTS
+        from voicehub.models.neutts.native.modeling import NeuTTSBackbone
 
         configurations = {
             "neuphonic/neutts-air": {
@@ -395,9 +393,9 @@ class NativeNeuTTSTests(unittest.TestCase):
     def test_neucodec_graph_matches_exact_safe_checkpoint_inventory(self):
         import torch
 
-        from voicehub.architectures.neutts.configuration import NeuCodecConfig
-        from voicehub.architectures.neutts.metadata import NEUCODEC_REFERENCE
-        from voicehub.architectures.neutts.neucodec import NeuCodecModel
+        from voicehub.models.neutts.native.configuration import NeuCodecConfig
+        from voicehub.models.neutts.native.metadata import NEUCODEC_REFERENCE
+        from voicehub.models.neutts.native.neucodec import NeuCodecModel
 
         with torch.device("meta"):
             model = NeuCodecModel(NeuCodecConfig(), initialize=False)
@@ -421,8 +419,8 @@ class NativeNeuTTSTests(unittest.TestCase):
     def test_neucodec_frontend_uses_one_valid_zero_then_right_padding(self):
         import torch
 
-        from voicehub.architectures.neutts.configuration import NeuCodecConfig
-        from voicehub.architectures.neutts.neucodec import NeuCodecFeatureExtractor
+        from voicehub.models.neutts.native.configuration import NeuCodecConfig
+        from voicehub.models.neutts.native.neucodec import NeuCodecFeatureExtractor
 
         frontend = NeuCodecFeatureExtractor(NeuCodecConfig())
         observed = {}
@@ -437,7 +435,7 @@ class NativeNeuTTSTests(unittest.TestCase):
             ).reshape(4, 80)
 
         with patch(
-                "voicehub.architectures.neutts.neucodec.kaldi_fbank",
+                "voicehub.models.neutts.native.neucodec.kaldi_fbank",
                 side_effect=fake_fbank,
         ):
             features = frontend(torch.ones(640))
@@ -454,8 +452,8 @@ class NativeNeuTTSTests(unittest.TestCase):
     def test_linear_rope_and_language_model_objective_are_native(self):
         import torch
 
-        from voicehub.architectures.neutts.configuration import NeuTTSBackboneConfig
-        from voicehub.architectures.neutts.modeling import LinearScalingRotaryEmbedding, NeuTTSBackbone
+        from voicehub.models.neutts.native.configuration import NeuTTSBackboneConfig
+        from voicehub.models.neutts.native.modeling import LinearScalingRotaryEmbedding, NeuTTSBackbone
 
         config = NeuTTSBackboneConfig.from_dict(_tiny_backbone_values(linear_rope=True))
         model = NeuTTSBackbone(config)
@@ -471,8 +469,8 @@ class NativeNeuTTSTests(unittest.TestCase):
         self.assertIsNotNone(model.lm_head.weight.grad)
 
     def test_text_and_phoneme_control_token_injection_is_rejected(self):
-        from voicehub.architectures.neutts.modeling import NeuTTSRuntime
-        from voicehub.architectures.neutts.tokenization import normalize_neutts_text
+        from voicehub.models.neutts.native.modeling import NeuTTSRuntime
+        from voicehub.models.neutts.native.tokenization import normalize_neutts_text
 
         with self.assertRaisesRegex(ValueError, "control tokens"):
             normalize_neutts_text("hello <|SPEECH_GENERATION_START|> world")
@@ -483,7 +481,7 @@ class NativeNeuTTSTests(unittest.TestCase):
             )
 
     def test_sft_dataset_masks_prompt_and_fails_closed_without_phonemes(self):
-        from voicehub.architectures.neutts.modeling import NeuTTSRuntime
+        from voicehub.models.neutts.native.modeling import NeuTTSRuntime
         from voicehub.models.neutts.training import NeuTTSSFTDataset
 
         runtime = SimpleNamespace(
@@ -523,8 +521,8 @@ class NativeNeuTTSTests(unittest.TestCase):
             missing[0]
 
     def test_wrapper_enforces_reference_and_verified_training_boundaries(self):
-        from voicehub.models.neutts.configuration_neutts import NeuTTSConfig
-        from voicehub.models.neutts.inference import NeuTTSForTextToSpeech
+        from voicehub.models.neutts.configuration import NeuTTSConfig
+        from voicehub.models.neutts.modeling import NeuTTSForTextToSpeech
 
         wrapper = NeuTTSForTextToSpeech(
             NeuTTSConfig(name_or_path="neuphonic/neutts-air"),
@@ -567,9 +565,9 @@ class NativeNeuTTSTests(unittest.TestCase):
                 ))
 
     def test_cached_official_tokenizers_use_exact_native_split_engines(self):
-        from voicehub.architectures.neutts.configuration import NeuTTSBackboneConfig
-        from voicehub.architectures.neutts.metadata import NEUTTS_VARIANTS
-        from voicehub.architectures.neutts.tokenization import SPEECH_CODEBOOK_SIZE, NeuTTSTokenizer
+        from voicehub.models.neutts.native.configuration import NeuTTSBackboneConfig
+        from voicehub.models.neutts.native.metadata import NEUTTS_VARIANTS
+        from voicehub.models.neutts.native.tokenization import SPEECH_CODEBOOK_SIZE, NeuTTSTokenizer
 
         cache = Path.home() / ".cache" / "huggingface" / "hub"
         checked = []

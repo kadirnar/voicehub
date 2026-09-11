@@ -12,9 +12,9 @@ from unittest.mock import patch
 import torch
 
 from voicehub import AutoConfig, AutoModelForSpeechRecognition, get_model_spec
-from voicehub.architectures.hubert import HubertConfig, HubertForCTC, resolve_hubert_artifacts
 from voicehub.checkpointing import save_safetensors
 from voicehub.models.asr_hubert import HubertASRConfig, HubertForSpeechRecognition, NativeHubertTrainingAdapter
+from voicehub.models.asr_hubert.native import HubertConfig, HubertForCTC, resolve_hubert_artifacts
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.specs import get_training_spec
 
@@ -154,7 +154,7 @@ print(json.dumps({name: name in sys.modules for name in names}))
 
         wrapper = HubertForSpeechRecognition(device="cpu")
         with patch(
-                "voicehub.architectures.hubert.artifacts."
+                "voicehub.models.asr_hubert.native.artifacts."
                 "resolve_hubert_artifacts",
                 side_effect=ResolutionReached,
         ) as resolver:
@@ -245,7 +245,7 @@ print(json.dumps({name: name in sys.modules for name in names}))
             exported = json.loads((export / "config.json").read_text(encoding="utf-8"))
             self.assertEqual(exported["model_type"], "asr_hubert")
             self.assertEqual(
-                exported["architectures"],
+                exported['architectures'],
                 ["HubertForCTC"],
             )
             self.assertEqual(
@@ -328,17 +328,17 @@ print(json.dumps({name: name in sys.modules for name in names}))
 
         self.assertEqual(
             model_spec.module,
-            "voicehub.models.asr_hubert.modeling_asr_hubert",
+            "voicehub.models.asr_hubert.modeling",
         )
         self.assertEqual(
             model_spec.config_module,
-            "voicehub.models.asr_hubert.configuration_asr_hubert",
+            "voicehub.models.asr_hubert.configuration",
         )
         self.assertTrue(model_spec.is_voicehub_native)
         self.assertEqual(model_spec.architecture, "hubert")
         self.assertEqual(
             training_spec.source_entrypoints,
-            ("voicehub.architectures.hubert.HubertForCTC", ),
+            ("voicehub.models.asr_hubert.native.HubertForCTC", ),
         )
 
     def test_external_runtime_and_pickle_options_are_rejected(self):

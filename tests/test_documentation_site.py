@@ -375,7 +375,7 @@ class DocumentationSiteTests(unittest.TestCase):
         self.assertEqual(set(documented_profiles), {spec.model_type for spec in specs})
         self.assertEqual(set(documented_parameters), {spec.model_type for spec in specs})
         seamless_metadata = runpy.run_path(
-            str(REPOSITORY_ROOT / "voicehub" / "architectures" / "seamless_m4t_v2" / "metadata.py"))
+            str(REPOSITORY_ROOT / 'voicehub/models/asr_seamless_m4t_v2/native/metadata.py'))
         seamless_repository = seamless_metadata["SEAMLESS_M4T_V2_REPOSITORY"]
         seamless_checkpoint = seamless_metadata["SEAMLESS_M4T_V2_CHECKPOINTS"][seamless_repository]
         self.assertEqual(
@@ -383,10 +383,10 @@ class DocumentationSiteTests(unittest.TestCase):
             seamless_checkpoint["s2t_parameter_count"],
         )
         self.assertIn("speech-to-text subset", documented_parameters["asr_seamless_m4t_v2"].note)
-        from voicehub.architectures.medasr.configuration import MedASRConfig
+        from voicehub.models.asr_medasr.native.configuration import MedASRConfig
         medasr_config = MedASRConfig()
         medasr_metadata = runpy.run_path(
-            str(REPOSITORY_ROOT / "voicehub" / "architectures" / "medasr" / "metadata.py"))
+            str(REPOSITORY_ROOT / 'voicehub/models/asr_medasr/native/metadata.py'))
         medasr_checkpoint = medasr_metadata["MEDASR_CHECKPOINT"]
         batch_norm_buffers = medasr_config.num_hidden_layers * (2 * medasr_config.hidden_size + 1)
         self.assertEqual(
@@ -417,6 +417,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 "asr_nemo",
                 "asr_wenet",
                 "vad_auditok",
+                "encodec",
                 "vad_transformers",
                 "vad_webrtc",
             },
@@ -649,7 +650,7 @@ class DocumentationSiteTests(unittest.TestCase):
         documented_parameters = model_documentation["PARAMETER_DOCUMENTATION"]
         task_labels = model_documentation["TASK_LABELS"]
         task_order = model_documentation["TASK_ORDER"]
-        self.assertEqual(len(specs), 68)
+        self.assertEqual(len(specs), 70)
         self.assertEqual(set(documented_parameters), {spec.model_type for spec in specs})
         index = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
@@ -772,6 +773,7 @@ class DocumentationSiteTests(unittest.TestCase):
             "text-to-speech": "_generate",
             "automatic-speech-recognition": "_transcribe",
             "voice-activity-detection": "_detect",
+            "audio-codec": "_encode",
         }
         specs = tuple(list_model_specs(task=None))
         self.assertEqual(set(profiles), {spec.model_type for spec in specs})
@@ -853,7 +855,7 @@ class DocumentationSiteTests(unittest.TestCase):
                 ("https://github.com/microsoft/SpeechT5", "github"),
                 (
                     "https://github.com/kadirnar/voicehub/blob/main/"
-                    "voicehub/models/speecht5/modeling_speecht5.py",
+                    "voicehub/models/speecht5/modeling.py",
                     "source",
                 ),
                 (
@@ -902,8 +904,8 @@ class DocumentationSiteTests(unittest.TestCase):
                 "Checkpoint status",
                 "Hardware and runtime",
                 "Real-checkpoint evidence",
-                "voicehub/models/speecht5/configuration_speecht5.py",
-                "voicehub/models/speecht5/modeling_speecht5.py",
+                "voicehub/models/speecht5/configuration.py",
+                "voicehub/models/speecht5/modeling.py",
         ):
             self.assertIn(fragment, source)
 
@@ -919,14 +921,14 @@ class DocumentationSiteTests(unittest.TestCase):
             (
                 "configuration",
                 "SpeechT5Config",
-                "voicehub/models/speecht5/configuration_speecht5.py",
+                "voicehub/models/speecht5/configuration.py",
                 "SpeechT5Config(**config_kwargs)",
                 ("**config_kwargs", ),
             ),
             (
                 "model",
                 "SpeechT5ForTextToSpeech",
-                "voicehub/models/speecht5/modeling_speecht5.py",
+                "voicehub/models/speecht5/modeling.py",
                 "AutoModelForTextToSpeech.from_pretrained(",
                 ("pretrained_model_name_or_path", "model_type", "config", "**model_kwargs"),
             ),
@@ -972,12 +974,12 @@ class DocumentationSiteTests(unittest.TestCase):
         generator = runpy.run_path(str(MODEL_PAGE_GENERATOR_PATH))
         source_provenance = generator["_source_provenance"]
         expected_examples = {
-            "asr_nemo": "voicehub/architectures/nemo_ctc/SOURCE.json",
-            "asr_speechbrain": ("voicehub/architectures/speechbrain_asr/SOURCE.json"),
-            "asr_wenet": "voicehub/architectures/wenet_u2pp/SOURCE.json",
-            "bark": "voicehub/architectures/bark/SOURCE.json",
-            "vad_webrtc": "voicehub/architectures/webrtc_vad/SOURCE.json",
-            "vits": "voicehub/architectures/vits/SOURCE.json",
+            "asr_nemo": "voicehub/models/asr_nemo/native/SOURCE.json",
+            "asr_speechbrain": ("voicehub/models/asr_speechbrain/native/SOURCE.json"),
+            "asr_wenet": "voicehub/models/asr_wenet/native/SOURCE.json",
+            "bark": "voicehub/models/bark/native/SOURCE.json",
+            "vad_webrtc": "voicehub/models/vad_webrtc/native/SOURCE.json",
+            "vits": "voicehub/models/vits/native/SOURCE.json",
         }
 
         for spec in list_model_specs(task=None):
@@ -1043,7 +1045,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         spec = get_model_spec("asr_wenet")
         checkpoint = generator["checkpoint_documentation"](spec)
         source_record = json.loads(
-            (REPOSITORY_ROOT / "voicehub/architectures/wenet_u2pp/SOURCE.json").read_text(encoding="utf-8"))
+            (REPOSITORY_ROOT / "voicehub/models/asr_wenet/native/SOURCE.json").read_text(encoding="utf-8"))
         page = (MODEL_PAGE_DIR / "asr_wenet.md").read_text(encoding="utf-8")
         index = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
         gallery = MODEL_NOTEBOOK_GALLERY_PATH.read_text(encoding="utf-8")
@@ -1233,7 +1235,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "[generate](reference/api.md#generation)",
                 "!!! tip",
                 "configuration, model, and processor",
-                "**68 integrations**",
+                "**70 integrations**",
                 "**34 TTS backends**",
                 "**23 ASR providers**",
                 "**11 VAD providers**",
@@ -1373,7 +1375,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 continue
             required_labels.add(label)
 
-        self.assertLessEqual(len(required_labels), 31)
+        self.assertLessEqual(len(required_labels), 32)
         for locale in LOCALIZED_HOME_LOCALES:
             with self.subTest(locale=locale):
                 locale_block = config.split(f"        - locale: {locale}\n", 1)[1]
@@ -1429,10 +1431,10 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         from voicehub.models.language_support import model_language_support
 
         index = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
-        self.assertEqual(index.count('class="vh-model-catalog"'), 3)
+        self.assertEqual(index.count('class="vh-model-catalog"'), 4)
         self.assertEqual(
             len(re.findall(r"^\| \[`[^`]+`\]\([^)]+\.md\) \|", index, re.MULTILINE)),
-            68,
+            70,
         )
         count_only_language_summary = (
             r"(?:\b(?:(?:supports?|support for)\s+)?\d+\s+"
@@ -1456,11 +1458,14 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 self.assertIn("### Language support", page)
                 self.assertNotRegex(page, count_only_language_summary)
                 self.assertNotIn("Checkpoint-defined; not exhaustively enumerated", page)
-                if spec.task is SpeechTask.VOICE_ACTIVITY_DETECTION:
+                if spec.task in {SpeechTask.VOICE_ACTIVITY_DETECTION, SpeechTask.AUDIO_CODEC}:
                     self.assertEqual(support.kind, "not-text-conditioned")
                     self.assertFalse(support.codes)
                     self.assertIn("Not text-language conditioned", page)
-                    self.assertIn("does not select a spoken language", page)
+                    if spec.task is SpeechTask.VOICE_ACTIVITY_DETECTION:
+                        self.assertIn("does not select a spoken language", page)
+                    else:
+                        self.assertIn("encode waveforms", page)
                     row = next(
                         line for line in index.splitlines()
                         if line.startswith(f"| [`{spec.display_name}`]({spec.model_type}.md) |"))
@@ -1501,7 +1506,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 self.assertIn(f"| {rendered_codes} |", row)
 
     def test_omnivoice_language_snapshot_matches_vendored_mapping(self):
-        from voicehub.architectures.omnivoice.languages import OMNIVOICE_LANGUAGE_CODES
+        from voicehub.models.omnivoice.native.languages import OMNIVOICE_LANGUAGE_CODES
 
         source_path = (
             REPOSITORY_ROOT / "voicehub" / "models" / "omnivoice" / "source" / "omnivoice" / "utils" /
@@ -1721,9 +1726,9 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "save_pretrained",
                 "load_for_training",
                 "validate_training_support",
-                "https://github.com/kadirnar/voicehub/blob/main/voicehub/modeling_utils.py",
-                "https://github.com/kadirnar/voicehub/blob/main/voicehub/audio_modeling_utils.py",
-                "https://github.com/kadirnar/voicehub/blob/main/voicehub/modeling_outputs.py",
+                "https://github.com/kadirnar/voicehub/blob/main/voicehub/models/tts.py",
+                "https://github.com/kadirnar/voicehub/blob/main/voicehub/models/audio.py",
+                "https://github.com/kadirnar/voicehub/blob/main/voicehub/outputs.py",
                 "[full API reference](api.md)",
         ):
             with self.subTest(fragment=fragment):
@@ -2041,7 +2046,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 "explicit standalone files",
                 "composition",
                 "voicehub/models/<model_type>/",
-                "voicehub/architectures/<model_type>/",
+                "voicehub/runtime/<model_type>/",
                 "tests/test_<model_type>.py",
                 "docs/models/providers/<model_type>.md",
                 "generated navigation block in `mkdocs.yml`",
@@ -2296,7 +2301,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         config = SITE_CONFIG_PATH.read_text(encoding="utf-8")
         self.assertIn("- javascripts/header-controls.js", config)
         self.assertIn("docs_version:", config)
-        self.assertIn('release: "0.3.0"', config)
+        self.assertIn('release: "0.4.0"', config)
         self.assertIn('published: "0.1.6"', config)
 
         stylesheet = STYLESHEET_PATH.read_text(encoding="utf-8")
@@ -2574,7 +2579,8 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
         )
 
     def test_every_asr_training_profile_is_in_model_and_training_docs(self):
-        from voicehub import SpeechTask, list_training_specs
+        from voicehub import SpeechTask
+        from voicehub.training import list_training_specs
 
         model_types = {
             spec.model_type
@@ -3803,7 +3809,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             "ModelTrainingSpec",
             '"builtin": true',
             "model-integration.json",
-            "voicehub/models/registry.py",
+            "voicehub/registry.py",
             "voicehub/training/specs.py",
             "_profile(",
             "inference-only",
@@ -3896,14 +3902,14 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 self.assertIn(colab_url, docs_gallery)
 
     def test_model_pages_cover_every_registry_entry(self):
-        from voicehub import AutoInferenceModel, list_model_specs
+        from voicehub import AutoModelForTextToSpeech, list_model_specs
 
         catalog = MODEL_PAGE_INDEX_PATH.read_text(encoding="utf-8")
         tts_matrix = (DOCS_ROOT / "models" / "tts-capabilities.md").read_text(encoding="utf-8", )
         speech_matrix = (DOCS_ROOT / "models" / "asr-vad-support.md").read_text(encoding="utf-8", )
         training_matrix = (DOCS_ROOT / "models" / "training-support.md").read_text(encoding="utf-8")
 
-        for model_spec in AutoInferenceModel.available_models():
+        for model_spec in AutoModelForTextToSpeech.available_models():
             with self.subTest(model_type=model_spec.model_type):
                 self.assertIn(
                     f'[`{model_spec.display_name}`]({model_spec.model_type}.md)',
@@ -3916,7 +3922,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 self.assertIn(f"(`{model_spec.model_type}`)", training_matrix)
 
         for model_spec in list_model_specs(task=None):
-            if model_spec.task.value == "text-to-speech":
+            if model_spec.task.value in {"text-to-speech", "audio-codec"}:
                 continue
             with self.subTest(model_type=model_spec.model_type):
                 self.assertIn(f"| `{model_spec.model_type}` |", speech_matrix)
@@ -3987,7 +3993,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
     def test_readme_python_examples_compile(self):
         examples = PYTHON_BLOCK.findall(README_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(examples), 3)
+        self.assertEqual(len(examples), 4)
         for index, source in enumerate(examples, start=1):
             ast.parse(
                 textwrap.dedent(source),

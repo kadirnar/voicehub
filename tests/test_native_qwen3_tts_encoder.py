@@ -7,20 +7,20 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.qwen3_tts.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.qwen3tts.native.checkpoint import (
     export_qwen3_tts_speech_tokenizer,
     load_qwen3_tts_decoder_checkpoint,
     load_qwen3_tts_encoder_checkpoint,
 )
-from voicehub.architectures.qwen3_tts.codec import Qwen3TTSSpeechDecoder
-from voicehub.architectures.qwen3_tts.configuration import (
+from voicehub.models.qwen3tts.native.codec import Qwen3TTSSpeechDecoder
+from voicehub.models.qwen3tts.native.configuration import (
     Qwen3TTSDecoderConfig,
     Qwen3TTSEncoderConfig,
     Qwen3TTSTokenizerConfig,
 )
-from voicehub.architectures.qwen3_tts.encoder import Qwen3TTSSpeechEncoder
-from voicehub.checkpointing import save_safetensors
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.qwen3tts.native.encoder import Qwen3TTSSpeechEncoder
 
 
 def _tiny_encoder_config() -> Qwen3TTSEncoderConfig:

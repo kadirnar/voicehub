@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.voxcpm."
 _EXPORTS = {
-    "VoxCPMConfig": _PACKAGE + "configuration_voxcpm",
-    "VoxCPMForTextToSpeech": _PACKAGE + "modeling_voxcpm",
-    "VoxCPMTTS": _PACKAGE + "modeling_voxcpm",
+    "VoxCPMConfig": _PACKAGE + "configuration",
+    "VoxCPMForTextToSpeech": _PACKAGE + "modeling",
+    "VoxCPMTTS": _PACKAGE + "modeling",
     "VoxCPMTrainingAdapter": _PACKAGE + "training",
 }
 

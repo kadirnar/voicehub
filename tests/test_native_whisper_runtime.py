@@ -11,8 +11,8 @@ except ModuleNotFoundError:
     torch = None
 
 if torch is not None:
-    from voicehub.architectures.registry import ArchitectureRegistry
-    from voicehub.architectures.whisper import (
+    from voicehub.generation import GenerationConfig
+    from voicehub.models.asr_whisper_native.native import (
         WhisperDecodingConfig,
         WhisperGenerationAdapter,
         WhisperTokenSet,
@@ -21,7 +21,7 @@ if torch is not None:
         create_whisper_architecture_spec,
         register_whisper_architecture,
     )
-    from voicehub.generation import GenerationConfig
+    from voicehub.runtime.registry import ArchitectureRegistry
 
 
 def _token_set(*, multilingual=True):
@@ -393,11 +393,11 @@ class WhisperArchitectureRegistrationTests(unittest.TestCase):
         self.assertEqual(spec.architecture_id, "whisper")
         self.assertEqual(
             spec.model_builder.path,
-            "voicehub.architectures.whisper.modeling:WhisperModel",
+            "voicehub.models.asr_whisper_native.native.modeling:WhisperModel",
         )
         self.assertEqual(
             spec.decoder.path,
-            "voicehub.architectures.whisper.decoding:WhisperGenerationAdapter",
+            "voicehub.models.asr_whisper_native.native.decoding:WhisperGenerationAdapter",
         )
         self.assertTrue(spec.capabilities.training)
         self.assertTrue(spec.capabilities.supports_task("automatic-speech-recognition"))

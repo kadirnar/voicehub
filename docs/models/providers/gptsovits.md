@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/RVC-Boss/GPT-SoVITS" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/modeling_gptsovits.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/gptsovits.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -113,7 +113,7 @@ Korean and Cantonese support applies to V2 and later variants.
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/modeling_gptsovits.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/modeling.py)
 
 ## Configuration
 
@@ -202,8 +202,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.gptsovits.modeling_gptsovits.GPTSoVITSForTextToSpeech` |
-| Configuration | `voicehub.models.gptsovits.configuration_gptsovits.GPTSoVITSConfig` |
+| Implementation | `voicehub.models.gptsovits.modeling.GPTSoVITSForTextToSpeech` |
+| Configuration | `voicehub.models.gptsovits.configuration.GPTSoVITSConfig` |
 | Source provenance | `voicehub/models/gptsovits/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -228,7 +228,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `GPTSoVITSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/configuration_gptsovits.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -247,7 +247,7 @@ GPTSoVITSConfig(**config_kwargs)
 
 ### `GPTSoVITSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/modeling_gptsovits.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/gptsovits/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

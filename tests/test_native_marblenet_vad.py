@@ -8,23 +8,23 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures import get_architecture_spec
-from voicehub.architectures.marblenet_vad.checkpoint import (
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
+from voicehub.hub import write_json_file
+from voicehub.models.vad_nemo import NeMoVADConfig, NeMoVADForVoiceActivityDetection
+from voicehub.models.vad_nemo.native.checkpoint import (
     MarbleNetVADSafeTensorsCheckpointAdapter,
     convert_nemo_marblenet_checkpoint,
 )
-from voicehub.architectures.marblenet_vad.configuration import MarbleNetVADConfig
-from voicehub.architectures.marblenet_vad.metadata import (
+from voicehub.models.vad_nemo.native.configuration import MarbleNetVADConfig
+from voicehub.models.vad_nemo.native.metadata import (
     MARBLENET_VAD_REPOSITORY,
     MARBLENET_VAD_REVISION,
     MARBLENET_VAD_SHA256,
     NEMO_SOURCE_REVISION,
 )
-from voicehub.architectures.marblenet_vad.modeling import MarbleNetVADModel
-from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.hub import write_json_file
-from voicehub.models.vad_nemo import NeMoVADConfig, NeMoVADForVoiceActivityDetection
+from voicehub.models.vad_nemo.native.modeling import MarbleNetVADModel
 from voicehub.registry import get_model_spec
+from voicehub.runtime import get_architecture_spec
 from voicehub.training import get_training_spec
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -186,7 +186,7 @@ class NativeMarbleNetProviderTests(unittest.TestCase):
             {"sample_rate": 8_000},
             {"architecture_family": "window"},
             {"speech_class_id": 0},
-            {"model_kwargs": {"trainer": object()}},
+            {"model_kwargs": {'trainer': object()}},
             {"model_kwargs": {"token": "secret"}},
         ):
             with self.subTest(kwargs=kwargs), self.assertRaises((TypeError, ValueError)):

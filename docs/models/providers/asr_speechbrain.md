@@ -194,7 +194,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
 | Implementation | `voicehub.models.asr_native.speechbrain.SpeechBrainASRForSpeechRecognition` |
 | Configuration | `voicehub.models.asr_native.configuration.SpeechBrainASRConfig` |
-| Source provenance | `voicehub/architectures/speechbrain_asr/SOURCE.json` |
+| Source provenance | `voicehub/models/asr_speechbrain/native/SOURCE.json` |
 | License | [Apache-2.0](https://huggingface.co/speechbrain/asr-crdnn-rnnlm-librispeech) |
 
 The pinned CRDNN, RNNLM, tokenizer, and source implementation are Apache-2.0. The original pickle files cross a strict one-time conversion boundary; steady-state artifacts are Safetensors. Commercial use: **allowed by the registered terms**.

@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/hexgrad/kokoro" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/modeling_kokoro.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/kokoro.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -103,7 +103,7 @@ integration. This page is generated from its registry contract. [Open the `kokor
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Kokoro](https://github.com/hexgrad/kokoro)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/modeling_kokoro.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/modeling.py)
 
 ## Configuration
 
@@ -190,8 +190,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.kokoro.modeling_kokoro.KokoroForTextToSpeech` |
-| Configuration | `voicehub.models.kokoro.configuration_kokoro.KokoroConfig` |
+| Implementation | `voicehub.models.kokoro.modeling.KokoroForTextToSpeech` |
+| Configuration | `voicehub.models.kokoro.configuration.KokoroConfig` |
 | Source provenance | `voicehub/models/kokoro/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -216,7 +216,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `KokoroConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/configuration_kokoro.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -235,7 +235,7 @@ KokoroConfig(**config_kwargs)
 
 ### `KokoroForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/modeling_kokoro.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/kokoro/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

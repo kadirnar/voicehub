@@ -7,16 +7,16 @@ from types import SimpleNamespace
 
 import torch
 
-from voicehub.architectures.qwen3_tts.configuration import Qwen3TTSArchitectureConfig
-from voicehub.architectures.qwen3_tts.modeling import Qwen3TTSForConditionalGeneration
-from voicehub.architectures.qwen3_tts.registration import create_qwen3_tts_architecture_spec
-from voicehub.models.qwen3tts.inference import Qwen3TTSConfig
 from voicehub.models.qwen3tts.lora import (
     QWEN3_TTS_LORA_CONFIG_NAME,
     QWEN3_TTS_LORA_WEIGHTS_NAME,
     merged_qwen3_tts_state_dict,
     save_qwen3_tts_lora_adapter,
 )
+from voicehub.models.qwen3tts.modeling import Qwen3TTSConfig
+from voicehub.models.qwen3tts.native.configuration import Qwen3TTSArchitectureConfig
+from voicehub.models.qwen3tts.native.modeling import Qwen3TTSForConditionalGeneration
+from voicehub.models.qwen3tts.native.registration import create_qwen3_tts_architecture_spec
 from voicehub.optimization import LoRALinear
 from voicehub.registry import get_model_spec
 from voicehub.training.recipes import Qwen3TTSTrainingAdapter

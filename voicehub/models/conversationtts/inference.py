@@ -1,7 +1,7 @@
 """Backward-compatible ConversationTTS imports."""
 
-from voicehub.models.conversationtts.configuration_conversationtts import ConversationTTSConfig
-from voicehub.models.conversationtts.modeling_conversationtts import ConversationTTS, ConversationTTSForTextToSpeech
+from voicehub.models.conversationtts.configuration import ConversationTTSConfig
+from voicehub.models.conversationtts.modeling import ConversationTTS, ConversationTTSForTextToSpeech
 
 __all__ = [
     "ConversationTTS",

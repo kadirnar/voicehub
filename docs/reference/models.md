@@ -5,7 +5,7 @@ description: Shared pretrained speech-model bases, normalized outputs, and porta
 # Models
 
 VoiceHub model wrappers expose one pretrained lifecycle across text to speech,
-automatic speech recognition, and voice activity detection. Task-specific
+automatic speech recognition, voice activity detection, and audio codecs. Task-specific
 classes keep their input and output semantics explicit while sharing lazy
 loading, saving, training validation, and runtime-state transitions.
 
@@ -30,7 +30,7 @@ and extension contracts.
 
 ## `PreTrainedSpeechModel`
 
-[`PreTrainedSpeechModel`](https://github.com/kadirnar/voicehub/blob/main/voicehub/modeling_utils.py)
+[`PreTrainedSpeechModel`](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/tts.py)
 is the public marker shared by every pretrained speech wrapper. It deliberately
 does not implement a token-embedding or language-model utility mixin. Speech
 models may own waveform processors, acoustic encoders, codecs, vocoders, and
@@ -55,9 +55,9 @@ Inspecting the public classes or registry does not construct a model.
 
 The source implementations are split by input contract:
 
-- [`PreTrainedTTSModel`](https://github.com/kadirnar/voicehub/blob/main/voicehub/modeling_utils.py)
+- [`PreTrainedTTSModel`](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/tts.py)
   owns text processing, `TTSGenerationConfig`, `generate()`, and `TTSOutput`.
-- [`PreTrainedAudioModel`, `PreTrainedASRModel`, and `PreTrainedVADModel`](https://github.com/kadirnar/voicehub/blob/main/voicehub/audio_modeling_utils.py)
+- [`PreTrainedAudioModel`, `PreTrainedASRModel`, and `PreTrainedVADModel`](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/audio.py)
   share audio loading, inference configuration, streaming sessions, and the
   ASR/VAD lifecycle.
 
@@ -66,6 +66,7 @@ The source implementations are split by input contract:
 | `PreTrainedTTSModel` | Text plus optional conditioning | `generate()` | `TTSOutput` |
 | `PreTrainedASRModel` | Audio or an audio path | `transcribe()` | `ASROutput` |
 | `PreTrainedVADModel` | Audio or an audio path | `detect()` | `VADOutput` |
+| `PreTrainedCodecModel` | Audio or a codec payload | `encode()` / `decode()` | `CodecOutput` / `AudioOutput` |
 
 `PreTrainedAudioModel.forward()` provides the common audio request path.
 ASR and VAD keep separate task classes so a wrapper cannot silently return the
@@ -73,19 +74,21 @@ wrong output type. `PreTrainedTTSModel.forward()` similarly validates that the
 model integration returned `TTSOutput`.
 
 Use `AutoModel`, `AutoModelForTextToSpeech`,
-`AutoModelForSpeechRecognition`, or `AutoModelForVoiceActivityDetection`
+`AutoModelForSpeechRecognition`, `AutoModelForVoiceActivityDetection`, or
+`AutoModelForAudioCodec`
 instead of instantiating an abstract pretrained base directly.
 
 ## Model outputs
 
 The public output dataclasses live in
-[`voicehub/modeling_outputs.py`](https://github.com/kadirnar/voicehub/blob/main/voicehub/modeling_outputs.py).
+[`voicehub/outputs.py`](https://github.com/kadirnar/voicehub/blob/main/voicehub/outputs.py).
 They provide named fields, integer and string indexing, `keys()`, `to_dict()`,
 and a compact tuple view without making a provider-specific object public.
 
 | Output | Required fields | Optional evidence |
 | --- | --- | --- |
-| `TTSOutput` | `audio`, `sample_rate` | Output path and provider metadata |
+| `AudioOutput` / `TTSOutput` | `audio`, `sample_rate` | Output path and model metadata |
+| `CodecOutput` | `codes`, `sample_rate`, `length`, `model_type` | Model-owned encoding metadata |
 | `ASROutput` | `text`, ordered `segments` | Language, duration, confidence, words, speakers, and metadata |
 | `VADOutput` | Ordered, non-overlapping speech `segments` | Duration, sample rate, frame probabilities, and metadata |
 

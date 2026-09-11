@@ -43,7 +43,7 @@ the source record.
 already in memory:
 
 ```python
-from voicehub import SpeechDataset
+from voicehub.training import SpeechDataset
 
 dataset = SpeechDataset(
     records,
@@ -92,7 +92,7 @@ mappings directly, or reads JSON, JSON Lines, CSV, and TSV manifests without
 importing a tensor framework:
 
 ```python
-from voicehub import ASRDataset
+from voicehub.training import ASRDataset
 
 records = ASRDataset.from_manifest(
     "data/train.jsonl",
@@ -156,7 +156,7 @@ data/clips/000002.txt
 Then pair them by stem:
 
 ```python
-from voicehub import ASRDataset
+from voicehub.training import ASRDataset
 
 records = ASRDataset.from_audio_folder(
     "data/clips",
@@ -193,12 +193,7 @@ Every ASR training profile exposes its accepted record shapes before a model
 or checkpoint is loaded:
 
 ```python
-from voicehub import (
-    ASRDataArchitecture,
-    get_asr_dataset_spec,
-    get_training_spec,
-    list_asr_dataset_specs,
-)
+from voicehub.training import ASRDataArchitecture, get_asr_dataset_spec, get_training_spec, list_asr_dataset_specs
 
 contract = get_asr_dataset_spec("asr_qwen3")
 same_contract = get_training_spec("asr_qwen3").dataset_spec
@@ -390,7 +385,7 @@ variable-length dimensions. Use `AudioFieldSchema` when a field's time
 dimension is ambiguous:
 
 ```python
-from voicehub import AudioFieldSchema, DataCollatorForAudioTraining
+from voicehub.training import AudioFieldSchema, DataCollatorForAudioTraining
 
 collator = DataCollatorForAudioTraining(
     label_pad_token_id=-100,

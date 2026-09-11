@@ -8,7 +8,7 @@ from numbers import Integral, Real
 from typing import Any
 
 from voicehub.inference_configuration import VADInferenceConfig
-from voicehub.modeling_outputs import SpeechSegment
+from voicehub.outputs import SpeechSegment
 
 
 def _score(value: Any) -> float:

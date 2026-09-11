@@ -11,15 +11,18 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from voicehub import AutoInferenceModel, AutoModelForTextToSpeech, AutoTrainingAdapter, Trainer, TrainingArguments
+from voicehub import AutoModelForTextToSpeech
 from voicehub.checkpointing import save_safetensors
-from voicehub.models.bark.inference import BarkConfig, BarkForTextToSpeech, _build_bark_training_model
-from voicehub.models.speecht5.inference import SpeechT5Config, SpeechT5ForTextToSpeech
-from voicehub.models.vits.inference import VitsConfig, VitsForTextToSpeech, _build_vits_training_model
+from voicehub.models.bark.modeling import BarkConfig, BarkForTextToSpeech, _build_bark_training_model
+from voicehub.models.speecht5.modeling import SpeechT5Config, SpeechT5ForTextToSpeech
+from voicehub.models.vits.modeling import VitsConfig, VitsForTextToSpeech, _build_vits_training_model
 from voicehub.models.vits.training import NativeVitsGeneratorTrainingAdapter
 from voicehub.registry import ModelSpec, get_model_spec
+from voicehub.training import AutoTrainingAdapter
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.contracts import TrainingSupport
 from voicehub.training.specs import TrainingFamily, get_training_spec
+from voicehub.training.trainer import Trainer
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
@@ -239,7 +242,7 @@ class TransformersTTSRegistryTests(unittest.TestCase):
                     "",
                     model_type=alias,
                 )
-                legacy_model = AutoInferenceModel.from_pretrained(alias)
+                legacy_model = AutoModelForTextToSpeech.from_pretrained(model_type=alias)
                 self.assertIsInstance(model, expected_class)
                 self.assertIsInstance(legacy_model, expected_class)
                 self.assertFalse(model.is_loaded)
@@ -282,7 +285,7 @@ class TransformersTTSInferenceTests(unittest.TestCase):
         wrapper._torch = _FakeTorch()
 
         with patch(
-                "voicehub.models.bark.inference.seeded_inference",
+                "voicehub.models.bark.modeling.seeded_inference",
                 _fixed_seed,
         ):
             output = wrapper._generate(
@@ -321,7 +324,7 @@ class TransformersTTSInferenceTests(unittest.TestCase):
         wrapper._coerce_speaker_embeddings = Mock(return_value="speaker")
 
         with patch(
-                "voicehub.models.speecht5.inference.seeded_inference",
+                "voicehub.models.speecht5.modeling.seeded_inference",
                 _fixed_seed,
         ):
             output = wrapper._generate(
@@ -346,7 +349,7 @@ class TransformersTTSInferenceTests(unittest.TestCase):
             sampling_rate=16_000,
         )
         with patch(
-                "voicehub.models.speecht5.inference.load_audio",
+                "voicehub.models.speecht5.modeling.load_audio",
                 return_value=loaded,
         ) as loader:
             waveform, sampling_rate, batch_size = wrapper._training_audio_batch(
@@ -375,7 +378,7 @@ class TransformersTTSInferenceTests(unittest.TestCase):
             sampling_rate=16_000,
         )
         with patch(
-                "voicehub.models.speecht5.inference.load_audio",
+                "voicehub.models.speecht5.modeling.load_audio",
                 return_value=loaded,
         ) as loader:
             waveform, sampling_rate, batch_size = wrapper._training_audio_batch(
@@ -413,7 +416,7 @@ class TransformersTTSInferenceTests(unittest.TestCase):
             ),
         ]
         with patch(
-                "voicehub.models.speecht5.inference.load_audio",
+                "voicehub.models.speecht5.modeling.load_audio",
                 side_effect=loaded,
         ) as loader:
             waveforms, sampling_rate, batch_size = wrapper._training_audio_batch(

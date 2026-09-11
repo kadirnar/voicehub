@@ -124,10 +124,7 @@ Separately distributed integrations can register the same capability without
 editing VoiceHub's client:
 
 ```python
-from voicehub import (
-    LLMBackendSupport,
-    register_llm_backend_support,
-)
+from voicehub.llm_serving import LLMBackendSupport, register_llm_backend_support
 
 register_llm_backend_support(
     LLMBackendSupport(

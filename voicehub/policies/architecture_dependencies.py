@@ -21,22 +21,21 @@ from pathlib import Path
 ALLOWED_NATIVE_IMPORT_ROOTS = frozenset({"torch", "voicehub"})
 _DYNAMIC_IMPORT_INFRASTRUCTURE = frozenset({
     "auto.py",
-    "automodel.py",
-    "architectures/catalog.py",
-    "architectures/specifications.py",
+    'runtime/catalog.py',
+    'runtime/specifications.py',
     "dependencies.py",
 })
 _PER_FILE_ALLOWED_IMPORT_ROOTS = {
-    "integrations.py": frozenset({"wandb"}),
+    'training/integrations.py': frozenset({"wandb"}),
     "kernels/capabilities.py": frozenset({"cutlass", "triton"}),
     "kernels/cute_codecs.py": frozenset({"cutlass"}),
     "kernels/triton_activations.py": frozenset({"triton"}),
     "neural/backends/flash_attention4.py": frozenset({"flash_attn"}),
 }
 _CORE_NATIVE_RUNTIME_DIRECTORIES = (
-    "architectures",
+    'runtime',
     "audio.py",
-    "base_model.py",
+    'models/base.py',
     "checkpointing",
     "components/neural/conformer",
     "components/audio/watermarking/wavmark",
@@ -46,7 +45,7 @@ _CORE_NATIVE_RUNTIME_DIRECTORIES = (
     "components/audio/codecs/dac/utils",
     "components/audio/codecs/dac/compare",
     "components/audio/codecs/encodec",
-    "data_collator.py",
+    'training/data_collator.py',
     "generation",
     "neural",
     "objectives",
@@ -54,8 +53,8 @@ _CORE_NATIVE_RUNTIME_DIRECTORIES = (
     "processing",
     "streaming.py",
     "tokenization",
-    "trainer.py",
-    "trainer_utils.py",
+    'training/trainer.py',
+    'training/utils.py',
     "training",
 )
 _DYNAMIC_NATIVE_SOURCE_DIRECTORIES = (
@@ -69,7 +68,7 @@ def _discover_architecture_reference_files(root: Path) -> tuple[str, ...]:
     """Resolve literal lazy-component modules from registration source."""
     package_prefix = f"{root.name}."
     references = set()
-    for registration_path in sorted((root / "architectures").glob("*/registration.py")):
+    for registration_path in sorted((root / "models").glob("*/native/registration.py")):
         tree = ast.parse(
             registration_path.read_text(encoding="utf-8"),
             filename=str(registration_path),
@@ -101,11 +100,13 @@ def discover_native_runtime_directories(package_root: str | Path, ) -> tuple[str
     root = Path(package_root)
     model_root = root / "models"
     model_facades = tuple(path.relative_to(root).as_posix() for path in sorted(model_root.glob("*/*.py")))
+    native_networks = tuple(path.relative_to(root).as_posix() for path in sorted(model_root.glob("*/native")))
     architecture_references = _discover_architecture_reference_files(root)
     return tuple(
         dict.fromkeys((
             *_CORE_NATIVE_RUNTIME_DIRECTORIES,
             *model_facades,
+            *native_networks,
             *architecture_references,
             *_DYNAMIC_NATIVE_SOURCE_DIRECTORIES,
         )))

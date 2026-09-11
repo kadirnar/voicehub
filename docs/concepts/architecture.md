@@ -1,149 +1,135 @@
 ---
-description: How VoiceHub separates model discovery, runtime code, tasks, optimization, and training.
+description: The shared model lifecycle and four task contracts in VoiceHub 0.4.
 ---
 
 # Library architecture
 
-VoiceHub has a small public core and lazy model integrations. Listing models or
-reading config does not import a model graph or download weights.
+VoiceHub has one model registry, one pretrained lifecycle, and four task contracts:
+TTS, speech recognition (STT/ASR), VAD, and audio codecs. All model families use
+`AutoConfig`, `AutoModel`, `AutoProcessor`, and `pipeline`.
 
-## The layers
-
-| Layer | Location | Responsibility |
-| --- | --- | --- |
-| Public factories | `voicehub/auto.py` | Choose a model by config and speech task |
-| Model registry | `voicehub/models/registry.py` | Store lazy config/model import paths and aliases |
-| Model wrappers | `voicehub/models/<name>/` | Normalize loading, inputs, and task outputs |
-| Native graphs | `voicehub/architectures/<name>/` | Own executable PyTorch architecture code |
-| Shared parts | `voicehub/components/` | Reusable codecs, vocoders, and neural building blocks |
-| Optimization | `voicehub/optimization/` | Validate and apply transactional runtime passes |
-| Training | `voicehub/training/` | Data contracts, adapters, objectives, and recipes |
-
-Model-specific behavior stays with the integration. Code moves into a shared
-layer only when multiple integrations use the same contract.
-
-Shared behavior resolves capabilities, protocols, or declarative registry
-metadata instead of comparing provider names. The repository-wide provider
-independence policy scans every shared Python module, including components,
-training, serving, and optimization. Canonical model names and live aliases are
-allowed in declarative catalogs, provenance, licensing, and model-local code;
-using one in an `if`, conditional expression, loop condition, assertion,
-comprehension filter, comparison, or `match` branch fails the architecture
-contract test.
-
-## Loading a model
-
-```python
-from voicehub import AutoModel
-
-model = AutoModel.from_pretrained(
-    "Qwen/Qwen3-ASR-0.6B",
-    model_type="asr_qwen3",
-    lazy_load=True,
-)
-```
-
-The path is:
-
-1. the registry resolves `model_type` without loading the graph;
-2. `AutoConfig` creates the registered config;
-3. `AutoModel` dispatches to the TTS, ASR, or VAD factory;
-4. the wrapper is created with `model=None`;
-5. the first inference or explicit `load()` builds the runtime.
-
-The wrapper returns `TTSOutput`, `ASROutput`, or `VADOutput`, never a raw
-provider-specific result.
-
-## Registries are extension points
-
-Models are registered by pairing a config and wrapper:
-
-```python
-AutoModelForTextToSpeech.register(
-    AuroraConfig,
-    AuroraForTextToSpeech,
-    default_model_path="acme/aurora-base",
-)
-```
-
-The registry stores class import paths so later discovery remains lazy. The
-task-specific factory supplies the task, preventing an ASR model from loading
-through a VAD or TTS API. `AutoModel` provides task-aware dispatch when the
-caller wants one entry point.
-
-Built-ins and extensions use the same `ModelSpec` and `ModelRegistry`
-contracts. The old `voicehub.registry` module is a compatibility facade over
-the model-domain implementation.
-
-## Runtime lifecycle
-
-All wrappers use the same basic states:
+## Package structure
 
 ```text
-created -> loaded for inference -> loaded for training
-   ^               |                       |
-   +------- explicit restore/transition ---+
+voicehub/
+├── auto.py                 # One factory implementation, optional task constraints
+├── configuration.py        # Serializable configuration
+├── model.py                # Load, save, device, mode, and inference lifecycle
+├── outputs.py              # Audio, transcription, activity, and encoded outputs
+├── registry.py             # Lazy model registration and lookup
+├── tasks.py                # Four task identifiers and aliases
+├── pipelines.py            # Small task conveniences
+├── models/
+│   ├── catalog.py          # Built-in model declarations
+│   ├── base.py             # Shared runtime and optimization interfaces
+│   ├── tts.py              # Text → speech
+│   ├── audio.py            # Speech → text or activity segments
+│   ├── codec.py            # Audio ↔ codec-owned representation
+│   └── <family>/
+│       ├── __init__.py     # Lazy family exports
+│       ├── configuration.py
+│       ├── modeling.py     # Task adapter and checkpoint loading
+│       ├── processing.py   # Only when the family needs its own processor
+│       └── native/         # Network, conversion, metadata, and legal notices
+├── runtime/                # Lazy graph metadata and component references
+├── components/             # Reused codecs, vocoders, and network components
+├── processing/             # Audio and text preparation
+├── generation/             # Generation configuration and sampling
+├── training/               # Trainer, arguments, callbacks, adapters, objectives
+└── optimization/           # Optional runtime transformations
 ```
 
-Inference strategies and optimization plans cannot silently cross into
-training. A reversible transformation must be restored before changing modes.
-This prevents compiled, cached, or inference-only state from leaking into a
-differentiable graph.
+Only the small inference and registration surface is exported from `voicehub`.
+Training and optimization have their own namespaces. Existing model-local
+training modules and upstream reference sources stay with their model family.
+Shared neural utilities and checkpoint helpers retain their existing dedicated
+modules; the tree above shows the architectural boundaries, not every file.
 
-## Optimization passes
+## Task contracts
 
-Every speech wrapper exposes `apply_optimization_plan()`:
+| Task | Factory | Implementation hook | Public result |
+| --- | --- | --- | --- |
+| TTS | `AutoModelForTextToSpeech` | `_generate(text, ...)` | `TTSOutput` |
+| STT / ASR | `AutoModelForSpeechRecognition` | `_transcribe(audio, ...)` | `ASROutput` |
+| VAD | `AutoModelForVoiceActivityDetection` | `_detect(audio, ...)` | `VADOutput` |
+| Codec | `AutoModelForAudioCodec` | `_encode(waveform, ...)`, `_decode(codes, ...)` | `CodecOutput`, `AudioOutput` |
+
+Each task base inherits `PreTrainedSpeechModel`. A model implements its loading
+hook and task operation. Shared code owns configuration, lazy loading, device
+selection, checkpoint persistence, inference settings, and mode transitions.
+A new model does not copy `from_pretrained()` or `save_pretrained()`.
+
+Codecs preserve batches and channels. Input tensors may have shapes `[T]`,
+`[C, T]`, or `[B, C, T]`; arrays require a sample rate. `CodecOutput.codes` is an
+opaque model-owned payload: a tensor, segmented frames with scales, or another
+representation. The shared contract imposes no universal codebook layout.
+Decoding restores the original encoded length and returns `[B, C, T]` audio.
+
+## Loading and discovery
 
 ```python
-result = model.apply_optimization_plan(
-    ("custom-kernels", "compile"),
-    mode="inference",
+from voicehub import AutoModel, list_model_specs
+
+for spec in list_model_specs(task="codec"):
+    print(spec.model_type)
+
+model = AutoModel.from_pretrained(
+    "descript/dac_44khz",
+    model_type="dac",
+    device="cpu",
 )
-print(result.manifest())
 ```
 
-An optimization pass declares runtime constraints and implements:
+The registry resolves a lazy import reference, the factory creates the registered
+configuration, and the task adapter is constructed with `model=None`. The first
+operation or explicit `load()` builds the native graph. Merely importing the
+package, listing models, and constructing configurations do not import PyTorch.
 
-- `manifest_configuration()`;
-- `validate(model, context)`;
-- `apply(model, context)`;
-- `restore(...)` when reversible.
+`AutoModel` uses the same implementation as the four constrained factories.
+A task factory rejects the wrong task before importing its model. A saved
+VoiceHub `config.json` identifies the family; external checkpoints may need an
+explicit `model_type`.
 
-The manager validates the complete plan before the first change. Application
-is ordered; a failure rolls back earlier reversible passes. Manifests use
-stable pass IDs and versions.
+The model catalog records selectable integrations. Runtime metadata describes
+network components, architecture capabilities, and conversion hooks. These are
+different records: a multi-component TTS model may reuse a codec graph. Runtime
+metadata never implements a second loading lifecycle.
 
-New registered passes are visible to every model automatically. The pass
-validates the loaded runtime surface it needs. Architecture
-`optimization_passes` metadata records implementations verified for automatic
-selection; it is not a required edit for every explicit extension pass. A
-pass may set `requires_architecture_support = True` when runtime inspection
-cannot safely prove compatibility.
+## Extension rule
 
-## Native architecture metadata
+Keep the integration, its native graph, conversion code, and preprocessing in
+one `models/<family>/` directory. Promote a component into shared code when
+multiple families actually use it. Shared behavior uses capabilities and
+protocols instead of branching on model names.
 
-`ArchitectureSpec` describes an owned graph without importing it. It contains
-lazy references to the builder, config, processor, decoder, objective, and
-checkpoint adapter, plus verified devices, dtypes, tasks, and features.
+Register the configuration and model class with a task factory:
 
-Use architecture metadata for facts VoiceHub can test. Do not use it as a
-second implementation of model behavior.
+```python
+from voicehub import AutoModelForAudioCodec
 
-## Training boundary
+# MyCodecConfig and MyCodecModel are your importable implementation classes.
+AutoModelForAudioCodec.register(
+    MyCodecConfig,
+    MyCodecModel,
+    default_model_path="acme/my-codec",
+)
+```
 
-`ModelTrainingSpec` states whether the integrated artifact supports native,
-preprocessed, custom, or no training. `AutoTrainingAdapter` selects the family
-adapter, while `Trainer` owns the loop, callbacks, checkpoint timing, and
-strategy hooks.
+The registry stores import paths. Model packages must keep their `__init__.py`
+lazy so metadata discovery never imports a network. The model scaffold accepts
+`--task tts`, `asr`, `vad`, or `codec`; see [Add a model](../project/adding-a-model.md).
 
-Optimization uses the same pass contract in training mode. Passes that change
-parameter topology must provide complete optimizer routing and portable state
-semantics.
+## Training and optimization
 
-## Where to add code
+Import `Trainer`, `TrainingArguments`, callbacks, and training adapters from
+`voicehub.training`. Training availability remains explicit in each model's
+training specification. The new DAC and EnCodec task wrappers currently expose
+inference and export; they do not advertise a universal codec training recipe.
 
-- New model: follow [Add a model](../project/adding-a-model.md).
-- New ASR/VAD provider: follow [Add a provider](../project/adding-speech-provider.md).
-- New pass: follow [Add an optimization](../project/adding-an-optimization.md).
-- New shared layer: add it only after at least two model integrations need the
-  same interface.
+Optimization passes remain optional and validate the actual loaded runtime.
+The shared lifecycle restores reversible inference transformations before
+training. TTS generation settings stay in the TTS task layer; they are not
+forced onto recognition, VAD, or codecs.
+
+See the [0.4 migration guide](../project/migration-0.4.md) for old-to-new imports
+and the analysis behind this layout.

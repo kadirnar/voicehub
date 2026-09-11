@@ -6,17 +6,17 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from voicehub.architectures.speechbrain_vad.checkpoint import (
+from voicehub.hub import resolve_pretrained_file
+from voicehub.models.vad_speechbrain.native.checkpoint import (
     NATIVE_SPEECHBRAIN_VAD_FILENAME,
     convert_speechbrain_vad_checkpoint,
 )
-from voicehub.architectures.speechbrain_vad.metadata import (
+from voicehub.models.vad_speechbrain.native.metadata import (
     SPEECHBRAIN_VAD_HPARAMS_SHA256,
     SPEECHBRAIN_VAD_MODEL_SHA256,
     SPEECHBRAIN_VAD_REPOSITORY,
     SPEECHBRAIN_VAD_REVISION,
 )
-from voicehub.hub import resolve_pretrained_file
 from voicehub.path_utils import is_explicit_local_path
 
 _OFFICIAL_ALIASES = frozenset({

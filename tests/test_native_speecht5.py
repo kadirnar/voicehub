@@ -21,7 +21,6 @@ from voicehub.models.speecht5.checkpoint import (
     state_dict_inventory,
     tensor_inventory_fingerprint,
 )
-from voicehub.models.speecht5.inference import SpeechT5Config, SpeechT5ForTextToSpeech
 from voicehub.models.speecht5.metadata import (
     SPEECHT5_HIFIGAN_REVISION,
     SPEECHT5_HIFIGAN_STATE_VALUES,
@@ -33,6 +32,7 @@ from voicehub.models.speecht5.metadata import (
     SPEECHT5_TENSOR_FINGERPRINT,
     TRANSFORMERS_REFERENCE_REVISION,
 )
+from voicehub.models.speecht5.modeling import SpeechT5Config, SpeechT5ForTextToSpeech
 from voicehub.models.speecht5.native_configuration import NativeSpeechT5Config, NativeSpeechT5HifiGanConfig
 from voicehub.models.speecht5.native_modeling import SpeechT5ForTextToSpeechModel, SpeechT5HifiGan
 from voicehub.models.speecht5.processing import (
@@ -461,8 +461,8 @@ class NativeSpeechT5CheckpointTests(unittest.TestCase):
 class NativeSpeechT5TrainingAndRuntimeTests(unittest.TestCase):
 
     def test_shared_registry_and_trainer_select_the_native_runtime(self):
-        from voicehub.architectures import get_architecture_spec
         from voicehub.registry import get_model_spec
+        from voicehub.runtime import get_architecture_spec
         from voicehub.training.recipes import BUILTIN_MODEL_ADAPTERS
         from voicehub.training.specs import get_training_spec
 

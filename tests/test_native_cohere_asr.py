@@ -15,21 +15,21 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.cohere_asr.artifacts import CohereAsrArtifacts, resolve_cohere_asr_artifacts
-from voicehub.architectures.cohere_asr.checkpoint import (
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.asr_cohere import CohereASRConfig, CohereForSpeechRecognition, NativeCohereASRTrainingAdapter
+from voicehub.models.asr_cohere.native.artifacts import CohereAsrArtifacts, resolve_cohere_asr_artifacts
+from voicehub.models.asr_cohere.native.checkpoint import (
     CohereAsrCheckpointAdapter,
     cohere_asr_header_fingerprint,
     native_cohere_asr_tensor_shapes,
 )
-from voicehub.architectures.cohere_asr.configuration import SUPPORTED_LANGUAGES, CohereAsrConfig
-from voicehub.architectures.cohere_asr.metadata import COHERE_ASR_CHECKPOINTS
-from voicehub.architectures.cohere_asr.modeling import CohereAsrForConditionalGeneration
-from voicehub.architectures.cohere_asr.processing import CohereAsrProcessor
-from voicehub.architectures.cohere_asr.runtime import CohereAsrRuntime, load_cohere_asr_runtime, save_cohere_asr_runtime
-from voicehub.architectures.cohere_asr.tokenization import CohereAsrTokenizer, load_cohere_tokenizer
-from voicehub.architectures.parakeet_tdt.configuration import ParakeetEncoderConfig
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.models.asr_cohere import CohereASRConfig, CohereForSpeechRecognition, NativeCohereASRTrainingAdapter
+from voicehub.models.asr_cohere.native.configuration import SUPPORTED_LANGUAGES, CohereAsrConfig
+from voicehub.models.asr_cohere.native.metadata import COHERE_ASR_CHECKPOINTS
+from voicehub.models.asr_cohere.native.modeling import CohereAsrForConditionalGeneration
+from voicehub.models.asr_cohere.native.processing import CohereAsrProcessor
+from voicehub.models.asr_cohere.native.runtime import CohereAsrRuntime, load_cohere_asr_runtime, save_cohere_asr_runtime
+from voicehub.models.asr_cohere.native.tokenization import CohereAsrTokenizer, load_cohere_tokenizer
+from voicehub.models.asr_parakeet_tdt.native.configuration import ParakeetEncoderConfig
 from voicehub.policies.architecture_dependencies import inspect_native_runtime
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.tasks import SpeechTask
@@ -301,10 +301,10 @@ class CohereAsrProvenanceTests(unittest.TestCase):
             "b6a50ae0290d1258910c660ccb06292",
         )
         source = json.loads(
-            (PACKAGE_ROOT / "architectures/cohere_asr/SOURCE.json").read_text(encoding="utf-8"))
+            (PACKAGE_ROOT / 'models/asr_cohere/native/SOURCE.json').read_text(encoding="utf-8"))
         self.assertEqual(source["implementation"], "voicehub-native")
         self.assertTrue(source["verified_scope"]["training"])
-        self.assertTrue((PACKAGE_ROOT / "architectures/cohere_asr/THIRD_PARTY_LICENSE").is_file())
+        self.assertTrue((PACKAGE_ROOT / 'models/asr_cohere/native/THIRD_PARTY_LICENSE').is_file())
 
     def test_default_graph_exactly_matches_published_header_namespace(self):
         config = CohereAsrConfig()
@@ -366,7 +366,7 @@ class CohereAsrProvenanceTests(unittest.TestCase):
         violations = inspect_native_runtime(
             PACKAGE_ROOT,
             directories=(
-                "architectures/cohere_asr",
+                'models/asr_cohere/native',
                 "models/asr_cohere",
             ),
         )
@@ -386,7 +386,7 @@ def blocked(name, *args, **kwargs):
         raise ModuleNotFoundError("torch blocked by test")
     return original(name, *args, **kwargs)
 builtins.__import__ = blocked
-import voicehub.architectures.cohere_asr
+import voicehub.models.asr_cohere.native
 import voicehub.models.asr_cohere
 assert "torch" not in sys.modules
 """
@@ -400,7 +400,7 @@ assert "torch" not in sys.modules
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_sources_do_not_hide_dynamic_external_imports(self):
-        paths = tuple((PACKAGE_ROOT / "architectures/cohere_asr").glob("*.py")) + tuple(
+        paths = tuple((PACKAGE_ROOT / 'models/asr_cohere/native').glob("*.py")) + tuple(
             (PACKAGE_ROOT / "models/asr_cohere").glob("*.py"))
         forbidden = {
             "datasets",
@@ -970,12 +970,12 @@ class CohereAsrArtifactTests(unittest.TestCase):
 
             with (
                     patch(
-                        "voicehub.architectures.cohere_asr.artifacts."
+                        "voicehub.models.asr_cohere.native.artifacts."
                         "resolve_pretrained_file",
                         side_effect=resolve,
                     ),
                     patch(
-                        "voicehub.architectures.cohere_asr.artifacts."
+                        "voicehub.models.asr_cohere.native.artifacts."
                         "get_cached_hugging_face_commit",
                         return_value=None,
                     ),
@@ -989,12 +989,12 @@ class CohereAsrArtifactTests(unittest.TestCase):
             revision = "1" * 40
             with (
                     patch(
-                        "voicehub.architectures.cohere_asr.artifacts."
+                        "voicehub.models.asr_cohere.native.artifacts."
                         "resolve_pretrained_file",
                         side_effect=resolve,
                     ),
                     patch(
-                        "voicehub.architectures.cohere_asr.artifacts."
+                        "voicehub.models.asr_cohere.native.artifacts."
                         "get_cached_hugging_face_commit",
                         return_value=revision,
                     ),
@@ -1019,12 +1019,12 @@ class CohereAsrArtifactTests(unittest.TestCase):
 
             with (
                     patch(
-                        "voicehub.architectures.cohere_asr.artifacts."
+                        "voicehub.models.asr_cohere.native.artifacts."
                         "resolve_pretrained_file",
                         side_effect=incoherent,
                     ),
                     patch(
-                        "voicehub.architectures.cohere_asr.artifacts."
+                        "voicehub.models.asr_cohere.native.artifacts."
                         "get_cached_hugging_face_commit",
                         return_value=revision,
                     ),

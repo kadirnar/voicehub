@@ -8,9 +8,9 @@ from typing import Any
 
 import torch
 
-from voicehub.architectures.zonos2.checkpoint import save_zonos2_pretrained
-from voicehub.architectures.zonos2.modeling import Zonos2ForCausalLM
-from voicehub.modeling_outputs import SpeechTrainingOutput
+from voicehub.models.zonos2.native.checkpoint import save_zonos2_pretrained
+from voicehub.models.zonos2.native.modeling import Zonos2ForCausalLM
+from voicehub.outputs import SpeechTrainingOutput
 from voicehub.training.adapters import CausalLMTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 

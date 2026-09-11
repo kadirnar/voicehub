@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import torch
 
-from voicehub.architectures.vits.alignment import maximum_path as _native_maximum_path
+from voicehub.models.vits.native.alignment import maximum_path as _native_maximum_path
 
 
 def maximum_path_c(paths, values, text_lengths, frame_lengths) -> None:

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from voicehub.architectures.supertonic.runtime import NativeSupertonicRuntime
+from voicehub.models.supertonic.native.runtime import NativeSupertonicRuntime
 from voicehub.training.adapters import FlowMatchingTrainingAdapter
 from voicehub.training.datasets import SpeechDataset
 

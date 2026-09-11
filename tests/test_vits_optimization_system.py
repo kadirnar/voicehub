@@ -8,29 +8,25 @@ import torch
 from torch import nn
 
 from tests.test_native_vits_model import _tiny_config
-from voicehub import (
-    VITSArchitectureKind,
-    VITSCUDAGraphPolicy,
-    VITSOptimizationConfig,
-    get_tts_optimization_support,
-    get_vits_model_optimization_support,
-    list_vits_model_optimization_support,
-    vits_acceleration_plan,
-)
-from voicehub.architectures.gptsovits.modeling import PosteriorEncoder
-from voicehub.architectures.inflecttts.modules import WN as InflectWaveNet
-from voicehub.architectures.vits.modeling import VitsModel, VitsWaveNet
 from voicehub.kernels import CapabilityStatus, KernelBackend, fused_add_tanh_sigmoid, fused_add_tanh_sigmoid_reference
+from voicehub.models.gptsovits.native.modeling import PosteriorEncoder
+from voicehub.models.inflecttts.native.modules import WN as InflectWaveNet
 from voicehub.models.melotts.source.melo.modules import WN as MeloWaveNet
 from voicehub.models.openvoice.source.openvoice.modules import WN as OpenVoiceWaveNet
+from voicehub.models.vits.native.modeling import VitsModel, VitsWaveNet
 from voicehub.optimization import (
     CustomKernelPass,
     OptimizationCompatibilityError,
     OptimizationContext,
     OptimizationPassManager,
     TorchCompilePass,
+    VITSArchitectureKind,
     accelerators,
+    get_tts_optimization_support,
+    get_vits_model_optimization_support,
+    list_vits_model_optimization_support,
 )
+from voicehub.training import VITSCUDAGraphPolicy, VITSOptimizationConfig, vits_acceleration_plan
 
 
 class VITSFamilyInventoryTests(unittest.TestCase):
@@ -145,7 +141,7 @@ class VITSLegacyWeightNormCacheTests(unittest.TestCase):
     def test_cache_preserves_state_gradients_and_parameter_updates(self):
         from torch.nn.utils import remove_weight_norm, weight_norm
 
-        from voicehub.architectures.vits.weight_norm import enable_legacy_weight_norm_inference_cache
+        from voicehub.models.vits.native.weight_norm import enable_legacy_weight_norm_inference_cache
 
         torch.manual_seed(37)
         with warnings.catch_warnings():
@@ -190,7 +186,7 @@ class VITSLegacyWeightNormCacheTests(unittest.TestCase):
     def test_cache_falls_back_to_the_original_expression_under_compile(self):
         from torch.nn.utils import weight_norm
 
-        from voicehub.architectures.vits.weight_norm import enable_legacy_weight_norm_inference_cache
+        from voicehub.models.vits.native.weight_norm import enable_legacy_weight_norm_inference_cache
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FutureWarning)
@@ -304,7 +300,7 @@ class VITSStructuralKernelTests(unittest.TestCase):
         self.assertEqual(training[0].attribute, "forward")
 
     def test_native_vits_inference_compile_fails_closed(self):
-        from voicehub.architectures.vits.modeling import VitsSamplingConfig
+        from voicehub.models.vits.native.modeling import VitsSamplingConfig
 
         torch.manual_seed(43)
         model = VitsModel(_tiny_config()).eval()

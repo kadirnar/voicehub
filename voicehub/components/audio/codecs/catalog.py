@@ -482,9 +482,9 @@ _ENTRIES = (
         separable_autoencoder=True,
         implementation_paths=(
             "voicehub.components.audio.codecs.dac.model.dac:DAC",
-            "voicehub.architectures.dac.modeling:DacModel",
-            "voicehub.architectures.parlertts.modeling:ParlerDacAudioEncoder",
-            "voicehub.architectures.zonos.codec:ZonosDACCodec",
+            "voicehub.models.dac.native.modeling:DacModel",
+            "voicehub.models.parlertts.native.modeling:ParlerDacAudioEncoder",
+            "voicehub.models.zonos.native.codec:ZonosDACCodec",
         ),
         primitives=_primitives(
             encoder=(
@@ -701,7 +701,7 @@ _ENTRIES = (
         stochastic_vae=False,
         separable_autoencoder=True,
         implementation_paths=(
-            "voicehub.architectures.neutts.neucodec:NeuCodecModel",
+            "voicehub.models.neutts.native.neucodec:NeuCodecModel",
         ),
         primitives=_primitives(
             encoder=(
@@ -752,10 +752,10 @@ _ENTRIES = (
         stochastic_vae=False,
         separable_autoencoder=True,
         implementation_paths=(
-            "voicehub.architectures.mosstts.codec:NativeMossAudioCodec",
-            "voicehub.architectures.mosstts.codec_modeling_v1:"
+            "voicehub.models.mosstts.native.codec:NativeMossAudioCodec",
+            "voicehub.models.mosstts.native.codec_modeling_v1:"
             "MossAudioTokenizerV1Model",
-            "voicehub.architectures.mosstts.codec_modeling:"
+            "voicehub.models.mosstts.native.codec_modeling:"
             "MossAudioTokenizerV2Model",
         ),
         primitives=_primitives(
@@ -807,8 +807,8 @@ _ENTRIES = (
         stochastic_vae=False,
         separable_autoencoder=True,
         implementation_paths=(
-            "voicehub.architectures.qwen3_tts.encoder:Qwen3TTSSpeechEncoder",
-            "voicehub.architectures.qwen3_tts.codec:Qwen3TTSSpeechDecoder",
+            "voicehub.models.qwen3tts.native.encoder:Qwen3TTSSpeechEncoder",
+            "voicehub.models.qwen3tts.native.codec:Qwen3TTSSpeechDecoder",
         ),
         primitives=_primitives(
             encoder=(
@@ -871,8 +871,8 @@ _ENTRIES = (
         stochastic_vae=True,
         separable_autoencoder=True,
         implementation_paths=(
-            "voicehub.architectures.vibevoice.codec:VibeVoiceAcousticTokenizer",
-            "voicehub.architectures.vibevoice.codec:VibeVoiceSemanticTokenizer",
+            "voicehub.models.vibevoice.native.codec:VibeVoiceAcousticTokenizer",
+            "voicehub.models.vibevoice.native.codec:VibeVoiceSemanticTokenizer",
         ),
         primitives=_primitives(
             encoder=(
@@ -925,7 +925,7 @@ _ENTRIES = (
         stochastic_vae=True,
         separable_autoencoder=True,
         implementation_paths=(
-            "voicehub.architectures.voxcpm2.codec:VoxCPMAudioVAE",
+            "voicehub.models.voxcpm.native.codec:VoxCPMAudioVAE",
         ),
         primitives=_primitives(
             encoder=(
@@ -983,8 +983,8 @@ _ENTRIES = (
         stochastic_vae=False,
         separable_autoencoder=True,
         implementation_paths=(
-            "voicehub.architectures.omnivoice.codec:HiggsAudioV2Tokenizer",
-            "voicehub.architectures.higgs_audio_v2.tokenizer:"
+            "voicehub.models.omnivoice.native.codec:HiggsAudioV2Tokenizer",
+            "voicehub.models.higgstts.native.tokenizer:"
             "HiggsAudioV2TokenizerModel",
         ),
         primitives=_primitives(
@@ -1036,7 +1036,7 @@ _ENTRIES = (
         stochastic_vae=False,
         separable_autoencoder=True,
         implementation_paths=(
-            "voicehub.architectures.fishtts.codec:FishModifiedDAC",
+            "voicehub.models.fishtts.native.codec:FishModifiedDAC",
         ),
         primitives=_primitives(
             encoder=(
@@ -1201,8 +1201,8 @@ _ENTRIES = (
         stochastic_vae=False,
         separable_autoencoder=False,
         implementation_paths=(
-            "voicehub.architectures.gptsovits.modeling:GPTSoVITSSynthesizer",
-            "voicehub.architectures.gptsovits.quantizer:"
+            "voicehub.models.gptsovits.native.modeling:GPTSoVITSSynthesizer",
+            "voicehub.models.gptsovits.native.quantizer:"
             "ResidualVectorQuantizer",
         ),
         primitives=_primitives(
@@ -1252,8 +1252,8 @@ _ENTRIES = (
         stochastic_vae=False,
         separable_autoencoder=True,
         implementation_paths=(
-            "voicehub.architectures.xtts2.dvae:XTTS2DVAE",
-            "voicehub.architectures.xtts2.decoder:HifiDecoder",
+            "voicehub.models.xtts.native.dvae:XTTS2DVAE",
+            "voicehub.models.xtts.native.decoder:HifiDecoder",
         ),
         primitives=_primitives(
             encoder=(CodecPrimitive.CAUSAL_CONV1D, ),
@@ -1309,11 +1309,11 @@ _ENTRIES = (
         stochastic_vae=False,
         separable_autoencoder=False,
         implementation_paths=(
-            "voicehub.architectures.cosyvoice_native.speech_tokenizer:"
+            "voicehub.models.cosyvoice.native.speech_tokenizer:"
             "CosyVoiceSpeechTokenizer",
-            "voicehub.architectures.cosyvoice_native.flow:"
+            "voicehub.models.cosyvoice.native.flow:"
             "CosyVoiceFlowMatchingModel",
-            "voicehub.architectures.cosyvoice_native.vocoder:"
+            "voicehub.models.cosyvoice.native.vocoder:"
             "CosyVoiceHiFTGenerator",
         ),
         primitives=_primitives(
@@ -1496,8 +1496,8 @@ def list_codec_primitive_manifests(
 
 def list_registered_llm_tts_codec_model_types() -> tuple[str, ...]:
     """Derive the active codec-LM inventory from architecture traits."""
-    from voicehub.architectures import get_architecture_spec
-    from voicehub.models.registry import list_model_specs
+    from voicehub.runtime import get_architecture_spec
+    from voicehub.registry import list_model_specs
     from voicehub.tasks import SpeechTask
 
     output = []

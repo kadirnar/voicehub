@@ -18,10 +18,9 @@ from voicehub.auto import (
     AutoModelForVoiceActivityDetection,
     AutoProcessor,
 )
-from voicehub.automodel import MODEL_TYPE_TO_MODEL_CLASS_NAME, AutoInferenceModel
 from voicehub.components import MODEL_COMPONENTS, components_for_model
-from voicehub.configuration_utils import VoiceHubConfig
-from voicehub.processing_utils import VoiceHubProcessor
+from voicehub.configuration import VoiceHubConfig
+from voicehub.processing.processor import VoiceHubProcessor
 from voicehub.registry import (
     MODEL_ALIASES,
     MODEL_REGISTRY,
@@ -191,7 +190,7 @@ class SpeechTaskRegistryTests(unittest.TestCase):
                 tts_spec.processor_class,
             ),
             (
-                "voicehub.processing_utils",
+                "voicehub.processing.processor",
                 "VoiceHubProcessor",
             ),
         )
@@ -201,7 +200,7 @@ class SpeechTaskRegistryTests(unittest.TestCase):
                 asr_spec.processor_class,
             ),
             (
-                "voicehub.processing_utils",
+                "voicehub.processing.processor",
                 "AudioProcessor",
             ),
         )
@@ -268,7 +267,7 @@ print(json.dumps({
         )
         result = json.loads(completed.stdout)
 
-        self.assertEqual(result["count"], 68)
+        self.assertEqual(result["count"], 70)
         self.assertEqual(result["heavy_modules"], [])
         self.assertEqual(
             result["processor_classes"],
@@ -332,7 +331,7 @@ print(json.dumps({
         )
         result = json.loads(completed.stdout)
 
-        self.assertEqual(result["count"], 68)
+        self.assertEqual(result["count"], 70)
         self.assertEqual(result["heavy_modules"], [])
         self.assertEqual(
             set(result["config_classes"]),
@@ -402,7 +401,7 @@ print(json.dumps({
             self.VAD_MODEL_TYPE,
         )
         self.assertEqual(
-            MODEL_TYPE_TO_MODEL_CLASS_NAME[self.ASR_MODEL_TYPE],
+            get_model_spec(self.ASR_MODEL_TYPE).class_name,
             "_FakeASRModel",
         )
         self.assertIn(
@@ -740,13 +739,13 @@ print(json.dumps({
                 ValueError,
                 "Use AutoModelForSpeechRecognition",
         ):
-            AutoInferenceModel.from_pretrained(self.ASR_MODEL_TYPE)
+            AutoModelForTextToSpeech.from_pretrained(model_type=self.ASR_MODEL_TYPE)
         self.assertNotIn(missing_module, sys.modules)
 
-    def test_legacy_inference_discovery_remains_tts_only(self):
+    def test_task_factory_discovery_remains_tts_only(self):
         self._register_task_backends()
 
-        available = {spec.model_type for spec in AutoInferenceModel.available_models()}
+        available = {spec.model_type for spec in AutoModelForTextToSpeech.available_models()}
         self.assertIn("dia", available)
         self.assertNotIn(self.ASR_MODEL_TYPE, available)
         self.assertNotIn(self.VAD_MODEL_TYPE, available)
@@ -773,17 +772,17 @@ print(json.dumps({
         self.assertIsNotNone(default)
         self.assertEqual(default.model_type, "orpheustts")
         self.assertTrue(default.default_for_task)
-        signature = inspect.signature(AutoInferenceModel.from_pretrained)
+        signature = inspect.signature(AutoModelForTextToSpeech.from_pretrained)
         self.assertIsNone(signature.parameters["model_type"].default)
 
-    def test_legacy_tts_default_is_resolved_from_live_registry_metadata(self):
+    def test_tts_default_is_resolved_from_live_registry_metadata(self):
         builtin_default = get_default_model_spec("tts")
-        extension_model_type = "test-legacy-default-tts"
+        extension_model_type = "test-default-tts"
         extension = ModelSpec(
             model_type=extension_model_type,
             module=self.FAKE_MODULE,
             class_name="_FakeDefaultTTSModel",
-            default_model_path="acme/legacy-default-tts",
+            default_model_path="acme/default-tts",
             task="tts",
             default_for_task=True,
         )
@@ -798,22 +797,18 @@ print(json.dumps({
             register_model_spec(extension)
             with patch.dict(sys.modules, {self.FAKE_MODULE: fake_module}):
                 task_model = AutoModelForTextToSpeech.from_pretrained(marker="task")
-                legacy_model = AutoInferenceModel.from_pretrained(marker="legacy")
 
             self.assertIs(get_default_model_spec("tts"), extension)
             self.assertEqual(task_model.config.name_or_path, extension.default_model_path)
             self.assertEqual(task_model.init_kwargs["marker"], "task")
-            self.assertEqual(legacy_model.model_path, extension.default_model_path)
-            self.assertEqual(legacy_model.device, "cuda")
-            self.assertEqual(legacy_model.init_kwargs["marker"], "legacy")
 
             unregister_model_spec(extension_model_type)
             self.assertIsNone(get_default_model_spec("tts"))
             with self.assertRaisesRegex(
                     ValueError,
-                    "no registry-declared TTS default",
+                    "no registry-declared default checkpoint",
             ):
-                AutoInferenceModel.from_pretrained()
+                AutoModelForTextToSpeech.from_pretrained()
         finally:
             unregister_model_spec(extension_model_type, missing_ok=True)
             register_model_spec(builtin_default, exist_ok=True)
@@ -854,7 +849,7 @@ print(json.dumps({
     def test_shared_auto_factories_contain_no_registered_model_literals(self):
         package_root = Path(__file__).resolve().parents[1] / "voicehub"
         registered_model_types = {spec.model_type for spec in list_model_specs(task=None)}
-        for filename in ("auto.py", "automodel.py"):
+        for filename in ("auto.py", ):
             with self.subTest(filename=filename):
                 tree = ast.parse((package_root / filename).read_text(encoding="utf-8"))
                 string_literals = {
@@ -871,7 +866,7 @@ print(json.dumps({
             config_path.write_text(
                 json.dumps({
                     "model_type": "wav2vec2",
-                    "architectures": ["Wav2Vec2ForAudioFrameClassification"],
+                    'architectures': ["Wav2Vec2ForAudioFrameClassification"],
                 }),
                 encoding="utf-8",
             )

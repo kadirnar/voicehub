@@ -10,7 +10,7 @@ except ModuleNotFoundError:
     torch = None
 
 if torch is not None:
-    from voicehub.architectures.whisper import (
+    from voicehub.models.asr_whisper_native.native import (
         HuggingFaceWhisperCheckpointAdapter,
         OpenAIWhisperCheckpointAdapter,
         WhisperConfig,
@@ -238,7 +238,7 @@ class WhisperCheckpointTests(unittest.TestCase):
 
     def test_huggingface_safetensors_mapping_has_complete_coverage(self):
         config = self.config.to_dict()
-        config["architectures"] = ["WhisperForConditionalGeneration"]
+        config['architectures'] = ["WhisperForConditionalGeneration"]
         mapping = huggingface_whisper_tensor_mapping(config)
         self.assertEqual(
             {target
@@ -259,7 +259,7 @@ class WhisperCheckpointTests(unittest.TestCase):
 
     def test_bare_huggingface_model_uses_an_unprefixed_namespace(self):
         config = self.config.to_dict()
-        config["architectures"] = ["WhisperModel"]
+        config['architectures'] = ["WhisperModel"]
         mapping = huggingface_whisper_tensor_mapping(
             config,
             source_prefix="",

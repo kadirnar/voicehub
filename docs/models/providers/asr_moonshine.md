@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2410.15608" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/moonshine-ai/moonshine" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/modeling_asr_moonshine.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_moonshine.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -106,7 +106,7 @@ integration. This page is generated from its registry contract. [Open the `asr_m
 
 - **Paper:** [Moonshine: Speech Recognition for Live Transcription and Voice Commands](https://arxiv.org/abs/2410.15608)
 - **Upstream GitHub:** [Moonshine](https://github.com/moonshine-ai/moonshine)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/modeling_asr_moonshine.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/modeling.py)
 
 ## Configuration
 
@@ -192,9 +192,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_moonshine.modeling_asr_moonshine.MoonshineForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_moonshine.configuration_asr_moonshine.MoonshineASRConfig` |
-| Source provenance | `voicehub/architectures/moonshine/SOURCE.json` |
+| Implementation | `voicehub.models.asr_moonshine.modeling.MoonshineForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_moonshine.configuration.MoonshineASRConfig` |
+| Source provenance | `voicehub/models/asr_moonshine/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -218,7 +218,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `MoonshineASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/configuration_asr_moonshine.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -237,7 +237,7 @@ MoonshineASRConfig(**config_kwargs)
 
 ### `MoonshineForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/modeling_asr_moonshine.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_moonshine/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

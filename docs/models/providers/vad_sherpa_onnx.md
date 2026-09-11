@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/k2-fsa/sherpa-onnx" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling_vad_sherpa_onnx.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/vad_sherpa_onnx.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -100,7 +100,7 @@ The public VAD contract does not select a spoken language; validate checkpoint a
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling_vad_sherpa_onnx.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling.py)
 
 ## Configuration
 
@@ -180,9 +180,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.vad_sherpa_onnx.modeling_vad_sherpa_onnx.SherpaONNXVADForVoiceActivityDetection` |
-| Configuration | `voicehub.models.vad_sherpa_onnx.configuration_vad_sherpa_onnx.SherpaONNXVADConfig` |
-| Source provenance | `voicehub/architectures/ten_vad/SOURCE.json` |
+| Implementation | `voicehub.models.vad_sherpa_onnx.modeling.SherpaONNXVADForVoiceActivityDetection` |
+| Configuration | `voicehub.models.vad_sherpa_onnx.configuration.SherpaONNXVADConfig` |
+| Source provenance | `voicehub/models/vad_ten/native/SOURCE.json` |
 | License | [LicenseRef-TEN-VAD-Open-Source-License](https://github.com/TEN-framework/ten-vad) |
 
 The provider's optional TEN family is governed by a non-standard license with additional deployment restrictions, including limits on competing with Agora. Review the bundled THIRD_PARTY_LICENSE before conversion, fine-tuning, distribution, or deployment. The default Silero family retains its own checkpoint terms. Commercial use: **review required**.
@@ -206,7 +206,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `SherpaONNXVADConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/configuration_vad_sherpa_onnx.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -225,7 +225,7 @@ SherpaONNXVADConfig(**config_kwargs)
 
 ### `SherpaONNXVADForVoiceActivityDetection`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling_vad_sherpa_onnx.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_sherpa_onnx/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

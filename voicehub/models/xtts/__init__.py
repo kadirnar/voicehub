@@ -6,13 +6,13 @@ import importlib
 from typing import Any
 
 _EXPORTS = {
-    "XTTS": ("voicehub.models.xtts.modeling_xtts", "XTTS"),
+    "XTTS": ("voicehub.models.xtts.modeling", "XTTS"),
     "XTTSConfig": (
-        "voicehub.models.xtts.configuration_xtts",
+        "voicehub.models.xtts.configuration",
         "XTTSConfig",
     ),
     "XTTSForTextToSpeech": (
-        "voicehub.models.xtts.modeling_xtts",
+        "voicehub.models.xtts.modeling",
         "XTTSForTextToSpeech",
     ),
     "XTTSTrainingAdapter": (

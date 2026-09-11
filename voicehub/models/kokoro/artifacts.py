@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from voicehub.architectures.kokoro.configuration import KokoroArchitectureConfig
-from voicehub.architectures.kokoro.metadata import KOKORO_CHECKPOINT_REVISION
 from voicehub.hub import read_json_file, resolve_pretrained_file
+from voicehub.models.kokoro.native.configuration import KokoroArchitectureConfig
+from voicehub.models.kokoro.native.metadata import KOKORO_CHECKPOINT_REVISION
 
 _OFFICIAL_REPOSITORIES = {
     "hexgrad/Kokoro-82M": "kokoro-v1_0.pth",

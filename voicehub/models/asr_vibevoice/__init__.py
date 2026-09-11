@@ -8,8 +8,8 @@ from typing import Any
 _PACKAGE = "voicehub.models.asr_vibevoice."
 _EXPORTS = {
     "NativeVibeVoiceASRTrainingAdapter": _PACKAGE + "training_asr_vibevoice",
-    "VibeVoiceASRConfig": _PACKAGE + "configuration_asr_vibevoice",
-    "VibeVoiceForSpeechRecognition": _PACKAGE + "modeling_asr_vibevoice",
+    "VibeVoiceASRConfig": _PACKAGE + "configuration",
+    "VibeVoiceForSpeechRecognition": _PACKAGE + "modeling",
 }
 
 __all__ = [

@@ -182,6 +182,28 @@ AUDIO_FILE = Path("speech.wav")'''
     )
 
 
+def _codec_cells(spec) -> tuple[dict[str, object], ...]:
+    configuration = f'''from pathlib import Path
+
+RUN_INFERENCE = False
+MODEL_TYPE = {spec.model_type!r}
+CHECKPOINT = {spec.default_model_path!r}
+DEVICE = "cpu"
+AUDIO_FILE = Path("speech.wav")'''
+    inference = '''if RUN_INFERENCE:
+    from voicehub import AutoModelForAudioCodec
+
+    model = AutoModelForAudioCodec.from_pretrained(CHECKPOINT, model_type=MODEL_TYPE, device=DEVICE)
+    encoded = model.encode(AUDIO_FILE)
+    reconstructed = model.decode(encoded)
+    print(reconstructed.sample_rate, reconstructed.audio.shape)'''
+    return (
+        _code("configure", configuration, tags=("smoke-safe", )),
+        _markdown("inputs", "## Run inference\n\nSet the recording path, then enable RUN_INFERENCE."),
+        _code("inference", inference, tags=("requires-model", "requires-audio-runtime", "requires-data")),
+    )
+
+
 def _vad_cells(spec) -> tuple[dict[str, object], ...]:
     profile = inference_profile(spec)
     configuration = f'''from pathlib import Path
@@ -255,6 +277,7 @@ print("training:", model_spec.training.support.value)'''
         "text-to-speech": _tts_cells,
         "automatic-speech-recognition": _asr_cells,
         "voice-activity-detection": _vad_cells,
+        "audio-codec": _codec_cells,
     }[spec.task.value](spec)
     cells = [
         _markdown("introduction", introduction),

@@ -7,23 +7,23 @@ from types import SimpleNamespace
 import torch
 from torch import nn
 
-from voicehub.architectures.causal_lm.configuration import Qwen3Config
-from voicehub.architectures.mosstts.checkpoint import inspect_mosstts_checkpoint
-from voicehub.architectures.mosstts.codec import MossAudioCodecConfig, NativeMossAudioCodec
-from voicehub.architectures.mosstts.codec_checkpoint import (
+from voicehub.models.causal_lm.native.configuration import Qwen3Config
+from voicehub.models.mosstts.native.checkpoint import inspect_mosstts_checkpoint
+from voicehub.models.mosstts.native.codec import MossAudioCodecConfig, NativeMossAudioCodec
+from voicehub.models.mosstts.native.codec_checkpoint import (
     export_moss_audio_tokenizer_checkpoint,
     load_moss_audio_tokenizer_checkpoint,
 )
-from voicehub.architectures.mosstts.codec_configuration import MossAudioTokenizerConfig
-from voicehub.architectures.mosstts.codec_modeling import MossAudioTokenizerModel as MossAudioTokenizerV2Model
-from voicehub.architectures.mosstts.codec_modeling_v1 import MossAudioTokenizerModel as MossAudioTokenizerV1Model
-from voicehub.architectures.mosstts.configuration import MossGPT2Config, MossTTSConfig
-from voicehub.architectures.mosstts.metadata import MOSS_CODEC_CHECKPOINTS
-from voicehub.architectures.mosstts.modeling import build_mosstts_model
-from voicehub.architectures.mosstts.processing import MossTTSProcessor
-from voicehub.architectures.mosstts.runtime import MossTTSRuntime
-from voicehub.architectures.mosstts.tokenization import MossTextTokenizer
-from voicehub.architectures.mosstts.training import MossTTSDataset
+from voicehub.models.mosstts.native.codec_configuration import MossAudioTokenizerConfig
+from voicehub.models.mosstts.native.codec_modeling import MossAudioTokenizerModel as MossAudioTokenizerV2Model
+from voicehub.models.mosstts.native.codec_modeling_v1 import MossAudioTokenizerModel as MossAudioTokenizerV1Model
+from voicehub.models.mosstts.native.configuration import MossGPT2Config, MossTTSConfig
+from voicehub.models.mosstts.native.metadata import MOSS_CODEC_CHECKPOINTS
+from voicehub.models.mosstts.native.modeling import build_mosstts_model
+from voicehub.models.mosstts.native.processing import MossTTSProcessor
+from voicehub.models.mosstts.native.runtime import MossTTSRuntime
+from voicehub.models.mosstts.native.tokenization import MossTextTokenizer
+from voicehub.models.mosstts.native.training import MossTTSDataset
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.contracts import TrainingSupport
 from voicehub.training.specs import get_training_spec
@@ -328,8 +328,8 @@ class NativeMossCodecTests(unittest.TestCase):
 class NativeMossTrainingTests(unittest.TestCase):
 
     def test_shared_training_profile_uses_the_native_adapter(self):
-        from voicehub.architectures.mosstts.training import NativeMossTTSTrainingAdapter
-        from voicehub.models.mosstts.inference import MossTTSForTextToSpeech
+        from voicehub.models.mosstts.modeling import MossTTSForTextToSpeech
+        from voicehub.models.mosstts.native.training import NativeMossTTSTrainingAdapter
 
         spec = get_training_spec("mosstts")
         model = MossTTSForTextToSpeech(device="cpu")
@@ -350,7 +350,7 @@ class NativeMossTrainingTests(unittest.TestCase):
             ("training_backend.codec", ),
         )
         self.assertIn(
-            "voicehub.architectures.mosstts.training:"
+            "voicehub.models.mosstts.native.training:"
             "NativeMossTTSTrainingAdapter",
             spec.source_entrypoints,
         )

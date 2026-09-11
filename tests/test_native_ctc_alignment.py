@@ -6,11 +6,11 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.ctc_alignment import CTCAlignment, align_ctc_transcript, build_trellis
-from voicehub.modeling_outputs import ASROutput, ASRSegment
 from voicehub.models.asr_native.configuration import WhisperXConfig
 from voicehub.models.asr_native.whisperx import WhisperXForSpeechRecognition
 from voicehub.models.asr_whisper_native import NativeWhisperTrainingAdapter, WhisperForSpeechRecognition
+from voicehub.neural.ctc_alignment import CTCAlignment, align_ctc_transcript, build_trellis
+from voicehub.outputs import ASROutput, ASRSegment
 
 
 def _emission(labels: tuple[int, ...], vocabulary_size: int) -> torch.Tensor:

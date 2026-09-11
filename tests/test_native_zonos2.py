@@ -12,10 +12,13 @@ from unittest.mock import Mock, patch
 import torch
 from torch.nn import functional as F
 
-from voicehub.architectures.zonos2.artifacts import resolve_zonos2_artifacts
-from voicehub.architectures.zonos2.checkpoint import export_zonos2_checkpoint, load_zonos2_checkpoint
-from voicehub.architectures.zonos2.configuration import Zonos2ArchitectureConfig
-from voicehub.architectures.zonos2.metadata import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.zonos2.modeling import Zonos2Config, Zonos2ForTextToSpeech
+from voicehub.models.zonos2.native.artifacts import resolve_zonos2_artifacts
+from voicehub.models.zonos2.native.checkpoint import export_zonos2_checkpoint, load_zonos2_checkpoint
+from voicehub.models.zonos2.native.configuration import Zonos2ArchitectureConfig
+from voicehub.models.zonos2.native.metadata import (
     ZONOS2_OFFICIAL_CHECKPOINT,
     ZONOS2_OFFICIAL_CHECKPOINT_REVISION,
     ZONOS2_PARAMETER_COUNT,
@@ -25,9 +28,9 @@ from voicehub.architectures.zonos2.metadata import (
     ZONOS2_SOURCE_REVISION,
     ZONOS2_TENSOR_COUNT,
 )
-from voicehub.architectures.zonos2.modeling import Zonos2ForCausalLM
-from voicehub.architectures.zonos2.objective import zonos2_causal_cross_entropy
-from voicehub.architectures.zonos2.prompting import (
+from voicehub.models.zonos2.native.modeling import Zonos2ForCausalLM
+from voicehub.models.zonos2.native.objective import zonos2_causal_cross_entropy
+from voicehub.models.zonos2.native.prompting import (
     build_zonos2_prompt,
     delay_audio_completion,
     prepare_zonos2_training_batch,
@@ -35,18 +38,15 @@ from voicehub.architectures.zonos2.prompting import (
     shear_up,
     text_to_byte_ids,
 )
-from voicehub.architectures.zonos2.registration import create_zonos2_architecture_spec
-from voicehub.architectures.zonos2.runtime import (
+from voicehub.models.zonos2.native.registration import create_zonos2_architecture_spec
+from voicehub.models.zonos2.native.runtime import (
     NativeZonos2Runtime,
     Zonos2Generation,
     normalize_zonos2_text,
     speaking_rate_bucket_from_speed,
 )
-from voicehub.architectures.zonos2.sampling import Zonos2SamplingOptions, sample_zonos2_codes
-from voicehub.architectures.zonos2.speaker import zonos2_speaker_mel
-from voicehub.checkpointing import save_safetensors
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.models.zonos2.inference import Zonos2Config, Zonos2ForTextToSpeech
+from voicehub.models.zonos2.native.sampling import Zonos2SamplingOptions, sample_zonos2_codes
+from voicehub.models.zonos2.native.speaker import zonos2_speaker_mel
 from voicehub.models.zonos2.training import Zonos2TrainingAdapter
 from voicehub.training.contracts import TrainingSupport
 from voicehub.training.specs import get_training_spec
@@ -376,7 +376,7 @@ class NativeZonos2CheckpointTests(unittest.TestCase):
                 return config if filename == "params.json" else checkpoint
 
             with patch(
-                    "voicehub.architectures.zonos2.artifacts."
+                    "voicehub.models.zonos2.native.artifacts."
                     "resolve_pretrained_file",
                     side_effect=resolve,
             ):
@@ -651,7 +651,7 @@ class NativeZonos2RuntimeTests(unittest.TestCase):
                 speaker_embedding=None,
             ))
         with patch(
-                "voicehub.models.zonos2.inference.seeded_inference",
+                "voicehub.models.zonos2.modeling.seeded_inference",
                 return_value=nullcontext(41),
         ) as seeded:
             output = wrapper._generate("hello")
@@ -664,7 +664,7 @@ class NativeZonos2RuntimeTests(unittest.TestCase):
         self.assertEqual(output.sample_rate, 44_100)
 
     def test_native_files_do_not_import_external_model_libraries(self):
-        root = (Path(__file__).parents[1] / "voicehub" / "architectures" / "zonos2")
+        root = (Path(__file__).parents[1] / 'voicehub/models/zonos2/native')
         forbidden = {
             "transformers",
             "safetensors",

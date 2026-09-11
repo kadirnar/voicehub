@@ -14,7 +14,7 @@ from typing import Any
 
 from voicehub.checkpointing import save_safetensors
 from voicehub.dependencies import import_optional
-from voicehub.modeling_outputs import TTSTrainingOutput
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.training.adapters import FlowMatchingTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 

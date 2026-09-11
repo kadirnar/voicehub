@@ -4,22 +4,22 @@ import unittest
 
 from torch import nn
 
-from voicehub.architectures.cosyvoice_native.configuration import CosyVoiceArchitectureConfig
-from voicehub.architectures.cosyvoice_native.modeling import CosyVoiceNativeModel
-from voicehub.architectures.gptsovits.runtime import GPTSoVITSRuntime
-from voicehub.architectures.mosstts.modeling import (
+from voicehub.models.conversationtts.source.conversationtts.models.model_new import Model as ConversationTTSModel
+from voicehub.models.cosyvoice.native.configuration import CosyVoiceArchitectureConfig
+from voicehub.models.cosyvoice.native.modeling import CosyVoiceNativeModel
+from voicehub.models.gptsovits.native.runtime import GPTSoVITSRuntime
+from voicehub.models.mosstts.native.modeling import (
     MossDelayModel,
     MossLocalV15Model,
     MossOldLocalModel,
     MossRealtimeModel,
 )
-from voicehub.architectures.parlertts.modeling import ParlerTTSForConditionalGeneration
-from voicehub.architectures.vibevoice.modeling import (
+from voicehub.models.parlertts.native.modeling import ParlerTTSForConditionalGeneration
+from voicehub.models.vibevoice.native.modeling import (
     VibeVoiceForConditionalGeneration,
     VibeVoiceRealtimeForConditionalGeneration,
 )
-from voicehub.architectures.zonos.modeling import ZonosForCausalLM
-from voicehub.models.conversationtts.source.conversationtts.models.model_new import Model as ConversationTTSModel
+from voicehub.models.zonos.native.modeling import ZonosForCausalLM
 from voicehub.optimization import OptimizationCompileTarget
 
 

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from voicehub.modeling_outputs import TTSTrainingOutput
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.training.adapters import FlowMatchingTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 from voicehub.training.datasets import SpeechDataset
@@ -20,7 +20,7 @@ class NativeIrodoriTrainingAdapter(FlowMatchingTrainingAdapter):
 
     def setup(self) -> NativeIrodoriTrainingAdapter:
         super().setup()
-        from voicehub.architectures.irodoritts.modeling import TextToLatentRFDiT
+        from voicehub.models.irodoritts.native.modeling import TextToLatentRFDiT
 
         runtime = getattr(self.model, "model", None)
         native = getattr(runtime, "model", None)
@@ -65,7 +65,7 @@ class NativeIrodoriTrainingAdapter(FlowMatchingTrainingAdapter):
             raise TypeError("Irodori training requires a TrainingContext.")
         prepared = self.prepare_training_inputs(context.inputs, context)
         prepared = self.prepare_runtime_inputs(prepared)
-        from voicehub.architectures.irodoritts.training import irodori_training_step
+        from voicehub.models.irodoritts.native.training import irodori_training_step
 
         objective = self.model.config.training_objective
         native = self.primary_model

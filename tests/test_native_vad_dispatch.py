@@ -5,11 +5,11 @@ import sys
 import unittest
 from pathlib import Path
 
-from voicehub.architectures.registry import ArchitectureRegistry
-from voicehub.architectures.vad_dispatch.registration import (
+from voicehub.models.vad_sherpa_onnx.native.registration import (
     create_vad_dispatch_architecture_spec,
     register_vad_dispatch_architecture,
 )
+from voicehub.runtime.registry import ArchitectureRegistry
 
 
 class NativeVADDispatchTests(unittest.TestCase):
@@ -31,9 +31,8 @@ class NativeVADDispatchTests(unittest.TestCase):
         self.assertTrue(spec.capabilities.supports_task("voice-activity-detection"), )
         self.assertEqual(
             spec.model_builder.path,
-            (
-                "voicehub.models.vad_sherpa_onnx.modeling_vad_sherpa_onnx:"
-                "SherpaONNXVADForVoiceActivityDetection"),
+            ("voicehub.models.vad_sherpa_onnx.modeling:"
+             "SherpaONNXVADForVoiceActivityDetection"),
         )
 
     def test_registration_supports_isolated_registry_and_aliases(self):
@@ -49,17 +48,17 @@ class NativeVADDispatchTests(unittest.TestCase):
         script = """
 import json
 import sys
-from voicehub.architectures.registry import ArchitectureRegistry
-from voicehub.architectures.vad_dispatch.registration import (
+from voicehub.runtime.registry import ArchitectureRegistry
+from voicehub.models.vad_sherpa_onnx.native.registration import (
     register_vad_dispatch_architecture,
 )
 
 register_vad_dispatch_architecture(registry=ArchitectureRegistry())
 print(json.dumps({
-    "silero": "voicehub.architectures.silero_vad.modeling" in sys.modules,
-    "ten": "voicehub.architectures.ten_vad.modeling" in sys.modules,
+    "silero": "voicehub.models.vad_silero.native.modeling" in sys.modules,
+    "ten": "voicehub.models.vad_ten.native.modeling" in sys.modules,
     "wrapper": (
-        "voicehub.models.vad_sherpa_onnx.modeling_vad_sherpa_onnx"
+        "voicehub.models.vad_sherpa_onnx.modeling"
         in sys.modules
     ),
 }))

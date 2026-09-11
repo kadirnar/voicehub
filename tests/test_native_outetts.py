@@ -10,13 +10,13 @@ from types import SimpleNamespace
 
 import torch
 
-from voicehub.architectures.causal_lm.configuration import LlamaConfig
-from voicehub.architectures.outetts.artifacts import OuteTTSArtifacts
-from voicehub.architectures.outetts.checkpoint import load_outetts_language_model
-from voicehub.architectures.outetts.modeling import OuteTTSForCausalLM, RecentWindowRepetitionProcessor
-from voicehub.architectures.outetts.prompting import OuteTTSPromptProcessor
-from voicehub.architectures.outetts.tokenization import OuteTTSTokenizer
+from voicehub.models.causal_lm.native.configuration import LlamaConfig
 from voicehub.models.outetts.inference import OuteTTSConfig, OuteTTSForTextToSpeech
+from voicehub.models.outetts.native.artifacts import OuteTTSArtifacts
+from voicehub.models.outetts.native.checkpoint import load_outetts_language_model
+from voicehub.models.outetts.native.modeling import OuteTTSForCausalLM, RecentWindowRepetitionProcessor
+from voicehub.models.outetts.native.prompting import OuteTTSPromptProcessor
+from voicehub.models.outetts.native.tokenization import OuteTTSTokenizer
 from voicehub.models.outetts.training import OuteTTSSFTDataset, OuteTTSTrainingAdapter
 from voicehub.tokenization import ByteBPETokenizer
 from voicehub.training import AutoTrainingAdapter, TrainingSupport, get_training_spec
@@ -237,8 +237,8 @@ class NativeOuteTTSPromptAndTrainingTests(unittest.TestCase):
 class NativeOuteTTSBoundaryTests(unittest.TestCase):
 
     def test_shared_registries_resolve_the_native_training_contract(self):
-        from voicehub.architectures import get_architecture_spec
         from voicehub.registry import get_model_spec
+        from voicehub.runtime import get_architecture_spec
 
         model_spec = get_model_spec("outetts")
         training_spec = get_training_spec("outetts")
@@ -307,7 +307,7 @@ class NativeOuteTTSBoundaryTests(unittest.TestCase):
 
     def test_active_modules_do_not_import_provider_runtimes(self):
         roots = (
-            Path("voicehub/architectures/outetts"),
+            Path("voicehub/models/outetts/native"),
             Path("voicehub/models/outetts/inference.py"),
             Path("voicehub/models/outetts/training.py"),
         )
@@ -330,7 +330,7 @@ class NativeOuteTTSBoundaryTests(unittest.TestCase):
                     )
 
     def test_provenance_document_is_valid_json(self):
-        path = Path("voicehub/architectures/outetts/SOURCE.json")
+        path = Path("voicehub/models/outetts/native/SOURCE.json")
         document = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(document["architecture"], "outetts")
         self.assertEqual(

@@ -89,7 +89,6 @@ class TorchCompileInferenceStrategy(InferenceStrategy):
         self._lock = RLock()
 
     def validate(self, wrapper: Any) -> None:
-        from voicehub.architectures import get_architecture_spec
         from voicehub.optimization.passes import OptimizationCompatibilityError
         from voicehub.optimization.torch_compile import (
             TorchCompileRequirement,
@@ -97,6 +96,7 @@ class TorchCompileInferenceStrategy(InferenceStrategy):
             inspect_torch_compile,
             torch_compile_architecture_incompatibility,
         )
+        from voicehub.runtime import get_architecture_spec
 
         context = self._runtime_context(None, wrapper)
         architecture = (None if context.architecture is None else get_architecture_spec(context.architecture))

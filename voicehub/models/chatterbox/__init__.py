@@ -1,28 +1,25 @@
-try:
-    from importlib.metadata import version
+"""Lazy exports for the chatterbox model family."""
 
-    __version__ = version("voicehub")
-except Exception:
-    __version__ = "0.0.0"
+from importlib import import_module
 
-from voicehub.models.chatterbox.inference import ChatterboxConfig, ChatterboxForTextToSpeech
-
-__all__ = [
-    "ChatterboxConfig",
-    "ChatterboxForTextToSpeech",
-    "ChatterboxTTS",
-    "ChatterboxVC",
-]
+_EXPORTS = {
+    'ChatterboxConfig': ('voicehub.models.chatterbox.modeling', 'ChatterboxConfig'),
+    'ChatterboxForTextToSpeech': ('voicehub.models.chatterbox.modeling', 'ChatterboxForTextToSpeech'),
+    'ChatterboxTTS': ('voicehub.models.chatterbox.tts', 'ChatterboxTTS'),
+    'ChatterboxVC': ('voicehub.models.chatterbox.vc', 'ChatterboxVC')
+}
+__all__ = sorted(_EXPORTS)
 
 
 def __getattr__(name):
-    """Keep Chatterbox' heavy runtime imports lazy."""
-    if name == "ChatterboxTTS":
-        from .tts import ChatterboxTTS
+    try:
+        module_name, attribute = _EXPORTS[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
 
-        return ChatterboxTTS
-    if name == "ChatterboxVC":
-        from .vc import ChatterboxVC
 
-        return ChatterboxVC
-    raise AttributeError(name)
+def __dir__():
+    return sorted((*globals(), *_EXPORTS))

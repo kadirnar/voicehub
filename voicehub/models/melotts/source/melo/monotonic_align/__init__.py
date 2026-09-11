@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from voicehub.architectures.vits.alignment import maximum_path as _maximum_path
+from voicehub.models.vits.native.alignment import maximum_path as _maximum_path
 
 
 def maximum_path(neg_cent: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:

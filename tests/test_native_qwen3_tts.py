@@ -13,23 +13,23 @@ from unittest import mock
 
 import torch
 
-from voicehub.architectures.qwen3_tts import modeling as qwen3_tts_modeling
-from voicehub.architectures.qwen3_tts.checkpoint import (
+from voicehub.models.qwen3tts.native import modeling as qwen3_tts_modeling
+from voicehub.models.qwen3tts.native.checkpoint import (
     export_qwen3_tts_decoder,
     export_qwen3_tts_model,
     load_qwen3_tts_decoder_checkpoint,
     load_qwen3_tts_model_checkpoint,
 )
-from voicehub.architectures.qwen3_tts.codec import Qwen3TTSSpeechDecoder
-from voicehub.architectures.qwen3_tts.configuration import (
+from voicehub.models.qwen3tts.native.codec import Qwen3TTSSpeechDecoder
+from voicehub.models.qwen3tts.native.configuration import (
     Qwen3TTSArchitectureConfig,
     Qwen3TTSDecoderConfig,
     Qwen3TTSTokenizerConfig,
 )
-from voicehub.architectures.qwen3_tts.modeling import Qwen3TTSForConditionalGeneration
-from voicehub.architectures.qwen3_tts.registration import create_qwen3_tts_architecture_spec
-from voicehub.architectures.qwen3_tts.runtime import _load_reference_audio, load_qwen3_tts_runtime
-from voicehub.architectures.qwen3_tts.tokenization import EXPECTED_TTS_TOKEN_IDS
+from voicehub.models.qwen3tts.native.modeling import Qwen3TTSForConditionalGeneration
+from voicehub.models.qwen3tts.native.registration import create_qwen3_tts_architecture_spec
+from voicehub.models.qwen3tts.native.runtime import _load_reference_audio, load_qwen3_tts_runtime
+from voicehub.models.qwen3tts.native.tokenization import EXPECTED_TTS_TOKEN_IDS
 from voicehub.optimization.codecs import discover_codec_compile_targets
 from voicehub.tokenization import encode_gpt2_token
 
@@ -227,13 +227,13 @@ class NativeQwen3TTSTests(unittest.TestCase):
     def test_source_metadata_is_pinned_and_apache_licensed(self):
         root = Path(__file__).parents[1]
         metadata = json.loads(
-            (root / "voicehub" / "architectures" / "qwen3_tts" / "SOURCE.json").read_text(encoding="utf-8"))
+            (root / 'voicehub/models/qwen3tts/native/SOURCE.json').read_text(encoding="utf-8"))
         self.assertEqual(metadata["license"], "Apache-2.0")
         self.assertEqual(len(metadata["revision"]), 40)
         self.assertIn("Mimi-derived", metadata["limitations"][0])
 
     def test_native_modules_do_not_import_upstream_runtimes(self):
-        root = (Path(__file__).parents[1] / "voicehub" / "architectures" / "qwen3_tts")
+        root = (Path(__file__).parents[1] / 'voicehub/models/qwen3tts/native')
         forbidden = {
             "diffusers",
             "huggingface_hub",
@@ -266,7 +266,7 @@ class NativeQwen3TTSTests(unittest.TestCase):
         # The tiny test does not download multi-GB weights. Meta construction
         # still proves the graph's complete persistent namespace.
         config = Qwen3TTSArchitectureConfig.from_dict({
-            "architectures": ["Qwen3TTSForConditionalGeneration"],
+            'architectures': ["Qwen3TTSForConditionalGeneration"],
             "model_type": "qwen3_tts",
             "tokenizer_type": "qwen3_tts_tokenizer_12hz",
             "tts_model_size": "0b6",

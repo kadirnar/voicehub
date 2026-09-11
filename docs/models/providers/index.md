@@ -102,6 +102,17 @@ and public API documentation.
 
 </div>
 
+## Audio codecs
+
+<div class="vh-model-catalog" markdown>
+
+| Model | Languages | Hugging Face ID | Training | Notebook |
+| --- | --- | --- | --- | --- |
+| [`Dac`](dac.md) | Not text-language conditioned | [`descript/dac_44khz`](https://huggingface.co/descript/dac_44khz) | `inference-only` | [Colab](https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/dac.ipynb) |
+| [`Encodec`](encodec.md) | Not text-language conditioned | Not published / not applicable | `inference-only` | — |
+
+</div>
+
 ## Registry access
 
 Registry discovery stays lazy and imports no model runtime.

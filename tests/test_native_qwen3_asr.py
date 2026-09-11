@@ -5,20 +5,20 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.causal_lm.configuration import Qwen3Config
-from voicehub.architectures.qwen3_asr.artifacts import Qwen3ASRArtifacts
-from voicehub.architectures.qwen3_asr.checkpoint import native_qwen3_asr_tensor_shapes
-from voicehub.architectures.qwen3_asr.configuration import Qwen3ASRArchitectureConfig, Qwen3ASRAudioConfig
-from voicehub.architectures.qwen3_asr.modeling import Qwen3ASRForConditionalGeneration
-from voicehub.architectures.qwen3_asr.processing import Qwen3ASRProcessor
-from voicehub.architectures.qwen3_asr.runtime import Qwen3ASRRuntime, load_qwen3_asr_runtime
-from voicehub.architectures.qwen3_asr.tokenization import (
+from voicehub.models.asr_qwen3 import Qwen3ASRConfig, Qwen3ASRForSpeechRecognition
+from voicehub.models.asr_qwen3.native.artifacts import Qwen3ASRArtifacts
+from voicehub.models.asr_qwen3.native.checkpoint import native_qwen3_asr_tensor_shapes
+from voicehub.models.asr_qwen3.native.configuration import Qwen3ASRArchitectureConfig, Qwen3ASRAudioConfig
+from voicehub.models.asr_qwen3.native.modeling import Qwen3ASRForConditionalGeneration
+from voicehub.models.asr_qwen3.native.processing import Qwen3ASRProcessor
+from voicehub.models.asr_qwen3.native.runtime import Qwen3ASRRuntime, load_qwen3_asr_runtime
+from voicehub.models.asr_qwen3.native.tokenization import (
     ASR_TEXT,
     EXPECTED_TOKEN_IDS,
     Qwen3ASRTokenizer,
     qwen2_pretokenize,
 )
-from voicehub.models.asr_qwen3 import Qwen3ASRConfig, Qwen3ASRForSpeechRecognition
+from voicehub.models.causal_lm.native.configuration import Qwen3Config
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.tokenization.assets import encode_gpt2_token
 
@@ -131,7 +131,7 @@ class NativeQwen3ASRTests(unittest.TestCase):
 
     def test_official_namespace_is_exact_for_both_public_shapes(self):
         root = Path(__file__).resolve().parents[1]
-        source = (root / "voicehub" / "architectures" / "qwen3_asr" / "SOURCE.json")
+        source = (root / 'voicehub/models/asr_qwen3/native/SOURCE.json')
         metadata = json.loads(source.read_text(encoding="utf-8"))
         self.assertEqual(
             metadata["main_library"]["revision"],

@@ -17,7 +17,7 @@ class SileroVADStreamingSession:
         segmentation_config: Any,
         return_frames: bool,
     ) -> None:
-        from voicehub.architectures.silero_vad.modeling import SileroVADStream
+        from voicehub.models.vad_silero.native.modeling import SileroVADStream
 
         if wrapper.model is None or wrapper.native_config is None:
             raise RuntimeError("Silero VAD must be loaded before streaming.")

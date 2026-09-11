@@ -2,12 +2,12 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from voicehub.models.csm.inference import CSMForTextToSpeech
-from voicehub.models.llasa.inference import LlasaForTextToSpeech
-from voicehub.models.neutts.inference import NeuTTSForTextToSpeech
-from voicehub.models.orpheustts.inference import OrpheusTTSForTextToSpeech
+from voicehub.models.csm.modeling import CSMForTextToSpeech
+from voicehub.models.llasa.modeling import LlasaForTextToSpeech
+from voicehub.models.neutts.modeling import NeuTTSForTextToSpeech
+from voicehub.models.orpheustts.modeling import OrpheusTTSForTextToSpeech
 from voicehub.models.outetts.inference import OuteTTSForTextToSpeech
-from voicehub.models.qwen3tts.inference import Qwen3TTSForTextToSpeech
+from voicehub.models.qwen3tts.modeling import Qwen3TTSForTextToSpeech
 
 
 class _EvalModule:

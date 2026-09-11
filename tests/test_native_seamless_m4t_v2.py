@@ -10,30 +10,33 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.registry import ArchitectureRegistry
-from voicehub.architectures.seamless_m4t_v2.artifacts import (
+from voicehub.models.asr_seamless_m4t_v2 import SeamlessM4Tv2ASRConfig, SeamlessM4Tv2ForSpeechRecognition
+from voicehub.models.asr_seamless_m4t_v2.native.artifacts import (
     SeamlessM4Tv2S2TArtifacts,
     resolve_seamless_m4t_v2_artifacts,
 )
-from voicehub.architectures.seamless_m4t_v2.checkpoint import (
+from voicehub.models.asr_seamless_m4t_v2.native.checkpoint import (
     SeamlessM4Tv2S2TCheckpointAdapter,
     native_seamless_m4t_v2_tensor_shapes,
     seamless_m4t_v2_header_fingerprint,
 )
-from voicehub.architectures.seamless_m4t_v2.configuration import SeamlessM4Tv2S2TConfig
-from voicehub.architectures.seamless_m4t_v2.frontend import SeamlessM4Tv2FeatureExtractor
-from voicehub.architectures.seamless_m4t_v2.metadata import SEAMLESS_M4T_V2_CHECKPOINTS
-from voicehub.architectures.seamless_m4t_v2.modeling import SeamlessM4Tv2ForSpeechToText
-from voicehub.architectures.seamless_m4t_v2.processing import SeamlessM4Tv2Processor
-from voicehub.architectures.seamless_m4t_v2.registration import register_seamless_m4t_v2_architecture
-from voicehub.architectures.seamless_m4t_v2.runtime import (
+from voicehub.models.asr_seamless_m4t_v2.native.configuration import SeamlessM4Tv2S2TConfig
+from voicehub.models.asr_seamless_m4t_v2.native.frontend import SeamlessM4Tv2FeatureExtractor
+from voicehub.models.asr_seamless_m4t_v2.native.metadata import SEAMLESS_M4T_V2_CHECKPOINTS
+from voicehub.models.asr_seamless_m4t_v2.native.modeling import SeamlessM4Tv2ForSpeechToText
+from voicehub.models.asr_seamless_m4t_v2.native.processing import SeamlessM4Tv2Processor
+from voicehub.models.asr_seamless_m4t_v2.native.registration import register_seamless_m4t_v2_architecture
+from voicehub.models.asr_seamless_m4t_v2.native.runtime import (
     SeamlessM4Tv2S2TRuntime,
     load_seamless_m4t_v2_runtime,
     save_seamless_m4t_v2_runtime,
 )
-from voicehub.architectures.seamless_m4t_v2.tokenization import SEAMLESS_M4T_V2_LANGUAGE_TO_ID, SeamlessM4Tv2Tokenizer
-from voicehub.models.asr_seamless_m4t_v2 import SeamlessM4Tv2ASRConfig, SeamlessM4Tv2ForSpeechRecognition
+from voicehub.models.asr_seamless_m4t_v2.native.tokenization import (
+    SEAMLESS_M4T_V2_LANGUAGE_TO_ID,
+    SeamlessM4Tv2Tokenizer,
+)
 from voicehub.models.asr_seamless_m4t_v2.training_asr_seamless_m4t_v2 import NativeSeamlessM4Tv2TrainingAdapter
+from voicehub.runtime.registry import ArchitectureRegistry
 from voicehub.training import AutoTrainingAdapter
 
 
@@ -472,7 +475,7 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
 
     def test_active_python_has_no_external_model_runtime_imports(self):
         root = Path(__file__).parents[1] / "voicehub"
-        files = tuple((root / "architectures" / "seamless_m4t_v2").glob("*.py")) + tuple(
+        files = tuple((root / 'models/asr_seamless_m4t_v2/native').glob("*.py")) + tuple(
             (root / "models" / "asr_seamless_m4t_v2").glob("*.py"))
         forbidden = {
             "numpy",

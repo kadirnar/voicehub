@@ -10,24 +10,24 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.nemo_ctc.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.hub import write_json_file
+from voicehub.models.asr_nemo import NativeNeMoCTCTrainingAdapter, NeMoASRConfig, NeMoASRForSpeechRecognition
+from voicehub.models.asr_nemo.native.checkpoint import (
     NeMoCTCSafeTensorsCheckpointAdapter,
     convert_nemo_quartznet_checkpoint,
     native_nemo_ctc_tensor_shapes,
 )
-from voicehub.architectures.nemo_ctc.configuration import JasperBlockConfig, NeMoQuartzNetCTCConfig
-from voicehub.architectures.nemo_ctc.metadata import (
+from voicehub.models.asr_nemo.native.configuration import JasperBlockConfig, NeMoQuartzNetCTCConfig
+from voicehub.models.asr_nemo.native.metadata import (
     NEMO_SOURCE_REVISION,
     QUARTZNET_SHA256,
     QUARTZNET_STATE_VALUES,
     QUARTZNET_TENSOR_COUNT,
     QUARTZNET_TENSOR_FINGERPRINT,
 )
-from voicehub.architectures.nemo_ctc.modeling import NeMoQuartzNetForCTC
-from voicehub.architectures.nemo_ctc.tokenization import NeMoCharacterTokenizer
-from voicehub.checkpointing import save_safetensors
-from voicehub.hub import write_json_file
-from voicehub.models.asr_nemo import NativeNeMoCTCTrainingAdapter, NeMoASRConfig, NeMoASRForSpeechRecognition
+from voicehub.models.asr_nemo.native.modeling import NeMoQuartzNetForCTC
+from voicehub.models.asr_nemo.native.tokenization import NeMoCharacterTokenizer
 from voicehub.registry import get_model_spec
 from voicehub.training import get_training_spec
 from voicehub.training.specs import TrainingFamily
@@ -71,7 +71,7 @@ def _write_native_artifact(
     )
     values = config.to_dict()
     values.update({
-        "architectures": ["NeMoQuartzNetForCTC"],
+        'architectures': ["NeMoQuartzNetForCTC"],
         "model_type": "asr_nemo",
         "voicehub_provider": "asr_nemo",
     })
@@ -217,7 +217,7 @@ class NativeNeMoProviderTests(unittest.TestCase):
         self.assertEqual(provider.license.license_id, "NVIDIA-NGC-Terms")
         self.assertEqual(training.family, TrainingFamily.CTC)
         self.assertIn(
-            "voicehub.architectures.nemo_ctc",
+            "voicehub.models.asr_nemo.native",
             training.source_entrypoints[0],
         )
         adapter = NeMoASRForSpeechRecognition(NeMoASRConfig(), ).get_training_adapter()

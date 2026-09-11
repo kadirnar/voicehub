@@ -17,12 +17,12 @@ from typing import Any
 import torch
 from torch import nn
 
-from voicehub.modeling_outputs import TTSTrainingOutput
 from voicehub.models.chatterbox.checkpoint import export_chatterbox_runtime
 from voicehub.models.chatterbox.models.s3gen.const import S3GEN_SR
 from voicehub.models.chatterbox.models.s3tokenizer import S3_SR
 from voicehub.models.chatterbox.models.t3.modules.cond_enc import T3Cond
 from voicehub.models.chatterbox.tts import punc_norm
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.processing.waveform import load_native_audio, resample_waveform
 from voicehub.training.adapters import CompositeTrainingAdapter
 from voicehub.training.collators import DataCollatorForAudioTraining

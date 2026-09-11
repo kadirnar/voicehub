@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from voicehub.models.omnivoice.inference import OmniVoiceConfig, OmniVoiceForTextToSpeech
+from voicehub.models.omnivoice.modeling import OmniVoiceConfig, OmniVoiceForTextToSpeech
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
@@ -18,9 +18,9 @@ class OmniVoiceTrainingRuntimeTests(unittest.TestCase):
         import torch
 
         from tests.test_native_omnivoice import _tiny_codec, _tiny_tokenizer
-        from voicehub.architectures.omnivoice.configuration import OmniVoiceArchitectureConfig
-        from voicehub.architectures.omnivoice.modeling import OmniVoiceModel
-        from voicehub.architectures.omnivoice.runtime import OmniVoiceRuntime
+        from voicehub.models.omnivoice.native.configuration import OmniVoiceArchitectureConfig
+        from voicehub.models.omnivoice.native.modeling import OmniVoiceModel
+        from voicehub.models.omnivoice.native.runtime import OmniVoiceRuntime
 
         torch.manual_seed(17)
         model = OmniVoiceModel(OmniVoiceArchitectureConfig.tiny(vocab_size=320))
@@ -78,7 +78,7 @@ class OmniVoiceTrainingRuntimeTests(unittest.TestCase):
         self.assertEqual(adapter.spec.default_phase, "masked_audio")
         self.assertEqual(
             adapter.spec.source_entrypoints,
-            ("voicehub.architectures.omnivoice.modeling:"
+            ("voicehub.models.omnivoice.native.modeling:"
              "OmniVoiceModel.forward", ),
         )
         adapter.setup()

@@ -18,7 +18,7 @@ import torch.nn as nn
 from typing import List, Tuple
 from torch.nn import functional as F
 
-from voicehub.architectures.conversationtts.decoder import (
+from voicehub.models.conversationtts.native.decoder import (
     ConversationDecoder,
     build_llama32_decoder,
 )

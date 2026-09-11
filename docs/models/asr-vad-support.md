@@ -238,7 +238,8 @@ operations rather than hidden provider-runtime behavior.
 ## Discover support in code
 
 ```python
-from voicehub import SpeechTask, list_model_specs, list_training_specs
+from voicehub import SpeechTask, list_model_specs
+from voicehub.training import list_training_specs
 
 asr_models = list_model_specs(task="asr")
 vad_models = list_model_specs(task="vad")
@@ -255,7 +256,7 @@ for spec in (*asr_models, *vad_models):
 all_training_profiles = list_training_specs(task=None)
 ```
 
-The historical `AutoInferenceModel` and default `list_training_specs()` views
+The TTS factory and default `list_training_specs()` views
 remain TTS-oriented for compatibility. Use task-specific factories and an
 explicit task filter for new ASR/VAD code.
 

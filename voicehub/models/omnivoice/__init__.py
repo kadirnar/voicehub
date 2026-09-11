@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.omnivoice."
 _EXPORTS = {
-    "OmniVoiceConfig": _PACKAGE + "configuration_omnivoice",
-    "OmniVoiceForTextToSpeech": _PACKAGE + "modeling_omnivoice",
-    "OmniVoiceTTS": _PACKAGE + "modeling_omnivoice",
+    "OmniVoiceConfig": _PACKAGE + "configuration",
+    "OmniVoiceForTextToSpeech": _PACKAGE + "modeling",
+    "OmniVoiceTTS": _PACKAGE + "modeling",
     "OmniVoiceTrainingAdapter": _PACKAGE + "training",
     "OmniVoiceTrainingCollator": _PACKAGE + "training",
 }

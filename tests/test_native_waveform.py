@@ -7,7 +7,7 @@ from pathlib import Path
 
 import torch
 
-from voicehub.models.llasa.inference import LlasaForTextToSpeech
+from voicehub.models.llasa.modeling import LlasaForTextToSpeech
 from voicehub.processing import (
     NativeAudio,
     decode_pcm_wave,

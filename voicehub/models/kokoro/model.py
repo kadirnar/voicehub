@@ -10,8 +10,8 @@ from typing import Any
 import torch
 from torch import nn
 
-from voicehub.architectures.kokoro.configuration import KokoroArchitectureConfig
 from voicehub.hub import resolve_pretrained_file
+from voicehub.models.kokoro.native.configuration import KokoroArchitectureConfig
 from voicehub.optimization.protocols import OptimizationCompileTarget
 
 from .istftnet import Decoder

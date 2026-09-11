@@ -7,7 +7,7 @@ from typing import Any
 
 from voicehub.models.asr_native.configuration import FasterWhisperConfig
 from voicehub.models.asr_native.whisper_compat import normalize_whisper_source
-from voicehub.models.asr_whisper_native.modeling_asr_whisper_native import WhisperForSpeechRecognition
+from voicehub.models.asr_whisper_native.modeling import WhisperForSpeechRecognition
 
 
 class FasterWhisperForSpeechRecognition(WhisperForSpeechRecognition):

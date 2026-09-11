@@ -17,7 +17,7 @@ from transformers.utils import logging
 from transformers.modeling_utils import PreTrainedModel
 from transformers.activations import ACT2FN
 
-from .configuration_vibevoice import VibeVoiceAcousticTokenizerConfig, VibeVoiceSemanticTokenizerConfig
+from .configuration import VibeVoiceAcousticTokenizerConfig, VibeVoiceSemanticTokenizerConfig
 
 logger = logging.get_logger(__name__)
 

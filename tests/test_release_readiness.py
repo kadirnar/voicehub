@@ -42,25 +42,17 @@ class ReleaseReadinessTests(unittest.TestCase):
             member.size = len(encoded)
             archive.addfile(member, io.BytesIO(encoded))
 
-    def test_current_source_docs_and_evidence_share_one_version(self):
+    def test_rewrite_preserves_historical_evidence_and_requires_new_release_gates(self):
         version = self.release.source_version(PROJECT_ROOT)
-
-        self.assertEqual(version, "0.3.0")
+        self.assertEqual(version, "0.4.0")
         self.release.validate_source_metadata(version, PROJECT_ROOT)
         self.release.validate_documentation_version(version, PROJECT_ROOT)
-        self.assertEqual(
-            self.release.validate_layered_evidence(PROJECT_ROOT),
-            {
-                "tts_providers": 34,
-                "asr_providers": 23,
-                "vad_providers": 11,
-                "documented_providers": 68,
-            },
-        )
-        self.assertEqual(
-            self.release.validate_benchmark_versions(version, PROJECT_ROOT),
-            5,
-        )
+        # Do not relabel old measurements or silently claim codec checkpoint coverage.
+        with self.assertRaisesRegex(self.release.ReleaseCheckError, "records versions"):
+            self.release.validate_benchmark_versions(version, PROJECT_ROOT)
+        with self.assertRaisesRegex(self.release.ReleaseCheckError, "missing evidence"):
+            self.release.validate_layered_evidence(PROJECT_ROOT)
+        self.assertEqual(self.release.validate_benchmark_versions("0.3.0", PROJECT_ROOT), 5)
 
     def test_layered_evidence_requires_explicit_external_blockers(self):
         filenames = (
@@ -230,20 +222,39 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertIn("real_tokenizer_uses_sorted_wenet_unit_ids", source)
         self.assertIn("Import every integration from the installed wheel", source)
 
-    def test_release_script_cli_report_is_json(self):
+    def test_release_script_rejects_stale_evidence_for_the_rewrite(self):
         completed = subprocess.run(
             [sys.executable, str(SCRIPT)],
+            cwd=PROJECT_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("records versions", completed.stderr)
+        self.assertIn("expected only 0.4.0", completed.stderr)
+
+    def test_development_metadata_check_does_not_claim_checkpoint_evidence(self):
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT), "--metadata-only"],
             cwd=PROJECT_ROOT,
             check=True,
             capture_output=True,
             text=True,
         )
-
         report = json.loads(completed.stdout)
-        self.assertEqual(report["version"], "0.3.0")
-        self.assertEqual(report["benchmark_files"], 5)
-        self.assertEqual(report["layered_evidence"]["documented_providers"], 68)
+        self.assertEqual(report["version"], "0.4.0")
         self.assertEqual(report["source_metadata"], "passed")
+        self.assertEqual(report["checkpoint_evidence"], "not evaluated (metadata-only)")
+        rejected = subprocess.run(
+            [sys.executable, str(SCRIPT), "--metadata-only", "--tag", "v0.4.0"],
+            cwd=PROJECT_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("cannot be used for tag or publication checks", rejected.stderr)
 
 
 if __name__ == "__main__":

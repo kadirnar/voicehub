@@ -128,9 +128,9 @@ def bind_registered_architecture(
     if not isinstance(model_type, str) or not model_type.strip():
         return context
 
-    from voicehub.architectures import get_architecture_spec
     from voicehub.errors import UnknownModelError
-    from voicehub.models.registry import get_model_spec
+    from voicehub.registry import get_model_spec
+    from voicehub.runtime import get_architecture_spec
 
     try:
         model_spec = get_model_spec(model_type)

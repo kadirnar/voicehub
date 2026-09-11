@@ -23,7 +23,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2410.06885" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/SWivid/F5-TTS" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/modeling_f5tts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 </div>
 </details>
 </div>
@@ -109,7 +109,7 @@ integration. This page is generated from its registry contract.
 
 - **Paper:** [F5-TTS: A Fairytaler that Fakes Fluent and Faithful Speech](https://arxiv.org/abs/2410.06885)
 - **Upstream GitHub:** [F5-TTS](https://github.com/SWivid/F5-TTS)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/modeling_f5tts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/modeling.py)
 
 ## Configuration
 
@@ -196,8 +196,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.f5tts.modeling_f5tts.F5TTSForTextToSpeech` |
-| Configuration | `voicehub.models.f5tts.configuration_f5tts.F5TTSConfig` |
+| Implementation | `voicehub.models.f5tts.modeling.F5TTSForTextToSpeech` |
+| Configuration | `voicehub.models.f5tts.configuration.F5TTSConfig` |
 | Source provenance | `voicehub/models/f5tts/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -222,7 +222,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `F5TTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/configuration_f5tts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -241,7 +241,7 @@ F5TTSConfig(**config_kwargs)
 
 ### `F5TTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/modeling_f5tts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/f5tts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

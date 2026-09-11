@@ -13,21 +13,24 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.wenet_u2pp.checkpoint import (
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
+from voicehub.models.asr_wenet import NativeWeNetU2PPTrainingAdapter, WeNetASRConfig, WeNetASRForSpeechRecognition
+from voicehub.models.asr_wenet.artifacts import _official_archive_path, resolve_wenet_u2pp_artifacts
+from voicehub.models.asr_wenet.native.checkpoint import (
     WeNetU2PPSafeTensorsCheckpointAdapter,
     _load_restricted_state,
     convert_wenet_gigaspeech_checkpoint,
     native_wenet_tensor_shapes,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.wenet_u2pp.configuration import WeNetU2PPConfig
-from voicehub.architectures.wenet_u2pp.decoding import (
+from voicehub.models.asr_wenet.native.configuration import WeNetU2PPConfig
+from voicehub.models.asr_wenet.native.decoding import (
     WeNetDecodeHypothesis,
     attention_rescore,
     ctc_greedy_decode,
     ctc_prefix_beam_search,
 )
-from voicehub.architectures.wenet_u2pp.metadata import (
+from voicehub.models.asr_wenet.native.metadata import (
     GIGASPEECH_ARCHIVE_SHA256,
     GIGASPEECH_ARCHIVE_SIZE,
     GIGASPEECH_CHECKPOINT_LICENSE,
@@ -41,11 +44,8 @@ from voicehub.architectures.wenet_u2pp.metadata import (
     GIGASPEECH_TENSOR_FINGERPRINT_FORMAT,
     WENET_SOURCE_REVISION,
 )
-from voicehub.architectures.wenet_u2pp.modeling import WeNetSpecAugment, WeNetU2PPForASR
-from voicehub.architectures.wenet_u2pp.tokenization import WeNetGigaSpeechTokenizer
-from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.models.asr_wenet import NativeWeNetU2PPTrainingAdapter, WeNetASRConfig, WeNetASRForSpeechRecognition
-from voicehub.models.asr_wenet.artifacts import _official_archive_path, resolve_wenet_u2pp_artifacts
+from voicehub.models.asr_wenet.native.modeling import WeNetSpecAugment, WeNetU2PPForASR
+from voicehub.models.asr_wenet.native.tokenization import WeNetGigaSpeechTokenizer
 from voicehub.registry import get_model_spec
 from voicehub.training import get_training_spec
 from voicehub.training.specs import TrainingFamily, TrainingSupport
@@ -331,7 +331,7 @@ class NativeWeNetProviderTests(unittest.TestCase):
         self.assertEqual(training.family, TrainingFamily.SPEECH_SEQ2SEQ)
         self.assertEqual(training.support, TrainingSupport.NATIVE)
         self.assertIn(
-            "voicehub.architectures.wenet_u2pp",
+            "voicehub.models.asr_wenet.native",
             training.source_entrypoints[0],
         )
         adapter = WeNetASRForSpeechRecognition(WeNetASRConfig()).get_training_adapter()

@@ -65,6 +65,10 @@ FUNASR_PAPER = _paper("FunASR: A Fundamental End-to-End Speech Recognition Toolk
 # yapf: disable
 
 MODEL_REFERENCES = {
+    "dac": ModelReferences(_github("Descript Audio Codec", "descriptinc/descript-audio-codec"),
+                           (_paper("High-Fidelity Audio Compression with Improved RVQGAN", "2306.06546"),)),
+    "encodec": ModelReferences(_github("Encodec", "facebookresearch/encodec"),
+                               (_paper("High Fidelity Neural Audio Compression", "2210.13438"),)),
     # Text to speech.
     "orpheustts": ModelReferences(_github("Orpheus-TTS", "canopyai/Orpheus-TTS")),
     "dia": ModelReferences(_github("Dia", "nari-labs/dia")),

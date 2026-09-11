@@ -13,10 +13,10 @@ from unittest.mock import patch
 import torch
 
 from voicehub import AutoConfig, PreTrainedTTSModel, TTSGenerationConfig, TTSOutput
-from voicehub.configuration_utils import VoiceHubConfig
+from voicehub.configuration import VoiceHubConfig
 from voicehub.inference_strategy import InferenceStrategy
 from voicehub.models._shared import resolve_model_directory, resolve_torch_dtype, seeded_inference
-from voicehub.models.melotts.inference import MeloTTSConfig, MeloTTSForTextToSpeech
+from voicehub.models.melotts.modeling import MeloTTSConfig, MeloTTSForTextToSpeech
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
@@ -299,7 +299,7 @@ class InferenceLifecycleTests(unittest.TestCase):
         )
 
         with patch(
-                "voicehub.modeling_utils.import_module",
+                "voicehub.model.import_module",
                 return_value=fake_torch,
         ):
             model.load_for_training()
@@ -336,7 +336,7 @@ class InferenceLifecycleTests(unittest.TestCase):
             fake_torch = SimpleNamespace(load=lambda *args, **kwargs: unsafe_state)
 
             with patch(
-                    "voicehub.modeling_utils.import_module",
+                    "voicehub.model.import_module",
                     return_value=fake_torch,
             ), self.assertRaisesRegex(
                     ValueError,
@@ -351,7 +351,7 @@ class InferenceLifecycleTests(unittest.TestCase):
 
             fake_torch.load = lambda *args, **kwargs: safe_state
             with patch(
-                    "voicehub.modeling_utils.import_module",
+                    "voicehub.model.import_module",
                     return_value=fake_torch,
             ):
                 model.load()
@@ -779,7 +779,7 @@ class SharedInferenceHelperTests(unittest.TestCase):
 
     def test_tts_output_validates_python_audio_without_numpy(self):
         with patch(
-                "voicehub.base_model.import_module",
+                "voicehub.models.base.import_module",
                 side_effect=AssertionError("Plain Python audio should use the standard-library path"),
         ):
             output = TTSOutput(audio=[0.0, 0.25], sample_rate=24_000)
@@ -797,7 +797,7 @@ class SharedInferenceHelperTests(unittest.TestCase):
             dtype = FloatDType()
 
         with patch(
-                "voicehub.base_model.import_module",
+                "voicehub.models.base.import_module",
                 side_effect=AssertionError("Array-protocol audio should not require tensor conversion"),
         ):
             output = TTSOutput(audio=ArrayLike(), sample_rate=24_000)

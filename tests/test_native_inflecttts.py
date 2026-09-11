@@ -10,7 +10,8 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.inflecttts.checkpoint import (
+from voicehub.models.inflecttts.modeling import InflectTTSForTextToSpeech
+from voicehub.models.inflecttts.native.checkpoint import (
     INFLECT_MICRO_V2_INVENTORY_FINGERPRINT,
     INFLECT_NANO_V2_INVENTORY_FINGERPRINT,
     export_inflect_checkpoint,
@@ -18,17 +19,16 @@ from voicehub.architectures.inflecttts.checkpoint import (
     resolve_inflect_artifacts,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.inflecttts.configuration import (
+from voicehub.models.inflecttts.native.configuration import (
     INFLECT_MICRO_V2_CONFIG,
     INFLECT_NANO_V2_CONFIG,
     InflectV2Config,
 )
-from voicehub.architectures.inflecttts.frontend import InflectFrontendError, phonemes_to_ids
-from voicehub.architectures.inflecttts.modeling import build_inflect_model
-from voicehub.architectures.inflecttts.registration import create_inflect_architecture_spec
-from voicehub.architectures.inflecttts.runtime import InflectV2Runtime
-from voicehub.architectures.inflecttts.training import InflectV2TrainingModel
-from voicehub.models.inflecttts.inference import InflectTTSForTextToSpeech
+from voicehub.models.inflecttts.native.frontend import InflectFrontendError, phonemes_to_ids
+from voicehub.models.inflecttts.native.modeling import build_inflect_model
+from voicehub.models.inflecttts.native.registration import create_inflect_architecture_spec
+from voicehub.models.inflecttts.native.runtime import InflectV2Runtime
+from voicehub.models.inflecttts.native.training import InflectV2TrainingModel
 
 
 def _tiny_config(*, training: bool = False) -> InflectV2Config:
@@ -74,11 +74,11 @@ class NativeInflectArchitectureTests(unittest.TestCase):
                 (
                     "import sys; "
                     "import voicehub.models.inflecttts."
-                    "configuration_inflecttts; "
+                    "configuration; "
                     "print(*(int(name in sys.modules) for name in ("
-                    "'voicehub.models.inflecttts.inference', "
-                    "'voicehub.architectures.inflecttts.modeling', "
-                    "'voicehub.architectures.inflecttts.training')))"),
+                    "'voicehub.models.inflecttts.modeling', "
+                    "'voicehub.models.inflecttts.native.modeling', "
+                    "'voicehub.models.inflecttts.native.training')))"),
             ],
             cwd=Path(__file__).parents[1],
             check=True,
@@ -281,7 +281,7 @@ class NativeInflectArchitectureTests(unittest.TestCase):
         )
 
     def test_executable_boundary_imports_only_torch_and_voicehub(self):
-        package = (Path(__file__).parents[1] / "voicehub" / "architectures" / "inflecttts")
+        package = (Path(__file__).parents[1] / 'voicehub/models/inflecttts/native')
         forbidden = {
             "librosa",
             "matplotlib",

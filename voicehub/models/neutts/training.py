@@ -9,8 +9,8 @@ from typing import Any
 import torch
 from torch import Tensor
 
-from voicehub.architectures.neutts.metadata import NEUTTS_SOURCE_REVISION, NEUTTS_TRAINING_SOURCE
-from voicehub.architectures.neutts.tokenization import (
+from voicehub.models.neutts.native.metadata import NEUTTS_SOURCE_REVISION, NEUTTS_TRAINING_SOURCE
+from voicehub.models.neutts.native.tokenization import (
     SPEECH_CODEBOOK_SIZE,
     SPEECH_GENERATION_END,
     SPEECH_GENERATION_START,

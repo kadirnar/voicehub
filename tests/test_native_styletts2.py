@@ -11,23 +11,23 @@ import torch
 from torch import nn
 from torch.nn import functional
 
-from voicehub.architectures.kokoro.configuration import KokoroAlbertConfig
-from voicehub.architectures.styletts2.checkpoint import (
+from voicehub.models.kokoro.native.configuration import KokoroAlbertConfig
+from voicehub.models.styletts2.modeling import StyleTTS2ForTextToSpeech
+from voicehub.models.styletts2.native.checkpoint import (
     export_styletts2_checkpoint,
     load_styletts2_checkpoint,
     read_legacy_styletts2_checkpoint,
 )
-from voicehub.architectures.styletts2.configuration import StyleTTS2ArchitectureConfig, load_styletts2_config
-from voicehub.architectures.styletts2.frontend import (
+from voicehub.models.styletts2.native.configuration import StyleTTS2ArchitectureConfig, load_styletts2_config
+from voicehub.models.styletts2.native.frontend import (
     STYLETTS2_SYMBOLS,
     NativeStyleTTS2Frontend,
     StyleTTS2MelSpectrogram,
     trim_reference_silence,
 )
-from voicehub.architectures.styletts2.modeling import DEPLOYABLE_STYLETTS2_COMPONENTS
-from voicehub.architectures.styletts2.registration import create_styletts2_architecture_spec
-from voicehub.architectures.styletts2.training import StyleTTS2LossWeights, StyleTTS2TrainingModel
-from voicehub.models.styletts2.inference import StyleTTS2ForTextToSpeech
+from voicehub.models.styletts2.native.modeling import DEPLOYABLE_STYLETTS2_COMPONENTS
+from voicehub.models.styletts2.native.registration import create_styletts2_architecture_spec
+from voicehub.models.styletts2.native.training import StyleTTS2LossWeights, StyleTTS2TrainingModel
 from voicehub.models.styletts2.source.styletts2.models import StyleTTS2Modules
 from voicehub.models.styletts2.training import StyleTTS2TrainingAdapter, StyleTTS2TrainingCollator
 from voicehub.training.contracts import TrainingSupport
@@ -35,8 +35,8 @@ from voicehub.training.specs import get_training_spec
 
 ROOT = Path(__file__).parents[1]
 ACTIVE_FILES = (
-    *(ROOT / "voicehub" / "architectures" / "styletts2").glob("*.py"),
-    ROOT / "voicehub" / "models" / "styletts2" / "inference.py",
+    *(ROOT / 'voicehub/models/styletts2/native').glob("*.py"),
+    ROOT / 'voicehub/models/styletts2/modeling.py',
     ROOT / "voicehub" / "models" / "styletts2" / "runtime.py",
     ROOT / "voicehub" / "models" / "styletts2" / "training.py",
     ROOT / "voicehub" / "models" / "styletts2" / "source" / "styletts2" / "models.py",
@@ -178,11 +178,11 @@ class NativeStyleTTS2Tests(unittest.TestCase):
                 (
                     "import sys; "
                     "import voicehub.models.styletts2."
-                    "configuration_styletts2; "
+                    "configuration; "
                     "print(*(int(name in sys.modules) for name in ("
-                    "'voicehub.models.styletts2.inference', "
-                    "'voicehub.architectures.styletts2.modeling', "
-                    "'voicehub.architectures.styletts2.training')))"),
+                    "'voicehub.models.styletts2.modeling', "
+                    "'voicehub.models.styletts2.native.modeling', "
+                    "'voicehub.models.styletts2.native.training')))"),
             ],
             cwd=ROOT,
             check=True,

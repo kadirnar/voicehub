@@ -127,6 +127,9 @@ nav:
           - "SpeechBrainVAD": models/providers/vad_speechbrain.md
           - "TransformersVAD": models/providers/vad_transformers.md
           - "WebRTCVAD": models/providers/vad_webrtc.md
+      - Audio codecs:
+          - "Dac": models/providers/dac.md
+          - "Encodec": models/providers/encodec.md
       # END GENERATED MODEL GUIDE NAVIGATION
       - Models API: reference/models.md
       - Add a model: project/adding-a-model.md
@@ -170,6 +173,7 @@ plugins:
           name: Türkçe
           build: true
           nav_translations:
+            Audio codecs: Ses kodekleri
             Get started: Hızlı Başlangıç
             Model list: Model listesi
             Models API: Model API'si
@@ -251,6 +255,7 @@ plugins:
           name: Español
           build: true
           nav_translations:
+            Audio codecs: Códecs de audio
             Get started: Inicio rápido
             Model list: Lista de modelos
             Models API: API de modelos
@@ -332,6 +337,7 @@ plugins:
           name: Français
           build: true
           nav_translations:
+            Audio codecs: Codecs audio
             Get started: Démarrage rapide
             Model list: Liste des modèles
             Models API: API des modèles
@@ -413,6 +419,7 @@ plugins:
           name: Deutsch
           build: true
           nav_translations:
+            Audio codecs: Audiocodecs
             Get started: Schnellstart
             Model list: Modellliste
             Models API: Modell-API
@@ -494,6 +501,7 @@ plugins:
           name: Português
           build: true
           nav_translations:
+            Audio codecs: Codecs de áudio
             Get started: Início rápido
             Model list: Lista de modelos
             Models API: API de modelos
@@ -575,6 +583,7 @@ plugins:
           name: 简体中文
           build: true
           nav_translations:
+            Audio codecs: 音频编解码器
             Get started: 快速开始
             Model list: 模型列表
             Models API: 模型 API
@@ -656,6 +665,7 @@ plugins:
           name: 日本語
           build: true
           nav_translations:
+            Audio codecs: 音声コーデック
             Get started: クイックスタート
             Model list: モデル一覧
             Models API: モデル API
@@ -737,6 +747,7 @@ plugins:
           name: 한국어
           build: true
           nav_translations:
+            Audio codecs: 오디오 코덱
             Get started: 빠른 시작
             Model list: 모델 목록
             Models API: 모델 API
@@ -818,6 +829,7 @@ plugins:
           name: Русский
           build: true
           nav_translations:
+            Audio codecs: Аудиокодеки
             Get started: Быстрый старт
             Model list: Список моделей
             Models API: API моделей
@@ -899,6 +911,7 @@ plugins:
           name: العربية
           build: true
           nav_translations:
+            Audio codecs: برامج ترميز الصوت
             Get started: البدء السريع
             Model list: قائمة النماذج
             Models API: واجهة نماذج API
@@ -1010,7 +1023,7 @@ extra_javascript:
 extra:
   docs_version:
     label: main
-    release: "0.3.0"
+    release: "0.4.0"
     published: "0.1.6"
   social:
     - icon: fontawesome/brands/github

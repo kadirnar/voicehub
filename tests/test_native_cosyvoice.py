@@ -10,32 +10,32 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.cosyvoice_native.checkpoint import (
+from voicehub.checkpointing.errors import CheckpointCompatibilityError, CheckpointIntegrityError
+from voicehub.models.cosyvoice.configuration import CosyVoiceConfig
+from voicehub.models.cosyvoice.modeling import CosyVoiceForTextToSpeech
+from voicehub.models.cosyvoice.native.checkpoint import (
     convert_audited_cosyvoice_legacy_checkpoint,
     inspect_cosyvoice_checkpoint,
     tensor_inventory_fingerprint,
     validate_cosyvoice_checkpoint,
 )
-from voicehub.architectures.cosyvoice_native.configuration import CosyVoiceArchitectureConfig
-from voicehub.architectures.cosyvoice_native.metadata import (
+from voicehub.models.cosyvoice.native.configuration import CosyVoiceArchitectureConfig
+from voicehub.models.cosyvoice.native.metadata import (
     COSYVOICE3_LEGACY_FILES,
     COSYVOICE3_MODEL_REVISION,
     COSYVOICE_SOURCE_REVISION,
 )
-from voicehub.architectures.cosyvoice_native.modeling import CosyVoiceNativeModel
-from voicehub.architectures.cosyvoice_native.registration import create_cosyvoice_architecture_spec
-from voicehub.architectures.cosyvoice_native.runtime import CosyVoiceNativeRuntime, load_cosyvoice_runtime
-from voicehub.architectures.cosyvoice_native.tokenization import (
+from voicehub.models.cosyvoice.native.modeling import CosyVoiceNativeModel
+from voicehub.models.cosyvoice.native.registration import create_cosyvoice_architecture_spec
+from voicehub.models.cosyvoice.native.runtime import CosyVoiceNativeRuntime, load_cosyvoice_runtime
+from voicehub.models.cosyvoice.native.tokenization import (
     END_OF_PROMPT,
     END_OF_TEXT,
     IM_END,
     IM_START,
     CosyVoiceTextTokenizer,
 )
-from voicehub.checkpointing.errors import CheckpointCompatibilityError, CheckpointIntegrityError
-from voicehub.models.cosyvoice_native.configuration_cosyvoice import CosyVoiceConfig
-from voicehub.models.cosyvoice_native.modeling_cosyvoice import CosyVoiceForTextToSpeech
-from voicehub.models.cosyvoice_native.training_cosyvoice import CosyVoiceTrainingAdapter
+from voicehub.models.cosyvoice.training_cosyvoice import CosyVoiceTrainingAdapter
 from voicehub.tokenization import encode_gpt2_token
 from voicehub.training.contracts import TrainingContext, TrainingPhaseSpec
 from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
@@ -109,12 +109,12 @@ class NativeCosyVoicePolicyTests(unittest.TestCase):
             "x_transformers",
         }
         roots = (
-            PROJECT_ROOT / "voicehub" / "architectures" / "cosyvoice_native",
-            PROJECT_ROOT / "voicehub" / "models" / "cosyvoice_native",
+            PROJECT_ROOT / 'voicehub/models/cosyvoice/native',
+            PROJECT_ROOT / 'voicehub/models/cosyvoice',
         )
         violations = []
         for root in roots:
-            for path in root.rglob("*.py"):
+            for path in (root.rglob("*.py") if root.name == "native" else root.glob("*.py")):
                 tree = ast.parse(path.read_text(encoding="utf-8"))
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Import):
@@ -131,8 +131,8 @@ class NativeCosyVoicePolicyTests(unittest.TestCase):
     def test_public_packages_are_torch_lazy(self):
         script = (
             "import sys; "
-            "import voicehub.architectures.cosyvoice_native; "
-            "import voicehub.models.cosyvoice_native; "
+            "import voicehub.models.cosyvoice.native; "
+            "import voicehub.models.cosyvoice; "
             "print('torch' in sys.modules, 'transformers' in sys.modules, "
             "'numpy' in sys.modules, 'safetensors' in sys.modules)")
         result = subprocess.run(
@@ -146,8 +146,7 @@ class NativeCosyVoicePolicyTests(unittest.TestCase):
 
     def test_provenance_and_capability_boundary_are_immutable(self):
         source = json.loads(
-            (PROJECT_ROOT / "voicehub" / "architectures" / "cosyvoice_native" /
-             "SOURCE.json").read_text(encoding="utf-8"))
+            (PROJECT_ROOT / 'voicehub/models/cosyvoice/native/SOURCE.json').read_text(encoding="utf-8"))
         self.assertEqual(source["source"]["revision"], COSYVOICE_SOURCE_REVISION)
         self.assertEqual(
             source["checkpoint"]["revision"],

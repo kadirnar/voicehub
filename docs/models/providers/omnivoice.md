@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/k2-fsa/OmniVoice" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/omnivoice/modeling_omnivoice.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/omnivoice/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/omnivoice.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -111,7 +111,7 @@ integration. This page is generated from its registry contract. [Open the `omniv
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [OmniVoice](https://github.com/k2-fsa/OmniVoice)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/omnivoice/modeling_omnivoice.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/omnivoice/modeling.py)
 
 ## Configuration
 
@@ -197,8 +197,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.omnivoice.modeling_omnivoice.OmniVoiceForTextToSpeech` |
-| Configuration | `voicehub.models.omnivoice.configuration_omnivoice.OmniVoiceConfig` |
+| Implementation | `voicehub.models.omnivoice.modeling.OmniVoiceForTextToSpeech` |
+| Configuration | `voicehub.models.omnivoice.configuration.OmniVoiceConfig` |
 | Source provenance | `voicehub/models/omnivoice/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -223,7 +223,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `OmniVoiceConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/omnivoice/configuration_omnivoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/omnivoice/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -242,7 +242,7 @@ OmniVoiceConfig(**config_kwargs)
 
 ### `OmniVoiceForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/omnivoice/modeling_omnivoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/omnivoice/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

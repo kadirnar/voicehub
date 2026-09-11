@@ -10,9 +10,7 @@ from pathlib import Path
 from threading import RLock
 from types import MethodType, SimpleNamespace
 
-from voicehub.architectures import get_architecture_spec
-from voicehub.base_model import BaseSpeechModel
-from voicehub.modeling_outputs import ASROutput, SpeechSegment, TTSOutput, VADOutput
+from voicehub.models.base import BaseSpeechModel
 from voicehub.optimization import (
     OptimizationApplicationError,
     OptimizationCapabilities,
@@ -27,14 +25,16 @@ from voicehub.optimization import (
     register_optimization_pass,
     unregister_optimization_pass,
 )
+from voicehub.outputs import ASROutput, SpeechSegment, TTSOutput, VADOutput
 from voicehub.registry import ModelSpec, list_model_specs, register_model_spec, unregister_model_spec
-from voicehub.trainer import Trainer
-from voicehub.trainer_utils import CHECKPOINT_MANIFEST_NAME, MODEL_STATE_NAME, OPTIMIZATION_MANIFEST_NAME
+from voicehub.runtime import get_architecture_spec
 from voicehub.training.adapters import BaseTrainingAdapter
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.contracts import TrainingPhaseSpec, TrainingSupport
 from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
 from voicehub.training.strategy import TorchTrainingStrategy
-from voicehub.training_args import TrainingArguments
+from voicehub.training.trainer import Trainer
+from voicehub.training.utils import CHECKPOINT_MANIFEST_NAME, MODEL_STATE_NAME, OPTIMIZATION_MANIFEST_NAME
 
 
 class _AddPass(OptimizationPass):
@@ -560,7 +560,7 @@ class NativeOptimizationTests(unittest.TestCase):
         register_model_spec(
             ModelSpec(
                 model_type="optimization-agnostic-test",
-                module="voicehub.base_model",
+                module="voicehub.models.base",
                 class_name="BaseSpeechModel",
                 default_model_path="",
                 architecture=None,

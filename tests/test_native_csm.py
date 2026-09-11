@@ -12,13 +12,15 @@ from unittest.mock import patch
 import torch
 from torch.nn import functional
 
-from voicehub.architectures.csm.checkpoint import (
+from voicehub.hub import write_json_file
+from voicehub.models.csm.modeling import CSMForTextToSpeech
+from voicehub.models.csm.native.checkpoint import (
     export_csm_checkpoint,
     load_csm_checkpoint,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.csm.configuration import CSMArchitectureConfig, CSMTransformerConfig
-from voicehub.architectures.csm.metadata import (
+from voicehub.models.csm.native.configuration import CSMArchitectureConfig, CSMTransformerConfig
+from voicehub.models.csm.native.metadata import (
     CSM_CHECKPOINT_HEADER_FINGERPRINT,
     CSM_CHECKPOINT_PARAMETER_COUNT,
     CSM_CHECKPOINT_TENSOR_COUNT,
@@ -28,12 +30,10 @@ from voicehub.architectures.csm.metadata import (
     MIMI_CHECKPOINT_REVISION,
     MIMI_CHECKPOINT_TENSOR_COUNT,
 )
-from voicehub.architectures.csm.mimi import build_mimi, mimi_checkpoint_inventory
-from voicehub.architectures.csm.modeling import CSMAttention, CSMLlama3ScaledRoPE, CSMModel, sample_top_k
-from voicehub.architectures.csm.processing import CSMProcessor, CSMTextTokenizer
-from voicehub.architectures.csm.runtime import CSMRuntime, load_csm_runtime
-from voicehub.hub import write_json_file
-from voicehub.models.csm.inference import CSMForTextToSpeech
+from voicehub.models.csm.native.mimi import build_mimi, mimi_checkpoint_inventory
+from voicehub.models.csm.native.modeling import CSMAttention, CSMLlama3ScaledRoPE, CSMModel, sample_top_k
+from voicehub.models.csm.native.processing import CSMProcessor, CSMTextTokenizer
+from voicehub.models.csm.native.runtime import CSMRuntime, load_csm_runtime
 from voicehub.models.csm.training import CSMTrainingBackend, CSMTrainingCollator, prepare_csm_training_inputs
 from voicehub.tokenization import ByteBPETokenizer, encode_gpt2_token
 
@@ -126,7 +126,7 @@ class NativeCSMDependencyTests(unittest.TestCase):
 
     def test_public_runtime_has_no_external_model_framework_imports(self):
         roots = (
-            PROJECT_ROOT / "voicehub" / "architectures" / "csm",
+            PROJECT_ROOT / 'voicehub/models/csm/native',
             PROJECT_ROOT / "voicehub" / "models" / "csm",
         )
         forbidden = {
@@ -180,7 +180,7 @@ class NativeCSMDependencyTests(unittest.TestCase):
     def test_import_does_not_load_transformers_or_hub_client(self):
         command = (
             "import sys; "
-            "import voicehub.models.csm.inference; "
+            "import voicehub.models.csm.modeling; "
             "print('transformers' in sys.modules, "
             "'huggingface_hub' in sys.modules, "
             "'torchtune' in sys.modules, "
@@ -204,7 +204,7 @@ class NativeCSMDependencyTests(unittest.TestCase):
 
     def test_provenance_pins_source_model_and_codec(self):
         source = json.loads(
-            (PROJECT_ROOT / "voicehub" / "architectures" / "csm" / "SOURCE.json").read_text(encoding="utf-8"))
+            (PROJECT_ROOT / 'voicehub/models/csm/native/SOURCE.json').read_text(encoding="utf-8"))
         self.assertEqual(source["sources"][0]["revision"], CSM_SOURCE_REVISION)
         revisions = {artifact["revision"] for artifact in source["artifacts"]}
         self.assertIn(MIMI_CHECKPOINT_REVISION, revisions)

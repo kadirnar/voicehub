@@ -15,7 +15,7 @@ from typing import Any
 
 from voicehub.dependencies import import_optional
 from voicehub.hub_transport import download_hugging_face_snapshot
-from voicehub.modeling_outputs import TTSOutput
+from voicehub.outputs import TTSOutput
 from voicehub.path_utils import is_explicit_local_path
 
 _TORCH_DTYPE_ALIASES = {

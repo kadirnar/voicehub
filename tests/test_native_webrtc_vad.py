@@ -2,8 +2,8 @@ import json
 import unittest
 from pathlib import Path
 
-from voicehub.architectures import ARCHITECTURE_REGISTRY
-from voicehub.architectures.webrtc_vad import NativeWebRTCVAD
+from voicehub.models.vad_webrtc.native import NativeWebRTCVAD
+from voicehub.runtime import ARCHITECTURE_REGISTRY
 
 _REFERENCE_DECISIONS = {
     (8000, 10, 0): "000000000001111111111111000000111111111111110000111111111111",
@@ -89,8 +89,7 @@ class NativeWebRTCVADTests(unittest.TestCase):
         self.assertEqual(spec.capabilities.checkpoint_formats, ("none", ))
         self.assertEqual(spec.metadata["implementation"], "voicehub-native")
 
-        source_path = (
-            Path(__file__).resolve().parents[1] / "voicehub" / "architectures" / "webrtc_vad" / "SOURCE.json")
+        source_path = (Path(__file__).resolve().parents[1] / 'voicehub/models/vad_webrtc/native/SOURCE.json')
         source = json.loads(source_path.read_text(encoding="utf-8"))
         self.assertEqual(
             source["upstream"]["revision"],

@@ -1,7 +1,7 @@
 """Pyannote segmentation-3.0 voice activity detection."""
 
-from .configuration_vad_pyannote_segmentation import PyannoteSegmentationVADConfig
-from .modeling_vad_pyannote_segmentation import PyannoteSegmentationVADForVoiceActivityDetection
+from .configuration import PyannoteSegmentationVADConfig
+from .modeling import PyannoteSegmentationVADForVoiceActivityDetection
 
 __all__ = [
     "PyannoteSegmentationVADConfig",

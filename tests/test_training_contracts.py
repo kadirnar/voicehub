@@ -204,7 +204,7 @@ class TrainingContractValidationTests(unittest.TestCase):
             spec.model_type: spec.adapter_factory
             for spec in specs if spec.adapter_factory is not None
         }
-        self.assertEqual(len(specs), 68)
+        self.assertEqual(len(specs), 70)
         self.assertEqual(len(declared), 66)
         self.assertEqual(set(BUILTIN_MODEL_ADAPTERS), set(declared))
 

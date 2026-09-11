@@ -674,10 +674,10 @@ class NativeDiffusionCacheAdapterTests(unittest.TestCase):
         )
 
     def test_f5_and_cosyvoice_flat_dit_adapters_take_cache_hits(self):
-        from voicehub.architectures.cosyvoice_native.configuration import CosyVoiceArchitectureConfig
-        from voicehub.architectures.cosyvoice_native.flow import DiTEstimator
-        from voicehub.architectures.f5tts.configuration import F5TTSArchitectureConfig
-        from voicehub.architectures.f5tts.modeling import F5DiT
+        from voicehub.models.cosyvoice.native.configuration import CosyVoiceArchitectureConfig
+        from voicehub.models.cosyvoice.native.flow import DiTEstimator
+        from voicehub.models.f5tts.native.configuration import F5TTSArchitectureConfig
+        from voicehub.models.f5tts.native.modeling import F5DiT
 
         f5_config = F5TTSArchitectureConfig(
             model_name="cache-test",
@@ -752,10 +752,10 @@ class NativeDiffusionCacheAdapterTests(unittest.TestCase):
         self.assertEqual(cosy.diffusion_cache_stats()["cached_steps"], 1)
 
     def test_irodori_and_vibevoice_custom_adapters_take_cache_hits(self):
-        from voicehub.architectures.irodoritts.configuration import IrodoriModelConfig
-        from voicehub.architectures.irodoritts.modeling import TextToLatentRFDiT
-        from voicehub.architectures.vibevoice.configuration import VibeVoiceDiffusionConfig
-        from voicehub.architectures.vibevoice.diffusion import VibeVoiceDiffusionHead
+        from voicehub.models.irodoritts.native.configuration import IrodoriModelConfig
+        from voicehub.models.irodoritts.native.modeling import TextToLatentRFDiT
+        from voicehub.models.vibevoice.native.configuration import VibeVoiceDiffusionConfig
+        from voicehub.models.vibevoice.native.diffusion import VibeVoiceDiffusionHead
 
         irodori_config = IrodoriModelConfig(
             adaln_rank=8,
@@ -915,7 +915,7 @@ class NativeDiffusionCacheAdapterTests(unittest.TestCase):
 
     def test_supertonic_caches_latent_residual_without_stalling(self):
         from tests.test_native_supertonic_runtime import _runtime
-        from voicehub.architectures.supertonic.frontend import SupertonicStyle
+        from voicehub.models.supertonic.native.frontend import SupertonicStyle
 
         runtime = _runtime().eval()
         state_keys = tuple(runtime.state_dict())
@@ -948,9 +948,9 @@ class NativeDiffusionCacheAdapterTests(unittest.TestCase):
         self.assertEqual(tuple(runtime.state_dict()), state_keys)
 
     def test_echo_and_voxcpm_native_dits_take_cache_hits(self):
-        from voicehub.architectures.voxcpm2.configuration import VoxCPM2ArchitectureConfig
-        from voicehub.architectures.voxcpm2.modeling import VoxCPM2Model
         from voicehub.models.echo.model import EchoDiT
+        from voicehub.models.voxcpm.native.configuration import VoxCPM2ArchitectureConfig
+        from voicehub.models.voxcpm.native.modeling import VoxCPM2Model
 
         echo = EchoDiT(
             latent_size=4,

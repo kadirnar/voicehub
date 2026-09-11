@@ -163,7 +163,7 @@ class CodecCompatibilityTests(unittest.TestCase):
             modules = (
                 "voicehub.components.audio.codecs.dac",
                 "voicehub.models.fishtts.source.fish_speech.models.dac.modded_dac",
-                "voicehub.architectures.higgs_audio_v2.tokenizer",
+                "voicehub.models.higgstts.native.tokenizer",
                 "voicehub.models.irodoritts.source.dacvae",
                 "voicehub.models.irodoritts.source.irodori_tts.codec",
             )

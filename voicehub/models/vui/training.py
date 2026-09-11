@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from voicehub.dependencies import import_optional
-from voicehub.modeling_outputs import TTSTrainingOutput
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.training.adapters import CausalLMTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 

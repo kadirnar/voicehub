@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/NVIDIA/NeMo" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemotron/modeling_asr_nemotron.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemotron/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_nemotron.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -106,7 +106,7 @@ The `el-GR`, `lt-LT`, `lv-LV`, `mt-MT`, `sl-SI`, `he-IL`, `th-TH`, and `nn-NO` l
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [NVIDIA NeMo](https://github.com/NVIDIA/NeMo)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemotron/modeling_asr_nemotron.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemotron/modeling.py)
 
 ## Configuration
 
@@ -192,9 +192,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_nemotron.modeling_asr_nemotron.NemotronForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_nemotron.configuration_asr_nemotron.NemotronASRConfig` |
-| Source provenance | `voicehub/architectures/nemotron_asr/SOURCE.json` |
+| Implementation | `voicehub.models.asr_nemotron.modeling.NemotronForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_nemotron.configuration.NemotronASRConfig` |
+| Source provenance | `voicehub/models/asr_nemotron/native/SOURCE.json` |
 | License | [OpenMDW-1.1](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b) |
 
 Use of the checkpoint and derivatives is governed by the OpenMDW-1.1 license. Commercial use: **allowed by the registered terms**.
@@ -218,7 +218,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `NemotronASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemotron/configuration_asr_nemotron.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemotron/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -237,7 +237,7 @@ NemotronASRConfig(**config_kwargs)
 
 ### `NemotronForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemotron/modeling_asr_nemotron.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_nemotron/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

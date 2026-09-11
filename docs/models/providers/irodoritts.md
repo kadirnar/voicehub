@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/Aratako/Irodori-TTS" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/irodoritts/modeling_irodoritts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/irodoritts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/irodoritts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -105,7 +105,7 @@ integration. This page is generated from its registry contract. [Open the `irodo
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Irodori-TTS](https://github.com/Aratako/Irodori-TTS)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/irodoritts/modeling_irodoritts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/irodoritts/modeling.py)
 
 ## Configuration
 
@@ -191,8 +191,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.irodoritts.modeling_irodoritts.IrodoriTTSForTextToSpeech` |
-| Configuration | `voicehub.models.irodoritts.configuration_irodoritts.IrodoriTTSConfig` |
+| Implementation | `voicehub.models.irodoritts.modeling.IrodoriTTSForTextToSpeech` |
+| Configuration | `voicehub.models.irodoritts.configuration.IrodoriTTSConfig` |
 | Source provenance | `voicehub/models/irodoritts/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -217,7 +217,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `IrodoriTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/irodoritts/configuration_irodoritts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/irodoritts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -236,7 +236,7 @@ IrodoriTTSConfig(**config_kwargs)
 
 ### `IrodoriTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/irodoritts/modeling_irodoritts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/irodoritts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/marianne-m/brouhaha-vad" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_brouhaha/modeling_vad_pyannote_brouhaha.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_brouhaha/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/vad_pyannote_brouhaha.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -100,7 +100,7 @@ The public VAD contract does not select a spoken language; validate checkpoint a
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Brouhaha VAD](https://github.com/marianne-m/brouhaha-vad)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_brouhaha/modeling_vad_pyannote_brouhaha.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_brouhaha/modeling.py)
 
 ## Configuration
 
@@ -180,9 +180,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.vad_pyannote_brouhaha.modeling_vad_pyannote_brouhaha.PyannoteBrouhahaVADForVoiceActivityDetection` |
-| Configuration | `voicehub.models.vad_pyannote_brouhaha.configuration_vad_pyannote_brouhaha.PyannoteBrouhahaVADConfig` |
-| Source provenance | `voicehub/architectures/pyannet/SOURCE.json` |
+| Implementation | `voicehub.models.vad_pyannote_brouhaha.modeling.PyannoteBrouhahaVADForVoiceActivityDetection` |
+| Configuration | `voicehub.models.vad_pyannote_brouhaha.configuration.PyannoteBrouhahaVADConfig` |
+| Source provenance | `voicehub/models/vad_pyannote/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -206,7 +206,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `PyannoteBrouhahaVADConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_brouhaha/configuration_vad_pyannote_brouhaha.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_brouhaha/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -225,7 +225,7 @@ PyannoteBrouhahaVADConfig(**config_kwargs)
 
 ### `PyannoteBrouhahaVADForVoiceActivityDetection`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_brouhaha/modeling_vad_pyannote_brouhaha.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_pyannote_brouhaha/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

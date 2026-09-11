@@ -21,7 +21,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/huggingface/transformers" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_transformers/modeling_vad_transformers.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_transformers/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 </div>
 </details>
 </div>
@@ -97,7 +97,7 @@ The public VAD contract does not select a spoken language; validate checkpoint a
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Transformers](https://github.com/huggingface/transformers)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_transformers/modeling_vad_transformers.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_transformers/modeling.py)
 
 ## Configuration
 
@@ -177,8 +177,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.vad_transformers.modeling_vad_transformers.TransformersVADForVoiceActivityDetection` |
-| Configuration | `voicehub.models.vad_transformers.configuration_vad_transformers.TransformersVADConfig` |
+| Implementation | `voicehub.models.vad_transformers.modeling.TransformersVADForVoiceActivityDetection` |
+| Configuration | `voicehub.models.vad_transformers.configuration.TransformersVADConfig` |
 | Source provenance | No integration-specific bundled `SOURCE.json` is declared for this registry entry. |
 | License | Checkpoint-specific |
 
@@ -203,7 +203,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `TransformersVADConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_transformers/configuration_vad_transformers.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_transformers/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -222,7 +222,7 @@ TransformersVADConfig(**config_kwargs)
 
 ### `TransformersVADForVoiceActivityDetection`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_transformers/modeling_vad_transformers.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_transformers/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

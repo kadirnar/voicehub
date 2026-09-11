@@ -31,7 +31,7 @@ Check the [training support matrix](training-support.md) before choosing a
 checkpoint or preparing a dataset.
 
 ```python
-from voicehub import get_training_spec
+from voicehub.training import get_training_spec
 
 print(get_training_spec("dia").support.value)
 ```

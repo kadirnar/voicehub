@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from voicehub.dependencies import resolve_import_path
-from voicehub.models.registry import normalize_model_type
+from voicehub.registry import normalize_model_type
 from voicehub.training.adapters import (
     AcousticTrainingAdapter,
     AudioClassificationTrainingAdapter,

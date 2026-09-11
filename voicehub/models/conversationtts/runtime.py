@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from voicehub.architectures.conversationtts.checkpoint import (
+from voicehub.models.conversationtts.native.checkpoint import (
     ConversationTTSCheckpointReport,
     load_conversationtts_checkpoint,
 )

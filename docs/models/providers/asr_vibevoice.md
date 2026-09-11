@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/microsoft/VibeVoice" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/modeling_asr_vibevoice.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_vibevoice.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -105,7 +105,7 @@ integration. This page is generated from its registry contract. [Open the `asr_v
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [VibeVoice](https://github.com/microsoft/VibeVoice)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/modeling_asr_vibevoice.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/modeling.py)
 
 ## Configuration
 
@@ -192,9 +192,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_vibevoice.modeling_asr_vibevoice.VibeVoiceForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_vibevoice.configuration_asr_vibevoice.VibeVoiceASRConfig` |
-| Source provenance | `voicehub/architectures/vibevoice/source/SOURCE.json` |
+| Implementation | `voicehub.models.asr_vibevoice.modeling.VibeVoiceForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_vibevoice.configuration.VibeVoiceASRConfig` |
+| Source provenance | `voicehub/models/vibevoice/native/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.
@@ -218,7 +218,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `VibeVoiceASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/configuration_asr_vibevoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -237,7 +237,7 @@ VibeVoiceASRConfig(**config_kwargs)
 
 ### `VibeVoiceForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/modeling_asr_vibevoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_vibevoice/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

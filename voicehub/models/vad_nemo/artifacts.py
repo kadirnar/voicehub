@@ -5,17 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from voicehub.architectures.marblenet_vad.checkpoint import (
-    NATIVE_MARBLENET_VAD_FILENAME,
-    convert_nemo_marblenet_checkpoint,
-)
-from voicehub.architectures.marblenet_vad.metadata import (
+from voicehub.hub import resolve_pretrained_file
+from voicehub.models.vad_nemo.native.checkpoint import NATIVE_MARBLENET_VAD_FILENAME, convert_nemo_marblenet_checkpoint
+from voicehub.models.vad_nemo.native.metadata import (
     MARBLENET_VAD_FILENAME,
     MARBLENET_VAD_REPOSITORY,
     MARBLENET_VAD_REVISION,
     MARBLENET_VAD_SHA256,
 )
-from voicehub.hub import resolve_pretrained_file
 from voicehub.path_utils import is_explicit_local_path
 
 _OFFICIAL_ALIASES = frozenset({

@@ -78,17 +78,17 @@ provider entry.
 
 | Step | Owned files or generated artifacts |
 | --- | --- |
-| 1. Create the package | `voicehub/models/<model_type>/`; optional `voicehub/architectures/<model_type>/` |
+| 1. Create the package | `voicehub/models/<model_type>/`; optional `voicehub/runtime/<model_type>/` |
 | 2. Record provenance and license | `source/SOURCE.json`, `source/THIRD_PARTY_LICENSE`, `scripts/documentation_references.py`, and any required `NOTICE` or `COPYING` file |
 | 3. Define the config | `configuration_<model_type>.py` |
 | 4. Implement the task wrapper | `modeling_<model_type>.py`, `runtime.py`, and model-local processing or conversion modules |
 | 5. Register once | `model-integration.json` and `registration.py`; legacy central fragments only while migrating an existing declaration |
-| 6. Declare training and optimization support | The manifest, optional `voicehub/architectures/<model_type>/` registration, and model-local training or optimization factories |
+| 6. Declare training and optimization support | The manifest, optional `voicehub/runtime/<model_type>/` registration, and model-local training or optimization factories |
 | 7. Test the contract | `tests/test_<model_type>.py`; registry-wide tests discover the activated integration without a provider list edit |
 | 8. Generate the model page | `docs/models/providers/<model_type>.md` and the generated navigation block in `mkdocs.yml` |
 
 If VoiceHub owns the executable graph, put it in
-`voicehub/architectures/auroratts/`. Keep reviewed upstream code and its
+`voicehub/models/auroratts/native/`. Keep reviewed upstream code and its
 license notice beside the integration. Put reusable codecs, vocoders, and
 layers under `voicehub/components/`.
 
@@ -270,7 +270,7 @@ components, and limitations first. Then change only its activation field:
 The model registry derives the lazy config/model paths and aliases from that
 activated manifest. The training registry derives the explicit inference-only
 profile from the same source. It imports neither the model package nor PyTorch,
-and it requires no edit to `voicehub/models/registry.py` or
+and it requires no edit to `voicehub/registry.py` or
 `voicehub/training/specs.py`. An inactive or invalid work-in-progress manifest
 is never registered. A central declaration and an activated manifest for the
 same model fail as a duplicate.
@@ -299,8 +299,7 @@ A task may have at most one no-argument default. Set `default_for_task=True`
 only when the default checkpoint/provider policy has explicit project approval;
 the model registry rejects ambiguous defaults. The shared auto factories derive
 this choice from `ModelSpec` metadata and contain no provider-name fallback.
-The compatibility `AutoInferenceModel` uses the same TTS declaration, so a
-default policy must never be duplicated in that legacy surface.
+The task factory resolves its default from the same registry declaration.
 
 If the backend reuses a registered codec, vocoder, watermark, or neural block,
 list its canonical names in `components=(...)`. The resulting `ModelSpec` owns

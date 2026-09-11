@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.llasa."
 _EXPORTS = {
-    "LlasaConfig": _PACKAGE + "configuration_llasa",
-    "LlasaForTextToSpeech": _PACKAGE + "inference",
-    "LlasaTTS": _PACKAGE + "inference",
+    "LlasaConfig": _PACKAGE + "configuration",
+    "LlasaForTextToSpeech": _PACKAGE + "modeling",
+    "LlasaTTS": _PACKAGE + "modeling",
 }
 
 __all__ = sorted(_EXPORTS)

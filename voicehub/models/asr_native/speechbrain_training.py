@@ -570,7 +570,7 @@ class NativeSpeechBrainASRTrainingAdapter(SpeechSeq2SeqTrainingAdapter):
         return float(value)
 
     def recipe_resume_configuration(self) -> Mapping[str, Any]:
-        from voicehub.architectures.speechbrain_asr.metadata import (
+        from voicehub.models.asr_speechbrain.native.metadata import (
             SPEECHBRAIN_ASR_REVISION,
             SPEECHBRAIN_ASR_SOURCE_REVISION,
         )

@@ -10,13 +10,13 @@ from types import SimpleNamespace
 
 import torch
 
-from voicehub.architectures.wav2vec2 import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.models.asr_wav2vec2.native import (
     Wav2Vec2Config,
     Wav2Vec2FeatureExtractor,
     Wav2Vec2ForAudioFrameClassification,
     Wav2Vec2ForSequenceClassification,
 )
-from voicehub.checkpointing import save_safetensors
 from voicehub.models.vad_transformers import TransformersVADConfig, TransformersVADForVoiceActivityDetection
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +29,7 @@ def _tiny_config(
 ) -> Wav2Vec2Config:
     return Wav2Vec2Config.from_dict({
         "model_type": "wav2vec2",
-        "architectures": [architecture],
+        'architectures': [architecture],
         "id2label": {
             "0": "silence",
             "1": "speech",
@@ -86,7 +86,7 @@ def _write_artifact(
             projector.weight.zero_()
             projector.bias.zero_()
     values = config.to_dict()
-    values["architectures"] = [architecture]
+    values['architectures'] = [architecture]
     (root / "config.json").write_text(
         json.dumps(values),
         encoding="utf-8",
@@ -250,13 +250,13 @@ class NativeTransformersVADProviderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "task-ambiguous"):
             TransformersVADForVoiceActivityDetection._infer_architecture_family({
                 "model_type": "wav2vec2",
-                "architectures": [],
+                'architectures': [],
             })
         with self.assertRaisesRegex(ValueError, "ASR head"):
             TransformersVADForVoiceActivityDetection._infer_architecture_family({
                 "model_type":
                 "wav2vec2",
-                "architectures": ["Wav2Vec2ForCTC"],
+                'architectures': ["Wav2Vec2ForCTC"],
             })
 
     def test_remote_code_pickle_and_loader_options_are_rejected(self):

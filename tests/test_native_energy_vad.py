@@ -5,7 +5,7 @@ import unittest
 
 import torch
 
-from voicehub.architectures.energy_vad import (
+from voicehub.models.vad_auditok.native import (
     EnergyVoiceActivityDetector,
     create_energy_vad_architecture_spec,
     estimate_energy_threshold,

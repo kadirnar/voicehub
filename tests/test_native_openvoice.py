@@ -9,22 +9,6 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures import get_architecture_spec
-from voicehub.architectures.openvoice.artifacts import OpenVoiceArtifacts, resolve_openvoice_artifacts
-from voicehub.architectures.openvoice.checkpoint import (
-    load_openvoice_checkpoint,
-    read_openvoice_checkpoint,
-    save_openvoice_checkpoint,
-)
-from voicehub.architectures.openvoice.configuration import OpenVoiceConverterConfig
-from voicehub.architectures.openvoice.metadata import (
-    OPENVOICE_CHECKPOINT_REVISION,
-    OPENVOICE_CONVERTER_CHECKPOINT,
-    OPENVOICE_SOURCE_REVISION,
-)
-from voicehub.architectures.openvoice.modeling import OpenVoiceToneColorConverter
-from voicehub.architectures.openvoice.processing import OpenVoiceAudioProcessor
-from voicehub.architectures.openvoice.runtime import OpenVoiceRuntime, load_openvoice_runtime
 from voicehub.checkpointing import save_safetensors
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
 from voicehub.models.openvoice import (
@@ -33,6 +17,22 @@ from voicehub.models.openvoice import (
     OpenVoiceTrainingAdapter,
     OpenVoiceTrainingCollator,
 )
+from voicehub.models.openvoice.native.artifacts import OpenVoiceArtifacts, resolve_openvoice_artifacts
+from voicehub.models.openvoice.native.checkpoint import (
+    load_openvoice_checkpoint,
+    read_openvoice_checkpoint,
+    save_openvoice_checkpoint,
+)
+from voicehub.models.openvoice.native.configuration import OpenVoiceConverterConfig
+from voicehub.models.openvoice.native.metadata import (
+    OPENVOICE_CHECKPOINT_REVISION,
+    OPENVOICE_CONVERTER_CHECKPOINT,
+    OPENVOICE_SOURCE_REVISION,
+)
+from voicehub.models.openvoice.native.modeling import OpenVoiceToneColorConverter
+from voicehub.models.openvoice.native.processing import OpenVoiceAudioProcessor
+from voicehub.models.openvoice.native.runtime import OpenVoiceRuntime, load_openvoice_runtime
+from voicehub.runtime import get_architecture_spec
 from voicehub.training import AutoTrainingAdapter, TrainingSupport
 
 
@@ -99,8 +99,7 @@ class OpenVoiceArchitectureTests(unittest.TestCase):
             "9652c27e92b6b2a91632590ac9962ef7ae2b712e5c5b7f4c34ec55ee2b37ab9e",
         )
 
-        source = (
-            Path(__file__).resolve().parents[1] / "voicehub" / "architectures" / "openvoice" / "SOURCE.json")
+        source = (Path(__file__).resolve().parents[1] / 'voicehub/models/openvoice/native/SOURCE.json')
         document = json.loads(source.read_text(encoding="utf-8"))
         self.assertFalse(
             any(
@@ -333,7 +332,7 @@ print(json.dumps({
     "native": spec.is_voicehub_native,
     "architecture": spec.architecture,
     "torch": "torch" in sys.modules,
-    "provider": "voicehub.models.openvoice.inference" in sys.modules,
+    "provider": "voicehub.models.openvoice.modeling" in sys.modules,
 }))
 """
         result = subprocess.run(

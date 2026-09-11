@@ -17,7 +17,7 @@ from typing import Any
 
 from voicehub.checkpointing import save_safetensors
 from voicehub.dependencies import import_optional
-from voicehub.modeling_outputs import TTSTrainingOutput
+from voicehub.outputs import TTSTrainingOutput
 from voicehub.training.adapters import CausalLMTrainingAdapter
 from voicehub.training.contracts import TrainingContext
 from voicehub.training.recipes import SourceRecipeTrainingAdapter
@@ -616,13 +616,13 @@ class FishSpeechTrainingAdapter(
         self.setup()
         destination = Path(save_directory)
         destination.mkdir(parents=True, exist_ok=True)
-        from voicehub.architectures.fishtts.checkpoint import (
+        from voicehub.hub import write_json_file
+        from voicehub.models.fishtts.native.checkpoint import (
             save_fish_codec_pretrained,
             save_fish_semantic_pretrained,
             write_fish_license_files,
         )
-        from voicehub.architectures.fishtts.modeling import FishS2ForConditionalGeneration
-        from voicehub.hub import write_json_file
+        from voicehub.models.fishtts.native.modeling import FishS2ForConditionalGeneration
 
         if isinstance(
                 self.primary_model,
@@ -674,7 +674,7 @@ class FishSpeechTrainingAdapter(
                 codec = ensure_codec_loaded()
         if codec is None or not callable(getattr(codec, "state_dict", None)):
             raise FileNotFoundError("Fish export requires a loaded native codec module.")
-        from voicehub.architectures.fishtts.codec import FishModifiedDAC
+        from voicehub.models.fishtts.native.codec import FishModifiedDAC
 
         if isinstance(codec, FishModifiedDAC):
             save_fish_codec_pretrained(codec, destination / "codec")

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from voicehub.architectures.gptsovits.training import GPTSoVITSStagedTrainingModel
+from voicehub.models.gptsovits.native.training import GPTSoVITSStagedTrainingModel
 from voicehub.training.adapters import CompositeTrainingAdapter
 from voicehub.training.collators import DataCollatorForAudioTraining
 from voicehub.training.datasets import SpeechDataset

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import unittest
 
-from voicehub.architectures import get_architecture_spec
 from voicehub.optimization import (
     DIFFUSION_FAMILY_FEATURE,
     DIFFUSION_KIND_FEATURE_PREFIX,
@@ -17,6 +16,7 @@ from voicehub.optimization import (
     list_diffusion_model_optimization_support,
 )
 from voicehub.registry import list_model_specs
+from voicehub.runtime import get_architecture_spec
 from voicehub.tasks import SpeechTask
 
 _EXPECTED = {

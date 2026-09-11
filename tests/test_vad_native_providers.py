@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from voicehub.audio_modeling_utils import PreTrainedVADModel
+from voicehub.models.audio import PreTrainedVADModel
 from voicehub.models.vad_nemo import NeMoVADConfig, NeMoVADForVoiceActivityDetection
 from voicehub.models.vad_pyannote import PyannoteVADConfig, PyannoteVADForVoiceActivityDetection
 from voicehub.models.vad_speechbrain import SpeechBrainVADConfig, SpeechBrainVADForVoiceActivityDetection
@@ -179,8 +179,8 @@ print(json.dumps({
         self.assertNotIn("token", json.loads(serialized))
 
     def test_segment_splitters_do_not_emit_floating_point_slivers(self):
-        from voicehub.models.vad_pyannote.modeling_vad_pyannote import _finalize_segments as finalize_pyannote
-        from voicehub.models.vad_speechbrain.modeling_vad_speechbrain import _finalize_segments as finalize_speechbrain
+        from voicehub.models.vad_pyannote.modeling import _finalize_segments as finalize_pyannote
+        from voicehub.models.vad_speechbrain.modeling import _finalize_segments as finalize_speechbrain
 
         values = ({"start": 0.0, "end": 0.30000000000000004}, )
         for finalize in (finalize_pyannote, finalize_speechbrain):

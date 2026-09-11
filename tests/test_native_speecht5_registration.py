@@ -5,17 +5,17 @@ import subprocess
 import sys
 import unittest
 
-from voicehub.architectures.registry import ArchitectureRegistry
-from voicehub.architectures.speecht5.metadata import (
+from voicehub.models.speecht5.native.metadata import (
     SPEECHT5_HIFIGAN_REFERENCE_INVENTORY,
     SPEECHT5_REFERENCE_INVENTORY,
     SPEECHT5_SOURCE_REVISION,
 )
-from voicehub.architectures.speecht5.registration import (
+from voicehub.models.speecht5.native.registration import (
     DEFAULT_SPEECHT5_ALIASES,
     create_speecht5_architecture_spec,
     register_speecht5_architecture,
 )
+from voicehub.runtime.registry import ArchitectureRegistry
 from voicehub.tasks import SpeechTask
 
 
@@ -25,7 +25,7 @@ class NativeSpeechT5RegistrationTests(unittest.TestCase):
         code = """
 import json
 import sys
-import voicehub.architectures.speecht5.registration
+import voicehub.models.speecht5.native.registration
 print(json.dumps({
     name: name in sys.modules
     for name in ("torch", "transformers", "numpy", "safetensors")

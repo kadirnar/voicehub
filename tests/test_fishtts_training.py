@@ -6,10 +6,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from voicehub.models.fishtts.training import FishSemanticDataset, FishSpeechTrainingAdapter, FishTextDataCollator
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.contracts import TrainingPhaseSpec, TrainingSupport
 from voicehub.training.specs import ModelTrainingSpec, TrainingFamily, get_training_spec
-from voicehub.training_args import TrainingArguments
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 

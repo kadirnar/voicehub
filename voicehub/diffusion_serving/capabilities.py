@@ -14,7 +14,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from voicehub.errors import VoiceHubError
-from voicehub.models.registry import list_model_specs, normalize_model_type
+from voicehub.registry import list_model_specs, normalize_model_type
 
 if TYPE_CHECKING:
     from voicehub.diffusion_serving.vllm_omni import VLLMOmniDiffusionPlugin

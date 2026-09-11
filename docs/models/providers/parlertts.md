@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2402.01912" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/huggingface/parler-tts" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/parlertts/modeling_parlertts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/parlertts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/parlertts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -103,7 +103,7 @@ integration. This page is generated from its registry contract. [Open the `parle
 
 - **Paper:** [Parler-TTS: A Text-to-Speech Dataset and Model Controlled by Natural Language](https://arxiv.org/abs/2402.01912)
 - **Upstream GitHub:** [Parler-TTS](https://github.com/huggingface/parler-tts)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/parlertts/modeling_parlertts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/parlertts/modeling.py)
 
 ## Configuration
 
@@ -190,8 +190,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.parlertts.modeling_parlertts.ParlerTTSForTextToSpeech` |
-| Configuration | `voicehub.models.parlertts.configuration_parlertts.ParlerTTSConfig` |
+| Implementation | `voicehub.models.parlertts.modeling.ParlerTTSForTextToSpeech` |
+| Configuration | `voicehub.models.parlertts.configuration.ParlerTTSConfig` |
 | Source provenance | `voicehub/models/parlertts/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -216,7 +216,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `ParlerTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/parlertts/configuration_parlertts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/parlertts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -235,7 +235,7 @@ ParlerTTSConfig(**config_kwargs)
 
 ### `ParlerTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/parlertts/modeling_parlertts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/parlertts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

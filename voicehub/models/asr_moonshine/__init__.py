@@ -7,8 +7,8 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.asr_moonshine."
 _EXPORTS = {
-    "MoonshineASRConfig": _PACKAGE + "configuration_asr_moonshine",
-    "MoonshineForSpeechRecognition": _PACKAGE + "modeling_asr_moonshine",
+    "MoonshineASRConfig": _PACKAGE + "configuration",
+    "MoonshineForSpeechRecognition": _PACKAGE + "modeling",
     "NativeMoonshineTrainingAdapter": _PACKAGE + "training_asr_moonshine",
 }
 

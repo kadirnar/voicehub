@@ -15,8 +15,8 @@ from .modular_vibevoice_tokenizer import (
     VibeVoiceTokenizerEncoderOutput
 )
 
-from .configuration_vibevoice import VibeVoiceASRConfig
-from .modeling_vibevoice import (
+from .configuration import VibeVoiceASRConfig
+from .modeling import (
     VibeVoiceCausalLMOutputWithPast,    
     SpeechConnector
 )

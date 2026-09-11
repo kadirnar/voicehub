@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from voicehub.models.orpheustts.configuration_orpheustts import OrpheusTTSConfig
-from voicehub.models.orpheustts.inference import OrpheusTTSForTextToSpeech
+from voicehub.models.orpheustts.configuration import OrpheusTTSConfig
+from voicehub.models.orpheustts.modeling import OrpheusTTSForTextToSpeech
 from voicehub.models.orpheustts.protocol import (
     AUDIO_TOKEN_OFFSET,
     END_SPEECH_TOKEN_ID,
@@ -164,7 +164,7 @@ def _tiny_tokenizer_document() -> dict[str, object]:
 
 
 def _tiny_lm_config():
-    from voicehub.architectures.causal_lm.configuration import CausalLMConfig
+    from voicehub.models.causal_lm.native.configuration import CausalLMConfig
 
     return CausalLMConfig.from_dict({
         "model_type": "llama",
@@ -211,9 +211,9 @@ def _tiny_snac_config() -> dict[str, object]:
 def _write_tiny_artifact(root: Path):
     import torch
 
-    from voicehub.architectures.causal_lm.modeling import LlamaForCausalLM
     from voicehub.checkpointing import save_safetensors
     from voicehub.hub import write_json_file
+    from voicehub.models.causal_lm.native.modeling import LlamaForCausalLM
     from voicehub.models.orpheustts.source.snac import SNAC
 
     torch.manual_seed(37)
@@ -275,7 +275,7 @@ print(json.dumps({name: name in sys.modules for name in names}))
         self.assertTrue(training_spec.native_training)
         self.assertEqual(
             training_spec.source_entrypoints,
-            ("voicehub.architectures.causal_lm.modeling:"
+            ("voicehub.models.causal_lm.native.modeling:"
              "CausalLMForCausalLM.forward", ),
         )
 

@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/canopyai/Orpheus-TTS" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/orpheustts/modeling_orpheustts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/orpheustts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/orpheustts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -104,7 +104,7 @@ integration. This page is generated from its registry contract. [Open the `orphe
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/orpheustts/modeling_orpheustts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/orpheustts/modeling.py)
 
 ## Configuration
 
@@ -190,8 +190,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.orpheustts.modeling_orpheustts.OrpheusTTSForTextToSpeech` |
-| Configuration | `voicehub.models.orpheustts.configuration_orpheustts.OrpheusTTSConfig` |
+| Implementation | `voicehub.models.orpheustts.modeling.OrpheusTTSForTextToSpeech` |
+| Configuration | `voicehub.models.orpheustts.configuration.OrpheusTTSConfig` |
 | Source provenance | `voicehub/models/orpheustts/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -216,7 +216,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `OrpheusTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/orpheustts/configuration_orpheustts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/orpheustts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -235,7 +235,7 @@ OrpheusTTSConfig(**config_kwargs)
 
 ### `OrpheusTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/orpheustts/modeling_orpheustts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/orpheustts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

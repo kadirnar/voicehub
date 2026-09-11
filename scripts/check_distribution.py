@@ -20,7 +20,7 @@ from zipfile import ZipFile
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 REPRESENTATIVE_PACKAGE_FILES = (
     "voicehub/py.typed",
-    "voicehub/architectures/outetts/default_speaker.json",
+    "voicehub/models/outetts/native/default_speaker.json",
     "voicehub/models/conversationtts/source/conversationtts/llama3_2/tokenizer.json",
     ("voicehub/models/chatterbox/source/perth/perth_net/pretrained/implicit/"
      "perth_net_250000.pth.tar"),
@@ -170,7 +170,7 @@ from voicehub.policies.architecture_dependencies import (
 required = {
     "py.typed": files("voicehub").joinpath("py.typed").is_file(),
     "default_speaker.json": files("voicehub").joinpath(
-        "architectures", "outetts", "default_speaker.json"
+        "models", "outetts", "native", "default_speaker.json"
     ).is_file(),
     "tokenizer.json": files("voicehub").joinpath(
         "models", "conversationtts", "source", "conversationtts",

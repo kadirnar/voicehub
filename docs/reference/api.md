@@ -4,7 +4,7 @@ description: Code-grounded reference for VoiceHub inference, training, artifacts
 
 # API reference
 
-This page documents the public Python surface exported by `voicehub`. VoiceHub
+This page documents the root and specialist Python APIs. VoiceHub
 keeps registry discovery and configuration lightweight; model runtimes and
 PyTorch are imported only when the selected operation needs them.
 
@@ -29,11 +29,12 @@ python -m pip install "voicehub[training] @ git+https://github.com/kadirnar/voic
 
 | Area | Primary API |
 | --- | --- |
-| Discovery | `list_model_specs()`, `SpeechTask`, `AutoInferenceModel.available_models()`, `ModelSpec` |
+| Discovery | `list_model_specs()`, `SpeechTask`, `AutoModelForTextToSpeech.available_models()`, `ModelSpec` |
 | Configuration | `AutoConfig`, `VoiceHubConfig`, `AutoProcessor`, `VoiceHubProcessor`, `AudioProcessor` |
 | Task pipeline | `pipeline()`, `Pipeline`, `TextToSpeechPipeline`, `AutomaticSpeechRecognitionPipeline`, `VoiceActivityDetectionPipeline` |
 | TTS inference | `AutoModelForTextToSpeech`, `TTSGenerationConfig`, `TTSOutput` |
 | ASR inference | `AutoModelForSpeechRecognition`, `ASRInferenceConfig`, `ASROutput` |
+| Codec inference | `AutoModelForAudioCodec`, `CodecOutput`, `AudioOutput`; see the [codec contract](../concepts/architecture.md#task-contracts) |
 | VAD inference | `AutoModelForVoiceActivityDetection`, `VADInferenceConfig`, `VADOutput` |
 | Inference execution | `InferenceStrategy`, `EagerInferenceStrategy`, `TorchCompileInferenceStrategy` |
 | LLM TTS serving | `LLMBackendConfig`, `list_llm_backend_support()`, token and Omni speech transports |
@@ -49,10 +50,13 @@ python -m pip install "voicehub[training] @ git+https://github.com/kadirnar/voic
 | Collation | `default_data_collator`, `DefaultDataCollator`, `DataCollatorForTTSTraining`, `DataCollatorForAudioTraining` |
 | Extensions | Inference-strategy, training-spec, adapter, and training-strategy registries |
 
-Unless a different module is shown, names on this page can be imported directly:
+Use root imports for inference and registration. Import training, optimization,
+and data APIs from their corresponding namespaces:
 
 ```python
-from voicehub import AutoModelForTextToSpeech, Trainer, TrainingArguments
+from voicehub import AutoModelForTextToSpeech
+from voicehub.training.trainer import Trainer
+from voicehub.training.arguments import TrainingArguments
 ```
 
 ## Model discovery
@@ -67,8 +71,8 @@ list_model_specs(
 ```
 
 Filter the shared registry by `text-to-speech`,
-`automatic-speech-recognition`, or `voice-activity-detection`. Short aliases
-`tts`, `asr`, `stt`, and `vad` are accepted:
+`automatic-speech-recognition`, `voice-activity-detection`, or `audio-codec`.
+Short aliases `tts`, `asr`, `stt`, `vad`, and `codec` are accepted:
 
 ```python
 from voicehub import list_model_specs
@@ -77,21 +81,21 @@ for spec in list_model_specs(task="asr"):
     print(spec.model_type, spec.architecture, spec.install_extra or "default")
 ```
 
-### `AutoInferenceModel.available_models`
+### `AutoModelForTextToSpeech.available_models`
 
 ```python
-AutoInferenceModel.available_models() -> tuple[ModelSpec, ...]
+AutoModelForTextToSpeech.available_models() -> tuple[ModelSpec, ...]
 ```
 
-Returns the legacy TTS-only registry view in stable display order without
+Returns the TTS registry view in stable display order without
 loading model weights or importing a model runtime. Use
 `list_model_specs(task=None)` for all speech tasks, or pass `task="asr"` /
 `task="vad"` for a task-specific view.
 
 ```python
-from voicehub import AutoInferenceModel
+from voicehub import AutoModelForTextToSpeech
 
-for spec in AutoInferenceModel.available_models():
+for spec in AutoModelForTextToSpeech.available_models():
     print(
         spec.model_type,
         spec.default_model_path,
@@ -383,28 +387,6 @@ model = AutoModelForTextToSpeech.from_pretrained(
 )
 ```
 
-### `AutoInferenceModel`
-
-`AutoInferenceModel` is the compatibility, model-type-first factory:
-
-```python
-AutoInferenceModel.from_pretrained(
-    model_type: str | None = None,
-    model_path: str | Path | None = None,
-    device: str = "cuda",
-    inference_strategy: str | InferenceStrategy | None = None,
-    **kwargs,
-)
-```
-
-When `model_type` is omitted, the registry's unique TTS
-`default_for_task` entry is used. When `model_path` is `None`, that entry's
-`default_model_path` is used. The built-in declaration preserves the legacy
-Orpheus default without embedding a provider name in the compatibility
-factory.
-Prefer `AutoModelForTextToSpeech` in new code because it can infer the model
-type from a saved VoiceHub configuration.
-
 ### ASR and VAD factories
 
 `AutoModelForSpeechRecognition` and
@@ -413,10 +395,7 @@ type from a saved VoiceHub configuration.
 the registry task before a model module is imported:
 
 ```python
-from voicehub import (
-    AutoModelForSpeechRecognition,
-    AutoModelForVoiceActivityDetection,
-)
+from voicehub import AutoModelForSpeechRecognition, AutoModelForVoiceActivityDetection
 
 asr = AutoModelForSpeechRecognition.from_pretrained(
     "openai/whisper-small",
@@ -771,11 +750,7 @@ Names are stripped and lowercased. The built-in `"eager"` and
 `"torch-compile"` entries cannot be replaced or removed.
 
 ```python
-from voicehub import (
-    InferenceStrategy,
-    register_inference_strategy,
-    unregister_inference_strategy,
-)
+from voicehub.inference_strategy import InferenceStrategy, register_inference_strategy, unregister_inference_strategy
 
 
 class AuditedEagerStrategy(InferenceStrategy):
@@ -1402,7 +1377,7 @@ variant is trainable.
 profile can still be gated when its required specialized adapter is absent.
 
 ```python
-from voicehub import get_training_spec, list_training_specs, TrainingSupport
+from voicehub.training import get_training_spec, list_training_specs, TrainingSupport
 
 dia = get_training_spec("dia")
 preprocessed = list_training_specs(
@@ -1848,7 +1823,8 @@ The dataset must already satisfy the selected model recipe, unless the
 integration supplies `create_training_dataset()`.
 
 ```python
-from voicehub import Trainer, TrainingArguments
+from voicehub.training.trainer import Trainer
+from voicehub.training.arguments import TrainingArguments
 
 args = TrainingArguments(
     output_dir="runs/voicehub",
@@ -2051,7 +2027,7 @@ without a dot is written beside its source; a dotted derived name is written
 from the batch root. Masks have shape `(batch, padded_sequence_length)`.
 
 ```python
-from voicehub import DataCollatorForTTSTraining, TTSFieldSchema
+from voicehub.training import DataCollatorForTTSTraining, TTSFieldSchema
 
 collator = DataCollatorForTTSTraining(
     field_schemas={
@@ -2529,11 +2505,7 @@ Factories are constructed lazily and must return `TrainingStrategy`. The
 built-in `"torch"` strategy cannot be unregistered.
 
 ```python
-from voicehub import (
-    TorchTrainingStrategy,
-    register_training_strategy,
-    unregister_training_strategy,
-)
+from voicehub.training import TorchTrainingStrategy, register_training_strategy, unregister_training_strategy
 
 
 class InstrumentedTorchStrategy(TorchTrainingStrategy):
@@ -2615,14 +2587,7 @@ calls its `save_pretrained()` method. Declare a nonstandard layout here instead
 of branching on the model type in a shared adapter.
 
 ```python
-from voicehub import (
-    get_training_spec,
-    ModelTrainingSpec,
-    TrainingFamily,
-    TrainingSupport,
-    register_training_spec,
-    unregister_training_spec,
-)
+from voicehub.training import get_training_spec, ModelTrainingSpec, TrainingFamily, TrainingSupport, register_training_spec, unregister_training_spec
 
 profile = ModelTrainingSpec(
     model_type="exampletts",

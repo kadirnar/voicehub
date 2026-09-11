@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.higgstts."
 _EXPORTS = {
-    "HiggsTTS": _PACKAGE + "modeling_higgstts",
-    "HiggsTTSConfig": _PACKAGE + "configuration_higgstts",
-    "HiggsTTSForTextToSpeech": _PACKAGE + "modeling_higgstts",
+    "HiggsTTS": _PACKAGE + "modeling",
+    "HiggsTTSConfig": _PACKAGE + "configuration",
+    "HiggsTTSForTextToSpeech": _PACKAGE + "modeling",
     "HiggsTrainingAdapter": _PACKAGE + "training",
     "HiggsTrainingCollator": _PACKAGE + "training",
 }

@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2508.19205" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/microsoft/VibeVoice" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vibevoice/modeling_vibevoice.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vibevoice/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/vibevoice.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -103,7 +103,7 @@ integration. This page is generated from its registry contract. [Open the `vibev
 
 - **Paper:** [VibeVoice Technical Report](https://arxiv.org/abs/2508.19205)
 - **Upstream GitHub:** [VibeVoice](https://github.com/microsoft/VibeVoice)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vibevoice/modeling_vibevoice.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vibevoice/modeling.py)
 
 ## Configuration
 
@@ -188,8 +188,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.vibevoice.modeling_vibevoice.VibeVoiceForTextToSpeech` |
-| Configuration | `voicehub.models.vibevoice.configuration_vibevoice.VibeVoiceConfig` |
+| Implementation | `voicehub.models.vibevoice.modeling.VibeVoiceForTextToSpeech` |
+| Configuration | `voicehub.models.vibevoice.configuration.VibeVoiceConfig` |
 | Source provenance | `voicehub/models/vibevoice/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -214,7 +214,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `VibeVoiceConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vibevoice/configuration_vibevoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vibevoice/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -233,7 +233,7 @@ VibeVoiceConfig(**config_kwargs)
 
 ### `VibeVoiceForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vibevoice/modeling_vibevoice.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vibevoice/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

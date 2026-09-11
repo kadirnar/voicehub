@@ -22,7 +22,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/myshell-ai/MeloTTS" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/melotts/modeling_melotts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/melotts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 </div>
 </details>
 </div>
@@ -102,7 +102,7 @@ integration. This page is generated from its registry contract.
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [MeloTTS](https://github.com/myshell-ai/MeloTTS)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/melotts/modeling_melotts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/melotts/modeling.py)
 
 ## Configuration
 
@@ -189,8 +189,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.melotts.modeling_melotts.MeloTTSForTextToSpeech` |
-| Configuration | `voicehub.models.melotts.configuration_melotts.MeloTTSConfig` |
+| Implementation | `voicehub.models.melotts.modeling.MeloTTSForTextToSpeech` |
+| Configuration | `voicehub.models.melotts.configuration.MeloTTSConfig` |
 | Source provenance | `voicehub/models/melotts/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -215,7 +215,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `MeloTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/melotts/configuration_melotts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/melotts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -234,7 +234,7 @@ MeloTTSConfig(**config_kwargs)
 
 ### `MeloTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/melotts/modeling_melotts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/melotts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

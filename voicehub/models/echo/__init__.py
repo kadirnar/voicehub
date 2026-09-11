@@ -1,5 +1,23 @@
-"""Echo-TTS configuration and model exports."""
+"""Lazy exports for the echo model family."""
 
-from voicehub.models.echo.inference import EchoTTSConfig, EchoTTSForTextToSpeech
+from importlib import import_module
 
-__all__ = ["EchoTTSConfig", "EchoTTSForTextToSpeech"]
+_EXPORTS = {
+    'EchoTTSConfig': ('voicehub.models.echo.modeling', 'EchoTTSConfig'),
+    'EchoTTSForTextToSpeech': ('voicehub.models.echo.modeling', 'EchoTTSForTextToSpeech')
+}
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name):
+    try:
+        module_name, attribute = _EXPORTS[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted((*globals(), *_EXPORTS))

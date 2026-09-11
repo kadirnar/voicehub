@@ -9,10 +9,10 @@ from voicehub.models.cosyvoice.training import CosyVoiceTrainingAdapter
 from voicehub.models.higgstts.training import HiggsTrainingAdapter
 from voicehub.models.orpheustts.training import OrpheusSFTDataset
 from voicehub.models.xtts.training import XTTSTrainingAdapter
-from voicehub.trainer import Trainer
+from voicehub.training.arguments import TrainingArguments
 from voicehub.training.recipes import F5TTSTrainingAdapter, Qwen3TTSTrainingAdapter
 from voicehub.training.specs import get_training_spec
-from voicehub.training_args import TrainingArguments
+from voicehub.training.trainer import Trainer
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 

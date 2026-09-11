@@ -4,10 +4,10 @@ from types import SimpleNamespace
 
 import torch
 
-from voicehub.architectures.irodoritts.flow_matching import sample_euler_rf_cfg
-from voicehub.architectures.irodoritts.modeling import TextToLatentRFDiT
 from voicehub.models.echo.model import EchoDiT
 from voicehub.models.echo.sampling import sample_euler_cfg_independent_guidances
+from voicehub.models.irodoritts.native.flow_matching import sample_euler_rf_cfg
+from voicehub.models.irodoritts.native.modeling import TextToLatentRFDiT
 from voicehub.optimization.diffusion_sampling import (
     DiffusionSamplingConfig,
     DiffusionSamplingController,

@@ -6,8 +6,8 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
-    "StyleTTS2Config": ("voicehub.models.styletts2.configuration_styletts2"),
-    "StyleTTS2ForTextToSpeech": "voicehub.models.styletts2.inference",
+    "StyleTTS2Config": ("voicehub.models.styletts2.configuration"),
+    "StyleTTS2ForTextToSpeech": "voicehub.models.styletts2.modeling",
 }
 
 

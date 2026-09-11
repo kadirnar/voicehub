@@ -11,10 +11,10 @@ from types import SimpleNamespace
 import torch
 
 from voicehub import AutoConfig, AutoModelForSpeechRecognition, get_model_spec
-from voicehub.architectures.wav2vec2 import Wav2Vec2Config, Wav2Vec2ForCTC
-from voicehub.architectures.wav2vec2.tokenization import Wav2Vec2CTCTokenizer
 from voicehub.checkpointing import save_safetensors
 from voicehub.models.asr_wav2vec2 import NativeWav2Vec2TrainingAdapter, Wav2Vec2ASRConfig, Wav2Vec2ForSpeechRecognition
+from voicehub.models.asr_wav2vec2.native import Wav2Vec2Config, Wav2Vec2ForCTC
+from voicehub.models.asr_wav2vec2.native.tokenization import Wav2Vec2CTCTokenizer
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.specs import get_training_spec
 
@@ -52,7 +52,7 @@ def _tiny_artifact(root: Path):
     )
     reference = Wav2Vec2ForCTC(config)
     values = config.to_dict()
-    values["architectures"] = ["Wav2Vec2ForCTC"]
+    values['architectures'] = ["Wav2Vec2ForCTC"]
     (root / "config.json").write_text(
         json.dumps(values),
         encoding="utf-8",
@@ -346,17 +346,17 @@ print(json.dumps({name: name in sys.modules for name in names}))
 
         self.assertEqual(
             model_spec.module,
-            "voicehub.models.asr_wav2vec2.modeling_asr_wav2vec2",
+            "voicehub.models.asr_wav2vec2.modeling",
         )
         self.assertEqual(
             model_spec.config_module,
-            "voicehub.models.asr_wav2vec2.configuration_asr_wav2vec2",
+            "voicehub.models.asr_wav2vec2.configuration",
         )
         self.assertIn("voicehub-native", model_spec.capabilities)
         self.assertEqual(model_spec.architecture, "wav2vec2")
         self.assertEqual(
             training_spec.source_entrypoints,
-            ("voicehub.architectures.wav2vec2.Wav2Vec2ForCTC", ),
+            ("voicehub.models.asr_wav2vec2.native.Wav2Vec2ForCTC", ),
         )
 
     def test_external_runtime_configuration_is_rejected_explicitly(self):

@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/resemble-ai/chatterbox" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/chatterbox/modeling_chatterbox.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/chatterbox/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/chatterbox.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -108,7 +108,7 @@ integration. This page is generated from its registry contract. [Open the `chatt
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Chatterbox](https://github.com/resemble-ai/chatterbox)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/chatterbox/modeling_chatterbox.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/chatterbox/modeling.py)
 
 ## Configuration
 
@@ -197,8 +197,8 @@ This profile uses model-specific phases; inspect and honor each phase boundary. 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.chatterbox.modeling_chatterbox.ChatterboxForTextToSpeech` |
-| Configuration | `voicehub.models.chatterbox.configuration_chatterbox.ChatterboxConfig` |
+| Implementation | `voicehub.models.chatterbox.modeling.ChatterboxForTextToSpeech` |
+| Configuration | `voicehub.models.chatterbox.configuration.ChatterboxConfig` |
 | Source provenance | `voicehub/models/chatterbox/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -223,7 +223,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `ChatterboxConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/chatterbox/configuration_chatterbox.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/chatterbox/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -242,7 +242,7 @@ ChatterboxConfig(**config_kwargs)
 
 ### `ChatterboxForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/chatterbox/modeling_chatterbox.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/chatterbox/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

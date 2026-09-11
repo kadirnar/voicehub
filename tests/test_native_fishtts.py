@@ -14,8 +14,13 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.fishtts.artifacts import resolve_fish_codec_artifacts, resolve_fish_semantic_artifacts
-from voicehub.architectures.fishtts.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointIntegrityError
+from voicehub.hub import write_json_file
+from voicehub.models.fishtts.configuration import FishTTSConfig
+from voicehub.models.fishtts.modeling import FishTTSForTextToSpeech
+from voicehub.models.fishtts.native.artifacts import resolve_fish_codec_artifacts, resolve_fish_semantic_artifacts
+from voicehub.models.fishtts.native.checkpoint import (
     convert_legacy_fish_codec,
     inspect_fish_checkpoint,
     load_fish_codec_checkpoint,
@@ -23,9 +28,9 @@ from voicehub.architectures.fishtts.checkpoint import (
     save_fish_codec_pretrained,
     save_fish_semantic_pretrained,
 )
-from voicehub.architectures.fishtts.codec import FishModifiedDAC
-from voicehub.architectures.fishtts.configuration import FishCodecConfig, FishS2Config
-from voicehub.architectures.fishtts.metadata import (
+from voicehub.models.fishtts.native.codec import FishModifiedDAC
+from voicehub.models.fishtts.native.configuration import FishCodecConfig, FishS2Config
+from voicehub.models.fishtts.native.metadata import (
     FISH_ATTRIBUTION,
     FISH_LICENSE_NOTICE,
     FISH_S2_CHECKPOINT_REVISION,
@@ -37,10 +42,10 @@ from voicehub.architectures.fishtts.metadata import (
     FISH_SPEECH_SOURCE_LICENSE_SHA256,
     FISH_SPEECH_SOURCE_REVISION,
 )
-from voicehub.architectures.fishtts.modeling import FishS2ForConditionalGeneration
-from voicehub.architectures.fishtts.prompting import FishConversationTurn, build_fish_prompt, split_speaker_turns
-from voicehub.architectures.fishtts.registration import create_fish_s2_architecture_spec
-from voicehub.architectures.fishtts.tokenization import (
+from voicehub.models.fishtts.native.modeling import FishS2ForConditionalGeneration
+from voicehub.models.fishtts.native.prompting import FishConversationTurn, build_fish_prompt, split_speaker_turns
+from voicehub.models.fishtts.native.registration import create_fish_s2_architecture_spec
+from voicehub.models.fishtts.native.tokenization import (
     AUDIO_END,
     AUDIO_PAD,
     AUDIO_START,
@@ -57,11 +62,6 @@ from voicehub.architectures.fishtts.tokenization import (
     FishTokenizer,
     normalize_fish_text,
 )
-from voicehub.checkpointing import save_safetensors
-from voicehub.checkpointing.errors import CheckpointIntegrityError
-from voicehub.hub import write_json_file
-from voicehub.models.fishtts.configuration_fishtts import FishTTSConfig
-from voicehub.models.fishtts.inference import FishTTSForTextToSpeech
 from voicehub.models.fishtts.training import FishSpeechTrainingAdapter
 from voicehub.tokenization import encode_gpt2_token
 
@@ -237,7 +237,7 @@ class NativeFishDependencyTests(unittest.TestCase):
 
     def test_active_runtime_has_no_provider_or_model_framework_imports(self):
         roots = (
-            PROJECT_ROOT / "voicehub" / "architectures" / "fishtts",
+            PROJECT_ROOT / 'voicehub/models/fishtts/native',
             PROJECT_ROOT / "voicehub" / "models" / "fishtts",
         )
         forbidden = {
@@ -272,7 +272,7 @@ class NativeFishDependencyTests(unittest.TestCase):
     def test_wrapper_import_keeps_external_model_frameworks_unloaded(self):
         command = (
             "import sys; "
-            "import voicehub.models.fishtts.inference; "
+            "import voicehub.models.fishtts.modeling; "
             "names=('transformers','huggingface_hub','safetensors',"
             "'tokenizers','numpy','torchaudio','einops','hydra',"
             "'omegaconf','vector_quantize_pytorch','fish_speech'); "
@@ -290,7 +290,7 @@ class NativeFishDependencyTests(unittest.TestCase):
         )
 
     def test_provenance_and_license_obligations_are_pinned(self):
-        directory = (PROJECT_ROOT / "voicehub" / "architectures" / "fishtts")
+        directory = (PROJECT_ROOT / 'voicehub/models/fishtts/native')
         source = json.loads((directory / "SOURCE.json").read_text(encoding="utf-8"))
         self.assertEqual(
             source["implementation_sources"][0]["revision"],
@@ -627,14 +627,14 @@ class NativeFishCheckpointAndLifecycleTests(unittest.TestCase):
             root = Path(directory)
             legacy = root / "codec.pth"
             legacy.write_bytes(b"not the official checkpoint")
-            with patch("voicehub.architectures.fishtts.checkpoint.torch.load", ) as load:
+            with patch("voicehub.models.fishtts.native.checkpoint.torch.load", ) as load:
                 with self.assertRaisesRegex(
                         PermissionError,
                         "trust_legacy_pickle",
                 ):
                     convert_legacy_fish_codec(legacy, root / "denied")
                 load.assert_not_called()
-            with patch("voicehub.architectures.fishtts.checkpoint.torch.load", ) as load:
+            with patch("voicehub.models.fishtts.native.checkpoint.torch.load", ) as load:
                 with self.assertRaises(CheckpointIntegrityError):
                     convert_legacy_fish_codec(
                         legacy,

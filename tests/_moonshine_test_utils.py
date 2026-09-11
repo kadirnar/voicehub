@@ -5,8 +5,8 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.moonshine import MoonshineConfig, MoonshineForConditionalGeneration
 from voicehub.checkpointing import save_safetensors
+from voicehub.models.asr_moonshine.native import MoonshineConfig, MoonshineForConditionalGeneration
 
 TINY_MOONSHINE_VOCABULARY = {
     "<unk>": 0,

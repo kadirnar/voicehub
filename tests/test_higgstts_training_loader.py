@@ -5,8 +5,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from voicehub.architectures.higgs_audio_v2.runtime import HiggsAudioV2Runtime
 from voicehub.models.higgstts.inference import HiggsTTSConfig, HiggsTTSForTextToSpeech
+from voicehub.models.higgstts.native.runtime import HiggsAudioV2Runtime
 from voicehub.models.higgstts.training import HiggsSFTDataset, HiggsTrainingCollator, load_higgs_training_backend
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -39,7 +39,7 @@ class HiggsTrainingCompatibilityTests(unittest.TestCase):
     def test_compatibility_loader_routes_to_native_runtime(self):
         sentinel = object()
         with patch(
-                "voicehub.architectures.higgs_audio_v2.runtime."
+                "voicehub.models.higgstts.native.runtime."
                 "load_higgs_audio_v2_runtime",
                 return_value=sentinel,
         ) as loader:
@@ -105,7 +105,7 @@ class HiggsTrainingCompatibilityTests(unittest.TestCase):
         )
         model = HiggsTTSForTextToSpeech(device="cpu")
         with patch(
-                "voicehub.architectures.higgs_audio_v2.runtime."
+                "voicehub.models.higgstts.native.runtime."
                 "load_higgs_audio_v2_runtime",
                 return_value=runtime,
         ) as loader:

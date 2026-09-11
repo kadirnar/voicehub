@@ -5,19 +5,6 @@ import unittest
 import torch
 from torch import nn
 
-from voicehub.architectures.cosyvoice_native.flow import AdaLayerNormZeroFinal as CosyVoiceAdaLayerNormFinal
-from voicehub.architectures.cosyvoice_native.vocoder import Snake as CosyVoiceSnake
-from voicehub.architectures.f5tts.modules import AdaLayerNormFinal as F5AdaLayerNormFinal
-from voicehub.architectures.higgs_audio_v2.tokenizer import Snake1d as HiggsSnake
-from voicehub.architectures.irodoritts.codec import IrodoriDACVAECodec
-from voicehub.architectures.irodoritts.codec_layers import Snake1d as IrodoriSnake
-from voicehub.architectures.irodoritts.modeling import LowRankAdaLN as IrodoriLowRankAdaLN
-from voicehub.architectures.irodoritts.runtime import InferenceRuntime as IrodoriRuntime
-from voicehub.architectures.omnivoice.codec import Snake1d as OmniVoiceSnake
-from voicehub.architectures.qwen3_tts.codec import SnakeBeta as QwenSnakeBeta
-from voicehub.architectures.vibevoice.diffusion import VibeVoiceDiffusionLayer
-from voicehub.architectures.voxcpm2.codec import _Snake1d as VoxCPMSnake
-from voicehub.architectures.zonos.codec import ZonosDACCodec
 from voicehub.components.audio.codecs.dac.nn.layers import Snake1d as DACSnake
 from voicehub.kernels import (
     AUDIO_CODEC_SNAKE,
@@ -33,11 +20,24 @@ from voicehub.kernels import (
     resolve_kernel,
 )
 from voicehub.models.chatterbox.models.s3gen.hifigan import Snake as ChatterboxSnake
+from voicehub.models.cosyvoice.native.flow import AdaLayerNormZeroFinal as CosyVoiceAdaLayerNormFinal
+from voicehub.models.cosyvoice.native.vocoder import Snake as CosyVoiceSnake
 from voicehub.models.echo.autoencoder import Snake1d as EchoSnake
 from voicehub.models.echo.model import LowRankAdaLN as EchoLowRankAdaLN
+from voicehub.models.f5tts.native.modules import AdaLayerNormFinal as F5AdaLayerNormFinal
+from voicehub.models.higgstts.native.tokenizer import Snake1d as HiggsSnake
+from voicehub.models.irodoritts.native.codec import IrodoriDACVAECodec
+from voicehub.models.irodoritts.native.codec_layers import Snake1d as IrodoriSnake
+from voicehub.models.irodoritts.native.modeling import LowRankAdaLN as IrodoriLowRankAdaLN
+from voicehub.models.irodoritts.native.runtime import InferenceRuntime as IrodoriRuntime
 from voicehub.models.llasa.xcodec2 import XCodec2SnakeBeta
+from voicehub.models.omnivoice.native.codec import Snake1d as OmniVoiceSnake
 from voicehub.models.orpheustts.source.snac.layers import Snake1d as SNACSnake
+from voicehub.models.qwen3tts.native.codec import SnakeBeta as QwenSnakeBeta
+from voicehub.models.vibevoice.native.diffusion import VibeVoiceDiffusionLayer
+from voicehub.models.voxcpm.native.codec import _Snake1d as VoxCPMSnake
 from voicehub.models.vui.fluac import Snake1d as VUISnake
+from voicehub.models.zonos.native.codec import ZonosDACCodec
 from voicehub.optimization import (
     CodecOptimizationConfig,
     CustomKernelPass,

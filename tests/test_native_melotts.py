@@ -10,18 +10,20 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.melotts.checkpoint import (
+from voicehub.models.melotts.configuration import MeloTTSConfig
+from voicehub.models.melotts.modeling import MeloTTSForTextToSpeech
+from voicehub.models.melotts.native.checkpoint import (
     inspect_melotts_checkpoint,
     read_legacy_melotts_checkpoint,
     save_melotts_pretrained,
 )
-from voicehub.architectures.melotts.configuration import (
+from voicehub.models.melotts.native.configuration import (
     MeloTTSArchitectureConfig,
     MeloTTSDataConfig,
     MeloTTSModelConfig,
 )
-from voicehub.architectures.melotts.frontend import NativeMeloTTSFrontend
-from voicehub.architectures.melotts.metadata import (
+from voicehub.models.melotts.native.frontend import NativeMeloTTSFrontend
+from voicehub.models.melotts.native.metadata import (
     MELOTTS_EN_NEWEST_INVENTORY_FINGERPRINT,
     MELOTTS_EN_NEWEST_PARAMETER_COUNT,
     MELOTTS_EN_NEWEST_TENSOR_COUNT,
@@ -29,18 +31,16 @@ from voicehub.architectures.melotts.metadata import (
     MELOTTS_RELEASES,
     MELOTTS_SOURCE_REVISION,
 )
-from voicehub.architectures.melotts.modeling import DEPLOYABLE_MELOTTS_COMPONENTS, build_melotts_model
-from voicehub.architectures.melotts.registration import create_melotts_architecture_spec
-from voicehub.architectures.melotts.runtime import MeloTTSRuntime
-from voicehub.architectures.melotts.training import (
+from voicehub.models.melotts.native.modeling import DEPLOYABLE_MELOTTS_COMPONENTS, build_melotts_model
+from voicehub.models.melotts.native.registration import create_melotts_architecture_spec
+from voicehub.models.melotts.native.runtime import MeloTTSRuntime
+from voicehub.models.melotts.native.training import (
     MeloTTSTrainingCollator,
     MeloTTSTrainingModel,
     discriminator_loss,
     feature_matching_loss,
     generator_loss,
 )
-from voicehub.models.melotts.configuration_melotts import MeloTTSConfig
-from voicehub.models.melotts.inference import MeloTTSForTextToSpeech
 from voicehub.models.melotts.source.melo.models import TextEncoder
 from voicehub.models.melotts.training import MeloTTSTrainingAdapter
 from voicehub.registry import get_model_spec
@@ -291,10 +291,10 @@ class NativeMeloTTSTests(unittest.TestCase):
 
     def test_active_graph_uses_only_stdlib_torch_and_voicehub(self):
         root = Path(__file__).parents[1]
-        files = tuple((root / "voicehub/architectures/melotts").glob("*.py")) + (
-            root / "voicehub/models/melotts/configuration_melotts.py",
-            root / "voicehub/models/melotts/inference.py",
-            root / "voicehub/models/melotts/modeling_melotts.py",
+        files = tuple((root / "voicehub/models/melotts/native").glob("*.py")) + (
+            root / "voicehub/models/melotts/configuration.py",
+            root / "voicehub/models/melotts/modeling.py",
+            root / "voicehub/models/melotts/modeling.py",
             root / "voicehub/models/melotts/training.py",
             root / "voicehub/models/melotts/source/melo/models.py",
             root / "voicehub/models/melotts/source/melo/modules.py",

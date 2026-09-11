@@ -22,7 +22,7 @@ from .modular_vibevoice_tokenizer import VibeVoiceTokenizerStreamingCache, VibeV
 from .modular_vibevoice_diffusion_head import VibeVoiceDiffusionHead
 from voicehub.models.vibevoice.source.vibevoice.schedule.dpm_solver import DPMSolverMultistepScheduler
 
-from .configuration_vibevoice import VibeVoiceConfig
+from .configuration import VibeVoiceConfig
 
 
 logger = logging.get_logger(__name__)

@@ -9,16 +9,18 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.registry import ArchitectureRegistry
-from voicehub.architectures.zonos.artifacts import ZonosArtifacts, resolve_zonos_artifacts
-from voicehub.architectures.zonos.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.zonos.modeling import ZonosConfig, ZonosForTextToSpeech
+from voicehub.models.zonos.native.artifacts import ZonosArtifacts, resolve_zonos_artifacts
+from voicehub.models.zonos.native.checkpoint import (
     export_zonos_checkpoint,
     load_zonos_checkpoint,
     save_zonos_pretrained,
     zonos_inventory_fingerprint,
 )
-from voicehub.architectures.zonos.configuration import ZonosArchitectureConfig, ZonosBackboneConfig
-from voicehub.architectures.zonos.frontend import (
+from voicehub.models.zonos.native.configuration import ZonosArchitectureConfig, ZonosBackboneConfig
+from voicehub.models.zonos.native.frontend import (
     PHONEME_SYMBOLS,
     PrecomputedPhonemeFrontend,
     batch_phoneme_ids,
@@ -26,7 +28,7 @@ from voicehub.architectures.zonos.frontend import (
     resolve_phonemes,
     tokenize_phonemes,
 )
-from voicehub.architectures.zonos.metadata import (
+from voicehub.models.zonos.native.metadata import (
     NATIVE_ZONOS_FORMAT,
     ZONOS_HYBRID_REPOSITORY,
     ZONOS_SOURCE_REVISION,
@@ -36,19 +38,17 @@ from voicehub.architectures.zonos.metadata import (
     ZONOS_TRANSFORMER_REVISION,
     ZONOS_TRANSFORMER_TENSOR_COUNT,
 )
-from voicehub.architectures.zonos.modeling import ZonosForCausalLM
-from voicehub.architectures.zonos.pattern import apply_delay_pattern
-from voicehub.architectures.zonos.registration import create_zonos_architecture_spec, register_zonos_architecture
-from voicehub.architectures.zonos.runtime import NativeZonosRuntime, ZonosGeneration
-from voicehub.architectures.zonos.sampling import ZonosSamplingOptions, sample_zonos_token
-from voicehub.checkpointing import save_safetensors
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.models.zonos.inference import ZonosConfig, ZonosForTextToSpeech
+from voicehub.models.zonos.native.modeling import ZonosForCausalLM
+from voicehub.models.zonos.native.pattern import apply_delay_pattern
+from voicehub.models.zonos.native.registration import create_zonos_architecture_spec, register_zonos_architecture
+from voicehub.models.zonos.native.runtime import NativeZonosRuntime, ZonosGeneration
+from voicehub.models.zonos.native.sampling import ZonosSamplingOptions, sample_zonos_token
 from voicehub.models.zonos.training import ZonosTrainingAdapter
+from voicehub.runtime.registry import ArchitectureRegistry
 from voicehub.training.specs import get_training_spec
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-ARCHITECTURE_ROOT = PROJECT_ROOT / "voicehub" / "architectures" / "zonos"
+ARCHITECTURE_ROOT = PROJECT_ROOT / 'voicehub/models/zonos/native'
 
 
 def _tiny_config() -> ZonosArchitectureConfig:
@@ -359,7 +359,7 @@ class NativeZonosCheckpointTests(unittest.TestCase):
 
     def test_official_resolution_is_pinned(self):
         with patch(
-                "voicehub.architectures.zonos.artifacts."
+                "voicehub.models.zonos.native.artifacts."
                 "resolve_pretrained_file",
                 side_effect=lambda source, filename, **kwargs: Path(filename),
         ) as resolver:
@@ -390,7 +390,7 @@ class NativeZonosRuntimeTests(unittest.TestCase):
         )
         expected_codes = torch.zeros(1, 9, 3, dtype=torch.long)
         with patch(
-                "voicehub.architectures.zonos.runtime.generate_zonos_codes",
+                "voicehub.models.zonos.native.runtime.generate_zonos_codes",
                 return_value=expected_codes,
         ):
             result = runtime.generate(
@@ -510,7 +510,7 @@ class NativeZonosDependencyTests(unittest.TestCase):
             "voicehub",
         }
         files = tuple(ARCHITECTURE_ROOT.glob("*.py")) + (
-            PROJECT_ROOT / "voicehub" / "models" / "zonos" / "inference.py",
+            PROJECT_ROOT / 'voicehub/models/zonos/modeling.py',
             PROJECT_ROOT / "voicehub" / "models" / "zonos" / "training.py",
         )
         violations = []

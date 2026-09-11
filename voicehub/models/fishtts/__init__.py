@@ -1,6 +1,24 @@
-"""Fish Speech model family."""
+"""Lazy exports for the fishtts model family."""
 
-from voicehub.models.fishtts.configuration_fishtts import FishTTSConfig
-from voicehub.models.fishtts.inference import FishTTS, FishTTSForTextToSpeech
+from importlib import import_module
 
-__all__ = ["FishTTS", "FishTTSConfig", "FishTTSForTextToSpeech"]
+_EXPORTS = {
+    'FishTTSConfig': ('voicehub.models.fishtts.configuration', 'FishTTSConfig'),
+    'FishTTS': ('voicehub.models.fishtts.modeling', 'FishTTS'),
+    'FishTTSForTextToSpeech': ('voicehub.models.fishtts.modeling', 'FishTTSForTextToSpeech')
+}
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name):
+    try:
+        module_name, attribute = _EXPORTS[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted((*globals(), *_EXPORTS))

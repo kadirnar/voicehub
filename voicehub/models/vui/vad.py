@@ -213,7 +213,7 @@ class _EnergyPipeline:
         return self
 
     def __call__(self, value: Any) -> Annotation:
-        from voicehub.architectures.energy_vad.modeling import EnergyVoiceActivityDetector
+        from voicehub.models.vad_auditok.native.modeling import EnergyVoiceActivityDetector
 
         if isinstance(value, Mapping):
             waveform = value["waveform"]
@@ -387,8 +387,8 @@ def load_vad_model(
     elif _sha256_file(checkpoint) != VAD_SEGMENTATION_SHA256:
         raise RuntimeError("Cached Vui VAD checkpoint failed SHA-256 verification.")
 
-    from voicehub.architectures.pyannet.checkpoint import convert_pyannote_lightning_checkpoint
     from voicehub.models.vad_pyannote import PyannoteVADForVoiceActivityDetection
+    from voicehub.models.vad_pyannote.native.checkpoint import convert_pyannote_lightning_checkpoint
 
     destination = checkpoint.parent / ".voicehub-native" / "vui-pyannet"
     if not (destination / "model.safetensors").is_file():

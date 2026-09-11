@@ -17,25 +17,23 @@ from urllib.error import HTTPError, URLError
 
 import torch
 
-from voicehub import (
-    AutoConfig,
-    AutoModelForTextToSpeech,
+from voicehub import AutoConfig, AutoModelForTextToSpeech, PreTrainedTTSModel, TTSOutput, VoiceHubConfig
+from voicehub.errors import LLMBackendCompatibilityError, LLMBackendRequestError
+from voicehub.generation import GenerationConfig
+from voicehub.llm_serving import (
     LLMBackend,
-    LLMBackendCompatibilityError,
     LLMBackendConfig,
-    LLMBackendRequestError,
     LLMBackendSupport,
     LLMBackendTransport,
-    PreTrainedTTSModel,
-    TTSOutput,
-    VoiceHubConfig,
+    LLMServingClient,
+    RemoteCausalLMProxy,
+    TokenGenerationRequest,
+    TokenGenerationResult,
     get_llm_backend_support,
     list_llm_backend_support,
     register_llm_backend_support,
     unregister_llm_backend_support,
 )
-from voicehub.generation import GenerationConfig
-from voicehub.llm_serving import LLMServingClient, RemoteCausalLMProxy, TokenGenerationRequest, TokenGenerationResult
 from voicehub.llm_serving.http import HTTPBackendClient, HTTPBackendResponse, join_endpoint
 
 
@@ -613,15 +611,8 @@ class LLMBackendSupportTests(unittest.TestCase):
 
     def test_architecture_failure_lookup_remains_framework_lazy(self):
         script = (
-            "import sys\n"
-            "from voicehub import LLMBackendCompatibilityError\n"
-            "from voicehub.llm_serving import get_llm_backend_support\n"
-            "try:\n"
-            "    get_llm_backend_support('outetts', 'vllm')\n"
-            "except LLMBackendCompatibilityError as error:\n"
-            "    print('64-token repetition window' in str(error), "
-            "'torch' in sys.modules, "
-            "'voicehub.models.outetts.modeling_outetts' in sys.modules)\n")
+            "import sys\nfrom voicehub.errors import LLMBackendCompatibilityError\nfrom voicehub.llm_serving import get_llm_backend_support\ntry:\n    get_llm_backend_support('outetts', 'vllm')\nexcept LLMBackendCompatibilityError as error:\n    print('64-token repetition window' in str(error), 'torch' in sys.modules, 'voicehub.models.outetts.modeling' in sys.modules)\n"
+        )
         completed = subprocess.run(
             [sys.executable, "-c", script],
             check=True,
@@ -658,7 +649,7 @@ class LLMBackendSupportTests(unittest.TestCase):
         package = Path(__file__).parents[1] / "voicehub"
         for path in package.rglob("*.py"):
             relative = path.relative_to(package)
-            if relative.parts[0] in {"models", "architectures", "components"}:
+            if relative.parts[0] in {"models", 'architectures', "components"}:
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):

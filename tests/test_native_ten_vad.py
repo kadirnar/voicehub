@@ -11,16 +11,18 @@ from types import SimpleNamespace
 
 import torch
 
-from voicehub.architectures.ten_vad.checkpoint import (
+from voicehub.checkpointing import ONNXAttribute, ONNXNode, SafeTensorReader, save_safetensors
+from voicehub.models.vad_sherpa_onnx.modeling import SherpaONNXVADForVoiceActivityDetection
+from voicehub.models.vad_ten.native.checkpoint import (
     NATIVE_TEN_VAD_FILENAME,
     NATIVE_TEN_VAD_FORMAT,
     TENVADSafeTensorsCheckpointAdapter,
     _graph_fingerprint,
     convert_ten_vad_onnx_checkpoint,
 )
-from voicehub.architectures.ten_vad.configuration import TENVADConfig
-from voicehub.architectures.ten_vad.frontend import TENVADFrontend
-from voicehub.architectures.ten_vad.metadata import (
+from voicehub.models.vad_ten.native.configuration import TENVADConfig
+from voicehub.models.vad_ten.native.frontend import TENVADFrontend
+from voicehub.models.vad_ten.native.metadata import (
     KALDI_NATIVE_FBANK_VERSION,
     SHERPA_ONNX_REVISION,
     TEN_VAD_GRAPH_FINGERPRINT,
@@ -29,10 +31,8 @@ from voicehub.architectures.ten_vad.metadata import (
     TEN_VAD_REVISION,
     TEN_VAD_SOURCE_LICENSE,
 )
-from voicehub.architectures.ten_vad.modeling import TENVADModel
-from voicehub.architectures.ten_vad.registration import create_ten_vad_architecture_spec
-from voicehub.checkpointing import ONNXAttribute, ONNXNode, SafeTensorReader, save_safetensors
-from voicehub.models.vad_sherpa_onnx.modeling_vad_sherpa_onnx import SherpaONNXVADForVoiceActivityDetection
+from voicehub.models.vad_ten.native.modeling import TENVADModel
+from voicehub.models.vad_ten.native.registration import create_ten_vad_architecture_spec
 from voicehub.training.auto import AutoTrainingAdapter
 
 _KALDI_NATIVE_FBANK_REFERENCE = torch.tensor(

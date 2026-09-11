@@ -28,7 +28,7 @@ class NativeMultimodalCompatibilityTests(unittest.TestCase):
             "import voicehub.models.asr_transformers_multimodal; "
             "print('torch' in sys.modules, 'transformers' in sys.modules, "
             "'voicehub.models.asr_transformers_multimodal."
-            "modeling_asr_transformers_multimodal' in sys.modules)")
+            "modeling' in sys.modules)")
         result = subprocess.run(
             [sys.executable, "-c", command],
             cwd=PROJECT_ROOT,
@@ -44,7 +44,7 @@ class NativeMultimodalCompatibilityTests(unittest.TestCase):
         self.assertIs(VibeVoiceASRConfig, NativeVibeVoiceASRConfig)
         configuration_module = importlib.import_module(
             "voicehub.models.asr_transformers_multimodal."
-            "configuration_asr_transformers_multimodal")
+            "configuration")
         self.assertIs(configuration_module.Qwen3ASRConfig, NativeQwen3ASRConfig)
         self.assertIs(
             configuration_module.VibeVoiceASRConfig,
@@ -60,9 +60,8 @@ class NativeMultimodalCompatibilityTests(unittest.TestCase):
             VibeVoiceASRForSpeechRecognition,
             NativeVibeVoiceForSpeechRecognition,
         )
-        modeling_module = importlib.import_module(
-            "voicehub.models.asr_transformers_multimodal."
-            "modeling_asr_transformers_multimodal")
+        modeling_module = importlib.import_module("voicehub.models.asr_transformers_multimodal."
+                                                  "modeling")
         self.assertIs(
             modeling_module.Qwen3ASRForSpeechRecognition,
             NativeQwen3ASRForSpeechRecognition,

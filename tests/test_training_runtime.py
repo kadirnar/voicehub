@@ -4,19 +4,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from voicehub import (
-    AutoTrainingAdapter,
-    DataCollatorForTTSTraining,
-    EarlyStoppingCallback,
-    PreTrainedTTSModel,
-    Trainer,
-    TrainerCallback,
-    TrainingArguments,
-    TTSOutput,
-    VoiceHubConfig,
-    get_last_checkpoint,
-)
-from voicehub.trainer_utils import (
+from voicehub import PreTrainedTTSModel, TTSOutput, VoiceHubConfig
+from voicehub.training import AutoTrainingAdapter, DataCollatorForTTSTraining
+from voicehub.training.adapters import CausalLMTrainingAdapter, VITSTrainingAdapter
+from voicehub.training.arguments import TrainingArguments
+from voicehub.training.callbacks import EarlyStoppingCallback, TrainerCallback
+from voicehub.training.contracts import TrainingPhaseKind, TrainingPhaseSpec, TrainingSupport
+from voicehub.training.optimization import OptimizerBundle, SchedulerBundle
+from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
+from voicehub.training.strategy import TorchTrainingStrategy, TrainingStrategy
+from voicehub.training.trainer import Trainer
+from voicehub.training.utils import (
     CHECKPOINT_COMPLETE_NAME,
     CHECKPOINT_FORMAT_VERSION,
     CHECKPOINT_MANIFEST_NAME,
@@ -25,12 +23,8 @@ from voicehub.trainer_utils import (
     SCALER_STATE_NAME,
     TRAINING_RECIPE_NAME,
     TRAINING_RUNTIME_STATE_NAME,
+    get_last_checkpoint,
 )
-from voicehub.training.adapters import CausalLMTrainingAdapter, VITSTrainingAdapter
-from voicehub.training.contracts import TrainingPhaseKind, TrainingPhaseSpec, TrainingSupport
-from voicehub.training.optimization import OptimizerBundle, SchedulerBundle
-from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
-from voicehub.training.strategy import TorchTrainingStrategy, TrainingStrategy
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
@@ -703,7 +697,7 @@ class TrainingRuntimeTests(unittest.TestCase):
         credential = "must-not-appear-in-errors"
         for owner in (
                 "train_dataset",
-                "data_collator",
+                'data_collator',
                 "callback 'example.StatefulCallback'",
                 "optimizer 'main'",
                 "scheduler 'main'",

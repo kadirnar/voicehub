@@ -11,8 +11,7 @@ except ModuleNotFoundError:
     torch = None
 
 if torch is not None:
-    from voicehub.architectures.registry import ArchitectureRegistry
-    from voicehub.architectures.wav2vec2 import (
+    from voicehub.models.asr_wav2vec2.native import (
         FACEBOOK_WAV2VEC2_BASE_960H_HEADER_FINGERPRINT,
         FACEBOOK_WAV2VEC2_BASE_960H_REVISION,
         TRANSFORMERS_WAV2VEC2_REVISION,
@@ -31,6 +30,7 @@ if torch is not None:
         register_wav2vec2_architecture,
         safetensors_header_fingerprint,
     )
+    from voicehub.runtime.registry import ArchitectureRegistry
 
 
 def _tiny_config(**overrides):
@@ -71,7 +71,7 @@ class Wav2Vec2ConfigurationTests(unittest.TestCase):
     def test_official_base_dimensions_and_length_formula(self):
         config = Wav2Vec2Config.from_dict({
             "model_type": "wav2vec2",
-            "architectures": ["Wav2Vec2ForCTC"],
+            'architectures': ["Wav2Vec2ForCTC"],
             "hidden_dropout": 0.1,
             "hidden_dropout_prob": 0.1,
             "num_feat_extract_layers": 7,
@@ -219,7 +219,7 @@ class Wav2Vec2ModelTests(unittest.TestCase):
             )
 
     def test_public_length_helpers_reject_non_integer_lengths(self):
-        from voicehub.architectures.wav2vec2 import downsample_wav2vec2_lengths, feature_attention_mask
+        from voicehub.models.asr_wav2vec2.native import downsample_wav2vec2_lengths, feature_attention_mask
 
         with self.assertRaisesRegex(TypeError, "integer dtype"):
             downsample_wav2vec2_lengths(
@@ -426,7 +426,7 @@ class Wav2Vec2CheckpointTests(unittest.TestCase):
         config_values = {
             **config.to_dict(),
             "model_type": "wav2vec2",
-            "architectures": ["Wav2Vec2ForAudioFrameClassification"],
+            'architectures': ["Wav2Vec2ForAudioFrameClassification"],
         }
         reference = Wav2Vec2ForAudioFrameClassification(config)
         source = {name: value.detach().clone() for name, value in reference.state_dict().items()}
@@ -480,7 +480,7 @@ class Wav2Vec2ArchitectureSpecTests(unittest.TestCase):
         self.assertIs(registry.get("native-wav2vec2"), spec)
 
     def test_native_modules_do_not_import_external_architecture_runtimes(self):
-        package = (Path(__file__).parents[1] / "voicehub" / "architectures" / "wav2vec2")
+        package = (Path(__file__).parents[1] / 'voicehub/models/asr_wav2vec2/native')
         forbidden = {
             "huggingface_hub",
             "numpy",

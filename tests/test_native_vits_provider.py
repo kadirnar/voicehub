@@ -7,8 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from voicehub.models.vits.configuration_vits import VitsConfig
-from voicehub.models.vits.inference import VitsForTextToSpeech
+from voicehub.models.vits.configuration import VitsConfig
+from voicehub.models.vits.modeling import VitsForTextToSpeech
 from voicehub.models.vits.training import NativeVitsGeneratorTrainingAdapter
 from voicehub.registry import get_model_spec
 from voicehub.training.auto import AutoTrainingAdapter
@@ -18,7 +18,7 @@ TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
 
 def _native_config() -> object:
-    from voicehub.architectures.vits.configuration import VitsConfig
+    from voicehub.models.vits.native.configuration import VitsConfig
 
     return VitsConfig(
         vocab_size=8,
@@ -59,9 +59,9 @@ def _native_config() -> object:
 
 
 def _write_checkpoint(directory: Path) -> None:
-    from voicehub.architectures.vits.modeling import VitsModel
     from voicehub.checkpointing import save_safetensors
     from voicehub.hub import write_json_file
+    from voicehub.models.vits.native.modeling import VitsModel
 
     native_config = _native_config()
     model = VitsModel(native_config)
@@ -237,7 +237,7 @@ class NativeVitsProviderRuntimeTests(unittest.TestCase):
     def test_local_checkpoint_inference_and_native_export_round_trip(self):
         import torch
 
-        from voicehub.architectures.vits.modeling import WeightNormalizedConv1d
+        from voicehub.models.vits.native.modeling import WeightNormalizedConv1d
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

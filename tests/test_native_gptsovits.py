@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import torch
 from torch import nn
 
-from voicehub.architectures.gptsovits.checkpoint import (
+from voicehub.models.gptsovits.native.checkpoint import (
     S1_FILENAME,
     S2_GENERATOR_FILENAME,
     export_gptsovits_checkpoint,
@@ -21,22 +21,22 @@ from voicehub.architectures.gptsovits.checkpoint import (
     resolve_gptsovits_artifacts,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.gptsovits.configuration import (
+from voicehub.models.gptsovits.native.configuration import (
     SUPPORTED_GPT_SOVITS_VARIANTS,
     GPTSoVITSS1Config,
     GPTSoVITSS2Config,
 )
-from voicehub.architectures.gptsovits.frontend import (
+from voicehub.models.gptsovits.native.frontend import (
     GPTSoVITSFrontendError,
     reject_raw_text,
     validate_prepared_inference,
 )
-from voicehub.architectures.gptsovits.metadata import GPT_SOVITS_VARIANTS
-from voicehub.architectures.gptsovits.modeling import build_s2_discriminator, build_s2_generator
-from voicehub.architectures.gptsovits.registration import create_gptsovits_architecture_spec
-from voicehub.architectures.gptsovits.runtime import GPTSoVITSRuntime, TTS_Config
-from voicehub.architectures.gptsovits.semantic import GPTSoVITSSemanticModel
-from voicehub.architectures.gptsovits.training import GPTSoVITSS2TrainingModel, build_staged_training_model
+from voicehub.models.gptsovits.native.metadata import GPT_SOVITS_VARIANTS
+from voicehub.models.gptsovits.native.modeling import build_s2_discriminator, build_s2_generator
+from voicehub.models.gptsovits.native.registration import create_gptsovits_architecture_spec
+from voicehub.models.gptsovits.native.runtime import GPTSoVITSRuntime, TTS_Config
+from voicehub.models.gptsovits.native.semantic import GPTSoVITSSemanticModel
+from voicehub.models.gptsovits.native.training import GPTSoVITSS2TrainingModel, build_staged_training_model
 from voicehub.models.gptsovits.training import GPTSoVITSTrainingAdapter
 from voicehub.training.contracts import TrainingPhaseSpec, TrainingSupport
 from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
@@ -560,7 +560,7 @@ class NativeGPTSoVITSTests(unittest.TestCase):
     def test_configuration_import_is_framework_lazy(self):
         script = (
             "import sys; "
-            "from voicehub.models.gptsovits.configuration_gptsovits "
+            "from voicehub.models.gptsovits.configuration "
             "import GPTSoVITSConfig; "
             "print('torch' in sys.modules, 'transformers' in sys.modules, "
             "GPTSoVITSConfig.model_type)")
@@ -572,11 +572,11 @@ class NativeGPTSoVITSTests(unittest.TestCase):
         self.assertEqual(output, "False False gptsovits")
 
     def test_active_native_boundary_has_no_provider_or_transformers_imports(self):
-        paths = list((PROJECT_ROOT / "voicehub" / "architectures" / "gptsovits").glob("*.py", ), )
+        paths = list((PROJECT_ROOT / 'voicehub/models/gptsovits/native').glob("*.py", ), )
         paths.extend([
             PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "__init__.py",
-            PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "configuration_gptsovits.py",
-            PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "inference.py",
+            PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "configuration.py",
+            PROJECT_ROOT / 'voicehub/models/gptsovits/modeling.py',
             PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "training.py",
         ])
         forbidden = {

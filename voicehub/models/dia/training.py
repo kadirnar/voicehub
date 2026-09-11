@@ -64,7 +64,7 @@ def resolve_dia_dtype(
         resolved_device = device
     if not isinstance(resolved_name, str) or not isinstance(resolved_device, str):
         raise TypeError("resolve_dia_dtype requires a dtype name and device.")
-    from voicehub.architectures.dia.runtime import resolve_dia_dtype as resolve_native_dtype
+    from voicehub.models.dia.native.runtime import resolve_dia_dtype as resolve_native_dtype
 
     return resolve_native_dtype(resolved_name, resolved_device)
 
@@ -365,7 +365,7 @@ def load_dia_native_backend(
     local_files_only: bool = False,
 ):
     """Load the strict VoiceHub-native Dia runtime."""
-    from voicehub.architectures.dia.runtime import load_dia_runtime
+    from voicehub.models.dia.native.runtime import load_dia_runtime
 
     return load_dia_runtime(
         model_name_or_path,
@@ -404,7 +404,7 @@ class _DiaAdapterCollator:
         config = getattr(self.adapter.model, "config", None)
         return {
             "sample_rate": getattr(config, "sample_rate", None),
-            "base_model": getattr(config, "name_or_path", None),
+            'base_model': getattr(config, "name_or_path", None),
         }
 
 

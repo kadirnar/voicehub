@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/Zyphra/Zonos" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos/modeling_zonos.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/zonos.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -110,7 +110,7 @@ integration. This page is generated from its registry contract. [Open the `zonos
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Zonos](https://github.com/Zyphra/Zonos)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos/modeling_zonos.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos/modeling.py)
 
 ## Configuration
 
@@ -195,8 +195,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.zonos.modeling_zonos.ZonosForTextToSpeech` |
-| Configuration | `voicehub.models.zonos.configuration_zonos.ZonosConfig` |
+| Implementation | `voicehub.models.zonos.modeling.ZonosForTextToSpeech` |
+| Configuration | `voicehub.models.zonos.configuration.ZonosConfig` |
 | Source provenance | `voicehub/models/zonos/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -221,7 +221,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `ZonosConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos/configuration_zonos.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -240,7 +240,7 @@ ZonosConfig(**config_kwargs)
 
 ### `ZonosForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos/modeling_zonos.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

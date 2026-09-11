@@ -6,9 +6,14 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from voicehub.auto import AutoModelForSpeechRecognition, AutoModelForTextToSpeech, AutoModelForVoiceActivityDetection
+from voicehub.auto import (
+    AutoModelForAudioCodec,
+    AutoModelForSpeechRecognition,
+    AutoModelForTextToSpeech,
+    AutoModelForVoiceActivityDetection,
+)
 from voicehub.errors import UnknownModelError
-from voicehub.models.registry import get_model_spec
+from voicehub.registry import get_model_spec
 from voicehub.tasks import SpeechTask
 
 
@@ -100,16 +105,33 @@ class VoiceActivityDetectionPipeline(Pipeline):
     inference_method = "detect"
 
 
+class AudioCodecPipeline(Pipeline):
+    """Encode audio on call; decode the returned CodecOutput explicitly."""
+
+    task = SpeechTask.AUDIO_CODEC
+    inference_method = "encode"
+
+    def _validate_model(self) -> None:
+        super()._validate_model()
+        if not callable(getattr(self.model, "decode", None)):
+            raise TypeError("An audio-codec pipeline requires a callable decode() method.")
+
+    def decode(self, encoded, **kwargs):
+        return self.model.decode(encoded, **kwargs)
+
+
 _PIPELINE_BY_TASK = {
     SpeechTask.TEXT_TO_SPEECH: TextToSpeechPipeline,
     SpeechTask.AUTOMATIC_SPEECH_RECOGNITION: AutomaticSpeechRecognitionPipeline,
     SpeechTask.VOICE_ACTIVITY_DETECTION: VoiceActivityDetectionPipeline,
+    SpeechTask.AUDIO_CODEC: AudioCodecPipeline,
 }
 
 _AUTO_FACTORY_BY_TASK = {
     SpeechTask.TEXT_TO_SPEECH: AutoModelForTextToSpeech,
     SpeechTask.AUTOMATIC_SPEECH_RECOGNITION: AutoModelForSpeechRecognition,
     SpeechTask.VOICE_ACTIVITY_DETECTION: AutoModelForVoiceActivityDetection,
+    SpeechTask.AUDIO_CODEC: AutoModelForAudioCodec,
 }
 
 _RESERVED_MODEL_KWARGS = frozenset({

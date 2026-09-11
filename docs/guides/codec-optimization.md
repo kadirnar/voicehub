@@ -65,7 +65,7 @@ such as flow matching plus HiFT, rather than a single `decode()` method.
 Query the same source of truth programmatically:
 
 ```python
-from voicehub import get_codec_entries_for_model, list_codec_entries
+from voicehub.components.audio.codecs import get_codec_entries_for_model, list_codec_entries
 
 for entry in list_codec_entries():
     owners = [owner.model_type for owner in entry.owners]

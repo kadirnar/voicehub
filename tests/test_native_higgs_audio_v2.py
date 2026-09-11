@@ -13,15 +13,20 @@ from unittest.mock import Mock
 
 import torch
 
-from voicehub.architectures.higgs_audio_v2.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.hub import write_json_file
+from voicehub.models.higgstts.configuration import HiggsTTSConfig
+from voicehub.models.higgstts.modeling import HiggsTTSForTextToSpeech
+from voicehub.models.higgstts.native.checkpoint import (
     export_higgs_checkpoint,
     load_higgs_checkpoint,
     tensor_inventory_fingerprint,
     validate_higgs_checkpoint,
 )
-from voicehub.architectures.higgs_audio_v2.configuration import HiggsAudioV2Config
-from voicehub.architectures.higgs_audio_v2.generation import HiggsAudioV2GenerationOutput, HiggsAudioV2Generator
-from voicehub.architectures.higgs_audio_v2.metadata import (
+from voicehub.models.higgstts.native.configuration import HiggsAudioV2Config
+from voicehub.models.higgstts.native.generation import HiggsAudioV2GenerationOutput, HiggsAudioV2Generator
+from voicehub.models.higgstts.native.metadata import (
     HIGGS_AUDIO_V2_CHECKPOINT_HEADER_FINGERPRINT,
     HIGGS_AUDIO_V2_CHECKPOINT_PARAMETER_COUNT,
     HIGGS_AUDIO_V2_CHECKPOINT_TENSOR_COUNT,
@@ -33,23 +38,18 @@ from voicehub.architectures.higgs_audio_v2.metadata import (
     HIGGS_AUDIO_V2_SOURCE_REVISION,
     HIGGS_AUDIO_V2_TOKENIZER_REVISION,
 )
-from voicehub.architectures.higgs_audio_v2.modeling import HiggsAudioV2ForConditionalGeneration
-from voicehub.architectures.higgs_audio_v2.processing import (
+from voicehub.models.higgstts.native.modeling import HiggsAudioV2ForConditionalGeneration
+from voicehub.models.higgstts.native.processing import (
     HIGGS_SPECIAL_TOKEN_IDS,
     HiggsAudioV2Processor,
     HiggsAudioV2TextTokenizer,
 )
-from voicehub.architectures.higgs_audio_v2.registration import register_higgs_audio_v2_architecture
-from voicehub.architectures.higgs_audio_v2.runtime import HiggsAudioV2Runtime, load_higgs_audio_v2_runtime
-from voicehub.architectures.higgs_audio_v2.tokenizer import HiggsAudioV2TokenizerModel
-from voicehub.architectures.higgs_audio_v2.tokenizer_configuration import HiggsAudioV2TokenizerConfig
-from voicehub.architectures.registry import ArchitectureRegistry
-from voicehub.checkpointing import save_safetensors
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.hub import write_json_file
-from voicehub.models.higgstts.configuration_higgstts import HiggsTTSConfig
-from voicehub.models.higgstts.modeling_higgstts import HiggsTTSForTextToSpeech
+from voicehub.models.higgstts.native.registration import register_higgs_audio_v2_architecture
+from voicehub.models.higgstts.native.runtime import HiggsAudioV2Runtime, load_higgs_audio_v2_runtime
+from voicehub.models.higgstts.native.tokenizer import HiggsAudioV2TokenizerModel
+from voicehub.models.higgstts.native.tokenizer_configuration import HiggsAudioV2TokenizerConfig
 from voicehub.models.higgstts.training import HiggsTrainingAdapter
+from voicehub.runtime.registry import ArchitectureRegistry
 from voicehub.tokenization.assets import encode_gpt2_token
 from voicehub.training.contracts import TrainingPhaseSpec, TrainingSupport
 from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
@@ -153,7 +153,7 @@ def _training_spec() -> ModelTrainingSpec:
         module_paths=("model", ),
         component_paths=("model", ),
         source_entrypoints=(
-            "voicehub.architectures.higgs_audio_v2.modeling:"
+            "voicehub.models.higgstts.native.modeling:"
             "HiggsAudioV2ForConditionalGeneration.forward", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
@@ -166,14 +166,14 @@ class NativeHiggsDependencyTests(unittest.TestCase):
 
     def test_native_files_do_not_import_external_model_runtimes(self):
         roots = (
-            PROJECT_ROOT / "voicehub" / "architectures" / "higgs_audio_v2",
+            PROJECT_ROOT / 'voicehub/models/higgstts/native',
             PROJECT_ROOT / "voicehub" / "models" / "higgstts",
         )
         active_provider_files = {
             "__init__.py",
-            "configuration_higgstts.py",
+            "configuration.py",
             "inference.py",
-            "modeling_higgstts.py",
+            "modeling.py",
             "training.py",
         }
         forbidden = {
@@ -220,8 +220,8 @@ class NativeHiggsDependencyTests(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "False False False False")
 
     def test_provenance_pins_code_weights_codec_and_training_boundary(self):
-        source = json.loads((PROJECT_ROOT / "voicehub" / "architectures" / "higgs_audio_v2" /
-                             "SOURCE.json").read_text(encoding="utf-8"))
+        source = json.loads(
+            (PROJECT_ROOT / 'voicehub/models/higgstts/native/SOURCE.json').read_text(encoding="utf-8"))
         self.assertEqual(
             source["source"]["revision"],
             HIGGS_AUDIO_V2_SOURCE_REVISION,
@@ -237,9 +237,7 @@ class NativeHiggsDependencyTests(unittest.TestCase):
         self.assertTrue(source["training"]["full_sft"])
         self.assertFalse(source["training"]["published_recipe"])
         self.assertIn("Community License", source["checkpoint"]["license"])
-        self.assertTrue(
-            (PROJECT_ROOT / "voicehub" / "architectures" / "higgs_audio_v2" /
-             "THIRD_PARTY_LICENSE").is_file())
+        self.assertTrue((PROJECT_ROOT / 'voicehub/models/higgstts/native/THIRD_PARTY_LICENSE').is_file())
 
     def test_architecture_registration_is_lazy_and_truthful(self):
         registry = ArchitectureRegistry()

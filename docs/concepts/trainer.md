@@ -45,7 +45,7 @@ adapter setup instead of producing a plausible-looking but invalid loss.
 Inspect the profile before constructing a training job:
 
 ```python
-from voicehub import get_training_spec
+from voicehub.training import get_training_spec
 
 spec = get_training_spec("parlertts")
 print(spec.support)
@@ -131,7 +131,8 @@ For a `native` or `preprocessed` profile, the public loop follows the familiar
 Transformers vocabulary:
 
 ```python
-from voicehub import Trainer, TrainingArguments
+from voicehub.training.trainer import Trainer
+from voicehub.training.arguments import TrainingArguments
 
 arguments = TrainingArguments(
     output_dir="runs/parler-finetune",

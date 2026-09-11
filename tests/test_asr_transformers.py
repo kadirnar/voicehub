@@ -10,13 +10,13 @@ from types import SimpleNamespace
 
 import torch
 
-from voicehub.architectures.wav2vec2 import Wav2Vec2Config, Wav2Vec2ForCTC
 from voicehub.checkpointing import save_safetensors
 from voicehub.models.asr_hubert import HubertForSpeechRecognition
 from voicehub.models.asr_moonshine import MoonshineForSpeechRecognition
 from voicehub.models.asr_transformers import TransformersASRConfig, TransformersASRForSpeechRecognition
 from voicehub.models.asr_transformers.training_asr_transformers import TransformersASRTrainingAdapter
 from voicehub.models.asr_wav2vec2 import Wav2Vec2ForSpeechRecognition
+from voicehub.models.asr_wav2vec2.native import Wav2Vec2Config, Wav2Vec2ForCTC
 from voicehub.models.asr_wavlm import WavLMForSpeechRecognition
 from voicehub.models.asr_whisper_native import WhisperForSpeechRecognition
 from voicehub.training.auto import AutoTrainingAdapter
@@ -55,7 +55,7 @@ def _write_tiny_wav2vec2_artifact(root: Path):
     )
     reference = Wav2Vec2ForCTC(config)
     values = config.to_dict()
-    values["architectures"] = ["Wav2Vec2ForCTC"]
+    values['architectures'] = ["Wav2Vec2ForCTC"]
     (root / "config.json").write_text(
         json.dumps(values),
         encoding="utf-8",
@@ -251,7 +251,7 @@ class NativeTransformersASRDispatchTests(unittest.TestCase):
                 self.assertEqual(
                     TransformersASRForSpeechRecognition._native_model_type_from_config({
                         "model_type": model_type,
-                        "architectures": [],
+                        'architectures': [],
                     }),
                     expected,
                 )
@@ -261,14 +261,14 @@ class NativeTransformersASRDispatchTests(unittest.TestCase):
                 TransformersASRForSpeechRecognition._native_model_type_from_config({
                     "model_type":
                     "wav2vec2",
-                    "architectures": ["Wav2Vec2ForAudioFrameClassification"],
+                    'architectures': ["Wav2Vec2ForAudioFrameClassification"],
                 }))
         with self.assertRaisesRegex(ValueError, "cannot dispatch"):
             (
                 TransformersASRForSpeechRecognition._native_model_type_from_config({
                     "model_type":
                     "parakeet_tdt",
-                    "architectures": ["ParakeetForTDT"],
+                    'architectures': ["ParakeetForTDT"],
                 }))
 
     def test_delegate_factory_selects_voicehub_wrappers_only(self):

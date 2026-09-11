@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from voicehub.hub import read_json_file, write_json_file
-from voicehub.trainer_utils import write_json
+from voicehub.training.utils import write_json
 
 
 class JSONArtifactWriterTest(unittest.TestCase):

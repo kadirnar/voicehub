@@ -8,15 +8,13 @@ import unittest
 from pathlib import Path
 
 import voicehub.training.data_contracts as data_contracts_module
-from voicehub import (
-    PreTrainedTTSModel,
+from voicehub import PreTrainedTTSModel, TTSOutput, VoiceHubConfig
+from voicehub.training import (
     TTSDataArchitecture,
     TTSDataReadiness,
     TTSDataset,
     TTSDatasetSpec,
-    TTSOutput,
     TTSRecordVariant,
-    VoiceHubConfig,
     get_tts_dataset_spec,
     list_training_specs,
     list_tts_dataset_specs,
@@ -717,10 +715,8 @@ class TTSDatasetContractTests(unittest.TestCase):
 
     def test_dataset_contract_imports_remain_framework_lazy(self):
         script = (
-            "import sys;"
-            "from voicehub import get_tts_dataset_spec;"
-            "print(get_tts_dataset_spec('f5tts').architecture.value,"
-            "'torch' in sys.modules,'numpy' in sys.modules)")
+            "import sys;from voicehub.training import get_tts_dataset_spec;print(get_tts_dataset_spec('f5tts').architecture.value,'torch' in sys.modules,'numpy' in sys.modules)"
+        )
         completed = subprocess.run(
             [sys.executable, "-c", script],
             check=True,

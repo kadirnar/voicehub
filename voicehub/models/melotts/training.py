@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from voicehub.architectures.melotts.training import MeloTTSTrainingCollator, MeloTTSTrainingModel
+from voicehub.models.melotts.native.training import MeloTTSTrainingCollator, MeloTTSTrainingModel
 from voicehub.training.adapters import VITSTrainingAdapter
 from voicehub.training.datasets import SpeechDataset
 

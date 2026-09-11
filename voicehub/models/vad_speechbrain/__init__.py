@@ -6,8 +6,8 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from voicehub.models.vad_speechbrain.configuration_vad_speechbrain import SpeechBrainVADConfig
-    from voicehub.models.vad_speechbrain.modeling_vad_speechbrain import SpeechBrainVADForVoiceActivityDetection
+    from voicehub.models.vad_speechbrain.configuration import SpeechBrainVADConfig
+    from voicehub.models.vad_speechbrain.modeling import SpeechBrainVADForVoiceActivityDetection
     from voicehub.models.vad_speechbrain.training_vad_speechbrain import (
         NativeSpeechBrainVADTrainingAdapter,
         SpeechBrainVADTrainingDataset,
@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 _PUBLIC_COMPONENTS = {
     "NativeSpeechBrainVADTrainingAdapter": ("voicehub.models.vad_speechbrain.training_vad_speechbrain"),
-    "SpeechBrainVADConfig": ("voicehub.models.vad_speechbrain.configuration_vad_speechbrain"),
-    "SpeechBrainVADForVoiceActivityDetection": ("voicehub.models.vad_speechbrain.modeling_vad_speechbrain"),
+    "SpeechBrainVADConfig": ("voicehub.models.vad_speechbrain.configuration"),
+    "SpeechBrainVADForVoiceActivityDetection": ("voicehub.models.vad_speechbrain.modeling"),
     "SpeechBrainVADTrainingDataset": ("voicehub.models.vad_speechbrain.training_vad_speechbrain"),
 }
 

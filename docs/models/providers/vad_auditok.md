@@ -21,7 +21,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/amsehili/auditok" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling_vad_auditok.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 </div>
 </details>
 </div>
@@ -97,7 +97,7 @@ This weightless runtime does not select a spoken language and is not text-langua
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [auditok](https://github.com/amsehili/auditok)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling_vad_auditok.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling.py)
 
 ## Configuration
 
@@ -177,8 +177,8 @@ This integration is **inference-only**. Choose a verified model from the
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify implementation-specific requirements |
 | Real-checkpoint evidence | Not applicable; version the implementation, configuration, and source provenance |
-| Implementation | `voicehub.models.vad_auditok.modeling_vad_auditok.AuditokVADForVoiceActivityDetection` |
-| Configuration | `voicehub.models.vad_auditok.configuration_vad_auditok.AuditokVADConfig` |
+| Implementation | `voicehub.models.vad_auditok.modeling.AuditokVADForVoiceActivityDetection` |
+| Configuration | `voicehub.models.vad_auditok.configuration.AuditokVADConfig` |
 | Source provenance | No integration-specific bundled `SOURCE.json` is declared for this registry entry. |
 | License | Source terms require review |
 
@@ -203,7 +203,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `AuditokVADConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/configuration_vad_auditok.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -222,7 +222,7 @@ AuditokVADConfig(**config_kwargs)
 
 ### `AuditokVADForVoiceActivityDetection`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling_vad_auditok.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_auditok/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

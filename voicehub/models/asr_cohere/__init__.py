@@ -7,8 +7,8 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.asr_cohere."
 _EXPORTS = {
-    "CohereASRConfig": _PACKAGE + "configuration_asr_cohere",
-    "CohereForSpeechRecognition": _PACKAGE + "modeling_asr_cohere",
+    "CohereASRConfig": _PACKAGE + "configuration",
+    "CohereForSpeechRecognition": _PACKAGE + "modeling",
     "NativeCohereASRTrainingAdapter": _PACKAGE + "training_asr_cohere",
 }
 

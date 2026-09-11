@@ -197,7 +197,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
 | Implementation | `voicehub.models.asr_wenet.WeNetASRForSpeechRecognition` |
 | Configuration | `voicehub.models.asr_wenet.WeNetASRConfig` |
-| Source provenance | `voicehub/architectures/wenet_u2pp/SOURCE.json` |
+| Source provenance | `voicehub/models/asr_wenet/native/SOURCE.json` |
 | License | [NOT DECLARED](https://github.com/wenet-e2e/wenet/blob/a50d4208f13bbf3a0746e606ac29176cd2e87e6b/examples/gigaspeech/s0/README.md#conformer-u2-result) |
 
 The published GigaSpeech checkpoint archive does not declare a checkpoint license. The VoiceHub-owned architecture port is Apache-2.0, but that source license is not assumed for the weights. Commercial use: **review required**.

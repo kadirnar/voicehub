@@ -262,8 +262,8 @@ def _architecture_sampling_techniques(architecture) -> tuple[str, ...]:
 
 def list_diffusion_model_optimization_support() -> tuple[DiffusionModelOptimizationSupport, ...]:
     """List active public diffusion/flow TTS models by architecture traits."""
-    from voicehub.architectures import get_architecture_spec
-    from voicehub.models.registry import list_model_specs
+    from voicehub.registry import list_model_specs
+    from voicehub.runtime import get_architecture_spec
 
     output = []
     for model in list_model_specs(task=SpeechTask.TEXT_TO_SPEECH):
@@ -291,7 +291,7 @@ def get_diffusion_model_optimization_support(model_type: str, ) -> DiffusionMode
     """Return one registered diffusion/flow TTS model or fail explicitly."""
     if not isinstance(model_type, str) or not model_type.strip():
         raise ValueError("`model_type` must be a non-empty string.")
-    from voicehub.models.registry import get_model_spec
+    from voicehub.registry import get_model_spec
 
     canonical = get_model_spec(model_type).model_type
     for support in list_diffusion_model_optimization_support():

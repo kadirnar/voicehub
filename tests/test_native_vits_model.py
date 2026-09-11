@@ -9,17 +9,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from voicehub.architectures.registry import ArchitectureRegistry
-from voicehub.architectures.vits.checkpoint import (
+from voicehub.models.vits.native.checkpoint import (
     FACEBOOK_MMS_TTS_ENG_HEADER_FINGERPRINT,
     FACEBOOK_MMS_TTS_ENG_REVISION,
     HuggingFaceVitsCheckpointAdapter,
     native_vits_tensor_shapes,
     safetensors_header_fingerprint,
 )
-from voicehub.architectures.vits.configuration import VitsConfig
-from voicehub.architectures.vits.frontend import VitsFrontendCapabilityError, VitsFrontendConfig, VitsTokenizer
-from voicehub.architectures.vits.registration import create_vits_architecture_spec, register_vits_architecture
+from voicehub.models.vits.native.configuration import VitsConfig
+from voicehub.models.vits.native.frontend import VitsFrontendCapabilityError, VitsFrontendConfig, VitsTokenizer
+from voicehub.models.vits.native.registration import create_vits_architecture_spec, register_vits_architecture
+from voicehub.runtime.registry import ArchitectureRegistry
 from voicehub.tasks import SpeechTask
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
@@ -71,9 +71,9 @@ class NativeVitsDeclarationTests(unittest.TestCase):
     def test_registration_is_lazy_and_capability_boundary_is_explicit(self):
         script = """
 import sys
-from voicehub.architectures.vits.registration import create_vits_architecture_spec
+from voicehub.models.vits.native.registration import create_vits_architecture_spec
 spec = create_vits_architecture_spec()
-print("voicehub.architectures.vits.modeling" in sys.modules)
+print("voicehub.models.vits.native.modeling" in sys.modules)
 print(spec.metadata["full_finetuning_ready"])
 """
         result = subprocess.run(
@@ -109,7 +109,7 @@ print(spec.metadata["full_finetuning_ready"])
         self.assertIs(registry.get("mms-tts"), registry.get("vits"))
 
     def test_vits_modules_do_not_import_architecture_frameworks(self):
-        package = Path(__file__).parents[1] / "voicehub" / "architectures" / "vits"
+        package = Path(__file__).parents[1] / 'voicehub/models/vits/native'
         allowed_roots = {
             "__future__",
             "collections",
@@ -144,9 +144,8 @@ print(spec.metadata["full_finetuning_ready"])
         self.assertEqual(violations, [])
 
     def test_source_provenance_pins_training_and_checkpoint_revisions(self):
-        source = json.loads(
-            (Path(__file__).parents[1] / "voicehub" / "architectures" / "vits" /
-             "SOURCE.json").read_text(encoding="utf-8"))
+        source = json.loads((Path(__file__).parents[1] /
+                             'voicehub/models/vits/native/SOURCE.json').read_text(encoding="utf-8"))
         self.assertEqual(
             source["sources"][0]["revision"],
             "2e561ba58618d021b5b8323d3765880f7e0ecfdb",
@@ -278,7 +277,7 @@ class VitsFrontendTests(unittest.TestCase):
         self.assertEqual(tokenizer.encode("X").input_ids, (0, 1, 0))
 
     def test_frontend_assets_reject_duplicate_json_keys(self):
-        from voicehub.architectures.vits.frontend import VitsFrontendAssetError
+        from voicehub.models.vits.native.frontend import VitsFrontendAssetError
 
         with tempfile.TemporaryDirectory() as directory:
             vocab = Path(directory) / "vocab.json"
@@ -316,7 +315,7 @@ class VitsCheckpointTests(unittest.TestCase):
 
     @unittest.skipUnless(TORCH_AVAILABLE, "native VITS requires PyTorch")
     def test_declared_shapes_match_the_executable_tiny_graph(self):
-        from voicehub.architectures.vits.modeling import VitsModel
+        from voicehub.models.vits.native.modeling import VitsModel
 
         config = _tiny_config(stochastic=True)
         actual = {name: tuple(tensor.shape) for name, tensor in VitsModel(config).state_dict().items()}
@@ -327,8 +326,8 @@ class VitsCheckpointTests(unittest.TestCase):
 class VitsWaveNetKernelTests(unittest.TestCase):
 
     def test_torch_backend_matches_the_original_gated_activation(self):
-        from voicehub.architectures.vits.modeling import VitsWaveNet
         from voicehub.kernels import KernelBackend
+        from voicehub.models.vits.native.modeling import VitsWaveNet
 
         torch.manual_seed(19)
         wavenet = VitsWaveNet(_tiny_config(), num_layers=2).eval()
@@ -361,8 +360,8 @@ class VitsWaveNetKernelTests(unittest.TestCase):
         )
 
     def test_backend_selection_does_not_change_checkpoint_keys(self):
-        from voicehub.architectures.vits.modeling import VitsWaveNet
         from voicehub.kernels import KernelBackend
+        from voicehub.models.vits.native.modeling import VitsWaveNet
 
         wavenet = VitsWaveNet(_tiny_config(), num_layers=2)
         before = {name: tensor.detach().clone() for name, tensor in wavenet.state_dict().items()}
@@ -381,7 +380,7 @@ class VitsWaveNetKernelTests(unittest.TestCase):
 class VitsWeightNormCacheTests(unittest.TestCase):
 
     def test_inference_cache_is_exact_nonpersistent_and_reversible(self):
-        from voicehub.architectures.vits.modeling import VitsModel, VitsSamplingConfig, WeightNormalizedConv1d
+        from voicehub.models.vits.native.modeling import VitsModel, VitsSamplingConfig, WeightNormalizedConv1d
 
         torch.manual_seed(29)
         model = VitsModel(_tiny_config()).eval()
@@ -415,7 +414,7 @@ class VitsWeightNormCacheTests(unittest.TestCase):
             model.cache_weight_norm_for_inference()
 
     def test_cache_invalidates_after_parameter_or_dtype_mutation(self):
-        from voicehub.architectures.vits.modeling import VitsModel, WeightNormalizedConv1d
+        from voicehub.models.vits.native.modeling import VitsModel, WeightNormalizedConv1d
 
         model = VitsModel(_tiny_config()).eval()
         model.cache_weight_norm_for_inference()
@@ -445,7 +444,7 @@ class VitsWeightNormCacheTests(unittest.TestCase):
                 if isinstance(module, WeightNormalizedConv1d)))
 
     def test_cache_never_changes_gradient_semantics(self):
-        from voicehub.architectures.vits.modeling import WeightNormalizedConv1d
+        from voicehub.models.vits.native.modeling import WeightNormalizedConv1d
 
         layer = WeightNormalizedConv1d(2, 3, 3, padding=1).eval()
         layer.cache_weight_norm_for_inference()
@@ -460,7 +459,7 @@ class VitsWeightNormCacheTests(unittest.TestCase):
 class VitsAlignmentTests(unittest.TestCase):
 
     def test_duration_expansion_and_monotonic_search_agree(self):
-        from voicehub.architectures.vits.alignment import generate_path, maximum_path
+        from voicehub.models.vits.native.alignment import generate_path, maximum_path
 
         durations = torch.tensor([[[2.0, 1.0, 2.0]]])
         mask = torch.ones(1, 1, 5, 3)
@@ -487,7 +486,7 @@ class VitsAlignmentTests(unittest.TestCase):
         self.assertTrue(torch.equal(maximum_path(scores, mask[:, 0]), expected), )
 
     def test_spline_duration_flow_is_numerically_reversible(self):
-        from voicehub.architectures.vits.modeling import VitsConvFlow
+        from voicehub.models.vits.native.modeling import VitsConvFlow
 
         torch.manual_seed(4)
         flow = VitsConvFlow(_tiny_config(stochastic=True)).eval()
@@ -515,7 +514,7 @@ class VitsAlignmentTests(unittest.TestCase):
 class VitsRuntimeTests(unittest.TestCase):
 
     def test_request_seed_is_repeatable_and_preserves_global_rng(self):
-        from voicehub.architectures.vits.modeling import VitsModel, VitsSamplingConfig
+        from voicehub.models.vits.native.modeling import VitsModel, VitsSamplingConfig
 
         torch.manual_seed(91)
         model = VitsModel(_tiny_config()).eval()
@@ -562,8 +561,8 @@ class VitsRuntimeTests(unittest.TestCase):
         )
 
     def test_supervised_generator_graph_runs_mas_and_backward(self):
-        from voicehub.architectures.vits.losses import vits_kl_loss
-        from voicehub.architectures.vits.modeling import VitsModel
+        from voicehub.models.vits.native.losses import vits_kl_loss
+        from voicehub.models.vits.native.modeling import VitsModel
 
         model = VitsModel(_tiny_config()).train()
         output = model(
@@ -592,7 +591,7 @@ class VitsRuntimeTests(unittest.TestCase):
         self.assertIsNotNone(model.decoder.conv_post.weight.grad)
 
     def test_windowed_training_slices_latents_before_decoder_deterministically(self):
-        from voicehub.architectures.vits.modeling import VitsModel
+        from voicehub.models.vits.native.modeling import VitsModel
 
         model = VitsModel(_tiny_config()).train()
         spectrogram = torch.randn(2, 5, 7)
@@ -659,7 +658,7 @@ class VitsRuntimeTests(unittest.TestCase):
         )
 
     def test_stochastic_duration_training_graph_is_differentiable(self):
-        from voicehub.architectures.vits.modeling import VitsModel
+        from voicehub.models.vits.native.modeling import VitsModel
 
         model = VitsModel(_tiny_config(stochastic=True)).train()
         output = model(
@@ -678,8 +677,8 @@ class VitsRuntimeTests(unittest.TestCase):
 class VitsLossTests(unittest.TestCase):
 
     def test_generator_objective_combines_every_source_term(self):
-        from voicehub.architectures.vits.losses import VitsGeneratorLoss
-        from voicehub.architectures.vits.modeling import VitsTrainingOutput
+        from voicehub.models.vits.native.losses import VitsGeneratorLoss
+        from voicehub.models.vits.native.modeling import VitsTrainingOutput
 
         latent = torch.zeros(1, 2, 3, requires_grad=True)
         generated_output = torch.zeros(1, 2, requires_grad=True)
@@ -713,7 +712,7 @@ class VitsLossTests(unittest.TestCase):
         self.assertIsNotNone(generated_feature.grad)
 
     def test_source_loss_equations_and_gradient_boundaries(self):
-        from voicehub.architectures.vits.losses import (
+        from voicehub.models.vits.native.losses import (
             discriminator_loss,
             feature_matching_loss,
             generator_adversarial_loss,
@@ -753,7 +752,7 @@ class VitsLossTests(unittest.TestCase):
         self.assertEqual(kl.item(), -1.0)
 
     def test_small_discriminators_execute_the_reference_topology(self):
-        from voicehub.architectures.vits.losses import VitsPeriodDiscriminator, VitsScaleDiscriminator
+        from voicehub.models.vits.native.losses import VitsPeriodDiscriminator, VitsScaleDiscriminator
 
         waveform = torch.randn(2, 1, 64, requires_grad=True)
         scale = VitsScaleDiscriminator(
@@ -772,7 +771,7 @@ class VitsLossTests(unittest.TestCase):
         self.assertIsNotNone(waveform.grad)
 
     def test_training_support_distinguishes_recipe_from_checkpoint_metadata(self):
-        from voicehub.architectures.vits.losses import VITS_TRAINING_SUPPORT
+        from voicehub.models.vits.native.losses import VITS_TRAINING_SUPPORT
 
         self.assertTrue(VITS_TRAINING_SUPPORT.differentiable_generator_graph)
         self.assertTrue(VITS_TRAINING_SUPPORT.monotonic_alignment_search)
@@ -808,7 +807,7 @@ class VitsAdversarialTrainingTests(unittest.TestCase):
         return values
 
     def test_acoustic_frontend_matches_its_spectrogram_projection(self):
-        from voicehub.architectures.vits.training import VitsAcousticConfig, VitsAcousticFrontend
+        from voicehub.models.vits.native.training import VitsAcousticConfig, VitsAcousticFrontend
 
         config = VitsAcousticConfig.from_mapping(self._acoustic_config())
         frontend = VitsAcousticFrontend(config)
@@ -825,8 +824,8 @@ class VitsAdversarialTrainingTests(unittest.TestCase):
         )
 
     def test_acoustic_config_rejects_unverifiable_or_misaligned_values(self):
-        from voicehub.architectures.vits.modeling import VitsModel
-        from voicehub.architectures.vits.training import VitsAcousticConfig
+        from voicehub.models.vits.native.modeling import VitsModel
+        from voicehub.models.vits.native.training import VitsAcousticConfig
 
         with self.assertRaisesRegex(ValueError, "incomplete"):
             VitsAcousticConfig.from_mapping({"sampling_rate": 16_000})
@@ -839,8 +838,8 @@ class VitsAdversarialTrainingTests(unittest.TestCase):
     def test_both_source_phases_are_differentiable(self):
         from torch import nn
 
-        from voicehub.architectures.vits.modeling import VitsModel
-        from voicehub.architectures.vits.training import VitsAdversarialTrainingModel
+        from voicehub.models.vits.native.modeling import VitsModel
+        from voicehub.models.vits.native.training import VitsAdversarialTrainingModel
 
         class TinyDiscriminator(nn.Module):
 
@@ -906,8 +905,8 @@ class VitsAdversarialTrainingTests(unittest.TestCase):
     def test_windowed_training_aligns_real_waveform_and_mel_to_model_offsets(self):
         from torch import nn
 
-        from voicehub.architectures.vits.modeling import VitsModel
-        from voicehub.architectures.vits.training import VitsAdversarialTrainingModel
+        from voicehub.models.vits.native.modeling import VitsModel
+        from voicehub.models.vits.native.training import VitsAdversarialTrainingModel
 
         training_model = VitsAdversarialTrainingModel(
             VitsModel(_tiny_config()),
@@ -951,9 +950,9 @@ class VitsAdversarialTrainingTests(unittest.TestCase):
     def test_adapter_routes_and_freezes_the_two_optimizer_phases(self):
         from torch import nn
 
-        from voicehub.architectures.vits.modeling import VitsModel
-        from voicehub.architectures.vits.training import VitsAdversarialTrainingModel
-        from voicehub.models.vits.configuration_vits import VitsConfig as PublicVitsConfig
+        from voicehub.models.vits.configuration import VitsConfig as PublicVitsConfig
+        from voicehub.models.vits.native.modeling import VitsModel
+        from voicehub.models.vits.native.training import VitsAdversarialTrainingModel
         from voicehub.models.vits.training import NativeVitsGeneratorTrainingAdapter
         from voicehub.training.specs import get_training_spec
 

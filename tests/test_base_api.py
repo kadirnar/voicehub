@@ -4,7 +4,6 @@ import unittest
 from pathlib import Path
 
 from voicehub import (
-    AudioProcessor,
     AutoConfig,
     AutoModelForTextToSpeech,
     AutoProcessor,
@@ -12,8 +11,8 @@ from voicehub import (
     TTSGenerationConfig,
     TTSOutput,
     VoiceHubConfig,
-    VoiceHubProcessor,
 )
+from voicehub.processing.processor import AudioProcessor, VoiceHubProcessor
 
 
 class DummyConfig(VoiceHubConfig):

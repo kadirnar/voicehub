@@ -10,19 +10,20 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.dac.configuration import DacConfig
-from voicehub.architectures.parlertts.artifacts import resolve_parlertts_artifacts
-from voicehub.architectures.parlertts.checkpoint import (
+from voicehub.models.dac.native.configuration import DacConfig
+from voicehub.models.parlertts.modeling import ParlerTTSForTextToSpeech
+from voicehub.models.parlertts.native.artifacts import resolve_parlertts_artifacts
+from voicehub.models.parlertts.native.checkpoint import (
     export_parlertts_checkpoint,
     load_parlertts_checkpoint,
     tensor_inventory_fingerprint,
 )
-from voicehub.architectures.parlertts.configuration import (
+from voicehub.models.parlertts.native.configuration import (
     ParlerDecoderConfig,
     ParlerTTSArchitectureConfig,
     T5EncoderConfig,
 )
-from voicehub.architectures.parlertts.metadata import (
+from voicehub.models.parlertts.native.metadata import (
     PARLER_TTS_CHECKPOINT_LICENSE,
     PARLER_TTS_CHECKPOINT_REVISION,
     PARLER_TTS_HEADER_FINGERPRINT,
@@ -30,17 +31,16 @@ from voicehub.architectures.parlertts.metadata import (
     PARLER_TTS_SOURCE_REVISION,
     PARLER_TTS_TENSOR_COUNT,
 )
-from voicehub.architectures.parlertts.modeling import (
+from voicehub.models.parlertts.native.modeling import (
     ParlerTTSForCausalLM,
     ParlerTTSForConditionalGeneration,
     apply_delay_pattern_mask,
     build_delay_pattern_mask,
     prepare_audio_code_labels,
 )
-from voicehub.architectures.parlertts.processing import ParlerTextTokenizer
-from voicehub.architectures.parlertts.registration import create_parlertts_architecture_spec
-from voicehub.architectures.parlertts.t5 import NativeT5EncoderModel
-from voicehub.models.parlertts.inference import ParlerTTSForTextToSpeech
+from voicehub.models.parlertts.native.processing import ParlerTextTokenizer
+from voicehub.models.parlertts.native.registration import create_parlertts_architecture_spec
+from voicehub.models.parlertts.native.t5 import NativeT5EncoderModel
 from voicehub.models.parlertts.training import ParlerTTSTrainingAdapter
 from voicehub.training.specs import get_training_spec
 

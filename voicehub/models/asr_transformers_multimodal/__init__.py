@@ -7,27 +7,27 @@ from typing import Any
 
 _EXPORTS = {
     "MultimodalTransformersASRConfig": (
-        "voicehub.models.asr_transformers_multimodal.configuration_asr_transformers_multimodal",
+        "voicehub.models.asr_transformers_multimodal.configuration",
         "MultimodalTransformersASRConfig",
     ),
     "MultimodalTransformersASRForSpeechRecognition": (
-        "voicehub.models.asr_transformers_multimodal.modeling_asr_transformers_multimodal",
+        "voicehub.models.asr_transformers_multimodal.modeling",
         "MultimodalTransformersASRForSpeechRecognition",
     ),
     "Qwen3ASRConfig": (
-        "voicehub.models.asr_qwen3.configuration_asr_qwen3",
+        "voicehub.models.asr_qwen3.configuration",
         "Qwen3ASRConfig",
     ),
     "Qwen3ASRForSpeechRecognition": (
-        "voicehub.models.asr_qwen3.modeling_asr_qwen3",
+        "voicehub.models.asr_qwen3.modeling",
         "Qwen3ASRForSpeechRecognition",
     ),
     "VibeVoiceASRConfig": (
-        "voicehub.models.asr_vibevoice.configuration_asr_vibevoice",
+        "voicehub.models.asr_vibevoice.configuration",
         "VibeVoiceASRConfig",
     ),
     "VibeVoiceASRForSpeechRecognition": (
-        "voicehub.models.asr_vibevoice.modeling_asr_vibevoice",
+        "voicehub.models.asr_vibevoice.modeling",
         "VibeVoiceForSpeechRecognition",
     ),
 }

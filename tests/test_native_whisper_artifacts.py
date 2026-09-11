@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from voicehub.architectures.whisper.artifacts import resolve_whisper_artifacts
+from voicehub.models.asr_whisper_native.native.artifacts import resolve_whisper_artifacts
 
 
 class WhisperArtifactTests(unittest.TestCase):
@@ -74,12 +74,12 @@ class WhisperArtifactTests(unittest.TestCase):
 
             with (
                     patch(
-                        "voicehub.architectures.whisper.artifacts."
+                        "voicehub.models.asr_whisper_native.native.artifacts."
                         "resolve_pretrained_file",
                         side_effect=resolve,
                     ),
                     patch(
-                        "voicehub.architectures.whisper.artifacts."
+                        "voicehub.models.asr_whisper_native.native.artifacts."
                         "get_cached_hugging_face_commit",
                         return_value="a" * 40,
                     ),

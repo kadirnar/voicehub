@@ -159,9 +159,9 @@ class NativeProviderDependencyCompatibilityTests(unittest.TestCase):
     def test_native_melotts_imports_without_dormant_language_frontends(self):
         _assert_imports_without_dependencies(
             modules=(
-                "voicehub.architectures.melotts.frontend",
-                "voicehub.architectures.melotts.runtime",
-                "voicehub.models.melotts.inference",
+                "voicehub.models.melotts.native.frontend",
+                "voicehub.models.melotts.native.runtime",
+                "voicehub.models.melotts.modeling",
             ),
             blocked=(
                 "MeCab",
@@ -174,7 +174,7 @@ class NativeProviderDependencyCompatibilityTests(unittest.TestCase):
     def test_native_outetts_imports_without_dormant_backend_dependencies(self):
         _assert_imports_without_dependencies(
             modules=(
-                "voicehub.architectures.outetts.runtime",
+                "voicehub.models.outetts.native.runtime",
                 "voicehub.models.outetts.inference",
             ),
             blocked=(

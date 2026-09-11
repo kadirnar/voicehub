@@ -7,20 +7,12 @@ import unittest
 
 import torch
 
-from voicehub import (
-    DiffusionTTSOptimizationConfig,
-    LLMTTSOptimizationConfig,
-    VITSOptimizationConfig,
-    diffusion_tts_acceleration_plan,
-    llm_tts_acceleration_plan,
-    vits_acceleration_plan,
-)
-from voicehub.architectures.conversationtts.decoder import build_llama32_decoder
-from voicehub.architectures.conversationtts.registration import create_conversationtts_architecture_spec
-from voicehub.architectures.f5tts.registration import create_f5tts_architecture_spec
-from voicehub.architectures.qwen3_tts.registration import create_qwen3_tts_architecture_spec
-from voicehub.architectures.vits.registration import create_vits_architecture_spec
 from voicehub.kernels import KernelBackend
+from voicehub.models.conversationtts.native.decoder import build_llama32_decoder
+from voicehub.models.conversationtts.native.registration import create_conversationtts_architecture_spec
+from voicehub.models.f5tts.native.registration import create_f5tts_architecture_spec
+from voicehub.models.qwen3tts.native.registration import create_qwen3_tts_architecture_spec
+from voicehub.models.vits.native.registration import create_vits_architecture_spec
 from voicehub.neural.backends import FlashAttention4Policy
 from voicehub.optimization import (
     CustomKernelPass,
@@ -28,6 +20,14 @@ from voicehub.optimization import (
     OptimizationContext,
     OptimizationPassManager,
     TorchCompilePass,
+)
+from voicehub.training import (
+    DiffusionTTSOptimizationConfig,
+    LLMTTSOptimizationConfig,
+    VITSOptimizationConfig,
+    diffusion_tts_acceleration_plan,
+    llm_tts_acceleration_plan,
+    vits_acceleration_plan,
 )
 
 
@@ -93,18 +93,7 @@ class TTSAccelerationPlanTests(unittest.TestCase):
         )
 
     def test_plan_construction_does_not_import_or_build_optional_backends(self):
-        code = """
-import json
-import sys
-from voicehub import llm_tts_acceleration_plan
-plan = llm_tts_acceleration_plan(use_torch_compile=False)
-print(json.dumps({
-    "count": len(plan),
-    "flash_attn": "flash_attn" in sys.modules,
-    "triton": "triton" in sys.modules,
-    "cpp_extension": "torch.utils.cpp_extension" in sys.modules,
-}))
-"""
+        code = '\nimport json\nimport sys\nfrom voicehub.training import llm_tts_acceleration_plan\nplan = llm_tts_acceleration_plan(use_torch_compile=False)\nprint(json.dumps({\n    "count": len(plan),\n    "flash_attn": "flash_attn" in sys.modules,\n    "triton": "triton" in sys.modules,\n    "cpp_extension": "torch.utils.cpp_extension" in sys.modules,\n}))\n'
         result = subprocess.run(
             [sys.executable, "-c", code],
             check=True,

@@ -11,12 +11,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-from voicehub.architectures.nemo_ctc.checkpoint import (
+from voicehub.hub import resolve_pretrained_file
+from voicehub.models.asr_nemo.native.checkpoint import (
     NATIVE_NEMO_CTC_FILENAME,
     convert_nemo_quartznet_checkpoint,
     file_sha256,
 )
-from voicehub.architectures.nemo_ctc.metadata import (
+from voicehub.models.asr_nemo.native.metadata import (
     QUARTZNET_FILENAME,
     QUARTZNET_REPOSITORY,
     QUARTZNET_SHA256,
@@ -24,7 +25,6 @@ from voicehub.architectures.nemo_ctc.metadata import (
     QUARTZNET_URL,
     QUARTZNET_VERSION,
 )
-from voicehub.hub import resolve_pretrained_file
 from voicehub.path_utils import is_explicit_local_path
 
 _OFFICIAL_ALIASES = frozenset({

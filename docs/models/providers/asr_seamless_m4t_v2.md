@@ -24,7 +24,7 @@ hide:
 <div class="vh-model-detail__resource-menu">
 <a href="https://arxiv.org/abs/2312.05187" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/facebookresearch/seamless_communication" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling_asr_seamless_m4t_v2.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/asr_seamless_m4t_v2.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -109,7 +109,7 @@ These are output-language prompts supported by the audited S2T checkpoint.
 
 - **Paper:** [Seamless: Multilingual Expressive and Streaming Speech Translation](https://arxiv.org/abs/2312.05187)
 - **Upstream GitHub:** [Seamless Communication](https://github.com/facebookresearch/seamless_communication)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling_asr_seamless_m4t_v2.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling.py)
 
 ## Configuration
 
@@ -195,9 +195,9 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.asr_seamless_m4t_v2.modeling_asr_seamless_m4t_v2.SeamlessM4Tv2ForSpeechRecognition` |
-| Configuration | `voicehub.models.asr_seamless_m4t_v2.configuration_asr_seamless_m4t_v2.SeamlessM4Tv2ASRConfig` |
-| Source provenance | `voicehub/architectures/seamless_m4t_v2/SOURCE.json` |
+| Implementation | `voicehub.models.asr_seamless_m4t_v2.modeling.SeamlessM4Tv2ForSpeechRecognition` |
+| Configuration | `voicehub.models.asr_seamless_m4t_v2.configuration.SeamlessM4Tv2ASRConfig` |
+| Source provenance | `voicehub/models/asr_seamless_m4t_v2/native/SOURCE.json` |
 | License | [CC-BY-NC-4.0](https://huggingface.co/facebook/seamless-m4t-v2-large) |
 
 The pinned SeamlessM4T-v2 Large checkpoint and fine-tuned derivatives are non-commercial under CC-BY-NC-4.0. The VoiceHub-native S2T architecture port is audited against Apache-2.0 Transformers source. Commercial use: **not allowed**.
@@ -221,7 +221,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `SeamlessM4Tv2ASRConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/configuration_asr_seamless_m4t_v2.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -240,7 +240,7 @@ SeamlessM4Tv2ASRConfig(**config_kwargs)
 
 ### `SeamlessM4Tv2ForSpeechRecognition`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling_asr_seamless_m4t_v2.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/asr_seamless_m4t_v2/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

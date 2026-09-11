@@ -14,7 +14,7 @@ kernel-selector protocol.
 ## Supported models
 
 ```python
-from voicehub import list_vits_model_optimization_support
+from voicehub.optimization import list_vits_model_optimization_support
 
 for support in list_vits_model_optimization_support():
     print(support.to_dict())
@@ -67,7 +67,7 @@ preloaded CUDA extension are explicit choices, so an accelerator is not
 selected when its launch overhead is slower for the active shape.
 
 ```python
-from voicehub import TTSOptimizationConfig
+from voicehub.optimization import TTSOptimizationConfig
 
 result = model.optimize(
     TTSOptimizationConfig(
@@ -150,7 +150,7 @@ at a substantially higher first-call autotuning cost. An explicit caller mode
 is preserved. Enable graphs only for padded, static length/batch buckets:
 
 ```python
-from voicehub import VITSOptimizationConfig
+from voicehub.training import VITSOptimizationConfig
 
 profile = VITSOptimizationConfig()
 static_plan = profile.acceleration_plan(
@@ -173,7 +173,7 @@ The source optimizer algorithm remains AdamW. VoiceHub separates that algorithm
 from its execution backend:
 
 ```python
-from voicehub import VITSOptimizationConfig
+from voicehub.training import VITSOptimizationConfig
 
 profile = VITSOptimizationConfig(
     fused_adamw=True,       # PyTorch fused CUDA AdamW when supported

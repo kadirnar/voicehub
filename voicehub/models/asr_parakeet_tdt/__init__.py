@@ -8,8 +8,8 @@ from typing import Any
 _PACKAGE = "voicehub.models.asr_parakeet_tdt."
 _EXPORTS = {
     "NativeParakeetTDTTrainingAdapter": (_PACKAGE + "training_asr_parakeet_tdt"),
-    "ParakeetTDTASRConfig": (_PACKAGE + "configuration_asr_parakeet_tdt"),
-    "ParakeetTDTForSpeechRecognition": (_PACKAGE + "modeling_asr_parakeet_tdt"),
+    "ParakeetTDTASRConfig": (_PACKAGE + "configuration"),
+    "ParakeetTDTForSpeechRecognition": (_PACKAGE + "modeling"),
 }
 
 __all__ = sorted(_EXPORTS)

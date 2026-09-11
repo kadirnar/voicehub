@@ -45,6 +45,7 @@ class BuiltinModelManifest:
             SpeechTask.TEXT_TO_SPEECH: "ForTextToSpeech",
             SpeechTask.AUTOMATIC_SPEECH_RECOGNITION: "ForSpeechRecognition",
             SpeechTask.VOICE_ACTIVITY_DETECTION: "ForVoiceActivityDetection",
+            SpeechTask.AUDIO_CODEC: "ForAudioCodec",
         }
         return self.class_prefix + suffixes[self.task]
 
@@ -89,8 +90,8 @@ def _validate_activation_artifacts(path: Path, model_type: str) -> None:
     package = path.parent
     required = (
         package / "__init__.py",
-        package / f"configuration_{model_type}.py",
-        package / f"modeling_{model_type}.py",
+        package / "configuration.py",
+        package / "modeling.py",
         package / "registration.py",
         package / "runtime.py",
         package / "source" / "SOURCE.json",
@@ -100,7 +101,7 @@ def _validate_activation_artifacts(path: Path, model_type: str) -> None:
     if missing:
         raise ValueError(f"{path}: activated built-in is missing required package artifacts: {missing!r}.")
 
-    modeling_path = package / f"modeling_{model_type}.py"
+    modeling_path = package / "modeling.py"
     status = _literal_assignment(modeling_path, "IMPLEMENTATION_STATUS")
     if status != "ready":
         raise ValueError(

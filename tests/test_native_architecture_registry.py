@@ -5,7 +5,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from types import ModuleType, SimpleNamespace
 
-from voicehub.architectures import (
+from voicehub.runtime import (
     ARCHITECTURE_REGISTRY,
     ArchitectureCapabilities,
     ArchitectureCompatibilityError,
@@ -325,7 +325,7 @@ class ArchitectureRegistryTests(unittest.TestCase):
         from voicehub.registry import get_model_spec, list_model_specs
 
         model_specs = list_model_specs(task=None)
-        self.assertEqual(len(model_specs), 68)
+        self.assertEqual(len(model_specs), 70)
         self.assertTrue(all(spec.is_voicehub_native for spec in model_specs))
         moss_model = get_model_spec("mosstts")
         self.assertEqual(moss_model.architecture, "moss-tts")
@@ -347,46 +347,46 @@ class ArchitectureRegistryTests(unittest.TestCase):
         code = """
 import json
 import sys
-import voicehub.architectures as architectures
+import voicehub.runtime as architectures
 print(json.dumps({
     "ids": list(architectures.ARCHITECTURES),
     "torch": "torch" in sys.modules,
     "numpy": "numpy" in sys.modules,
     "modeling": sorted(
         name for name in sys.modules
-        if name.startswith("voicehub.architectures.")
+        if name.startswith("voicehub.models.")
         and name.endswith(".modeling")
     ),
     "kokoro_runtime": sorted(
         name for name in sys.modules
         if name in {
-            "voicehub.architectures.kokoro.albert",
-            "voicehub.architectures.kokoro.checkpoint",
+            "voicehub.models.kokoro.native.albert",
+            "voicehub.models.kokoro.native.checkpoint",
         }
-        or name.startswith("voicehub.models.kokoro")
+        or name == "voicehub.models.kokoro.modeling"
     ),
     "csm_runtime": sorted(
         name for name in sys.modules
         if name in {
-            "voicehub.architectures.csm.checkpoint",
-            "voicehub.architectures.csm.mimi",
-            "voicehub.architectures.csm.modeling",
-            "voicehub.architectures.csm.processing",
-            "voicehub.architectures.csm.runtime",
+            "voicehub.models.csm.native.checkpoint",
+            "voicehub.models.csm.native.mimi",
+            "voicehub.models.csm.native.modeling",
+            "voicehub.models.csm.native.processing",
+            "voicehub.models.csm.native.runtime",
         }
-        or name.startswith("voicehub.models.csm")
+        or name == "voicehub.models.csm.modeling"
     ),
     "outetts_runtime": sorted(
         name for name in sys.modules
-        if name.startswith("voicehub.architectures.outetts.")
+        if name.startswith("voicehub.models.outetts.native.")
         and not name.endswith((".metadata", ".registration"))
-        or name.startswith("voicehub.models.outetts")
+        or name == "voicehub.models.outetts.modeling"
     ),
     "fishtts_runtime": sorted(
         name for name in sys.modules
-        if name.startswith("voicehub.architectures.fishtts.")
+        if name.startswith("voicehub.models.fishtts.native.")
         and not name.endswith((".metadata", ".registration"))
-        or name.startswith("voicehub.models.fishtts")
+        or name == "voicehub.models.fishtts.modeling"
     ),
 }))
 """

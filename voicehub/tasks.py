@@ -11,6 +11,7 @@ class SpeechTask(str, Enum):
     TEXT_TO_SPEECH = "text-to-speech"
     AUTOMATIC_SPEECH_RECOGNITION = "automatic-speech-recognition"
     VOICE_ACTIVITY_DETECTION = "voice-activity-detection"
+    AUDIO_CODEC = "audio-codec"
 
     @classmethod
     def coerce(cls, value: SpeechTask | str) -> SpeechTask:
@@ -29,6 +30,8 @@ class SpeechTask(str, Enum):
             "stt": cls.AUTOMATIC_SPEECH_RECOGNITION.value,
             "vad": cls.VOICE_ACTIVITY_DETECTION.value,
             "speech-activity-detection": cls.VOICE_ACTIVITY_DETECTION.value,
+            "codec": cls.AUDIO_CODEC.value,
+            "audio-tokenization": cls.AUDIO_CODEC.value,
         }
         normalized = aliases.get(normalized, normalized)
         try:

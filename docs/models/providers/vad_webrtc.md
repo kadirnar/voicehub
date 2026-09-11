@@ -21,7 +21,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/wiseman/py-webrtcvad" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/modeling_vad_webrtc.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 </div>
 </details>
 </div>
@@ -31,7 +31,7 @@ hide:
 
 <div class="vh-model-detail__layout" markdown>
 
-<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-vad_webrtc"><h2 id="vh-model-facts-title-vad_webrtc">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-vad_webrtc" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Voice activity detection</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-vad_webrtc">Weightless</dd></div><div><dt>Architecture</dt><dd><code>webrtc-vad</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd>This weightless runtime does not select a spoken language and is not text-language conditioned; validate its implementation, configuration, and recording conditions for the target speech.</dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>5 capabilities</summary><span><code>voice-activity-detection</code> <code>fixed-point</code> <code>voicehub-native</code> <code>native-runtime</code> <code>streaming</code></span></details></dd></div><div><dt>Training</dt><dd><code>inference-only</code></dd></div><div><dt>License</dt><dd><a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/architectures/webrtc_vad/SOURCE.json">MIT and BSD-3-Clause</a></dd></div><div><dt>Runtime identifier</dt><dd id="vh-model-checkpoint-vad_webrtc"><code>webrtc-vad</code></dd></div></dl></details></aside>
+<aside class="vh-model-detail__sidebar" data-vh-model-facts aria-labelledby="vh-model-facts-title-vad_webrtc"><h2 id="vh-model-facts-title-vad_webrtc">Model facts</h2><details class="vh-model-detail__facts-disclosure" data-vh-model-facts-disclosure aria-labelledby="vh-model-facts-title-vad_webrtc" open><summary><span>Toggle model facts</span></summary><dl class="vh-model-detail__facts"><div><dt>Task</dt><dd>Voice activity detection</dd></div><div><dt>Parameters</dt><dd aria-describedby="vh-model-parameters-note-vad_webrtc">Weightless</dd></div><div><dt>Architecture</dt><dd><code>webrtc-vad</code></dd></div><div><dt>Runtime</dt><dd>VoiceHub-native</dd></div><div><dt>Languages</dt><dd>This weightless runtime does not select a spoken language and is not text-language conditioned; validate its implementation, configuration, and recording conditions for the target speech.</dd></div><div><dt>Capabilities</dt><dd><details class="vh-model-detail__capabilities"><summary>5 capabilities</summary><span><code>voice-activity-detection</code> <code>fixed-point</code> <code>voicehub-native</code> <code>native-runtime</code> <code>streaming</code></span></details></dd></div><div><dt>Training</dt><dd><code>inference-only</code></dd></div><div><dt>License</dt><dd><a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/native/SOURCE.json">MIT and BSD-3-Clause</a></dd></div><div><dt>Runtime identifier</dt><dd id="vh-model-checkpoint-vad_webrtc"><code>webrtc-vad</code></dd></div></dl></details></aside>
 
 <div class="vh-model-detail__main vh-model-detail__content" markdown>
 
@@ -97,7 +97,7 @@ This weightless runtime does not select a spoken language and is not text-langua
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [py-webrtcvad](https://github.com/wiseman/py-webrtcvad)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/modeling_vad_webrtc.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/modeling.py)
 
 ## Configuration
 
@@ -177,10 +177,10 @@ This integration is **inference-only**. Choose a verified model from the
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cpu`; verify implementation-specific requirements |
 | Real-checkpoint evidence | Not applicable; version the implementation, configuration, and source provenance |
-| Implementation | `voicehub.models.vad_webrtc.modeling_vad_webrtc.WebRTCVADForVoiceActivityDetection` |
-| Configuration | `voicehub.models.vad_webrtc.configuration_vad_webrtc.WebRTCVADConfig` |
-| Source provenance | `voicehub/architectures/webrtc_vad/SOURCE.json` |
-| License | [MIT and BSD-3-Clause](https://github.com/kadirnar/voicehub/blob/main/voicehub/architectures/webrtc_vad/SOURCE.json) |
+| Implementation | `voicehub.models.vad_webrtc.modeling.WebRTCVADForVoiceActivityDetection` |
+| Configuration | `voicehub.models.vad_webrtc.configuration.WebRTCVADConfig` |
+| Source provenance | `voicehub/models/vad_webrtc/native/SOURCE.json` |
+| License | [MIT and BSD-3-Clause](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/native/SOURCE.json) |
 
 This weightless runtime has no checkpoint license. Its audited source record declares **MIT and BSD-3-Clause**; verify those implementation terms.
 
@@ -203,7 +203,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `WebRTCVADConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/configuration_vad_webrtc.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -222,7 +222,7 @@ WebRTCVADConfig(**config_kwargs)
 
 ### `WebRTCVADForVoiceActivityDetection`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/modeling_vad_webrtc.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/vad_webrtc/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

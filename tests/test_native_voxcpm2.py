@@ -12,16 +12,19 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.registry import ArchitectureRegistry
-from voicehub.architectures.voxcpm2.checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.models.voxcpm.configuration import VoxCPMConfig
+from voicehub.models.voxcpm.modeling import VoxCPMForTextToSpeech
+from voicehub.models.voxcpm.native.checkpoint import (
     export_voxcpm_checkpoint,
     load_voxcpm_checkpoint,
     tensor_inventory_fingerprint,
     validate_voxcpm_checkpoint,
 )
-from voicehub.architectures.voxcpm2.codec import VoxCPMAudioVAE
-from voicehub.architectures.voxcpm2.configuration import VoxCPM2ArchitectureConfig
-from voicehub.architectures.voxcpm2.lora import (
+from voicehub.models.voxcpm.native.codec import VoxCPMAudioVAE
+from voicehub.models.voxcpm.native.configuration import VoxCPM2ArchitectureConfig
+from voicehub.models.voxcpm.native.lora import (
     VoxCPMLoRAConfig,
     export_voxcpm_lora,
     inject_voxcpm_lora,
@@ -29,7 +32,7 @@ from voicehub.architectures.voxcpm2.lora import (
     merged_voxcpm_state_dict,
     read_voxcpm_lora_config,
 )
-from voicehub.architectures.voxcpm2.metadata import (
+from voicehub.models.voxcpm.native.metadata import (
     VOXCPM2_CHECKPOINT_HEADER_FINGERPRINT,
     VOXCPM2_CHECKPOINT_PARAMETER_COUNT,
     VOXCPM2_CHECKPOINT_REVISION,
@@ -39,16 +42,13 @@ from voicehub.architectures.voxcpm2.metadata import (
     VOXCPM2_CODEC_TENSOR_COUNT,
     VOXCPM2_SOURCE_REVISION,
 )
-from voicehub.architectures.voxcpm2.modeling import VoxCPM2Model
-from voicehub.architectures.voxcpm2.processing import VoxCPM2Processor, VoxCPM2Tokenizer
-from voicehub.architectures.voxcpm2.registration import register_voxcpm2_architecture
-from voicehub.architectures.voxcpm2.runtime import VoxCPM2Runtime
-from voicehub.checkpointing import save_safetensors
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.models.voxcpm_native.configuration_voxcpm import VoxCPMConfig
-from voicehub.models.voxcpm_native.modeling_voxcpm import VoxCPMForTextToSpeech
-from voicehub.models.voxcpm_native.training_voxcpm import VoxCPMTrainingAdapter
+from voicehub.models.voxcpm.native.modeling import VoxCPM2Model
+from voicehub.models.voxcpm.native.processing import VoxCPM2Processor, VoxCPM2Tokenizer
+from voicehub.models.voxcpm.native.registration import register_voxcpm2_architecture
+from voicehub.models.voxcpm.native.runtime import VoxCPM2Runtime
+from voicehub.models.voxcpm.training_voxcpm import VoxCPMTrainingAdapter
 from voicehub.registry import get_model_spec
+from voicehub.runtime.registry import ArchitectureRegistry
 from voicehub.tokenization import SentencePieceBPEAssets, SentencePieceBPETokenizer
 from voicehub.training import AutoTrainingAdapter
 from voicehub.training.contracts import TrainingPhaseSpec, TrainingSupport
@@ -139,7 +139,7 @@ def _training_spec() -> ModelTrainingSpec:
         component_paths=("model", ),
         prediction_keys=("target_features", ),
         loss_keys=("diffusion_loss", "stop_loss"),
-        source_entrypoints=("voicehub.architectures.voxcpm2.modeling:VoxCPM2Model.forward", ),
+        source_entrypoints=("voicehub.models.voxcpm.native.modeling:VoxCPM2Model.forward", ),
         native_training=True,
         support=TrainingSupport.NATIVE,
         phases=(phase, ),
@@ -151,8 +151,8 @@ class NativeVoxCPMDependencyTests(unittest.TestCase):
 
     def test_native_files_do_not_import_external_model_runtimes(self):
         roots = (
-            PROJECT_ROOT / "voicehub" / "architectures" / "voxcpm2",
-            PROJECT_ROOT / "voicehub" / "models" / "voxcpm_native",
+            PROJECT_ROOT / 'voicehub/models/voxcpm/native',
+            PROJECT_ROOT / 'voicehub/models/voxcpm',
         )
         forbidden = {
             "accelerate",
@@ -184,7 +184,7 @@ class NativeVoxCPMDependencyTests(unittest.TestCase):
 
     def test_public_package_is_lazy_without_torch_or_framework_clients(self):
         command = (
-            "import sys; import voicehub.models.voxcpm_native; "
+            "import sys; import voicehub.models.voxcpm; "
             "print('torch' in sys.modules, 'transformers' in sys.modules, "
             "'huggingface_hub' in sys.modules, 'safetensors' in sys.modules)")
         result = subprocess.run(
@@ -197,8 +197,8 @@ class NativeVoxCPMDependencyTests(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "False False False False")
 
     def test_provenance_pins_source_checkpoint_and_training_boundary(self):
-        document = json.loads((PROJECT_ROOT / "voicehub" / "architectures" / "voxcpm2" /
-                               "SOURCE.json").read_text(encoding="utf-8"))
+        document = json.loads(
+            (PROJECT_ROOT / 'voicehub/models/voxcpm/native/SOURCE.json').read_text(encoding="utf-8"))
         self.assertEqual(document["source"]["revision"], VOXCPM2_SOURCE_REVISION)
         self.assertEqual(
             document["checkpoint"]["revision"],
@@ -210,8 +210,7 @@ class NativeVoxCPMDependencyTests(unittest.TestCase):
             document["training"]["codec_policy"],
             "AudioVAE V2 is frozen and used only for preprocessing/validation decode.",
         )
-        self.assertTrue(
-            (PROJECT_ROOT / "voicehub" / "architectures" / "voxcpm2" / "THIRD_PARTY_LICENSE").is_file())
+        self.assertTrue((PROJECT_ROOT / 'voicehub/models/voxcpm/native/THIRD_PARTY_LICENSE').is_file())
 
     def test_architecture_registration_is_lazy_and_truthful(self):
         registry = ArchitectureRegistry()
@@ -398,7 +397,7 @@ class NativeVoxCPMProviderTests(unittest.TestCase):
         self.assertEqual(training_spec.default_phase, "source_flow_and_stop")
         self.assertEqual(
             training_spec.source_entrypoints,
-            ("voicehub.architectures.voxcpm2.modeling:"
+            ("voicehub.models.voxcpm.native.modeling:"
              "VoxCPM2Model.forward", ),
         )
         self.assertIsInstance(adapter, VoxCPMTrainingAdapter)

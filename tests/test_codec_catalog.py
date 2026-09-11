@@ -7,7 +7,6 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from voicehub.architectures import get_architecture_spec
 from voicehub.components.audio.codecs.catalog import (
     CODEC_ALIASES,
     CODEC_CATALOG,
@@ -29,6 +28,7 @@ from voicehub.components.audio.codecs.catalog import (
     validate_codec_catalog_registry_coverage,
 )
 from voicehub.registry import MODEL_REGISTRY
+from voicehub.runtime import get_architecture_spec
 from voicehub.tasks import SpeechTask
 
 EXPECTED_LLM_TTS_MODEL_TYPES = {
@@ -109,8 +109,8 @@ def test_qwen_inventory_is_full_native_encoder_quantizer_decoder():
     assert qwen.stages.quantizer is CodecStageAvailability.NATIVE
     assert qwen.stages.decoder is CodecStageAvailability.NATIVE
     assert qwen.implementation_paths == (
-        "voicehub.architectures.qwen3_tts.encoder:Qwen3TTSSpeechEncoder",
-        "voicehub.architectures.qwen3_tts.codec:Qwen3TTSSpeechDecoder",
+        "voicehub.models.qwen3tts.native.encoder:Qwen3TTSSpeechEncoder",
+        "voicehub.models.qwen3tts.native.codec:Qwen3TTSSpeechDecoder",
     )
     assert CodecOptimizationSurface.SNAKE_BETA in qwen.optimization.surfaces
     assert not qwen.gaps

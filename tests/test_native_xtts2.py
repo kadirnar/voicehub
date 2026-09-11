@@ -11,20 +11,20 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from voicehub.architectures.xtts2.checkpoint import (
+from voicehub.models.xtts.native.checkpoint import (
     convert_trusted_legacy_xtts2_checkpoint,
     inspect_xtts2_checkpoint,
     load_xtts2_checkpoint,
     save_xtts2_checkpoint,
 )
-from voicehub.architectures.xtts2.configuration import XTTS2Config
-from voicehub.architectures.xtts2.gpt import XTTS2GPT
-from voicehub.architectures.xtts2.tokenizer import XTTS2Tokenizer
+from voicehub.models.xtts.native.configuration import XTTS2Config
+from voicehub.models.xtts.native.gpt import XTTS2GPT
+from voicehub.models.xtts.native.tokenizer import XTTS2Tokenizer
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_ROOTS = (
-    PROJECT_ROOT / "voicehub" / "architectures" / "xtts2",
-    PROJECT_ROOT / "voicehub" / "models" / "xtts_native",
+    PROJECT_ROOT / 'voicehub/models/xtts/native',
+    PROJECT_ROOT / 'voicehub/models/xtts',
 )
 FORBIDDEN = {
     "TTS",
@@ -63,7 +63,7 @@ class NativeXTTS2Tests(unittest.TestCase):
                 "-c",
                 (
                     "import sys; "
-                    "import voicehub.architectures.xtts2; "
+                    "import voicehub.models.xtts.native; "
                     "import voicehub.models.xtts; "
                     "print('torch' in sys.modules)"),
             ],

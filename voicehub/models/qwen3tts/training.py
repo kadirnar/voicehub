@@ -9,7 +9,7 @@ from typing import Any
 
 import torch
 
-from voicehub.architectures.qwen3_tts.runtime import qwen3_tts_speaker_mel
+from voicehub.models.qwen3tts.native.runtime import qwen3_tts_speaker_mel
 from voicehub.processing import load_native_audio
 
 

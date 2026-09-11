@@ -5,9 +5,9 @@ from __future__ import annotations
 from importlib import import_module
 
 _EXPORT_MODULES = {
-    "InflectTTSConfig": ("voicehub.models.inflecttts.configuration_inflecttts"),
-    "InflectTTSForTextToSpeech": "voicehub.models.inflecttts.inference",
-    "InflectTTSModel": "voicehub.models.inflecttts.inference",
+    "InflectTTSConfig": ("voicehub.models.inflecttts.configuration"),
+    "InflectTTSForTextToSpeech": "voicehub.models.inflecttts.modeling",
+    "InflectTTSModel": "voicehub.models.inflecttts.modeling",
 }
 
 

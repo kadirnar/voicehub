@@ -13,10 +13,7 @@ decision. Unsupported explicit requirements raise an error.
 ## Inspect support
 
 ```python
-from voicehub import (
-    get_tts_optimization_support,
-    list_tts_optimization_support,
-)
+from voicehub.optimization import get_tts_optimization_support, list_tts_optimization_support
 
 support = get_tts_optimization_support("qwen3tts")
 print(support.to_dict())
@@ -30,7 +27,8 @@ This table covers automatic TTS selection. Explicit extensions validate the runt
 ## Use a quality-preserving default
 
 ```python
-from voicehub import AutoModelForTextToSpeech, TTSOptimizationConfig
+from voicehub import AutoModelForTextToSpeech
+from voicehub.optimization import TTSOptimizationConfig
 
 model = AutoModelForTextToSpeech.from_pretrained(
     "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
@@ -193,7 +191,8 @@ profile.
 ## Configure optimization during loading
 
 ```python
-from voicehub import AutoModelForTextToSpeech, TTSOptimizationConfig
+from voicehub import AutoModelForTextToSpeech
+from voicehub.optimization import TTSOptimizationConfig
 
 model = AutoModelForTextToSpeech.from_pretrained(
     "F5TTS_v1_Base",
@@ -213,7 +212,7 @@ validation fails, call `clear_optimization_config()` before loading natively.
 ## Inspect a plan without weights
 
 ```python
-from voicehub import TTSOptimizationConfig
+from voicehub.optimization import TTSOptimizationConfig
 from voicehub.optimization import OptimizationContext
 
 plan = TTSOptimizationConfig().resolve(

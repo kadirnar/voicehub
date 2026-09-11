@@ -380,7 +380,7 @@ class _LazyCSMTrainingCollator:
         return {
             "depth_decoder_labels_ratio": 1.0,
             "sample_rate": getattr(config, "sample_rate", None),
-            "base_model": getattr(config, "name_or_path", None),
+            'base_model': getattr(config, "name_or_path", None),
             "runtime": "voicehub-native",
         }
 
@@ -418,7 +418,7 @@ def load_csm_training_backend(
     verify_checkpoint_integrity: bool = False,
 ) -> CSMTrainingBackend:
     """Load the VoiceHub-native CSM graph without Transformers."""
-    from voicehub.architectures.csm.runtime import load_csm_runtime
+    from voicehub.models.csm.native.runtime import load_csm_runtime
 
     runtime = load_csm_runtime(
         model_name_or_path,

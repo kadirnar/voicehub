@@ -6,9 +6,9 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
-    "ConversationTTS": ("voicehub.models.conversationtts.modeling_conversationtts"),
-    "ConversationTTSConfig": ("voicehub.models.conversationtts.configuration_conversationtts"),
-    "ConversationTTSForTextToSpeech": ("voicehub.models.conversationtts.modeling_conversationtts"),
+    "ConversationTTS": ("voicehub.models.conversationtts.modeling"),
+    "ConversationTTSConfig": ("voicehub.models.conversationtts.configuration"),
+    "ConversationTTSForTextToSpeech": ("voicehub.models.conversationtts.modeling"),
 }
 
 __all__ = sorted(_EXPORTS)

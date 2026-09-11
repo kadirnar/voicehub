@@ -7,10 +7,9 @@ from typing import Any
 
 _EXPORTS = {
     "GraniteSpeechASRConfig": ("voicehub.models.asr_granite_speech."
-                               "configuration_asr_granite_speech"),
-    "GraniteSpeechForSpeechRecognition":
-    ("voicehub.models.asr_granite_speech."
-     "modeling_asr_granite_speech"),
+                               "configuration"),
+    "GraniteSpeechForSpeechRecognition": ("voicehub.models.asr_granite_speech."
+                                          "modeling"),
     "NativeGraniteSpeechTrainingAdapter":
     ("voicehub.models.asr_granite_speech."
      "training_asr_granite_speech"),

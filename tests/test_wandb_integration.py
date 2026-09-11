@@ -9,10 +9,12 @@ from pathlib import Path
 from types import ModuleType
 from unittest.mock import Mock, patch
 
-from voicehub import Trainer, TrainingArguments, WandbCallback
 from voicehub.errors import OptionalDependencyError
-from voicehub.trainer_callback import TrainerCallback
-from voicehub.trainer_utils import CHECKPOINT_COMPLETE_NAME, MODEL_STATE_NAME, TRAINING_ARGS_NAME
+from voicehub.training.arguments import TrainingArguments
+from voicehub.training.callbacks import TrainerCallback
+from voicehub.training.integrations import WandbCallback
+from voicehub.training.trainer import Trainer
+from voicehub.training.utils import CHECKPOINT_COMPLETE_NAME, MODEL_STATE_NAME, TRAINING_ARGS_NAME
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 
@@ -151,10 +153,8 @@ class WandbCallbackTests(unittest.TestCase):
 
     def test_default_trainer_does_not_import_wandb(self):
         script = (
-            "import sys;"
-            "from voicehub import Trainer;"
-            "Trainer(model=object());"
-            "print('wandb' in sys.modules)")
+            "import sys;from voicehub.training.trainer import Trainer;Trainer(model=object());print('wandb' in sys.modules)"
+        )
         completed = subprocess.run(
             [sys.executable, "-c", script],
             check=True,
@@ -164,7 +164,7 @@ class WandbCallbackTests(unittest.TestCase):
         self.assertEqual(completed.stdout.strip(), "False")
 
     def test_report_to_registers_callback_without_eager_import(self):
-        with patch("voicehub.integrations.import_optional") as import_dependency:
+        with patch("voicehub.training.integrations.import_optional") as import_dependency:
             with tempfile.TemporaryDirectory() as directory:
                 trainer = Trainer(
                     model=object(),
@@ -183,7 +183,7 @@ class WandbCallbackTests(unittest.TestCase):
     def test_owned_run_receives_config_metrics_and_is_finished(self):
         fake_wandb = _fake_wandb()
         patched_import = patch(
-            "voicehub.integrations.import_optional",
+            "voicehub.training.integrations.import_optional",
             return_value=fake_wandb,
         )
         with tempfile.TemporaryDirectory() as directory, patched_import:
@@ -242,7 +242,7 @@ class WandbCallbackTests(unittest.TestCase):
         existing_run = _FakeRun(run_id="external")
         fake_wandb = _fake_wandb(existing_run=existing_run)
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer = Trainer(
@@ -273,7 +273,7 @@ class WandbCallbackTests(unittest.TestCase):
         fake_wandb = _fake_wandb(existing_run=existing_run)
         callback = WandbCallback()
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer = Trainer(
@@ -297,7 +297,7 @@ class WandbCallbackTests(unittest.TestCase):
         trainer = Trainer(model=object(), args=arguments, callbacks=[callback])
         trainer.state.is_world_process_zero = False
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 side_effect=AssertionError("must remain lazy"),
         ):
             trainer.callback_handler.on_train_begin(
@@ -315,7 +315,7 @@ class WandbCallbackTests(unittest.TestCase):
     def test_prediction_metrics_are_logged_with_the_test_namespace(self):
         fake_wandb = _fake_wandb()
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer = Trainer(
@@ -349,7 +349,7 @@ class WandbCallbackTests(unittest.TestCase):
             args=TrainingArguments(report_to="wandb"),
         )
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 side_effect=AssertionError("pre-training logs must remain lazy"),
         ):
             trainer.log({"eval_loss": 0.5})
@@ -367,7 +367,7 @@ class WandbCallbackTests(unittest.TestCase):
         )
         error = OptionalDependencyError("install voicehub[training]")
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 side_effect=error,
         ):
             with self.assertRaisesRegex(
@@ -383,7 +383,7 @@ class WandbCallbackTests(unittest.TestCase):
     def test_owned_run_is_finished_when_training_fails(self):
         fake_wandb = _fake_wandb()
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer = Trainer(
@@ -427,7 +427,7 @@ class WandbCallbackTests(unittest.TestCase):
         self.assertFalse(callback._finished)
         fake_wandb = _fake_wandb()
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer.callback_handler.on_train_begin(
@@ -447,7 +447,7 @@ class WandbCallbackTests(unittest.TestCase):
             callbacks=[callback],
         )
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer.callback_handler.on_train_begin(
@@ -489,7 +489,7 @@ class WandbCallbackTests(unittest.TestCase):
             callbacks=[callback],
         )
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             with self.assertRaisesRegex(RuntimeError, "initialization failed"):
@@ -540,7 +540,7 @@ class WandbCallbackTests(unittest.TestCase):
             callbacks=[callback],
         )
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             with self.assertRaisesRegex(RuntimeError, "initialization failed"):
@@ -577,7 +577,7 @@ class WandbCallbackTests(unittest.TestCase):
             callbacks=[callback],
         )
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer.callback_handler.on_train_begin(
@@ -624,7 +624,7 @@ class WandbCallbackTests(unittest.TestCase):
             callbacks=[callback],
         )
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer.callback_handler.on_train_begin(
@@ -664,7 +664,7 @@ class WandbCallbackTests(unittest.TestCase):
             callbacks=[callback],
         )
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             trainer.callback_handler.on_train_begin(
@@ -732,7 +732,7 @@ class WandbCallbackTests(unittest.TestCase):
     def test_restored_run_id_is_used_for_resumption(self):
         fake_wandb = _fake_wandb()
         with patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             callback = WandbCallback()
@@ -755,7 +755,7 @@ class WandbCallbackTests(unittest.TestCase):
     def test_checkpoint_artifact_is_logged_only_after_completion(self):
         fake_wandb = _fake_wandb()
         patched_import = patch(
-            "voicehub.integrations.import_optional",
+            "voicehub.training.integrations.import_optional",
             return_value=fake_wandb,
         )
         with tempfile.TemporaryDirectory() as directory, patched_import:
@@ -800,7 +800,7 @@ class WandbCallbackTests(unittest.TestCase):
     def test_end_mode_requests_and_logs_only_the_final_model_directory(self):
         fake_wandb = _fake_wandb()
         patched_import = patch(
-            "voicehub.integrations.import_optional",
+            "voicehub.training.integrations.import_optional",
             return_value=fake_wandb,
         )
         with tempfile.TemporaryDirectory() as directory, patched_import:
@@ -864,7 +864,7 @@ class WandbCallbackTests(unittest.TestCase):
 
         fake_wandb = _fake_wandb()
         patched_import = patch(
-            "voicehub.integrations.import_optional",
+            "voicehub.training.integrations.import_optional",
             return_value=fake_wandb,
         )
         with tempfile.TemporaryDirectory() as directory, patched_import:
@@ -934,7 +934,7 @@ class WandbCallbackTests(unittest.TestCase):
                 fake_wandb = _fake_wandb()
                 observer = TerminalObserver()
                 with tempfile.TemporaryDirectory() as directory, patch(
-                        "voicehub.integrations.import_optional",
+                        "voicehub.training.integrations.import_optional",
                         return_value=fake_wandb,
                 ):
                     trainer = Trainer(
@@ -998,7 +998,7 @@ class WandbCallbackTests(unittest.TestCase):
 
         fake_wandb = _fake_wandb()
         with tempfile.TemporaryDirectory() as directory, patch(
-                "voicehub.integrations.import_optional",
+                "voicehub.training.integrations.import_optional",
                 return_value=fake_wandb,
         ):
             final_model = Path(directory) / "final-model"

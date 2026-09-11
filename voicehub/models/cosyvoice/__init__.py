@@ -7,15 +7,15 @@ from typing import Any
 
 _EXPORTS = {
     "CosyVoiceConfig": (
-        "voicehub.models.cosyvoice.configuration_cosyvoice",
+        "voicehub.models.cosyvoice.configuration",
         "CosyVoiceConfig",
     ),
     "CosyVoiceForTextToSpeech": (
-        "voicehub.models.cosyvoice.modeling_cosyvoice",
+        "voicehub.models.cosyvoice.modeling",
         "CosyVoiceForTextToSpeech",
     ),
     "CosyVoiceTTS": (
-        "voicehub.models.cosyvoice.modeling_cosyvoice",
+        "voicehub.models.cosyvoice.modeling",
         "CosyVoiceTTS",
     ),
     "CosyVoiceTrainingAdapter": (

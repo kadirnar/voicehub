@@ -8,7 +8,7 @@ from numbers import Integral, Real
 from pathlib import Path
 from typing import Any
 
-from voicehub.configuration_utils import reject_serialized_secrets
+from voicehub.configuration import reject_serialized_secrets
 from voicehub.hub import read_json_file, resolve_pretrained_file, write_json_file
 from voicehub.serialization_utils import serialize_paths
 

@@ -8,7 +8,7 @@ from typing import Any
 
 from voicehub.errors import LLMBackendCompatibilityError, UnknownModelError
 from voicehub.llm_serving.configuration import LLMBackend, LLMBackendTransport
-from voicehub.models.registry import get_model_spec, normalize_model_type
+from voicehub.registry import get_model_spec, normalize_model_type
 
 _SPEECH_DIRECT_OPTIONS = (
     "duration_tokens",

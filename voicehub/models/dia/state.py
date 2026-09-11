@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import torch
 from torch import Tensor
 
-from voicehub.architectures.dia.modeling import DiaConditionalGenerationOutput, DiaEncoderOutput
+from voicehub.models.dia.native.modeling import DiaConditionalGenerationOutput, DiaEncoderOutput
 
 
 def create_attn_mask(

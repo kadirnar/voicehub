@@ -10,21 +10,21 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from voicehub.architectures.wenet_u2pp.checkpoint import (
+from voicehub.hub import resolve_pretrained_file
+from voicehub.models.asr_wenet.native.checkpoint import (
     NATIVE_WENET_FILENAME,
     WENET_TOKENIZER_FILENAME,
     WENET_UNITS_FILENAME,
     convert_wenet_gigaspeech_checkpoint,
     file_sha256,
 )
-from voicehub.architectures.wenet_u2pp.metadata import (
+from voicehub.models.asr_wenet.native.metadata import (
     GIGASPEECH_ARCHIVE_FILENAME,
     GIGASPEECH_ARCHIVE_SHA256,
     GIGASPEECH_ARCHIVE_SIZE,
     GIGASPEECH_MODEL_URL,
     GIGASPEECH_MODEL_VERSION,
 )
-from voicehub.hub import resolve_pretrained_file
 from voicehub.path_utils import is_explicit_local_path
 
 _OFFICIAL_ALIASES = frozenset({

@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from voicehub.architectures.pyannet.checkpoint import (
+from voicehub.hub import read_json_file, resolve_pretrained_file
+from voicehub.models.vad_pyannote.native.checkpoint import (
     PYANNOTE_BROUHAHA_REVISION,
     PYANNOTE_SEGMENTATION_3_REVISION,
     PYANNOTE_SEGMENTATION_3_SHA256,
@@ -14,7 +15,6 @@ from voicehub.architectures.pyannet.checkpoint import (
     config_for_variant,
     convert_pyannote_lightning_checkpoint,
 )
-from voicehub.hub import read_json_file, resolve_pretrained_file
 from voicehub.path_utils import is_explicit_local_path
 
 

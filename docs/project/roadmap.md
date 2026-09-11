@@ -1,9 +1,17 @@
 ---
 description: Evidence-first roadmap for the VoiceHub 0.3 release line.
-release: 0.3.0
+release: 0.4.0
 ---
 
 # Roadmap
+
+!!! note "0.4 architecture rewrite"
+
+    The current source is 0.4.0. See the [migration guide](migration-0.4.md).
+    The 0.3 report below is historical evidence. Its benchmark and CI results
+    do not validate this rewrite. Current release gates remain pending until
+    evidence is recorded for the exact new candidate.
+
 
 VoiceHub 0.3 is in release-hardening mode. The project is not accepting another
 model family into the built-in registry until the current TTS, ASR, and VAD

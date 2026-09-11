@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/owenawsong/Inflect" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/inflecttts/modeling_inflecttts.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/inflecttts/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/inflecttts.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -103,7 +103,7 @@ integration. This page is generated from its registry contract. [Open the `infle
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [Inflect](https://github.com/owenawsong/Inflect)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/inflecttts/modeling_inflecttts.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/inflecttts/modeling.py)
 
 ## Configuration
 
@@ -189,8 +189,8 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.inflecttts.modeling_inflecttts.InflectTTSForTextToSpeech` |
-| Configuration | `voicehub.models.inflecttts.configuration_inflecttts.InflectTTSConfig` |
+| Implementation | `voicehub.models.inflecttts.modeling.InflectTTSForTextToSpeech` |
+| Configuration | `voicehub.models.inflecttts.configuration.InflectTTSConfig` |
 | Source provenance | `voicehub/models/inflecttts/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -215,7 +215,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `InflectTTSConfig`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/inflecttts/configuration_inflecttts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/inflecttts/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -234,7 +234,7 @@ InflectTTSConfig(**config_kwargs)
 
 ### `InflectTTSForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/inflecttts/modeling_inflecttts.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/inflecttts/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

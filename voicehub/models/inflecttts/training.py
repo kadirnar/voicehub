@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from voicehub.architectures.inflecttts.training import InflectV2TrainingModel
+from voicehub.models.inflecttts.native.training import InflectV2TrainingModel
 from voicehub.training.adapters import VITSTrainingAdapter
 from voicehub.training.collators import DataCollatorForAudioTraining
 from voicehub.training.datasets import SpeechDataset

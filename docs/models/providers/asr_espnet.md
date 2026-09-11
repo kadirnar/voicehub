@@ -196,7 +196,7 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
 | Implementation | `voicehub.models.asr_native.espnet.ESPnetASRForSpeechRecognition` |
 | Configuration | `voicehub.models.asr_native.configuration.ESPnetASRConfig` |
-| Source provenance | `voicehub/architectures/espnet_transformer/SOURCE.json` |
+| Source provenance | `voicehub/models/asr_espnet/native/SOURCE.json` |
 | License | Checkpoint-specific |
 
 No VoiceHub-specific license override is registered. Verify the checkpoint and upstream source terms before use.

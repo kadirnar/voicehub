@@ -6,9 +6,9 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
-    "NeuTTSConfig": "voicehub.models.neutts.configuration_neutts",
-    "NeuTTSForTextToSpeech": "voicehub.models.neutts.inference",
-    "NeuTTSModel": "voicehub.models.neutts.inference",
+    "NeuTTSConfig": "voicehub.models.neutts.configuration",
+    "NeuTTSForTextToSpeech": "voicehub.models.neutts.modeling",
+    "NeuTTSModel": "voicehub.models.neutts.modeling",
 }
 
 

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "voicehub"
 dynamic = ["version"]
-description = "A unified inference and training interface for TTS, ASR, and VAD models"
+description = "A unified inference and training interface for TTS, ASR, VAD, and audio codec models"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
@@ -32,7 +32,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  # VoiceHub owns every built-in TTS, ASR, and VAD architecture. PyTorch is
+  # VoiceHub owns every built-in speech and codec architecture. PyTorch is
   # the only tensor/autograd substrate in the default inference runtime.
   # Training/reporting tools intentionally live in `voicehub[training]`.
   "torch>=2.8,<2.9",

@@ -729,7 +729,8 @@ def _benchmark_worker(args: argparse.Namespace) -> dict[str, Any]:
 
     from voicehub import AutoModelForTextToSpeech
     from voicehub import __version__ as voicehub_version
-    from voicehub import diffusion_cache_summary, get_model_spec, reset_diffusion_cache_metrics
+    from voicehub import get_model_spec
+    from voicehub.optimization import diffusion_cache_summary, reset_diffusion_cache_metrics
 
     effective_spec = _effective_worker_profile_spec(args)
     config_kwargs = copy.deepcopy(effective_spec["config_kwargs"])

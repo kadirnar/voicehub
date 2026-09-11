@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.zonos."
 _EXPORTS = {
-    "ZonosConfig": _PACKAGE + "configuration_zonos",
-    "ZonosForTextToSpeech": _PACKAGE + "inference",
-    "ZonosTTS": _PACKAGE + "inference",
+    "ZonosConfig": _PACKAGE + "configuration",
+    "ZonosForTextToSpeech": _PACKAGE + "modeling",
+    "ZonosTTS": _PACKAGE + "modeling",
     "ZonosTrainingAdapter": _PACKAGE + "training",
 }
 

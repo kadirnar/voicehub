@@ -38,7 +38,7 @@ models remain part of the default package.
 Do this before loading weights:
 
 ```python
-from voicehub import get_training_spec
+from voicehub.training import get_training_spec
 
 spec = get_training_spec("dia")
 print(spec.support.value)
@@ -52,7 +52,7 @@ Query the registry rather than relying on copied model counts:
 ```python
 from collections import Counter
 
-from voicehub import list_training_specs
+from voicehub.training import list_training_specs
 
 print(Counter(item.support.value for item in list_training_specs()))
 ```
@@ -63,7 +63,7 @@ Keep stable IDs, exact transcripts, speaker/session groups, consent, license,
 and provenance in the source manifest. Split before model preprocessing:
 
 ```python
-from voicehub import TTSDataset
+from voicehub.training import TTSDataset
 
 source = TTSDataset.from_manifest(
     "data/dia/manifest.jsonl",
@@ -117,7 +117,7 @@ Keep `max_steps=1` until the loss is finite, intended parameters receive
 gradients, frozen components remain frozen, and save/reload works:
 
 ```python
-from voicehub import Trainer, TrainingArguments
+from voicehub.training import Trainer, TrainingArguments
 
 arguments = TrainingArguments(
     output_dir="runs/dia-smoke",

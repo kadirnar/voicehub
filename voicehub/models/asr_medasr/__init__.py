@@ -7,9 +7,9 @@ from typing import Any
 
 _PACKAGE = "voicehub.models.asr_medasr."
 _EXPORTS = {
-    "MedASRASRConfig": _PACKAGE + "configuration_asr_medasr",
-    "MedASRConfig": _PACKAGE + "configuration_asr_medasr",
-    "MedASRForSpeechRecognition": _PACKAGE + "modeling_asr_medasr",
+    "MedASRASRConfig": _PACKAGE + "configuration",
+    "MedASRConfig": _PACKAGE + "configuration",
+    "MedASRForSpeechRecognition": _PACKAGE + "modeling",
     "NativeMedASRTrainingAdapter": _PACKAGE + "training_asr_medasr",
 }
 

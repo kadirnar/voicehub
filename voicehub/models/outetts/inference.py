@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from voicehub.dependencies import import_optional
-from voicehub.modeling_outputs import TTSOutput
-from voicehub.modeling_utils import PreTrainedTTSModel
 from voicehub.models._shared import finish_audio_output, resolve_torch_dtype, seeded_inference
-from voicehub.models.outetts.configuration_outetts import OuteTTSConfig
+from voicehub.models.outetts.configuration import OuteTTSConfig
+from voicehub.models.tts import PreTrainedTTSModel
+from voicehub.outputs import TTSOutput
 
 
 class OuteTTSForTextToSpeech(PreTrainedTTSModel):
@@ -332,7 +332,7 @@ class OuteTTSForTextToSpeech(PreTrainedTTSModel):
             model_type="outetts",
             install_extra=None,
         )
-        from voicehub.architectures.outetts.runtime import load_outetts_runtime
+        from voicehub.models.outetts.native.runtime import load_outetts_runtime
 
         dtype = None
         if self.config.torch_dtype != "auto":

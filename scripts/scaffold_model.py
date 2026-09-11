@@ -146,11 +146,27 @@ TASKS = {
         quickstart_input='"speech.wav"',
         sample_rate=16_000,
     ),
+    "codec":
+    TaskTemplate(
+        task="audio-codec",
+        enum_member="AUDIO_CODEC",
+        factory="AutoModelForAudioCodec",
+        base_class="PreTrainedCodecModel",
+        output_class="CodecOutput",
+        implementation_method="_encode",
+        public_method="encode",
+        model_suffix="ForAudioCodec",
+        training_family="AUDIO_CODEC",
+        input_name="audio",
+        quickstart_input='"speech.wav"',
+        sample_rate=24_000,
+    ),
 }
 TRAINING_FAMILY_VALUES = {
     "ACOUSTIC": "acoustic-regression",
     "AUDIO_CLASSIFICATION": "audio-classification",
     "CTC": "ctc",
+    "AUDIO_CODEC": "audio-codec",
 }
 
 
@@ -237,8 +253,8 @@ def _render_init(model_type: str, config_class: str, model_class: str) -> str:
         from typing import Any
 
         _EXPORTS = {{
-            {config_class!r}: __name__ + ".configuration_{model_type}",
-            {model_class!r}: __name__ + ".modeling_{model_type}",
+            {config_class!r}: __name__ + ".configuration",
+            {model_class!r}: __name__ + ".modeling",
         }}
 
         __all__ = sorted(_EXPORTS)
@@ -289,7 +305,7 @@ def _render_model(
     model_class: str,
     task: TaskTemplate,
 ) -> str:
-    return textwrap.dedent(
+    source = textwrap.dedent(
         f'''\
         """Shared-contract wrapper for the {model_type} integration."""
 
@@ -299,7 +315,7 @@ def _render_model(
 
         from voicehub import {task.base_class}, {task.output_class}
 
-        from .configuration_{model_type} import {config_class}
+        from .configuration import {config_class}
 
         IMPLEMENTATION_STATUS = {IMPLEMENTATION_STATUS!r}
 
@@ -328,6 +344,22 @@ def _render_model(
                     "{task.output_class}."
                 )
         ''')
+
+    if task.task == "audio-codec":
+        source = source.replace(
+            f"from voicehub import {task.base_class}, {task.output_class}",
+            f"from voicehub import {task.base_class}",
+        ).replace(f") -> {task.output_class}:",
+                  ") -> Any:").replace(f"{task.output_class}.", "the codec-owned codes payload.")
+        source += textwrap.indent(
+            textwrap.dedent(
+                '''\
+
+            def _decode(self, codes: Any, **kwargs: Any) -> Any:
+                del codes, kwargs
+                raise NotImplementedError("Return the reconstructed waveform tensor.")
+        '''), "    ")
+    return source
 
 
 def _render_runtime(model_type: str) -> str:
@@ -363,8 +395,8 @@ def _render_registration(
 
         from __future__ import annotations
 
-        from voicehub import (
-            {task.factory},
+        from voicehub import {task.factory}
+        from voicehub.training import (
             ModelTrainingSpec,
             TrainingFamily,
             TrainingSupport,
@@ -372,8 +404,8 @@ def _render_registration(
             unregister_training_spec,
         )
 
-        from .configuration_{model_type} import {config_class}
-        from .modeling_{model_type} import {model_class}
+        from .configuration import {config_class}
+        from .modeling import {model_class}
 
         _ALIASES = {aliases!r}
 
@@ -426,9 +458,9 @@ def _render_test(
         import unittest
 
         from voicehub import {task.factory}
-        from voicehub.base_model import BaseSpeechModel
-        from voicehub.models.{model_type}.configuration_{model_type} import {config_class}
-        from voicehub.models.{model_type}.modeling_{model_type} import (
+        from voicehub.models.base import BaseSpeechModel
+        from voicehub.models.{model_type}.configuration import {config_class}
+        from voicehub.models.{model_type}.modeling import (
             IMPLEMENTATION_STATUS,
             {model_class},
         )
@@ -658,13 +690,13 @@ def scaffold_files(
             config_class,
             model_class,
         ),
-        package / f"configuration_{normalized_model_type}.py":
+        package / "configuration.py":
         _render_config(
             normalized_model_type,
             config_class,
             task_template.sample_rate,
         ),
-        package / f"modeling_{normalized_model_type}.py":
+        package / "modeling.py":
         _render_model(
             normalized_model_type,
             config_class,
@@ -792,11 +824,11 @@ def render_builtin_catalog_fragments(
         f'''\
         ModelSpec(
             {normalized_model_type!r},
-            {f"voicehub.models.{normalized_model_type}.modeling_{normalized_model_type}"!r},
+            {f"voicehub.models.{normalized_model_type}.modeling"!r},
             {model_class!r},
             {checkpoint!r},
             capabilities={(task.task,)!r},
-            config_module={f"voicehub.models.{normalized_model_type}.configuration_{normalized_model_type}"!r},
+            config_module={f"voicehub.models.{normalized_model_type}.configuration"!r},
             config_class={config_class!r},
             task=SpeechTask.{task.enum_member},
         ),
@@ -959,10 +991,10 @@ def _validate_builtin_model_spec(
             "keep exactly one canonical declaration.")
     call = calls[0]
     expected_fields = {
-        "module": f"voicehub.models.{model_type}.modeling_{model_type}",
+        "module": f"voicehub.models.{model_type}.modeling",
         "class_name": model_class,
         "default_model_path": checkpoint,
-        "config_module": f"voicehub.models.{model_type}.configuration_{model_type}",
+        "config_module": f"voicehub.models.{model_type}.configuration",
         "config_class": config_class,
     }
     for field_name, expected in expected_fields.items():
@@ -1153,8 +1185,8 @@ def check_model_scaffold(output_root: Path, model_type: str) -> tuple[str, ...]:
     model_class = normalized_prefix + task_template.model_suffix
     required = (
         package / "__init__.py",
-        package / f"configuration_{normalized_model_type}.py",
-        package / f"modeling_{normalized_model_type}.py",
+        package / "configuration.py",
+        package / "modeling.py",
         package / "runtime.py",
         package / "registration.py",
         package / "source" / "SOURCE.json",
@@ -1181,7 +1213,7 @@ def check_model_scaffold(output_root: Path, model_type: str) -> tuple[str, ...]:
                 f"{normalized_model_type}: {_display_relative_path(path, root)} "
                 f"does not compile: {error}.")
 
-    config_path = package / f"configuration_{normalized_model_type}.py"
+    config_path = package / "configuration.py"
     if config_path in parsed:
         class_names = {node.name for node in parsed[config_path].body if isinstance(node, ast.ClassDef)}
         if config_class not in class_names:
@@ -1189,7 +1221,7 @@ def check_model_scaffold(output_root: Path, model_type: str) -> tuple[str, ...]:
                 f"{normalized_model_type}: {_display_relative_path(config_path, root)} must define "
                 f"{config_class}.")
 
-    model_path = package / f"modeling_{normalized_model_type}.py"
+    model_path = package / "modeling.py"
     if model_path in parsed:
         class_names = {node.name for node in parsed[model_path].body if isinstance(node, ast.ClassDef)}
         if model_class not in class_names:
@@ -1283,7 +1315,7 @@ def check_model_scaffold(output_root: Path, model_type: str) -> tuple[str, ...]:
             f"{normalized_model_type}: mkdocs.yml is missing {navigation_path!r}; "
             "register the built-in model, run scripts/generate_model_pages.py, and rerun --check.")
 
-    registry_path = root / "voicehub" / "models" / "registry.py"
+    registry_path = root / "voicehub/models/catalog.py"
     training_path = root / "voicehub" / "training" / "specs.py"
     uses_builtin_catalogs = registry_path.is_file() or training_path.is_file()
     if uses_builtin_catalogs:
@@ -1443,11 +1475,11 @@ def main(argv: list[str] | None = None) -> int:
             )
             sections = (
                 (
-                    "voicehub/models/registry.py :: _MODEL_SPECS",
+                    "voicehub/models/catalog.py :: _MODEL_SPECS",
                     fragments.model_spec,
                 ),
                 (
-                    "voicehub/models/registry.py :: _BUILTIN_MODEL_ALIASES",
+                    "voicehub/models/catalog.py :: _BUILTIN_MODEL_ALIASES",
                     fragments.aliases or "    # No aliases declared.\n",
                 ),
                 (

@@ -5,13 +5,11 @@ from pathlib import Path
 from unittest import mock
 
 import voicehub.training.tts_optimization as tts_optimization_module
-from voicehub import (
+from voicehub.training import (
     DiffusionTTSOptimizationConfig,
     EpochLengthBatchSampler,
     LLMTTSOptimizationConfig,
     ModelTrainingSpec,
-    Trainer,
-    TrainingArguments,
     TrainingFamily,
     TTSBatchingConfig,
     TTSBatchingStrategy,
@@ -23,7 +21,9 @@ from voicehub import (
     register_training_spec,
     unregister_training_spec,
 )
-from voicehub.trainer_utils import get_scheduler_lambda
+from voicehub.training.arguments import TrainingArguments
+from voicehub.training.trainer import Trainer
+from voicehub.training.utils import get_scheduler_lambda
 
 TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
 

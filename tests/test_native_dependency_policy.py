@@ -59,19 +59,19 @@ class NativeDependencyPolicyTests(unittest.TestCase):
                 "models/asr_whisper_native",
                 "models/dia",
                 "models/fishtts/__init__.py",
-                "models/fishtts/configuration_fishtts.py",
-                "models/fishtts/inference.py",
-                "models/fishtts/modeling_fishtts.py",
+                'models/fishtts/configuration.py',
+                'models/fishtts/modeling.py',
+                'models/fishtts/modeling.py',
                 "models/fishtts/training.py",
                 "models/higgstts/__init__.py",
-                "models/higgstts/configuration_higgstts.py",
+                'models/higgstts/configuration.py',
                 "models/higgstts/inference.py",
-                "models/higgstts/modeling_higgstts.py",
+                'models/higgstts/modeling.py',
                 "models/higgstts/training.py",
                 "models/openvoice/__init__.py",
-                "models/openvoice/configuration_openvoice.py",
-                "models/openvoice/modeling_openvoice.py",
-                "models/openvoice/inference.py",
+                'models/openvoice/configuration.py',
+                'models/openvoice/modeling.py',
+                'models/openvoice/modeling.py',
                 "models/openvoice/training.py",
                 "models/openvoice/source/openvoice/models.py",
                 "models/openvoice/source/openvoice/modules.py",
@@ -80,16 +80,16 @@ class NativeDependencyPolicyTests(unittest.TestCase):
                 "models/openvoice/source/openvoice/transforms.py",
                 "models/vits",
                 "models/vibevoice/__init__.py",
-                "models/vibevoice/configuration_vibevoice.py",
-                "models/vibevoice/inference.py",
-                "models/vibevoice/modeling_vibevoice.py",
+                'models/vibevoice/configuration.py',
+                'models/vibevoice/modeling.py',
+                'models/vibevoice/modeling.py',
                 "models/vibevoice/training.py",
                 "models/voxcpm/__init__.py",
-                "models/voxcpm/configuration_voxcpm.py",
-                "models/voxcpm/inference.py",
-                "models/voxcpm/modeling_voxcpm.py",
+                'models/voxcpm/configuration.py',
+                'models/voxcpm/modeling.py',
+                'models/voxcpm/modeling.py',
                 "models/voxcpm/training.py",
-                "models/voxcpm_native",
+                'models/voxcpm/native',
                 "models/vad_pyannote",
                 "models/vad_pyannote_brouhaha",
                 "models/vad_pyannote_segmentation",
@@ -163,7 +163,7 @@ class NativeDependencyPolicyTests(unittest.TestCase):
         )
 
     def test_every_declared_architecture_component_is_inside_the_policy_boundary(self, ):
-        from voicehub.architectures import list_architecture_specs
+        from voicehub.runtime import list_architecture_specs
 
         covered = set(collect_native_runtime_paths(PACKAGE_ROOT))
         uncovered = {}
@@ -185,11 +185,11 @@ class NativeDependencyPolicyTests(unittest.TestCase):
     def test_outetts_active_runtime_is_covered_but_dormant_source_is_not(self):
         covered = set(collect_native_runtime_paths(PACKAGE_ROOT))
         expected = {
-            *(PACKAGE_ROOT / "architectures/outetts").glob("*.py"),
+            *(PACKAGE_ROOT / 'models/outetts/native').glob("*.py"),
             PACKAGE_ROOT / "models/outetts/__init__.py",
-            PACKAGE_ROOT / "models/outetts/configuration_outetts.py",
+            PACKAGE_ROOT / 'models/outetts/configuration.py',
             PACKAGE_ROOT / "models/outetts/inference.py",
-            PACKAGE_ROOT / "models/outetts/modeling_outetts.py",
+            PACKAGE_ROOT / 'models/outetts/modeling.py',
             PACKAGE_ROOT / "models/outetts/training.py",
         }
 
@@ -202,11 +202,11 @@ class NativeDependencyPolicyTests(unittest.TestCase):
     def test_fishtts_active_graph_is_covered_but_provider_source_is_not(self):
         covered = set(collect_native_runtime_paths(PACKAGE_ROOT))
         expected = {
-            *(PACKAGE_ROOT / "architectures/fishtts").glob("*.py"),
+            *(PACKAGE_ROOT / 'models/fishtts/native').glob("*.py"),
             PACKAGE_ROOT / "models/fishtts/__init__.py",
-            PACKAGE_ROOT / "models/fishtts/configuration_fishtts.py",
-            PACKAGE_ROOT / "models/fishtts/inference.py",
-            PACKAGE_ROOT / "models/fishtts/modeling_fishtts.py",
+            PACKAGE_ROOT / 'models/fishtts/configuration.py',
+            PACKAGE_ROOT / 'models/fishtts/modeling.py',
+            PACKAGE_ROOT / 'models/fishtts/modeling.py',
             PACKAGE_ROOT / "models/fishtts/training.py",
         }
 
@@ -219,11 +219,11 @@ class NativeDependencyPolicyTests(unittest.TestCase):
     def test_mosstts_active_graph_is_covered_but_legacy_source_is_not(self):
         covered = set(collect_native_runtime_paths(PACKAGE_ROOT))
         expected = {
-            *(PACKAGE_ROOT / "architectures/mosstts").glob("*.py"),
+            *(PACKAGE_ROOT / 'models/mosstts/native').glob("*.py"),
             PACKAGE_ROOT / "models/mosstts/__init__.py",
-            PACKAGE_ROOT / "models/mosstts/configuration_mosstts.py",
-            PACKAGE_ROOT / "models/mosstts/inference.py",
-            PACKAGE_ROOT / "models/mosstts/modeling_mosstts.py",
+            PACKAGE_ROOT / 'models/mosstts/configuration.py',
+            PACKAGE_ROOT / 'models/mosstts/modeling.py',
+            PACKAGE_ROOT / 'models/mosstts/modeling.py',
             PACKAGE_ROOT / "models/mosstts/training.py",
         }
 
@@ -236,11 +236,11 @@ class NativeDependencyPolicyTests(unittest.TestCase):
     def test_melotts_active_graph_is_covered_but_provider_frontends_are_not(self):
         covered = set(collect_native_import_closure(PACKAGE_ROOT))
         expected = {
-            *(PACKAGE_ROOT / "architectures/melotts").glob("*.py"),
+            *(PACKAGE_ROOT / 'models/melotts/native').glob("*.py"),
             PACKAGE_ROOT / "models/melotts/__init__.py",
-            PACKAGE_ROOT / "models/melotts/configuration_melotts.py",
-            PACKAGE_ROOT / "models/melotts/inference.py",
-            PACKAGE_ROOT / "models/melotts/modeling_melotts.py",
+            PACKAGE_ROOT / 'models/melotts/configuration.py',
+            PACKAGE_ROOT / 'models/melotts/modeling.py',
+            PACKAGE_ROOT / 'models/melotts/modeling.py',
             PACKAGE_ROOT / "models/melotts/training.py",
             PACKAGE_ROOT / "models/melotts/source/melo/models.py",
             PACKAGE_ROOT / "models/melotts/source/melo/modules.py",
@@ -267,11 +267,11 @@ class NativeDependencyPolicyTests(unittest.TestCase):
     def test_openvoice_active_converter_excludes_optional_upstream_frontends(self):
         covered = set(collect_native_import_closure(PACKAGE_ROOT))
         expected = {
-            *(PACKAGE_ROOT / "architectures/openvoice").glob("*.py"),
+            *(PACKAGE_ROOT / 'models/openvoice/native').glob("*.py"),
             PACKAGE_ROOT / "models/openvoice/__init__.py",
-            PACKAGE_ROOT / "models/openvoice/configuration_openvoice.py",
-            PACKAGE_ROOT / "models/openvoice/modeling_openvoice.py",
-            PACKAGE_ROOT / "models/openvoice/inference.py",
+            PACKAGE_ROOT / 'models/openvoice/configuration.py',
+            PACKAGE_ROOT / 'models/openvoice/modeling.py',
+            PACKAGE_ROOT / 'models/openvoice/modeling.py',
             PACKAGE_ROOT / "models/openvoice/training.py",
             PACKAGE_ROOT / "models/openvoice/source/openvoice/models.py",
             PACKAGE_ROOT / "models/openvoice/source/openvoice/modules.py",
@@ -459,8 +459,9 @@ class NativeDependencyPolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "voicehub"
             root.mkdir()
+            (root / "training").mkdir()
             (root / "__init__.py").write_text("", encoding="utf-8")
-            (root / "integrations.py").write_text(
+            (root / 'training/integrations.py').write_text(
                 "import wandb\n"
                 "import transformers\n",
                 encoding="utf-8",
@@ -472,7 +473,7 @@ class NativeDependencyPolicyTests(unittest.TestCase):
 
             integration_violations = inspect_native_runtime(
                 root,
-                directories=("integrations.py", ),
+                directories=('training/integrations.py', ),
             )
             runtime_violations = inspect_native_runtime(
                 root,

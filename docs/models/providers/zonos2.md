@@ -23,7 +23,7 @@ hide:
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
 <a href="https://github.com/Zyphra/ZONOS2" data-vh-model-action="github">Upstream GitHub</a>
-<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos2/modeling_zonos2.py" data-vh-model-action="source">VoiceHub source</a>
+<a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos2/modeling.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/zonos2.ipynb" data-vh-model-action="colab">Open in Colab</a>
 </div>
 </details>
@@ -110,7 +110,7 @@ integration. This page is generated from its registry contract. [Open the `zonos
 
 - **Paper:** No dedicated upstream research paper is published for this integration.
 - **Upstream GitHub:** [ZONOS2](https://github.com/Zyphra/ZONOS2)
-- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos2/modeling_zonos2.py)
+- **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos2/modeling.py)
 
 ## Configuration
 
@@ -197,8 +197,8 @@ The integration accepts its declared source or prepared contract directly. Call 
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |
 | Real-checkpoint evidence | [Release evidence](../../project/release-readiness.md); a registry default alone is not execution evidence |
-| Implementation | `voicehub.models.zonos2.modeling_zonos2.Zonos2ForTextToSpeech` |
-| Configuration | `voicehub.models.zonos2.configuration_zonos2.Zonos2Config` |
+| Implementation | `voicehub.models.zonos2.modeling.Zonos2ForTextToSpeech` |
+| Configuration | `voicehub.models.zonos2.configuration.Zonos2Config` |
 | Source provenance | `voicehub/models/zonos2/source/SOURCE.json` |
 | License | Checkpoint-specific |
 
@@ -223,7 +223,7 @@ Use the stable configuration, processor, and task-model facades below.
 
 ### `Zonos2Config`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos2/configuration_zonos2.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos2/configuration.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text
@@ -242,7 +242,7 @@ Zonos2Config(**config_kwargs)
 
 ### `Zonos2ForTextToSpeech`
 
-<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos2/modeling_zonos2.py">View source</a></p>
+<p class="vh-model-api-card__source-wrap"><a class="vh-model-api-card__source" href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/zonos2/modeling.py">View source</a></p>
 <div class="vh-model-api-card__signature" markdown>
 
 ```text

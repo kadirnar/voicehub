@@ -11,8 +11,13 @@ from unittest import mock
 import torch
 from torch import nn
 
-from voicehub.architectures.xtts2.dvae import XTTS2DVAE, XTTS2DVAEConfig, XTTS2TrainingAudioEncoder
-from voicehub.architectures.xtts2.dvae_checkpoint import (
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
+from voicehub.components.audio.codecs.base import codec_is_stochastic_vae, separate_audio_codec
+from voicehub.models.xtts.configuration import XTTSConfig
+from voicehub.models.xtts.modeling import XTTSForTextToSpeech
+from voicehub.models.xtts.native.dvae import XTTS2DVAE, XTTS2DVAEConfig, XTTS2TrainingAudioEncoder
+from voicehub.models.xtts.native.dvae_checkpoint import (
     NATIVE_XTTS2_DVAE_FILENAME,
     NATIVE_XTTS2_DVAE_FORMAT,
     NATIVE_XTTS2_DVAE_MEL_STATS_FILENAME,
@@ -23,18 +28,13 @@ from voicehub.architectures.xtts2.dvae_checkpoint import (
     save_xtts2_dvae_checkpoint,
     save_xtts2_dvae_mel_stats,
 )
-from voicehub.architectures.xtts2.metadata import XTTS2_DVAE_STORED_ELEMENT_COUNT, XTTS2_DVAE_TENSOR_COUNT
-from voicehub.checkpointing import save_safetensors
-from voicehub.checkpointing.errors import CheckpointCompatibilityError
-from voicehub.components.audio.codecs.base import codec_is_stochastic_vae, separate_audio_codec
-from voicehub.models.xtts_native.configuration_xtts import XTTSConfig
-from voicehub.models.xtts_native.modeling_xtts import XTTSForTextToSpeech
-from voicehub.models.xtts_native.training_xtts import XTTSTrainingAdapter
+from voicehub.models.xtts.native.metadata import XTTS2_DVAE_STORED_ELEMENT_COUNT, XTTS2_DVAE_TENSOR_COUNT
+from voicehub.models.xtts.training_xtts import XTTSTrainingAdapter
 from voicehub.optimization import OptimizationContext, OptimizationPassManager, TorchCompilePass
 from voicehub.optimization.codecs import discover_codec_compile_targets
-from voicehub.trainer_utils import NATIVE_EXPORT_DIR
 from voicehub.training.specs import get_training_spec
 from voicehub.training.tts_datasets import TTSDataset
+from voicehub.training.utils import NATIVE_EXPORT_DIR
 
 
 def _tiny_config(**overrides) -> XTTS2DVAEConfig:

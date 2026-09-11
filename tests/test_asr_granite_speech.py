@@ -11,38 +11,38 @@ from types import SimpleNamespace
 
 import torch
 
-from voicehub.architectures.causal_lm.configuration import GraniteConfig
-from voicehub.architectures.granite_speech.artifacts import GraniteSpeechArtifacts, resolve_granite_speech_artifacts
-from voicehub.architectures.granite_speech.checkpoint import (
+from voicehub.models.asr_granite_speech import (
+    GraniteSpeechASRConfig,
+    GraniteSpeechForSpeechRecognition,
+    NativeGraniteSpeechTrainingAdapter,
+)
+from voicehub.models.asr_granite_speech.native.artifacts import GraniteSpeechArtifacts, resolve_granite_speech_artifacts
+from voicehub.models.asr_granite_speech.native.checkpoint import (
     granite_speech_header_fingerprint,
     math_product,
     native_granite_speech_tensor_shapes,
 )
-from voicehub.architectures.granite_speech.configuration import (
+from voicehub.models.asr_granite_speech.native.configuration import (
     GraniteSpeechArchitectureConfig,
     GraniteSpeechEncoderConfig,
     GraniteSpeechProjectorConfig,
 )
-from voicehub.architectures.granite_speech.frontend import GraniteSpeechFeatureExtractor
-from voicehub.architectures.granite_speech.modeling import GraniteSpeechForConditionalGeneration
-from voicehub.architectures.granite_speech.processing import GraniteSpeechProcessor
-from voicehub.architectures.granite_speech.runtime import (
+from voicehub.models.asr_granite_speech.native.frontend import GraniteSpeechFeatureExtractor
+from voicehub.models.asr_granite_speech.native.modeling import GraniteSpeechForConditionalGeneration
+from voicehub.models.asr_granite_speech.native.processing import GraniteSpeechProcessor
+from voicehub.models.asr_granite_speech.native.runtime import (
     GraniteSpeechRuntime,
     load_granite_speech_runtime,
     save_granite_speech_runtime,
 )
-from voicehub.architectures.granite_speech.tokenization import (
+from voicehub.models.asr_granite_speech.native.tokenization import (
     AUDIO_TOKEN,
     DEFAULT_AUDIO_TOKEN_ID,
     DEFAULT_EOS_TOKEN_ID,
     DEFAULT_PAD_TOKEN_ID,
     GraniteSpeechTokenizer,
 )
-from voicehub.models.asr_granite_speech import (
-    GraniteSpeechASRConfig,
-    GraniteSpeechForSpeechRecognition,
-    NativeGraniteSpeechTrainingAdapter,
-)
+from voicehub.models.causal_lm.native.configuration import GraniteConfig
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.tasks import SpeechTask
 from voicehub.tokenization.assets import encode_gpt2_token
@@ -639,7 +639,7 @@ class GraniteSpeechNativeRuntimeTests(unittest.TestCase):
         from transformers import GraniteSpeechEncoderConfig as ReferenceEncoderConfig
         from transformers.models.granite_speech import modeling_granite_speech
 
-        from voicehub.architectures.granite_speech.modeling import (
+        from voicehub.models.asr_granite_speech.native.modeling import (
             GraniteSpeechCTCEncoder,
             GraniteSpeechEncoderProjector,
         )
@@ -663,7 +663,7 @@ class GraniteSpeechNativeRuntimeTests(unittest.TestCase):
             **{
                 key: value
                 for key, value in config.text_config.to_dict().items() if key not in {
-                    "architectures",
+                    'architectures',
                     "extra_config",
                     "model_type",
                 }

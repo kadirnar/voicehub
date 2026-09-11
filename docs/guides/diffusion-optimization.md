@@ -97,7 +97,7 @@ The diffusion inventory answers *what graph is active*. The universal TTS
 resolver answers *which implementations that graph declares safe*.
 
 ```python
-from voicehub import TTSOptimizationConfig
+from voicehub.optimization import TTSOptimizationConfig
 from voicehub.optimization import OptimizationContext
 
 context = OptimizationContext(
@@ -141,7 +141,7 @@ the solver boundary and can reduce neural-network evaluations (NFE);
 changes codec kernels.
 
 ```python
-from voicehub import TTSOptimizationConfig
+from voicehub.optimization import TTSOptimizationConfig
 
 optimization = TTSOptimizationConfig(
     diffusion_sampling="required",
@@ -296,7 +296,7 @@ A sampler-level output may be velocity, denoised x0, or the next absolute
 latent. Query the registered techniques instead of checking model names:
 
 ```python
-from voicehub import get_diffusion_model_optimization_support
+from voicehub.optimization import get_diffusion_model_optimization_support
 
 support = get_diffusion_model_optimization_support("vibevoice")
 print(support.sampling_techniques)
@@ -417,7 +417,7 @@ retains exact execution when the architecture cannot provide one.
 `"required"` fails resolution instead of falling back.
 
 ```python
-from voicehub import DiffusionCacheConfig, TTSOptimizationConfig
+from voicehub.optimization import DiffusionCacheConfig, TTSOptimizationConfig
 
 optimization = TTSOptimizationConfig(
     attn_implementation="auto",
@@ -488,7 +488,7 @@ bytes, and bounded step histories. Public `generate()` calls automatically
 open a request session, including exception-safe cache release.
 
 ```python
-from voicehub import diffusion_cache_summary, reset_diffusion_cache_metrics
+from voicehub.optimization import diffusion_cache_summary, reset_diffusion_cache_metrics
 
 reset_diffusion_cache_metrics(model.model)
 audio = model.generate("A repeatable benchmark sentence.")
@@ -592,12 +592,8 @@ only complete pipelines that own text/speaker conditioning, the denoising or
 flow loop, and waveform or codec/vocoder output:
 
 ```python
-from voicehub import (
-    LLMBackendConfig,
-    bridge_vllm_omni_tts_config,
-    list_diffusion_serving_capabilities,
-    resolve_diffusion_tts_backend,
-)
+from voicehub.llm_serving import LLMBackendConfig
+from voicehub.diffusion_serving import bridge_vllm_omni_tts_config, list_diffusion_serving_capabilities, resolve_diffusion_tts_backend
 
 for capability in list_diffusion_serving_capabilities():
     print(
