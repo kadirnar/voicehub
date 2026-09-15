@@ -107,6 +107,9 @@ class LowRankAdaLN(DiffusionModulationKernelOptimizable, nn.Module):
         x_dtype = x.dtype
         x = x.float()
         x = x * torch.rsqrt((x * x).mean(dim=-1, keepdim=True) + self.eps)
+        if scale.dtype in (torch.float16, torch.bfloat16):
+            # The original Echo-style block rounds its gain before promotion.
+            scale = (1.0 + scale).float() - 1.0
         x = self._diffusion_modulate(
             x,
             shift.to(x.dtype),

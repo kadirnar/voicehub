@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 382, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 55, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/modeling_utils.py", line 546, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/outetts/inference.py", line 344, in _load_pretrained_model
+    runtime = load_outetts_runtime(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/outetts/runtime.py", line 333, in load_outetts_runtime
+    artifacts = resolve_outetts_artifacts(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/outetts/artifacts.py", line 281, in resolve_outetts_artifacts
+    tokenizer = resolve_pretrained_file(
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub.py", line 45, in resolve_pretrained_file
+    return download_hugging_face_file(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub_transport.py", line 287, in download_hugging_face_file
+    raise FileNotFoundError(
+FileNotFoundError: The requested Hub file is not available in the local cache: OuteAI/Llama-OuteTTS-1.0-1B@f445d0d301c7fc9e47fd545eb9f9d2912afe7a77/tokenizer.json (cache: /home/kadir/.cache/huggingface/hub).

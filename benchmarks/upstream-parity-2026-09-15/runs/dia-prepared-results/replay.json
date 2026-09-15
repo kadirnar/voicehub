@@ -1,0 +1,33 @@
+{
+  "cases": [
+    {
+      "name": "dia",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/dia-prepared-results/dia/request.json",
+      "provenance": {
+        "model_type": "dia",
+        "task": "text-to-speech",
+        "checkpoint": "nari-labs/Dia-1.6B-0626",
+        "repository": "https://github.com/nari-labs/dia",
+        "source_revision": "876125e461a03b157ec905b0fe8b57a0f8b9e7a0",
+        "resolved_source_revision": "876125e461a03b157ec905b0fe8b57a0f8b9e7a0",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/dia",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/dia/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

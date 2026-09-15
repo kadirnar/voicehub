@@ -1213,35 +1213,32 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
 
         self.assertFalse((DOCS_ROOT / "tts_workflow.md").exists())
 
-    def test_homepage_matches_current_transformers_representative_contract(self):
+    def test_homepage_uses_requested_liquid_welcome_template(self):
         source = HOME_PATH.read_text(encoding="utf-8")
         normalized_source = " ".join(source.split())
         headings = tuple(line for line in source.splitlines() if line.startswith(("# ", "## ", "### ")))
         self.assertEqual(
             headings,
             (
-                "# VoiceHub",
-                "## Features",
-                "## Design",
-                "## Learn",
+                "# Welcome to VoiceHub Docs!",
+                "## Why VoiceHub?",
+                "## Get started",
             ),
         )
-        self.assertEqual(source.count("-   **"), 12)
+        self.assertEqual(source.count("-   **"), 4)
         for fragment in (
-                "[Inference](guides/inference.md)",
-                "[Trainer](guides/trainer.md)",
-                "[generate](reference/api.md#generation)",
-                "!!! tip",
+                "[Explore models →](models/providers/index.md)",
+                "[Start generating →](getting-started/quickstart.md)",
+                "[Fine-tuning guide →](guides/training.md)",
+                "[Open examples →](guides/notebook.md)",
+                "!!! note",
                 "configuration, model, and processor",
                 "**68 integrations**",
                 "**34 TTS backends**",
                 "**23 ASR providers**",
                 "**11 VAD providers**",
                 '<div class="grid cards" markdown>',
-                "https://github.com/kadirnar/voicehub/actions/workflows/ci.yml",
-                "https://github.com/kadirnar/voicehub/actions/workflows/docs.yml",
-                "https://github.com/kadirnar/voicehub/blob/main/pyproject.toml",
-                "https://github.com/kadirnar/voicehub/blob/main/LICENSE",
+                "guides/upstream-parity.md",
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, normalized_source)
@@ -1373,7 +1370,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 continue
             required_labels.add(label)
 
-        self.assertLessEqual(len(required_labels), 31)
+        self.assertLessEqual(len(required_labels), 32)
         for locale in LOCALIZED_HOME_LOCALES:
             with self.subTest(locale=locale):
                 locale_block = config.split(f"        - locale: {locale}\n", 1)[1]
@@ -2652,7 +2649,8 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 expected_mark_path = (
                     "assets/voicehub-mark.svg" if homepage == DOCS_ROOT /
                     "index.md" else "../assets/voicehub-mark.svg")
-                self.assertEqual(source.count(f'src="{expected_mark_path}"'), 2)
+                self.assertEqual(
+                    source.count(f'src="{expected_mark_path}"'), 1 if homepage == HOME_PATH else 2)
 
     def test_desktop_and_tablet_shell_collapse_inactive_navigation_branches(self):
         stylesheet = STYLESHEET_PATH.read_text(encoding="utf-8")
@@ -3941,7 +3939,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             homepage,
         )
         self.assertIn(
-            f"**{counts['automatic-speech-recognition']} ASR\nproviders**",
+            f"**{counts['automatic-speech-recognition']} ASR providers**",
             homepage,
         )
         self.assertIn(

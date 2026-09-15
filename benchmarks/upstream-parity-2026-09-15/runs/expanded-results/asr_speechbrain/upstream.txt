@@ -1,0 +1,28 @@
+/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/speechbrain/utils/torch_audio_backend.py:64: UserWarning: torchaudio._backend.list_audio_backends has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release.
+  available_backends = torchaudio.list_audio_backends()
+/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/speechbrain/utils/torch_audio_backend.py:64: UserWarning: torchaudio._backend.list_audio_backends has been deprecated. This deprecation is part of a large refactoring effort to transition TorchAudio into a maintenance phase. The decoding and encoding capabilities of PyTorch for both audio and video are being consolidated into TorchCodec. Please see https://github.com/pytorch/audio/issues/3902 for more information. It will be removed from the 2.9 release.
+  available_backends = torchaudio.list_audio_backends()
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Timeout (0:00:45)!
+Thread 0x00007f27b4ded6c0 (most recent call first):
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 359 in wait
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 655 in wait
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/.venv-parity/lib/python3.12/site-packages/tqdm/_monitor.py", line 69 in run
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1075 in _bootstrap_inner
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1032 in _bootstrap
+
+Thread 0x00007f2ad9f46780 (most recent call first):
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/.venv-parity/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 578 in xet_get
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/.venv-parity/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1980 in _download_to_tmp_and_move
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/.venv-parity/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1257 in _hf_hub_download_to_cache_dir
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/.venv-parity/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1035 in hf_hub_download
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/.venv-parity/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88 in _inner_fn
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/speechbrain/utils/fetching.py", line 274 in download_file_hf
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/speechbrain/utils/distributed.py", line 318 in main_proc_wrapped_func
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/speechbrain/utils/fetching.py", line 429 in fetch
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/speechbrain/utils/parameter_transfer.py", line 259 in collect_files
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/speechbrain/inference/interfaces.py", line 200 in pretrained_from_hparams
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/speechbrain/inference/interfaces.py", line 489 in from_hparams
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 275 in prepare
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 375 in main
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 442 in <module>

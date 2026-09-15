@@ -1,0 +1,19 @@
+{
+  "model_type": "echo",
+  "task": "tts",
+  "device": "cuda",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 1,
+  "repeats": 5,
+  "samples": [
+    {
+      "id": "hello",
+      "text": "Hello, world. This is a speech quality comparison."
+    }
+  ],
+  "checkpoint": "/home/kadir/.cache/huggingface/hub/models--jordand--echo-tts-base/snapshots/06731f67000241d55cff6b0a961f22f5f151f24f",
+  "config": {
+    "codec_name_or_path": "/home/kadir/.cache/huggingface/hub/models--jordand--fish-s1-dac-min/snapshots/18b770e5b62b1a58ebd7423401a937cc063d8729"
+  }
+}

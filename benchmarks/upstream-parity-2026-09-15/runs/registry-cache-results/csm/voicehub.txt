@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 382, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 55, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/modeling_utils.py", line 546, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/csm/inference.py", line 88, in _load_pretrained_model
+    runtime = load_csm_runtime(
+              ^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/csm/runtime.py", line 331, in load_csm_runtime
+    artifacts = resolve_csm_artifacts(
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/csm/artifacts.py", line 108, in resolve_csm_artifacts
+    checkpoint = resolve_pretrained_file(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub.py", line 45, in resolve_pretrained_file
+    return download_hugging_face_file(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub_transport.py", line 287, in download_hugging_face_file
+    raise FileNotFoundError(
+FileNotFoundError: The requested Hub file is not available in the local cache: sesame/csm-1b@c92a71e1c419772e25be7dc14d952c2521a740ab/model.safetensors (cache: /home/kadir/.cache/huggingface/hub).

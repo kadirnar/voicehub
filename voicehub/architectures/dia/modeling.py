@@ -905,7 +905,10 @@ class DiaForConditionalGeneration(nn.Module):
             dtype=torch.long,
             device=device,
         )
-        maximum_steps = max_new_tokens + max(self.config.delay_pattern)
+        maximum_steps = max_new_tokens
+        # The generation budget includes the delayed channels' EOS tail,
+        # just as the upstream EOS delay processor's max_length does.
+        force_eos_length = sequences.shape[1] + max_new_tokens - max(self.config.delay_pattern) - 1
 
         for step in range(maximum_steps):
             forced_sequence = self.apply_delay_mask(
@@ -972,7 +975,7 @@ class DiaForConditionalGeneration(nn.Module):
 
             predicted_zero = scores[:, 0].argmax(dim=-1)
             new_eos = predicted_zero == decoder.eos_token_id
-            if step + 1 >= max_new_tokens:
+            if sequences.shape[1] >= force_eos_length:
                 new_eos = torch.ones_like(new_eos)
             active |= new_eos
             force_eos = active[:, None] & (remaining_delays == 0)
@@ -988,6 +991,11 @@ class DiaForConditionalGeneration(nn.Module):
             else:
                 next_tokens = flat_scores.argmax(dim=-1)
             next_tokens = next_tokens.reshape(batch_size, self.num_channels)
+            # Each channel stops independently after its delayed EOS. The
+            # upstream generation loop replaces subsequent tokens with PAD;
+            # the processor uses those pads to find complete DAC frames.
+            next_tokens = next_tokens.masked_fill(
+                active[:, None] & (remaining_delays < 0), decoder.pad_token_id)
             sequences = torch.cat(
                 (sequences, next_tokens[:, None]),
                 dim=1,

@@ -1,0 +1,1516 @@
+{
+  "cases": [
+    {
+      "name": "vad_transformers",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vad_transformers/request.json",
+      "provenance": {
+        "model_type": "vad_transformers",
+        "task": "voice-activity-detection",
+        "checkpoint": "",
+        "repository": "https://github.com/huggingface/transformers",
+        "source_revision": null,
+        "resolved_source_revision": "3f162ca5fd2daef9cb36841be1337ad657addbfe",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_pyannote",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vad_pyannote/request.json",
+      "provenance": {
+        "model_type": "vad_pyannote",
+        "task": "voice-activity-detection",
+        "checkpoint": "pyannote/voice-activity-detection",
+        "repository": "https://github.com/pyannote/pyannote-audio",
+        "source_revision": "795b92ab265888c58d160f90ae4d91b7bcc6aa2c",
+        "resolved_source_revision": "795b92ab265888c58d160f90ae4d91b7bcc6aa2c",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_speechbrain",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vad_speechbrain/request.json",
+      "provenance": {
+        "model_type": "vad_speechbrain",
+        "task": "voice-activity-detection",
+        "checkpoint": "speechbrain/vad-crdnn-libriparty",
+        "repository": "https://github.com/speechbrain/speechbrain",
+        "source_revision": null,
+        "resolved_source_revision": "89ead74d163463d30c62329a09cfdb4c54f5abc1",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_nemo",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vad_nemo/request.json",
+      "provenance": {
+        "model_type": "vad_nemo",
+        "task": "voice-activity-detection",
+        "checkpoint": "nvidia/Frame_VAD_Multilingual_MarbleNet_v2.0",
+        "repository": "https://github.com/NVIDIA/NeMo",
+        "source_revision": "ceeafa4f2b8cece8a0fd47b29051ad659e55b76c",
+        "resolved_source_revision": "ceeafa4f2b8cece8a0fd47b29051ad659e55b76c",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_funasr",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vad_funasr/request.json",
+      "provenance": {
+        "model_type": "vad_funasr",
+        "task": "voice-activity-detection",
+        "checkpoint": "funasr/fsmn-vad",
+        "repository": "https://github.com/modelscope/FunASR",
+        "source_revision": "16cd165ac3946cc8c08bf845331f91fefec8e1a9",
+        "resolved_source_revision": "16cd165ac3946cc8c08bf845331f91fefec8e1a9",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_sherpa_onnx",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vad_sherpa_onnx/request.json",
+      "provenance": {
+        "model_type": "vad_sherpa_onnx",
+        "task": "voice-activity-detection",
+        "checkpoint": "safestack/silero-vad",
+        "repository": "https://github.com/k2-fsa/sherpa-onnx",
+        "source_revision": null,
+        "resolved_source_revision": "7c4ccdff34a3a8e858d834c0793f3512d25b4241",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_pyannote_segmentation",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vad_pyannote_segmentation/request.json",
+      "provenance": {
+        "model_type": "vad_pyannote_segmentation",
+        "task": "voice-activity-detection",
+        "checkpoint": "pyannote/segmentation-3.0",
+        "repository": "https://github.com/pyannote/pyannote-audio",
+        "source_revision": "795b92ab265888c58d160f90ae4d91b7bcc6aa2c",
+        "resolved_source_revision": "795b92ab265888c58d160f90ae4d91b7bcc6aa2c",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_pyannote_brouhaha",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vad_pyannote_brouhaha/request.json",
+      "provenance": {
+        "model_type": "vad_pyannote_brouhaha",
+        "task": "voice-activity-detection",
+        "checkpoint": "pyannote/brouhaha",
+        "repository": "https://github.com/marianne-m/brouhaha-vad",
+        "source_revision": "9132cbe62ac78f90abdbc21bcf6ec6cfe9bb4891",
+        "resolved_source_revision": "9132cbe62ac78f90abdbc21bcf6ec6cfe9bb4891",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_transformers",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_transformers/request.json",
+      "provenance": {
+        "model_type": "asr_transformers",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "openai/whisper-small",
+        "repository": "https://github.com/huggingface/transformers",
+        "source_revision": null,
+        "resolved_source_revision": "3f162ca5fd2daef9cb36841be1337ad657addbfe",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_tiron",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_tiron/request.json",
+      "provenance": {
+        "model_type": "asr_tiron",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "Trelis/tiron",
+        "repository": "https://github.com/TrelisResearch/tiron",
+        "source_revision": "d249c5a81fc6e0f1ecd34fd30cf2519f06fe671c",
+        "resolved_source_revision": "d249c5a81fc6e0f1ecd34fd30cf2519f06fe671c",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_qwen3",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_qwen3/request.json",
+      "provenance": {
+        "model_type": "asr_qwen3",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "Qwen/Qwen3-ASR-0.6B",
+        "repository": "https://github.com/QwenLM/Qwen3-ASR",
+        "source_revision": "7c6daf77a2421100f5fb066495372c00129d39ff",
+        "resolved_source_revision": "7c6daf77a2421100f5fb066495372c00129d39ff",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_vibevoice",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_vibevoice/request.json",
+      "provenance": {
+        "model_type": "asr_vibevoice",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "microsoft/VibeVoice-ASR-HF",
+        "repository": "https://github.com/microsoft/VibeVoice",
+        "source_revision": null,
+        "resolved_source_revision": "1541f590c7099820f10ea012f48d2399282df69f",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_granite_speech",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_granite_speech/request.json",
+      "provenance": {
+        "model_type": "asr_granite_speech",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "ibm-granite/granite-speech-4.1-2b",
+        "repository": "https://github.com/ibm-granite/granite-speech-models",
+        "source_revision": null,
+        "resolved_source_revision": "c622675f2059ad81d1b89387f4e7bda5110cfb87",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_parakeet_tdt",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_parakeet_tdt/request.json",
+      "provenance": {
+        "model_type": "asr_parakeet_tdt",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "nvidia/parakeet-tdt-0.6b-v3",
+        "repository": "https://github.com/NVIDIA/NeMo",
+        "source_revision": "2381f42f6979449b5b99538f8f80135831009b51",
+        "resolved_source_revision": "2381f42f6979449b5b99538f8f80135831009b51",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_nemotron",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_nemotron/request.json",
+      "provenance": {
+        "model_type": "asr_nemotron",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+        "repository": "https://github.com/NVIDIA/NeMo",
+        "source_revision": null,
+        "resolved_source_revision": "1ef51bc0fc52dadd5782371aa37f1d3150683b01",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_cohere",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_cohere/request.json",
+      "provenance": {
+        "model_type": "asr_cohere",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "CohereLabs/cohere-transcribe-03-2026",
+        "repository": "https://github.com/huggingface/transformers",
+        "source_revision": "af71155683b4d34dd92d8f037392fa6bf334035e",
+        "resolved_source_revision": "af71155683b4d34dd92d8f037392fa6bf334035e",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_medasr",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_medasr/request.json",
+      "provenance": {
+        "model_type": "asr_medasr",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "google/medasr",
+        "repository": "https://github.com/google-health/medasr",
+        "source_revision": null,
+        "resolved_source_revision": "ad843cb81b3e610e1868ed38f7230a70b66ed7e8",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_wav2vec2",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_wav2vec2/request.json",
+      "provenance": {
+        "model_type": "asr_wav2vec2",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "facebook/wav2vec2-base-960h",
+        "repository": "https://github.com/facebookresearch/fairseq",
+        "source_revision": null,
+        "resolved_source_revision": "3d262bb25690e4eb2e7d3c1309b1e9c406ca4b99",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_hubert",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_hubert/request.json",
+      "provenance": {
+        "model_type": "asr_hubert",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "facebook/hubert-large-ls960-ft",
+        "repository": "https://github.com/facebookresearch/fairseq",
+        "source_revision": null,
+        "resolved_source_revision": "3d262bb25690e4eb2e7d3c1309b1e9c406ca4b99",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_wavlm",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_wavlm/request.json",
+      "provenance": {
+        "model_type": "asr_wavlm",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "patrickvonplaten/wavlm-libri-clean-100h-base-plus",
+        "repository": "https://github.com/microsoft/unilm",
+        "source_revision": null,
+        "resolved_source_revision": "50224e387211f15ac6a3b2685730b9a0c850f145",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_moonshine",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_moonshine/request.json",
+      "provenance": {
+        "model_type": "asr_moonshine",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "UsefulSensors/moonshine-tiny",
+        "repository": "https://github.com/moonshine-ai/moonshine",
+        "source_revision": "cc1695646a560f2eec7f7c058f3c4d580f039e4b",
+        "resolved_source_revision": "cc1695646a560f2eec7f7c058f3c4d580f039e4b",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_seamless_m4t_v2",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_seamless_m4t_v2/request.json",
+      "provenance": {
+        "model_type": "asr_seamless_m4t_v2",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "facebook/seamless-m4t-v2-large",
+        "repository": "https://github.com/facebookresearch/seamless_communication",
+        "source_revision": null,
+        "resolved_source_revision": "9a081e935c29c6b1e0e05bcbf3fcb623ad306524",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_faster_whisper",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_faster_whisper/request.json",
+      "provenance": {
+        "model_type": "asr_faster_whisper",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "openai/whisper-small",
+        "repository": "https://github.com/SYSTRAN/faster-whisper",
+        "source_revision": null,
+        "resolved_source_revision": "ed9a06cd89a93e47838f564998a6c09b655d7f43",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_whisperx",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_whisperx/request.json",
+      "provenance": {
+        "model_type": "asr_whisperx",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "openai/whisper-small",
+        "repository": "https://github.com/m-bain/whisperX",
+        "source_revision": null,
+        "resolved_source_revision": "2cfd7b7c5c7bba144954364db747319b50e8232b",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_openai_whisper",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_openai_whisper/request.json",
+      "provenance": {
+        "model_type": "asr_openai_whisper",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "openai/whisper-small",
+        "repository": "https://github.com/openai/whisper",
+        "source_revision": null,
+        "resolved_source_revision": "86098128c0b4f24f0e2aa2994de830614b474227",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_nemo",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_nemo/request.json",
+      "provenance": {
+        "model_type": "asr_nemo",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "nvidia/nemo/stt_en_quartznet15x5",
+        "repository": "https://github.com/NVIDIA/NeMo",
+        "source_revision": null,
+        "resolved_source_revision": "1ef51bc0fc52dadd5782371aa37f1d3150683b01",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_speechbrain",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_speechbrain/request.json",
+      "provenance": {
+        "model_type": "asr_speechbrain",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "speechbrain/asr-crdnn-rnnlm-librispeech",
+        "repository": "https://github.com/speechbrain/speechbrain",
+        "source_revision": null,
+        "resolved_source_revision": "89ead74d163463d30c62329a09cfdb4c54f5abc1",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_funasr",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_funasr/request.json",
+      "provenance": {
+        "model_type": "asr_funasr",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "FunAudioLLM/SenseVoiceSmall",
+        "repository": "https://github.com/modelscope/FunASR",
+        "source_revision": null,
+        "resolved_source_revision": "486b4b7ceb27b72db24a84c6e1be7cf6c5be6609",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_espnet",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_espnet/request.json",
+      "provenance": {
+        "model_type": "asr_espnet",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "espnet/shinji-watanabe-librispeech_asr_train_asr_transformer_e18_raw_bpe_sp_valid.acc.best",
+        "repository": "https://github.com/espnet/espnet",
+        "source_revision": null,
+        "resolved_source_revision": "0a5273158908108f54ed7d08ba46a02cb3db4474",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_wenet",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/asr_wenet/request.json",
+      "provenance": {
+        "model_type": "asr_wenet",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "wenet/gigaspeech-u2pp-conformer",
+        "repository": "https://github.com/wenet-e2e/wenet",
+        "source_revision": null,
+        "resolved_source_revision": "d17059667d6afe0680d19b3a4948ab825ef25105",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "orpheustts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/orpheustts/request.json",
+      "provenance": {
+        "model_type": "orpheustts",
+        "task": "text-to-speech",
+        "checkpoint": "canopylabs/orpheus-3b-0.1-ft",
+        "repository": "https://github.com/canopyai/Orpheus-TTS",
+        "source_revision": "e64661fe6d02c414fc77c53578c9d64082614861",
+        "resolved_source_revision": "e64661fe6d02c414fc77c53578c9d64082614861",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "dia",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/dia/request.json",
+      "provenance": {
+        "model_type": "dia",
+        "task": "text-to-speech",
+        "checkpoint": "nari-labs/Dia-1.6B-0626",
+        "repository": "https://github.com/nari-labs/dia",
+        "source_revision": "876125e461a03b157ec905b0fe8b57a0f8b9e7a0",
+        "resolved_source_revision": "876125e461a03b157ec905b0fe8b57a0f8b9e7a0",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vui",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vui/request.json",
+      "provenance": {
+        "model_type": "vui",
+        "task": "text-to-speech",
+        "checkpoint": "vui-abraham-100m.pt",
+        "repository": "https://github.com/fluxions-ai/vui",
+        "source_revision": "8656f9f175161cb19a7f6c1ff4374c9b56739b4a",
+        "resolved_source_revision": "8656f9f175161cb19a7f6c1ff4374c9b56739b4a",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "chatterbox",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/chatterbox/request.json",
+      "provenance": {
+        "model_type": "chatterbox",
+        "task": "text-to-speech",
+        "checkpoint": "ResembleAI/chatterbox",
+        "repository": "https://github.com/resemble-ai/chatterbox",
+        "source_revision": "eb90621fa748f341a5b768aed0c0c12fc561894b",
+        "resolved_source_revision": "eb90621fa748f341a5b768aed0c0c12fc561894b",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "echo",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/echo/request.json",
+      "provenance": {
+        "model_type": "echo",
+        "task": "text-to-speech",
+        "checkpoint": "jordand/echo-tts-base",
+        "repository": "https://github.com/jordandare/echo-tts",
+        "source_revision": "2ed95fce62d33bf7b56f835fd9ec0f0b6fb9155e",
+        "resolved_source_revision": "2ed95fce62d33bf7b56f835fd9ec0f0b6fb9155e",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "conversationtts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/conversationtts/request.json",
+      "provenance": {
+        "model_type": "conversationtts",
+        "task": "text-to-speech",
+        "checkpoint": "AudioFoundation/SpeechFoundation",
+        "repository": "https://github.com/Audio-Foundation-Models/ConversationTTS",
+        "source_revision": "b3851f70c2dc0d35ba609734b08915637fe2a733",
+        "resolved_source_revision": "b3851f70c2dc0d35ba609734b08915637fe2a733",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "llasa",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/llasa/request.json",
+      "provenance": {
+        "model_type": "llasa",
+        "task": "text-to-speech",
+        "checkpoint": "HKUSTAudio/Llasa-1B-Multilingual",
+        "repository": "https://github.com/zhenye234/LLaSA_training",
+        "source_revision": "479acd5277220f78a72093f63755c0892838d0c5",
+        "resolved_source_revision": "479acd5277220f78a72093f63755c0892838d0c5",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "cosyvoice",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/cosyvoice/request.json",
+      "provenance": {
+        "model_type": "cosyvoice",
+        "task": "text-to-speech",
+        "checkpoint": "FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
+        "repository": "https://github.com/FunAudioLLM/CosyVoice",
+        "source_revision": "074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc",
+        "resolved_source_revision": "074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "f5tts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/f5tts/request.json",
+      "provenance": {
+        "model_type": "f5tts",
+        "task": "text-to-speech",
+        "checkpoint": "F5TTS_v1_Base",
+        "repository": "https://github.com/SWivid/F5-TTS",
+        "source_revision": "9c614e9657089213efc6a7421b30630be138a3f5",
+        "resolved_source_revision": "9c614e9657089213efc6a7421b30630be138a3f5",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "gptsovits",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/gptsovits/request.json",
+      "provenance": {
+        "model_type": "gptsovits",
+        "task": "text-to-speech",
+        "checkpoint": "lj1995/GPT-SoVITS",
+        "repository": "https://github.com/RVC-Boss/GPT-SoVITS",
+        "source_revision": "d523079fc05d9a8028d6085bffe4a2757c32abb6",
+        "resolved_source_revision": "d523079fc05d9a8028d6085bffe4a2757c32abb6",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "melotts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/melotts/request.json",
+      "provenance": {
+        "model_type": "melotts",
+        "task": "text-to-speech",
+        "checkpoint": "EN",
+        "repository": "https://github.com/myshell-ai/MeloTTS",
+        "source_revision": "209145371cff8fc3bd60d7be902ea69cbdb7965a",
+        "resolved_source_revision": "209145371cff8fc3bd60d7be902ea69cbdb7965a",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "openvoice",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/openvoice/request.json",
+      "provenance": {
+        "model_type": "openvoice",
+        "task": "text-to-speech",
+        "checkpoint": "myshell-ai/OpenVoiceV2",
+        "repository": "https://github.com/myshell-ai/OpenVoice",
+        "source_revision": "74a1d147b17a8c3092dd5430504bd83ef6c7eb23",
+        "resolved_source_revision": "74a1d147b17a8c3092dd5430504bd83ef6c7eb23",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "outetts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/outetts/request.json",
+      "provenance": {
+        "model_type": "outetts",
+        "task": "text-to-speech",
+        "checkpoint": "OuteAI/Llama-OuteTTS-1.0-1B",
+        "repository": "https://github.com/edwko/OuteTTS",
+        "source_revision": "f5eac6e70d792844c6a6959d900a47af2c061a5b",
+        "resolved_source_revision": "f5eac6e70d792844c6a6959d900a47af2c061a5b",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "parlertts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/parlertts/request.json",
+      "provenance": {
+        "model_type": "parlertts",
+        "task": "text-to-speech",
+        "checkpoint": "parler-tts/parler-tts-mini-v1",
+        "repository": "https://github.com/huggingface/parler-tts",
+        "source_revision": "d108732cd57788ec86bc857d99a6cabd66663d68",
+        "resolved_source_revision": "d108732cd57788ec86bc857d99a6cabd66663d68",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "styletts2",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/styletts2/request.json",
+      "provenance": {
+        "model_type": "styletts2",
+        "task": "text-to-speech",
+        "checkpoint": "",
+        "repository": "https://github.com/yl4579/StyleTTS2",
+        "source_revision": "5cedc71c333f8d8b8551ca59378bdcc7af4c9529",
+        "resolved_source_revision": "5cedc71c333f8d8b8551ca59378bdcc7af4c9529",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "mosstts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/mosstts/request.json",
+      "provenance": {
+        "model_type": "mosstts",
+        "task": "text-to-speech",
+        "checkpoint": "OpenMOSS-Team/MOSS-TTS-v1.5",
+        "repository": "https://github.com/OpenMOSS/MOSS-TTS",
+        "source_revision": "ad99ec5f26debf1d6c1a4dc8461b2bcb787ec9af",
+        "resolved_source_revision": "ad99ec5f26debf1d6c1a4dc8461b2bcb787ec9af",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "qwen3tts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/qwen3tts/request.json",
+      "provenance": {
+        "model_type": "qwen3tts",
+        "task": "text-to-speech",
+        "checkpoint": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+        "repository": "https://github.com/QwenLM/Qwen3-TTS",
+        "source_revision": "022e286b98fbec7e1e916cb940cdf532cd9f488e",
+        "resolved_source_revision": "022e286b98fbec7e1e916cb940cdf532cd9f488e",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "irodoritts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/irodoritts/request.json",
+      "provenance": {
+        "model_type": "irodoritts",
+        "task": "text-to-speech",
+        "checkpoint": "Aratako/Irodori-TTS-500M-v3",
+        "repository": "https://github.com/Aratako/Irodori-TTS",
+        "source_revision": "eaf74d6a19138f743acb5b71a445fd25a57db987",
+        "resolved_source_revision": "eaf74d6a19138f743acb5b71a445fd25a57db987",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "zonos",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/zonos/request.json",
+      "provenance": {
+        "model_type": "zonos",
+        "task": "text-to-speech",
+        "checkpoint": "Zyphra/Zonos-v0.1-transformer",
+        "repository": "https://github.com/Zyphra/Zonos",
+        "source_revision": "bc40d98e1e1ab54fc65c483be127a90e3c7c0645",
+        "resolved_source_revision": "bc40d98e1e1ab54fc65c483be127a90e3c7c0645",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "zonos2",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/zonos2/request.json",
+      "provenance": {
+        "model_type": "zonos2",
+        "task": "text-to-speech",
+        "checkpoint": "Zyphra/ZONOS2",
+        "repository": "https://github.com/Zyphra/ZONOS2",
+        "source_revision": "194c0a3ab67b90383a67646289f28d4ecb1c1f64",
+        "resolved_source_revision": "194c0a3ab67b90383a67646289f28d4ecb1c1f64",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "voxcpm",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/voxcpm/request.json",
+      "provenance": {
+        "model_type": "voxcpm",
+        "task": "text-to-speech",
+        "checkpoint": "openbmb/VoxCPM2",
+        "repository": "https://github.com/OpenBMB/VoxCPM",
+        "source_revision": "616d3d3e630a9c96c2853250eef91b0f39dcd5fa",
+        "resolved_source_revision": "616d3d3e630a9c96c2853250eef91b0f39dcd5fa",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "omnivoice",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/omnivoice/request.json",
+      "provenance": {
+        "model_type": "omnivoice",
+        "task": "text-to-speech",
+        "checkpoint": "k2-fsa/OmniVoice",
+        "repository": "https://github.com/k2-fsa/OmniVoice",
+        "source_revision": "468e927ba3716cd8dd86421148dfb3046e9f9d7b",
+        "resolved_source_revision": "468e927ba3716cd8dd86421148dfb3046e9f9d7b",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "higgstts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/higgstts/request.json",
+      "provenance": {
+        "model_type": "higgstts",
+        "task": "text-to-speech",
+        "checkpoint": "bosonai/higgs-tts-2-3b-base",
+        "repository": "https://github.com/boson-ai/higgs-audio",
+        "source_revision": "05a145bb490501b534563bf51bf2f7aa2326b271",
+        "resolved_source_revision": "05a145bb490501b534563bf51bf2f7aa2326b271",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "xtts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/xtts/request.json",
+      "provenance": {
+        "model_type": "xtts",
+        "task": "text-to-speech",
+        "checkpoint": "coqui/XTTS-v2",
+        "repository": "https://github.com/coqui-ai/TTS",
+        "source_revision": "dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e",
+        "resolved_source_revision": "dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vibevoice",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vibevoice/request.json",
+      "provenance": {
+        "model_type": "vibevoice",
+        "task": "text-to-speech",
+        "checkpoint": "microsoft/VibeVoice-Realtime-0.5B",
+        "repository": "https://github.com/microsoft/VibeVoice",
+        "source_revision": "94da20d98b2fa7688e9cbfaf7692ddb4954f7600",
+        "resolved_source_revision": "94da20d98b2fa7688e9cbfaf7692ddb4954f7600",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "fishtts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/fishtts/request.json",
+      "provenance": {
+        "model_type": "fishtts",
+        "task": "text-to-speech",
+        "checkpoint": "fishaudio/s2-pro",
+        "repository": "https://github.com/fishaudio/fish-speech",
+        "source_revision": "e5e292632cb11e7a27b2b7487f58f612bc101e13",
+        "resolved_source_revision": "e5e292632cb11e7a27b2b7487f58f612bc101e13",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "csm",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/csm/request.json",
+      "provenance": {
+        "model_type": "csm",
+        "task": "text-to-speech",
+        "checkpoint": "sesame/csm-1b",
+        "repository": "https://github.com/SesameAILabs/csm",
+        "source_revision": "daed31e6d42cf71873999075de204fa37d2acec3",
+        "resolved_source_revision": "daed31e6d42cf71873999075de204fa37d2acec3",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "neutts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/neutts/request.json",
+      "provenance": {
+        "model_type": "neutts",
+        "task": "text-to-speech",
+        "checkpoint": "neuphonic/neutts-2e",
+        "repository": "https://github.com/neuphonic/neutts",
+        "source_revision": "ac69851f28fc63a487917e7c2e27f0d75c759cba",
+        "resolved_source_revision": "ac69851f28fc63a487917e7c2e27f0d75c759cba",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "supertonic",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/supertonic/request.json",
+      "provenance": {
+        "model_type": "supertonic",
+        "task": "text-to-speech",
+        "checkpoint": "Supertone/supertonic-3",
+        "repository": "https://github.com/supertone-inc/supertonic",
+        "source_revision": "7e2804f96016a7028cb1ed627353c61c1e9dd281",
+        "resolved_source_revision": "7e2804f96016a7028cb1ed627353c61c1e9dd281",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "inflecttts",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/inflecttts/request.json",
+      "provenance": {
+        "model_type": "inflecttts",
+        "task": "text-to-speech",
+        "checkpoint": "owensong/Inflect-Micro-v2",
+        "repository": "https://github.com/owenawsong/Inflect",
+        "source_revision": "6dad5382e473a90be8446e42405874937d4f8959",
+        "resolved_source_revision": "6dad5382e473a90be8446e42405874937d4f8959",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "bark",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/bark/request.json",
+      "provenance": {
+        "model_type": "bark",
+        "task": "text-to-speech",
+        "checkpoint": "suno/bark-small",
+        "repository": "https://github.com/suno-ai/bark",
+        "source_revision": null,
+        "resolved_source_revision": "f4f32d4cd480dfec1c245d258174bc9bde3c2148",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "speecht5",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/speecht5/request.json",
+      "provenance": {
+        "model_type": "speecht5",
+        "task": "text-to-speech",
+        "checkpoint": "microsoft/speecht5_tts",
+        "repository": "https://github.com/microsoft/SpeechT5",
+        "source_revision": null,
+        "resolved_source_revision": "5d66cf5f37e97f4a1999ad519537decc16d852af",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vits",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/registry-cache-results/vits/request.json",
+      "provenance": {
+        "model_type": "vits",
+        "task": "text-to-speech",
+        "checkpoint": "facebook/mms-tts-eng",
+        "repository": "https://github.com/jaywalnut310/vits",
+        "source_revision": "2e561ba58618d021b5b8323d3765880f7e0ecfdb",
+        "resolved_source_revision": "2e561ba58618d021b5b8323d3765880f7e0ecfdb",
+        "checkout_status": "ready",
+        "run_scope": "Cache-only readiness sweep; unavailable weights remain pending."
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "env",
+          "VOICEHUB_OFFLINE=1",
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

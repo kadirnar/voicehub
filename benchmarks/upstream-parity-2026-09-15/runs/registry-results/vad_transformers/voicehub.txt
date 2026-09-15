@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 343, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 40, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/audio_modeling_utils.py", line 239, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/vad_transformers/modeling_vad_transformers.py", line 185, in _load_pretrained_model
+    raise ValueError(
+ValueError: `vad_transformers` is a native checkpoint-family provider. Pass a Wav2Vec2 audio- or frame-classification Safetensors checkpoint to from_pretrained().

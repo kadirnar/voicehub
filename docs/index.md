@@ -1,221 +1,75 @@
 ---
-description: VoiceHub documentation for unified TTS, ASR, and VAD inference, data preparation, and architecture-aware fine-tuning.
+description: Get started with VoiceHub, explore speech models, and compare inference against original repositories.
 ---
 
 <div class="vh-doc-home" markdown>
 
-<p class="vh-doc-logo">
-  <img src="assets/voicehub-mark.svg" alt="">
-</p>
+<p class="vh-doc-eyebrow">Getting started</p>
 
-# VoiceHub
+# Welcome to VoiceHub Docs!
 
-<p class="vh-doc-tagline">
-  One speech model lifecycle for inference, data preparation, and
-  architecture-aware fine-tuning across modern TTS, ASR, and VAD families.
-</p>
+<p class="vh-doc-tagline">A shared Python interface for speech synthesis, transcription, and voice activity detection.</p>
 
-<div class="vh-doc-teaser" role="img" aria-label="Text passes through a VoiceHub model adapter and becomes an audio waveform">
-  <div class="vh-doc-teaser__label">
-    <strong>TEXT</strong>
-    <span>“A clear, natural voice.”</span>
-  </div>
-  <span class="vh-doc-teaser__arrow" aria-hidden="true">→</span>
-  <div class="vh-doc-teaser__model">
-    <img src="assets/voicehub-mark.svg" alt="">
+<div class="vh-welcome-banner" role="img" aria-label="VoiceHub documentation: text to speech, speech recognition, and voice activity detection">
+  <div>
+    <img src="assets/voicehub-mark.svg" alt="" width="48" height="48">
     <strong>VoiceHub</strong>
-    <span>MODEL ADAPTER</span>
+    <span>Speech models. One interface.</span>
   </div>
-  <span class="vh-doc-teaser__arrow" aria-hidden="true">→</span>
-  <div class="vh-doc-waveform" aria-hidden="true">
-    <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-  </div>
-  <span class="vh-doc-teaser__audio">AUDIO</span>
+  <div class="vh-welcome-tasks" aria-hidden="true"><span>Text → Audio</span><span>Audio → Text</span><span>Audio → Speech regions</span></div>
 </div>
 
-<p class="vh-badges">
-  <a href="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml">
-    <img src="https://github.com/kadirnar/voicehub/actions/workflows/ci.yml/badge.svg?branch=main" alt="VoiceHub continuous integration status">
-  </a>
-  <a href="https://github.com/kadirnar/voicehub/actions/workflows/docs.yml">
-    <img src="https://github.com/kadirnar/voicehub/actions/workflows/docs.yml/badge.svg?branch=main" alt="VoiceHub documentation build status">
-  </a>
-  <a href="https://github.com/kadirnar/voicehub/blob/main/pyproject.toml">
-    <img src="https://img.shields.io/badge/python-3.10%2B-3776AB" alt="VoiceHub supports Python 3.10 and later">
-  </a>
-  <a href="https://github.com/kadirnar/voicehub/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/VoiceHub%20license-Apache--2.0-4051b5" alt="VoiceHub is licensed under Apache 2.0">
-  </a>
-</p>
+## Why VoiceHub?
 
-VoiceHub presents text-to-speech, automatic speech recognition, and voice
-activity detection through shared configuration, processor, model, typed
-output, and trainer APIs. Implementations remain architecture-aware: codec
-language models, CTC and transducer ASR, speech encoder-decoders,
-flow-matching and diffusion models, audio/frame classifiers, VITS-style
-adversarial systems, and upstream-native pipelines keep their own
-conditioning, objectives, parameter ownership, and export rules.
+Work with **68 integrations**: **34 TTS backends**, **23 ASR providers**,
+and **11 VAD providers**, each with a documented configuration, model, and processor contract.
 
-The registry contains **68 integrations**: **34 TTS backends**, **23 ASR
-providers**, and **11 VAD providers**. Fine-tuning support is checkpoint- and
-runtime-specific; an
-inference integration does not imply that its current VoiceHub artifact is
-differentiable. Use the [TTS training matrix](models/training-support.md) and
-[ASR/VAD support matrix](models/asr-vad-support.md) to select an integration.
+- **One model lifecycle** — discover, configure, load, and run speech models through consistent APIs.
+- **Architecture-aware behavior** — preserve each model's conditioning, codecs, decoding, and outputs.
+- **Reproducible comparisons** — inspect checkpoint provenance, inference settings, timings, and measured differences.
+- **Explicit support** — check each integration's requirements and tested limits before choosing a model.
 
-Model source and every built-in TTS, ASR, and VAD inference runtime are
-installed with VoiceHub. Checkpoint weights are downloaded lazily or provided
-as local paths. Add only `voicehub[training]` for fine-tuning and reporting.
-The Apache-2.0 license covers VoiceHub itself; integrated source, checkpoints,
-codecs, datasets, and generated audio may have separate terms.
+[Explore the library architecture →](concepts/architecture.md)
 
-## Features
-
-VoiceHub provides the shared lifecycle needed for inference and training with
-pretrained speech models. Its main entry points are:
-
-- [Inference](guides/inference.md): discover a TTS, ASR, or VAD integration,
-  load its checkpoint, and receive a normalized task output.
-- [Trainer](guides/trainer.md): validate training support before delegating to
-  an integration's native objective, checkpoint, and evaluation boundaries.
-- [generate](reference/api.md#generation): configure reproducible speech
-  generation while preserving model-specific conditioning and output rules.
-
-## Design
-
-!!! tip
-    Read the [library architecture](concepts/architecture.md) to see how the
-    registry, task factories, processors, models, and portable artifacts fit
-    together.
-
-VoiceHub is designed for speech-model users, integration authors, and training
-engineers. Its main design principles are:
-
-1. **Fast and easy to use:** each registered integration exposes a focused
-   configuration, model, and processor contract, then enters inference or
-   training through `Pipeline` or `Trainer`.
-2. **Pretrained models:** reuse checkpoint artifacts through explicit
-   provenance, license, optional-dependency, hardware, and verification
-   boundaries instead of hiding provider-specific requirements.
-
-## Learn
-
-Start with the [Quickstart](getting-started/quickstart.md) for the shortest
-working TTS, ASR, and VAD paths. Continue with a focused guide or reference
-below when you need deeper lifecycle, training, optimization, or contribution
-details.
+## Get started
 
 <div class="grid cards" markdown>
 
--   **Getting started**
+-   **Explore models**
 
-    ---
+    Browse TTS, ASR, and VAD integrations, checkpoints, and their capabilities.
 
-    Install VoiceHub from the current source tree and run the first generation
-    request through the shared model factory.
+    [Explore models →](models/providers/index.md)
 
-    [Quick start](getting-started/quickstart.md)
+-   **Inference guides**
 
--   **Inference**
+    Install VoiceHub and run your first speech request with the shared API.
 
-    ---
+    [Start generating →](getting-started/quickstart.md)
 
-    Discover integrations, load Hub or local checkpoints, configure
-    reproducible generation, and consume normalized audio.
+-   **Fine-tuning**
 
-    [Inference guide](guides/inference.md)
+    Check training support and prepare data for your selected architecture.
 
--   **Speech recognition**
+    [Fine-tuning guide →](guides/training.md)
 
-    ---
+-   **Examples**
 
-    Transcribe files or in-memory audio through native CTC, transducer,
-    encoder-decoder, and Whisper-family graphs with normalized timestamps.
+    Follow runnable notebooks for inference, data preparation, and training.
 
-    [ASR guide](guides/speech-recognition.md)
-
--   **Voice activity detection**
-
-    ---
-
-    Detect ordered speech regions with native Wav2Vec2, Silero, PyanNet,
-    WebRTC, SpeechBrain, NeMo, or FunASR FSMN.
-
-    [VAD guide](guides/voice-activity-detection.md)
-
--   **Data preparation**
-
-    ---
-
-    Build auditable manifests, validate audio, prevent speaker or session
-    leakage, and create model-specific training inputs.
-
-    [Data preparation guide](guides/data-preparation.md)
-
--   **Training**
-
-    ---
-
-    Validate checkpoint boundaries, run native objectives, evaluate, resume
-    complete checkpoints, and save portable artifacts.
-
-    [Training guide](guides/training.md)
-
--   **ASR and VAD support**
-
-    ---
-
-    Compare provider families, default runtime coverage, output capabilities,
-    and the exact native-trainable or inference-only boundary.
-
-    [Speech-input matrix](models/asr-vad-support.md)
-
--   **Training support**
-
-    ---
-
-    Check the exact raw-data, preprocessed, specialized, or unavailable
-    fine-tuning boundary for every integration.
-
-    [Training matrix](models/training-support.md)
-
--   **Notebooks**
-
-    ---
-
-    Run focused inference, data, and training examples or follow the complete
-    Dia workflow through export and fresh-runtime reload.
-
-    [Open the notebook gallery](guides/notebook.md)
-
--   **API reference**
-
-    ---
-
-    Look up factories, outputs, trainer arguments, callbacks, collators,
-    strategies, artifacts, and extension registries.
-
-    [Browse the API](reference/api.md)
-
--   **Architecture**
-
-    ---
-
-    Understand the registry, model wrappers, adapters, runtime strategies,
-    checkpoints, and portable artifact boundaries.
-
-    [Library architecture](concepts/architecture.md)
-
--   **Add a model**
-
-    ---
-
-    Implement and test a lazy wrapper, training specification, specialized
-    adapter when required, and export contract.
-
-    [Model integration guide](project/adding-a-model.md)
+    [Open examples →](guides/notebook.md)
 
 </div>
+
+!!! note "Check the evidence"
+    A registered model is not proof of upstream quality or performance parity.
+    The [upstream comparison guide](guides/upstream-parity.md) distinguishes
+    actual paired measurements, failures, and outstanding evaluations.
+    Waveform agreement, transcript error rates, and inference timing are
+    separate checks.
+
+Checkpoint weights are downloaded lazily. Training tools are available through
+`voicehub[training]`. VoiceHub's license covers the library; integrated source,
+checkpoints, codecs, and datasets may have separate terms.
 
 </div>

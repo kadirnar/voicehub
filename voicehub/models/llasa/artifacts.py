@@ -68,12 +68,14 @@ def _required(root: Path, filename: str, *, owner: str) -> Path:
     path = root / filename
     if not path.is_file():
         raise FileNotFoundError(f"Native {owner} requires {filename!r} in {root}.")
-    return path.resolve()
+    # HF snapshot names are symlinks to extensionless cache blobs. Retain the
+    # artifact name for format dispatch and index-relative shard resolution.
+    return path.absolute()
 
 
 def _optional(root: Path, filename: str) -> Path | None:
     path = root / filename
-    return path.resolve() if path.is_file() else None
+    return path.absolute() if path.is_file() else None
 
 
 def _validate_checkpoint(path: Path, *, owner: str) -> None:

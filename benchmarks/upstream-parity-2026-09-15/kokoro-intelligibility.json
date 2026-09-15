@@ -1,0 +1,88 @@
+{
+  "method": "One fixed original Whisper tiny.en recognizer scores each Kokoro output against the synthesis text. This is a small intelligibility proxy, not MOS or a model-parity timing test.",
+  "recognizer": {
+    "python": "3.12.13",
+    "torch": "2.8.0+cu128",
+    "device": "cpu",
+    "threads": 1,
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "worker_sha256": "4ca4bbac392705ad16119caa5912392a03c79b2cc4aa9612392cad9ddf150cf3",
+    "repository_revision": "86098128c0b4f24f0e2aa2994de830614b474227",
+    "repository_dirty": false
+  },
+  "inputs": {
+    "upstream": {
+      "model_type": "asr_whisper",
+      "task": "asr",
+      "device": "cpu",
+      "seed": 123,
+      "threads": 1,
+      "warmup": 1,
+      "repeats": 5,
+      "samples": [
+        {
+          "id": "kokoro-text",
+          "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/intelligibility/upstream-16k.wav",
+          "reference": "Hello, world. This is a speech quality comparison."
+        }
+      ],
+      "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/whisper-tiny.en",
+      "upstream_checkpoint": "tiny.en",
+      "upstream_weights": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/openai-whisper",
+      "config": {
+        "torch_dtype": "float32"
+      },
+      "generation": {
+        "language": "en",
+        "return_timestamps": false,
+        "num_beams": 1
+      },
+      "hf_conversion_source": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_transformers/src/transformers/models/whisper/convert_openai_to_hf.py",
+      "diagnostics_after_seconds": 45
+    },
+    "voicehub": {
+      "model_type": "asr_whisper",
+      "task": "asr",
+      "device": "cpu",
+      "seed": 123,
+      "threads": 1,
+      "warmup": 1,
+      "repeats": 5,
+      "samples": [
+        {
+          "id": "kokoro-text",
+          "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/intelligibility/voicehub-16k.wav",
+          "reference": "Hello, world. This is a speech quality comparison."
+        }
+      ],
+      "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/whisper-tiny.en",
+      "upstream_checkpoint": "tiny.en",
+      "upstream_weights": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/openai-whisper",
+      "config": {
+        "torch_dtype": "float32"
+      },
+      "generation": {
+        "language": "en",
+        "return_timestamps": false,
+        "num_beams": 1
+      },
+      "hf_conversion_source": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_transformers/src/transformers/models/whisper/convert_openai_to_hf.py",
+      "diagnostics_after_seconds": 45
+    }
+  },
+  "scores": [
+    {
+      "id": "kokoro-text",
+      "text_exact": false,
+      "normalized_text_equal": false,
+      "upstream_wer": 0.0,
+      "upstream_cer": 0.0,
+      "upstream_text": " Hello world, this is a speech quality comparison.",
+      "voicehub_wer": 0.75,
+      "voicehub_cer": 0.425,
+      "voicehub_text": " Hello world, T.C. S. Bitch, Guelli DiChomparesan."
+    }
+  ],
+  "timing_comparison": null,
+  "timing_note": "Different synthesized inputs were recognized; this is not a runtime-parity timing test."
+}

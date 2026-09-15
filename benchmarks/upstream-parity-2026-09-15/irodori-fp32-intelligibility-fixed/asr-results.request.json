@@ -1,0 +1,28 @@
+{
+  "model_type": "asr_transformers",
+  "task": "asr",
+  "device": "cpu",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 0,
+  "repeats": 1,
+  "samples": [
+    {
+      "id": "irodoritts--irodori-card-ja-1--upstream",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-fp32-intelligibility-fixed/asr-inputs/irodoritts--irodori-card-ja-1--upstream.wav",
+      "reference": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002",
+      "sha256": "ae141f30622520de04a26f59bb0e80d20c2419de7d3debc30f02490bec4ceb70"
+    },
+    {
+      "id": "irodoritts--irodori-card-ja-1--voicehub",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-fp32-intelligibility-fixed/asr-inputs/irodoritts--irodori-card-ja-1--voicehub.wav",
+      "reference": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002",
+      "sha256": "b2d89928d5d8104d3f9f122c1d4d1d91a51eff6f349c5f8c7bea131a4097ae8a"
+    }
+  ],
+  "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/whisper-tiny.en",
+  "config": {
+    "torch_dtype": "float32"
+  },
+  "generation": {}
+}

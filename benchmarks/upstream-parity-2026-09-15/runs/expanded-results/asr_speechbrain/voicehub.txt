@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 382, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 55, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/audio_modeling_utils.py", line 239, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/asr_native/speechbrain.py", line 121, in _load_pretrained_model
+    artifacts = resolve_speechbrain_asr_artifacts(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/speechbrain_asr/artifacts.py", line 210, in resolve_speechbrain_asr_artifacts
+    raise ValueError(
+ValueError: The official SpeechBrain ASR release publishes three pickle-based checkpoints. Review the Apache-2.0 artifact and pass `trust_pickle_checkpoint=True` for its one-time conversion; later loads use the cached Safetensors artifact.

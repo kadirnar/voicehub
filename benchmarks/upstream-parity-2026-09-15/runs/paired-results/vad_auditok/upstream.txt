@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 188, in main
+    result = infer(sample)
+             ^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 139, in infer
+    return {"segments": [[r.meta.start, r.meta.end] for r in regions]}
+                          ^^^^^^
+AttributeError: 'AudioRegion' object has no attribute 'meta'

@@ -181,7 +181,6 @@ class FSMNVADStreamingSession:
                 raw,
                 duration=duration,
                 min_speech_duration_ms=self.min_speech_duration_ms,
-                min_silence_duration_ms=self.min_silence_duration_ms,
                 speech_pad_ms=self.speech_pad_ms,
                 max_speech_duration_s=self.max_speech_duration_s,
             )

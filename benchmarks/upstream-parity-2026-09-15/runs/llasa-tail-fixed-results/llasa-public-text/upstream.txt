@@ -1,0 +1,8 @@
+
+Loading weights:   0%|          | 0/147 [00:00<?, ?it/s]
+Loading weights:   1%|          | 1/147 [00:00<01:54,  1.27it/s]
+Loading weights:  95%|█████████▍| 139/147 [00:00<00:00, 211.10it/s]
+Loading weights: 100%|██████████| 147/147 [00:00<00:00, 163.76it/s]
+
+Loading weights:   0%|          | 0/811 [00:00<?, ?it/s]
+Loading weights: 100%|██████████| 811/811 [00:00<00:00, 15502.60it/s]

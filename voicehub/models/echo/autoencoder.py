@@ -989,20 +989,11 @@ class DecoderBlock(nn.Module):
     ):
         super().__init__()
         conv_trans_class = CausalWNConvTranspose1d if causal else WNConvTranspose1d
-        transformer_module = (
-            nn.Identity() if n_t_layer == 0 else WindowLimitedTransformer(
-                causal=causal,
-                input_dim=input_dim,
-                window_size=None,
-                config=transformer_general_config(
-                    n_layer=n_t_layer,
-                    n_head=input_dim // 64,
-                    dim=input_dim,
-                    intermediate_size=input_dim * 3,
-                ),
-            ))
+        # The published Fish S1 DAC decoder never attaches the transformer
+        # constructed by the original factory. Its checkpoint starts with
+        # Snake at block.0, followed by convolution and residual units.
+        del n_t_layer, transformer_general_config
         self.block = nn.Sequential(
-            transformer_module,
             Snake1d(input_dim),
             conv_trans_class(
                 input_dim, output_dim, kernel_size=2 * stride, stride=stride, padding=math.ceil(stride / 2)),

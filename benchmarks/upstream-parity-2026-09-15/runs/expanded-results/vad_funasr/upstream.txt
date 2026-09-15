@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 382, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 265, in prepare
+    raise ValueError("The original FSMN recipe requires explicit zero minimum duration and padding.")
+ValueError: The original FSMN recipe requires explicit zero minimum duration and padding.

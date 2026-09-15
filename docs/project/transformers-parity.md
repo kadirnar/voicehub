@@ -4,6 +4,13 @@ description: Versioned route mappings and rendered evidence for VoiceHub documen
 
 # Transformers documentation parity
 
+!!! note "Welcome template updated September 15, 2026"
+    The English welcome page now follows the explicitly requested
+    [Liquid LFM template](https://docs.liquid.ai/lfm/getting-started/welcome).
+    Its prior Transformers home-page mapping below is historical. Shared
+    navigation and other page mappings retain their existing contracts.
+
+
 This inventory records evidence instead of treating visual similarity as a
 claim. A mapped route is not complete until its structure, interactions,
 responsive states, accessibility, and screenshots have been checked.

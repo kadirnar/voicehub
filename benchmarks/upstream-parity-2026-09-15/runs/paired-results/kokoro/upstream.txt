@@ -1,0 +1,31 @@
+The cache for model files in Transformers v4.22.0 has been updated. Migrating your old cache. This is a one-time only operation. You can interrupt this and resume the migration later on by calling `transformers.utils.move_cache()`.
+
+0it [00:00, ?it/s]
+0it [00:00, ?it/s]
+Resolved 1 package in 1.40s
+Downloading en-core-web-sm (12.2MiB)
+ Downloaded en-core-web-sm
+Prepared 1 package in 520ms
+Installed 1 package in 26ms
+ + en-core-web-sm==3.8.0 (from https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl)
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 187, in main
+    result = infer(sample)
+             ^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 74, in infer
+    results = list(pipeline(sample["text"], voice=voice, speed=1))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro/kokoro/pipeline.py", line 372, in __call__
+    pack = self.load_voice(voice).to(model.device) if model else None
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro/kokoro/pipeline.py", line 173, in load_voice
+    packs = [self.load_single_voice(v) for v in voice.split(delimiter)]
+                                                ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro/.venv/lib/python3.12/site-packages/torch/_tensor.py", line 1052, in split
+    return torch._VF.split_with_sizes(self, split_size, dim)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: split_with_sizes(): argument 'split_sizes' (position 2) must be tuple of ints, not str
+WARNING: Defaulting repo_id to hexgrad/Kokoro-82M. Pass repo_id='hexgrad/Kokoro-82M' to suppress this warning.
+WARNING: Defaulting repo_id to hexgrad/Kokoro-82M. Pass repo_id='hexgrad/Kokoro-82M' to suppress this warning.
+[38;5;2m✔ Download and installation successful[0m
+You can now load the package via spacy.load('en_core_web_sm')

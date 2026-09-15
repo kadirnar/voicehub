@@ -1,0 +1,11 @@
++ /home/kadir/kadir_projects/github/voicehub/.venv/bin/python -m build --outdir /tmp/voicehub-distribution-q316heo1/dist /home/kadir/kadir_projects/github/voicehub
++ /home/kadir/kadir_projects/github/voicehub/.venv/bin/python -m venv /tmp/voicehub-distribution-q316heo1/wheel-venv
++ /tmp/voicehub-distribution-q316heo1/wheel-venv/bin/python -m pip install --no-deps /tmp/voicehub-distribution-q316heo1/dist/voicehub-0.3.0-py3-none-any.whl
+wheel: {"compliance_files": 195, "models": 68, "required_data": {"default_speaker.json": true, "kernel_source": true, "py.typed": true, "tokenizer.json": true, "watermark_checkpoint": true, "webrtc_batch_source": true, "webrtc_vad_source": true}, "runtime_dependency_violations": 0, "torch_imported": false, "version": "0.3.0"}
++ /home/kadir/kadir_projects/github/voicehub/.venv/bin/python -m venv /tmp/voicehub-distribution-q316heo1/sdist-venv
++ /tmp/voicehub-distribution-q316heo1/sdist-venv/bin/python -m pip install --no-deps /tmp/voicehub-distribution-q316heo1/dist/voicehub-0.3.0.tar.gz
+sdist: {"compliance_files": 195, "models": 68, "required_data": {"default_speaker.json": true, "kernel_source": true, "py.typed": true, "tokenizer.json": true, "watermark_checkpoint": true, "webrtc_batch_source": true, "webrtc_vad_source": true}, "runtime_dependency_violations": 0, "torch_imported": false, "version": "0.3.0"}
++ /home/kadir/kadir_projects/github/voicehub/.venv/bin/python -m venv /tmp/voicehub-distribution-q316heo1/editable-venv
++ /tmp/voicehub-distribution-q316heo1/editable-venv/bin/python -m pip install --no-deps -e /home/kadir/kadir_projects/github/voicehub
+editable: {"compliance_files": 195, "models": 68, "required_data": {"default_speaker.json": true, "kernel_source": true, "py.typed": true, "tokenizer.json": true, "watermark_checkpoint": true, "webrtc_batch_source": true, "webrtc_vad_source": true}, "runtime_dependency_violations": 0, "torch_imported": false, "version": "0.3.0"}
+PASS: version=0.3.0 models=68 provenance_manifests=82 compliance_files=195 wheel_bytes=57295648 sdist_bytes=55549229

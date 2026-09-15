@@ -1,0 +1,42 @@
+[
+  {
+    "repository": "Aratako/Semantic-DACVAE-Japanese-32dim",
+    "revision": "47376ee24834d7a05a48ebabfe3cde29b3c5e214",
+    "path": "/home/kadir/.cache/huggingface/hub/models--Aratako--Semantic-DACVAE-Japanese-32dim/snapshots/47376ee24834d7a05a48ebabfe3cde29b3c5e214",
+    "files": {
+      "weights.pth": "db120339c5ee7eca1912cdf29bc612b947a0808e69c3cebfb4936b45a762c1d5"
+    }
+  },
+  {
+    "repository": "llm-jp/llm-jp-3-150m",
+    "revision": "b112feef602fff752e4dac4c30af6a2c2fa41c7a",
+    "path": "/home/kadir/.cache/huggingface/hub/models--llm-jp--llm-jp-3-150m/snapshots/b112feef602fff752e4dac4c30af6a2c2fa41c7a",
+    "files": {
+      "config.json": "d5eb2e6c59d644bc077e08111359cc15ed21669e7bba8f48f3cfa4450fff7b0c",
+      "special_tokens_map.json": "f60631bdd138eb0c7db3d306fcf5e475a22d808fa2e2b2ad98cc32d17281194b",
+      "tokenizer_config.json": "1b457c73c2b6b683cbea24d883f7e5fa56fdd70b7cbf2fc8f42c0fd8de54c7a9",
+      "tokenizer.json": "955dc1fa623fab38cc92a3f4ee172423ae6d73201c4207569bfdf5626bc733f0"
+    }
+  },
+  {
+    "repository": "sony/silentcipher",
+    "revision": "a1c4d021905e0dc5b24be5f68db5fc4dba410ee1",
+    "path": "/home/kadir/.cache/huggingface/hub/models--sony--silentcipher/snapshots/a1c4d021905e0dc5b24be5f68db5fc4dba410ee1",
+    "role": "Original runtime automatic watermark backend",
+    "files": {
+      ".gitattributes": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361",
+      "README.md": "105f2bccec31749d64f6159fc1f4df67cbd174e2c7ac9d6c27077f2393e27af8",
+      "config.json": "6b73e5050cbb9e057f591d7fa0f206f65944318964b3033fd46e56b225cf36e1",
+      "16_khz/97561_iteration/hparams.yaml": "e4c25258e2789aa30f7e31486df8d9e491eed78c3a2eeed45a59f2a2cb3560f9",
+      "16_khz/97561_iteration/enc_c.ckpt": "b6473d71ddf69262a0cbe51aa833d47fad6ba36436e4434392e633069093bb27",
+      "16_khz/97561_iteration/dec_c.ckpt": "7581ba4e4282f88d15b972fd8b7cb45e280e7238837a5e4c8b009478a1784cd7",
+      "16_khz/97561_iteration/dec_m_0.ckpt": "bf443c7298f6994284082c0039bf824c70560cd437869bf6f2643b1482fcba71",
+      "16_khz/97561_iteration/opt.ckpt": "6f7563f8a08e3a4653dc38e8abe8236c4478c51cd51bff5165cfd3c078af9b67",
+      "44_1_khz/73999_iteration/hparams.yaml": "27735fd4db0c00c29fef7af872ad1e5efe854e48d530a86c75beac2b87f09ce3",
+      "44_1_khz/73999_iteration/dec_c.ckpt": "c23b57635172b2fbd3a8531d15ba76b5885a10d0fe902ccb823c521c56041b33",
+      "44_1_khz/73999_iteration/enc_c.ckpt": "ff64f80d2391fdfc888e4103c499be4a2c958e59626587a1eab6db93204814c7",
+      "44_1_khz/73999_iteration/dec_m_0.ckpt": "829540c058270d29788f05294894d45bf436e44add0e1099422242ebb94b7088",
+      "44_1_khz/73999_iteration/opt.ckpt": "f129597d7b5459be0455c43d9df12b6a842cbb95344024ebe297fb2516cfd6d1"
+    }
+  }
+]

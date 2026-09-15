@@ -1,0 +1,61 @@
+{
+  "model_type": "vad_webrtc",
+  "task": "vad",
+  "device": "cpu",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 2,
+  "repeats": 10,
+  "samples": [
+    {
+      "id": "1272-128104-0000",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0000.wav",
+      "reference": "MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL",
+      "sampling_rate": 16000,
+      "duration": 5.855,
+      "sha256": "a7218a38547d31138ceab661c082d517825d35658a67d566c6c5a0e33bc62e36"
+    },
+    {
+      "id": "1272-128104-0001",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0001.wav",
+      "reference": "NOR IS MISTER QUILTER'S MANNER LESS INTERESTING THAN HIS MATTER",
+      "sampling_rate": 16000,
+      "duration": 4.815,
+      "sha256": "9959a6750d124e5f272d61e124e23f2b0a0c10727a44183974c69abd4edf350a"
+    },
+    {
+      "id": "1272-128104-0002",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0002.wav",
+      "reference": "HE TELLS US THAT AT THIS FESTIVE SEASON OF THE YEAR WITH CHRISTMAS AND ROAST BEEF LOOMING BEFORE US SIMILES DRAWN FROM EATING AND ITS RESULTS OCCUR MOST READILY TO THE MIND",
+      "sampling_rate": 16000,
+      "duration": 12.485,
+      "sha256": "db78c045e290f35260c17507693ec49560d0d8a7f88d9308fa948eb8968812b6"
+    },
+    {
+      "id": "1272-128104-0003",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0003.wav",
+      "reference": "HE HAS GRAVE DOUBTS WHETHER SIR FREDERICK LEIGHTON'S WORK IS REALLY GREEK AFTER ALL AND CAN DISCOVER IN IT BUT LITTLE OF ROCKY ITHACA",
+      "sampling_rate": 16000,
+      "duration": 9.9,
+      "sha256": "8056b7d1fb28420848ac2e96d9ca2cc977aa3b500ec1349bb69e6abca5e7004b"
+    },
+    {
+      "id": "1272-128104-0004",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0004.wav",
+      "reference": "LINNELL'S PICTURES ARE A SORT OF UP GUARDS AND AT EM PAINTINGS AND MASON'S EXQUISITE IDYLLS ARE AS NATIONAL AS A JINGO POEM MISTER BIRKET FOSTER'S LANDSCAPES SMILE AT ONE MUCH IN THE SAME WAY THAT MISTER CARKER USED TO FLASH HIS TEETH AND MISTER JOHN COLLIER GIVES HIS SITTER A CHEERFUL SLAP ON THE BACK BEFORE HE SAYS LIKE A SHAMPOOER IN A TURKISH BATH NEXT MAN",
+      "sampling_rate": 16000,
+      "duration": 29.4,
+      "sha256": "96542a7c34125ed8a9dc0ce9cbcfc2d91f5c337735f0b2b46afb054ddf5eeb2c"
+    }
+  ],
+  "config": {
+    "aggressiveness": 3,
+    "frame_duration_ms": 30
+  },
+  "generation": {
+    "min_speech_duration_ms": 0,
+    "min_silence_duration_ms": 0,
+    "speech_pad_ms": 0
+  },
+  "diagnostics_after_seconds": 45
+}

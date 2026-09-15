@@ -1,0 +1,142 @@
+{
+  "cases": [
+    {
+      "name": "echo-public-text",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/tts-public-results/echo-public-text/request.json",
+      "provenance": {
+        "model_type": "echo",
+        "task": "text-to-speech",
+        "checkpoint": "jordand/echo-tts-base",
+        "repository": "https://github.com/jordandare/echo-tts",
+        "source_revision": "2ed95fce62d33bf7b56f835fd9ec0f0b6fb9155e",
+        "resolved_source_revision": "2ed95fce62d33bf7b56f835fd9ec0f0b6fb9155e",
+        "checkout_status": "ready",
+        "audio_codec": {
+          "repository": "jordand/fish-s1-dac-min",
+          "revision": "18b770e5b62b1a58ebd7423401a937cc063d8729",
+          "path": "/home/kadir/.cache/huggingface/hub/models--jordand--fish-s1-dac-min/snapshots/18b770e5b62b1a58ebd7423401a937cc063d8729",
+          "status": "cached"
+        },
+        "timing_scope": "Public-transcript smoke run, serial inference; background prefetch active",
+        "reference_compatibility": "torchcodec AudioDecoder import deferred until unused load_audio; Torch 2.8 instead of upstream requested >=2.9.1 to match VoiceHub; pinned local artifact resolver"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/echo",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/echo/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "llasa-public-text",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/tts-public-results/llasa-public-text/request.json",
+      "provenance": {
+        "model_type": "llasa",
+        "task": "text-to-speech",
+        "checkpoint": "HKUSTAudio/Llasa-1B-Multilingual",
+        "repository": "https://github.com/zhenye234/LLaSA_training",
+        "source_revision": "479acd5277220f78a72093f63755c0892838d0c5",
+        "resolved_source_revision": "479acd5277220f78a72093f63755c0892838d0c5",
+        "checkout_status": "ready",
+        "audio_codec": {
+          "repository": "HKUSTAudio/xcodec2-hf",
+          "revision": "64bd034d12d441299cdd535b15c33efd6ccdf252",
+          "path": "/home/kadir/.cache/huggingface/hub/models--HKUSTAudio--xcodec2-hf/snapshots/64bd034d12d441299cdd535b15c33efd6ccdf252",
+          "status": "cached"
+        },
+        "timing_scope": "Public-transcript smoke run, serial inference; background prefetch active",
+        "reference_compatibility": "Original model-card LLaSA recipe with authors published xcodec2-hf codec implementation; both sides float32",
+        "length_limit": "512 generated tokens; original recipe always drops the final token, even when EOS was not reached",
+        "tokenizer_compatibility": "Transformers 5 per-token extraction uses convert_ids_to_tokens instead of changed one-dimensional batch_decode semantics",
+        "sampling_compatibility": "Explicit top_k=50 and chat date_string=15 Sep 2026 on both sides"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/llasa",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/llasa/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "dia-public-text",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/tts-public-results/dia-public-text/request.json",
+      "provenance": {
+        "model_type": "dia",
+        "task": "text-to-speech",
+        "checkpoint": "nari-labs/Dia-1.6B-0626",
+        "repository": "https://github.com/nari-labs/dia",
+        "source_revision": "876125e461a03b157ec905b0fe8b57a0f8b9e7a0",
+        "resolved_source_revision": "876125e461a03b157ec905b0fe8b57a0f8b9e7a0",
+        "checkout_status": "ready",
+        "timing_scope": "Public-transcript smoke run, serial inference; background prefetch active"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/dia",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/dia/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "kokoro-injected-frontend-public-text",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/tts-public-results/kokoro-injected-frontend-public-text/request.json",
+      "provenance": {
+        "model_type": "kokoro",
+        "task": "text-to-speech",
+        "checkpoint": "hexgrad/Kokoro-82M",
+        "repository": "https://github.com/hexgrad/kokoro",
+        "source_revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+        "resolved_source_revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+        "checkout_status": "ready",
+        "evaluated_checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/kokoro",
+        "timing_scope": "Public-transcript smoke run, serial inference; background prefetch active"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

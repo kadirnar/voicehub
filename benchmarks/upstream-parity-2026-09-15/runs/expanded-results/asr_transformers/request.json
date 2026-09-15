@@ -1,0 +1,24 @@
+{
+  "model_type": "asr_transformers",
+  "task": "asr",
+  "device": "cuda",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 1,
+  "repeats": 5,
+  "samples": [
+    {
+      "id": "1272-128104-0000",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0000.wav",
+      "reference": "MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL",
+      "sampling_rate": 16000,
+      "duration": 5.855,
+      "sha256": "a7218a38547d31138ceab661c082d517825d35658a67d566c6c5a0e33bc62e36"
+    }
+  ],
+  "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/whisper-tiny.en",
+  "diagnostics_after_seconds": 45,
+  "config": {
+    "torch_dtype": "float32"
+  }
+}

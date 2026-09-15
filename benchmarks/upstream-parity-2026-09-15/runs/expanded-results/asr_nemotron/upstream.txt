@@ -1,0 +1,29 @@
+OneLogger: Setting error_handling_strategy to DISABLE_QUIETLY_AND_REPORT_METRIC_ERROR for rank (rank=0) with OneLogger disabled. To override: explicitly set error_handling_strategy parameter.
+No exporters were provided. This means that no telemetry data will be collected.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Timeout (0:00:45)!
+Thread 0x00007fc2b70b96c0 (most recent call first):
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 359 in wait
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 655 in wait
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/lib/python3.12/site-packages/tqdm/_monitor.py", line 69 in run
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1075 in _bootstrap_inner
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1032 in _bootstrap
+
+Thread 0x00007fc2e11026c0 (most recent call first):
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/lib/python3.12/site-packages/torch/_inductor/compile_worker/subproc_pool.py", line 61 in _recv_msg
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/lib/python3.12/site-packages/torch/_inductor/compile_worker/subproc_pool.py", line 195 in _read_thread
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1012 in run
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1075 in _bootstrap_inner
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1032 in _bootstrap
+
+Thread 0x00007fc6302a6780 (most recent call first):
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 578 in xet_get
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1980 in _download_to_tmp_and_move
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1257 in _hf_hub_download_to_cache_dir
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1035 in hf_hub_download
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88 in _inner_fn
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/nemo/core/classes/common.py", line 1171 in _get_hf_hub_pretrained_model_info
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/nemo/core/classes/common.py", line 1042 in from_pretrained
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 300 in prepare
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 374 in main
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 441 in <module>

@@ -287,13 +287,7 @@ class SileroVADModel(nn.Module):
             input_values,
             frame_size=self.config.frame_size,
         )
-        parameter = next(self.parameters())
-        if parameter.device != input_values.device:
-            raise ValueError("Model parameters and audio must be on the same device.")
-        if parameter.dtype != torch.float32:
-            raise TypeError(
-                "The released Silero VAD graph and checkpoint require "
-                "float32 model parameters.")
+        self._validate_model_input(input_values)
         state = self._validated_state(state, input_values=input_values)
         combined = torch.cat((state.context, input_values), dim=1)
         probabilities, logits, (hidden, cell) = self.forward_with_context(
@@ -311,6 +305,15 @@ class SileroVADModel(nn.Module):
             state=next_state,
         )
 
+    def _validate_model_input(self, input_values: Tensor) -> None:
+        parameter = next(self.parameters())
+        if parameter.device != input_values.device:
+            raise ValueError("Model parameters and audio must be on the same device.")
+        if parameter.dtype != torch.float32:
+            raise TypeError(
+                "The released Silero VAD graph and checkpoint require "
+                "float32 model parameters.")
+
     def frame_probabilities(
         self,
         input_values: Tensor,
@@ -322,6 +325,8 @@ class SileroVADModel(nn.Module):
         if not isinstance(pad_final_frame, bool):
             raise TypeError("`pad_final_frame` must be a boolean.")
         input_values = _floating_audio(input_values, frame_size=None)
+        self._validate_model_input(input_values)
+        current_state = self._validated_state(state, input_values=input_values)
         valid_samples = input_values.shape[1]
         remainder = valid_samples % self.config.frame_size
         if remainder:
@@ -336,17 +341,20 @@ class SileroVADModel(nn.Module):
 
         probabilities: list[Tensor] = []
         logits: list[Tensor] = []
-        current_state = state
+        hidden, cell, context = current_state.hidden, current_state.cell, current_state.context
         for offset in range(0, input_values.shape[1], self.config.frame_size):
-            output = self(
-                input_values[:, offset:offset + self.config.frame_size],
-                state=current_state,
+            # The complete waveform and initial state are validated above.
+            # Repeating finite scans, parameter traversal, and state dataclass
+            # construction for each 32 ms frame adds avoidable inference cost.
+            combined = torch.cat((context, input_values[:, offset:offset + self.config.frame_size]), dim=1)
+            probability, logit, (hidden, cell) = self.forward_with_context(
+                combined,
+                (hidden, cell),
             )
-            probabilities.append(output.probabilities)
-            logits.append(output.logits)
-            current_state = output.state
-        if current_state is None:  # pragma: no cover - non-empty invariant
-            raise RuntimeError("Silero VAD produced no frames.")
+            probabilities.append(probability)
+            logits.append(logit)
+            context = combined[:, -self.config.context_size:]
+        current_state = SileroVADState(hidden=hidden, cell=cell, context=context)
         return SileroVADAudioOutput(
             probabilities=torch.cat(probabilities, dim=1),
             logits=torch.cat(logits, dim=1),

@@ -29,7 +29,7 @@ class RouteExpectation:
 REPRESENTATIVE_ROUTES = {
     "index.html":
     RouteExpectation(
-        title="VoiceHub",
+        title="Welcome to VoiceHub Docs!",
         active_link="Overview",
         expanded_branches=("Get started", ),
     ),

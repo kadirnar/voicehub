@@ -76,6 +76,11 @@ class LowRankAdaLN(DiffusionModulationKernelOptimizable, nn.Module):
         x_dtype = x.dtype
         x = x.float()
         x = x * torch.rsqrt(torch.pow(x.float(), 2).mean(dim=-1, keepdim=True) + self.eps)
+        if scale.dtype in (torch.float16, torch.bfloat16):
+            # Upstream adds one before promoting the gain to float32.
+            # Preserve that low-precision rounding while supplying the
+            # shared modulation kernel with three float32 tensors.
+            scale = (scale + 1).float() - 1
         x = self._diffusion_modulate(
             x,
             shift.to(x.dtype),

@@ -1,6 +1,9 @@
 import json
+import shutil
+import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from voicehub.architectures import ARCHITECTURE_REGISTRY
 from voicehub.architectures.webrtc_vad import NativeWebRTCVAD
@@ -37,6 +40,45 @@ def _reference_frames(sample_rate, duration_ms, mode, count=60):
 
 
 class NativeWebRTCVADTests(unittest.TestCase):
+
+    def test_compiler_unavailability_preserves_the_python_fallback(self):
+        from voicehub.architectures.webrtc_vad.acceleration import get_accelerator
+
+        get_accelerator.cache_clear()
+        try:
+            with patch("voicehub.architectures.webrtc_vad.acceleration.shutil.which", return_value=None):
+                accelerator, status = get_accelerator()
+            self.assertIsNone(accelerator)
+            self.assertTrue(status.startswith("python:"))
+        finally:
+            get_accelerator.cache_clear()
+
+    @unittest.skipUnless(
+        sys.platform in {"linux", "darwin"} and shutil.which("cc") and shutil.which("c++"),
+        "Native WebRTC compilation requires POSIX C/C++ compilers")
+    def test_compiled_batches_match_stateful_python_decisions_and_tail_padding(self):
+        import torch
+
+        from voicehub.architectures.webrtc_vad.acceleration import get_accelerator
+
+        accelerator, status = get_accelerator()
+        self.assertIsNotNone(accelerator, status)
+        for rate in (8000, 16000, 32000, 48000):
+            for duration in (10, 20, 30):
+                for mode in range(4):
+                    frames = list(_reference_frames(rate, duration, mode, count=40))
+                    tail = frames[-1][:len(frames[-1]) // 3]
+                    values = [value for frame in frames for value in frame] + tail
+                    detector = NativeWebRTCVAD(mode)
+                    expected = [int(detector.is_speech(frame, rate)) for frame in frames]
+                    expected.append(int(detector.is_speech(tail + [0] * (len(frames[0]) - len(tail)), rate)))
+                    pcm = torch.tensor(values, dtype=torch.int16)
+                    with self.subTest(rate=rate, duration=duration, mode=mode):
+                        actual = accelerator(pcm, rate, len(frames[0]), mode)
+                        self.assertEqual(actual, expected)
+                        # Separate calls must start fresh rather than retain
+                        # GMM adaptation from the previous request.
+                        self.assertEqual(accelerator(pcm, rate, len(frames[0]), mode), expected)
 
     def test_pinned_reference_decisions_cover_every_resampler(self):
         for key, expected in _REFERENCE_DECISIONS.items():

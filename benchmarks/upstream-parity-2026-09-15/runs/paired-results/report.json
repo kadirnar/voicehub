@@ -1,0 +1,1201 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "name": "kokoro",
+      "provenance": {},
+      "upstream": {
+        "status": "error",
+        "task": "tts",
+        "samples": [],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cuda",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "load_seconds": 8.778363088999868,
+        "error_type": "TypeError",
+        "error": "split_with_sizes(): argument 'split_sizes' (position 2) must be tuple of ints, not str",
+        "returncode": 1,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/kokoro.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/kokoro/upstream.json"
+        ],
+        "wall_seconds": 21.554711290999876,
+        "log": ".cache/upstream-parity/paired-results/kokoro/upstream.log",
+        "request_sha256": "a2bd550cd46549adca9ab2d403c4337c6ac65259625e8c7c2a9dd33f13e0b279"
+      },
+      "voicehub": {
+        "status": "ok",
+        "task": "tts",
+        "samples": [
+          {
+            "id": "hello",
+            "warm_seconds": [
+              0.039785302999916894,
+              0.04091383299964946,
+              0.039769704000718775,
+              0.039731372000460397,
+              0.039502089000052365,
+              0.03950328100017941,
+              0.0404960249998112,
+              0.04033947900006751,
+              0.04022277900003246,
+              0.0400946270001441
+            ],
+            "sample_rate": 24000,
+            "metadata": {
+              "segments": [
+                "Hello, world. This is a speech quality comparison."
+              ],
+              "phonemes": [
+                "hello, world. this is a speech quality comparison."
+              ],
+              "frontend_ids": [
+                "voicehub-grapheme-fallback-v1"
+              ],
+              "source_equivalent_g2p": false,
+              "voice": "af_heart",
+              "speed": 1.0,
+              "seed": 123,
+              "requested_seed": 123
+            },
+            "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/kokoro/voicehub-hello.npy",
+            "archived_npy": "runs/paired-results/kokoro/voicehub-hello.npy",
+            "archived_wav": "runs/paired-results/kokoro/voicehub-hello.wav"
+          }
+        ],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cuda",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "load_seconds": 2.9594357039995884,
+        "returncode": 0,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/kokoro.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/kokoro/voicehub.json"
+        ],
+        "wall_seconds": 20.70256288300061,
+        "log": ".cache/upstream-parity/paired-results/kokoro/voicehub.log",
+        "request_sha256": "a2bd550cd46549adca9ab2d403c4337c6ac65259625e8c7c2a9dd33f13e0b279"
+      },
+      "comparison": {
+        "status": "not-comparable",
+        "reason": "Both executions must succeed."
+      }
+    },
+    {
+      "name": "vad_silero",
+      "provenance": {},
+      "upstream": {
+        "status": "ok",
+        "task": "vad",
+        "samples": [
+          {
+            "id": "1272-128104-0000",
+            "warm_seconds": [
+              0.05118106000008993,
+              0.051137827999809815,
+              0.0512879409998277,
+              0.05111818099976517,
+              0.05111026599934121,
+              0.05117699199945491,
+              0.05108075000043755,
+              0.0511840850003864,
+              0.05120785999952204,
+              0.05106240599980083
+            ],
+            "segments": [
+              [
+                0.514,
+                5.534
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0001",
+            "warm_seconds": [
+              0.04219272699992871,
+              0.0422034570001415,
+              0.042338932000347995,
+              0.0421718570005396,
+              0.042285141000320436,
+              0.042249954999533657,
+              0.04218579300049896,
+              0.04225287000008393,
+              0.04217187799986277,
+              0.04216452299988305
+            ],
+            "segments": [
+              [
+                0.514,
+                4.51
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0002",
+            "warm_seconds": [
+              0.10948803700011922,
+              0.10924594100015383,
+              0.10928068599969265,
+              0.10929397100062488,
+              0.10939291700015019,
+              0.10952706099942588,
+              0.10938908999924024,
+              0.10937472400019033,
+              0.10931517099925259,
+              0.10935995500040008
+            ],
+            "segments": [
+              [
+                0.578,
+                7.07
+              ],
+              [
+                7.618,
+                12.062
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0003",
+            "warm_seconds": [
+              0.0868457260003197,
+              0.08673545800047577,
+              0.08680185399953189,
+              0.08679228499931924,
+              0.08737696800017147,
+              0.08737205900069966,
+              0.08674695999980031,
+              0.08670417899975291,
+              0.08684470400021382,
+              0.08666701900074258
+            ],
+            "segments": [
+              [
+                0.578,
+                9.534
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0004",
+            "warm_seconds": [
+              0.25668114099971717,
+              0.2563680799994472,
+              0.25647408999975596,
+              0.2569106840001041,
+              0.25664523300019937,
+              0.257237100000566,
+              0.2565164999996341,
+              0.2566217589992448,
+              0.2599505609996413,
+              0.25845299499997054
+            ],
+            "segments": [
+              [
+                0.546,
+                2.686
+              ],
+              [
+                2.978,
+                5.054
+              ],
+              [
+                5.378,
+                10.046
+              ],
+              [
+                11.49,
+                18.718
+              ],
+              [
+                19.746,
+                24.414
+              ],
+              [
+                24.514,
+                29.118
+              ]
+            ]
+          }
+        ],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cpu",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "load_seconds": 0.22821755499990104,
+        "returncode": 0,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/vad_silero.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/vad_silero/upstream.json"
+        ],
+        "wall_seconds": 10.027811898999971,
+        "log": ".cache/upstream-parity/paired-results/vad_silero/upstream.log",
+        "request_sha256": "75aaac50b5f28f5f2be871ca1e8facce6a704d73968184e9c8a11083d58ad155"
+      },
+      "voicehub": {
+        "status": "ok",
+        "task": "vad",
+        "samples": [
+          {
+            "id": "1272-128104-0000",
+            "warm_seconds": [
+              0.06840780000038649,
+              0.06824400000004971,
+              0.06856019699989702,
+              0.06858610600011161,
+              0.06830266100041626,
+              0.06832604499959416,
+              0.07116096499976265,
+              0.06830803100001503,
+              0.068496036000397,
+              0.06824093500017625
+            ],
+            "segments": [
+              [
+                0.514,
+                5.534
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0001",
+            "warm_seconds": [
+              0.05643752899959509,
+              0.056440053999722295,
+              0.0565230510001129,
+              0.05647917799979041,
+              0.05635402200005046,
+              0.05642167899986816,
+              0.05653136699947936,
+              0.058165950999864435,
+              0.05881606799994188,
+              0.058970139000848576
+            ],
+            "segments": [
+              [
+                0.514,
+                4.51
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0002",
+            "warm_seconds": [
+              0.14520863899997494,
+              0.14882274899991899,
+              0.14665774300010526,
+              0.14537993100020685,
+              0.148812438999812,
+              0.1463538289999633,
+              0.1450697059999584,
+              0.14621230299962917,
+              0.14637511000000814,
+              0.14566838600057963
+            ],
+            "segments": [
+              [
+                0.578,
+                7.07
+              ],
+              [
+                7.618,
+                12.062
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0003",
+            "warm_seconds": [
+              0.11545623900019564,
+              0.11546396399990044,
+              0.1157396640001025,
+              0.11560731400004443,
+              0.11575140600052691,
+              0.11556150799970055,
+              0.11566932100049598,
+              0.11565900200002943,
+              0.1156001909994302,
+              0.11552421800024604
+            ],
+            "segments": [
+              [
+                0.578,
+                9.534
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0004",
+            "warm_seconds": [
+              0.34282853700005944,
+              0.34326566199979425,
+              0.34495465899999544,
+              0.34120795800026826,
+              0.34156572299980326,
+              0.345222924999689,
+              0.3412909540002147,
+              0.342215349000071,
+              0.34234134600046673,
+              0.3437264909998703
+            ],
+            "segments": [
+              [
+                0.546,
+                2.686
+              ],
+              [
+                2.978,
+                5.054
+              ],
+              [
+                5.378,
+                10.046
+              ],
+              [
+                11.49,
+                18.718
+              ],
+              [
+                19.746,
+                24.414
+              ],
+              [
+                24.514,
+                29.118
+              ]
+            ]
+          }
+        ],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cpu",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "load_seconds": 0.16824620499937737,
+        "returncode": 0,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/vad_silero.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/vad_silero/voicehub.json"
+        ],
+        "wall_seconds": 10.12731040699964,
+        "log": ".cache/upstream-parity/paired-results/vad_silero/voicehub.log",
+        "request_sha256": "75aaac50b5f28f5f2be871ca1e8facce6a704d73968184e9c8a11083d58ad155"
+      },
+      "comparison": {
+        "status": "measured",
+        "samples": [
+          {
+            "id": "1272-128104-0000",
+            "timing": {
+              "upstream_mean_seconds": 0.05115473689984355,
+              "voicehub_mean_seconds": 0.06866327760008062,
+              "ratio": 1.3422662643054393,
+              "difference_95pct_lower_seconds": 0.016957543477534677,
+              "difference_95pct_upper_seconds": 0.018059537922939455,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": true,
+            "upstream_segments": [
+              [
+                0.514,
+                5.534
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.514,
+                5.534
+              ]
+            ],
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          },
+          {
+            "id": "1272-128104-0001",
+            "timing": {
+              "upstream_mean_seconds": 0.04222171330011406,
+              "voicehub_mean_seconds": 0.057113903799927354,
+              "ratio": 1.3527140264052966,
+              "difference_95pct_lower_seconds": 0.014221465133085073,
+              "difference_95pct_upper_seconds": 0.015562915866541516,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": true,
+            "upstream_segments": [
+              [
+                0.514,
+                4.51
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.514,
+                4.51
+              ]
+            ],
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          },
+          {
+            "id": "1272-128104-0002",
+            "timing": {
+              "upstream_mean_seconds": 0.10936675529992498,
+              "voicehub_mean_seconds": 0.14645608350001565,
+              "ratio": 1.3391279927650566,
+              "difference_95pct_lower_seconds": 0.036247591940623373,
+              "difference_95pct_upper_seconds": 0.03793106445955797,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": true,
+            "upstream_segments": [
+              [
+                0.578,
+                7.07
+              ],
+              [
+                7.618,
+                12.062
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.578,
+                7.07
+              ],
+              [
+                7.618,
+                12.062
+              ]
+            ],
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          },
+          {
+            "id": "1272-128104-0003",
+            "timing": {
+              "upstream_mean_seconds": 0.08688872120010274,
+              "voicehub_mean_seconds": 0.11560328270006721,
+              "ratio": 1.3304751307575984,
+              "difference_95pct_lower_seconds": 0.02853968213778776,
+              "difference_95pct_upper_seconds": 0.028889440862141184,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": true,
+            "upstream_segments": [
+              [
+                0.578,
+                9.534
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.578,
+                9.534
+              ]
+            ],
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          },
+          {
+            "id": "1272-128104-0004",
+            "timing": {
+              "upstream_mean_seconds": 0.25718581429982806,
+              "voicehub_mean_seconds": 0.34286196040002326,
+              "ratio": 1.3331293614830313,
+              "difference_95pct_lower_seconds": 0.08453975148429889,
+              "difference_95pct_upper_seconds": 0.0868125407160915,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": true,
+            "upstream_segments": [
+              [
+                0.546,
+                2.686
+              ],
+              [
+                2.978,
+                5.054
+              ],
+              [
+                5.378,
+                10.046
+              ],
+              [
+                11.49,
+                18.718
+              ],
+              [
+                19.746,
+                24.414
+              ],
+              [
+                24.514,
+                29.118
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.546,
+                2.686
+              ],
+              [
+                2.978,
+                5.054
+              ],
+              [
+                5.378,
+                10.046
+              ],
+              [
+                11.49,
+                18.718
+              ],
+              [
+                19.746,
+                24.414
+              ],
+              [
+                24.514,
+                29.118
+              ]
+            ],
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          }
+        ],
+        "timing_regression_flag": true
+      }
+    },
+    {
+      "name": "vad_webrtc",
+      "provenance": {},
+      "upstream": {
+        "status": "error",
+        "task": "vad",
+        "samples": [],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cpu",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "error_type": "ModuleNotFoundError",
+        "error": "No module named 'pkg_resources'",
+        "returncode": 1,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_webrtc",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_webrtc/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/vad_webrtc.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/vad_webrtc/upstream.json"
+        ],
+        "wall_seconds": 3.1192184769997766,
+        "log": ".cache/upstream-parity/paired-results/vad_webrtc/upstream.log",
+        "request_sha256": "d35b88edbcefdc9984ed60389d38e4b1bb86ca3d843433949babb6980dddd552"
+      },
+      "voicehub": {
+        "status": "ok",
+        "task": "vad",
+        "samples": [
+          {
+            "id": "1272-128104-0000",
+            "warm_seconds": [
+              0.12947501500002545,
+              0.12978390699936426,
+              0.12911481500032096,
+              0.129495223000049,
+              0.12914705599996523,
+              0.12956720900001528,
+              0.12922774800063053,
+              0.12893128800078557,
+              0.12944953699934558,
+              0.1292802469997696
+            ],
+            "segments": [
+              [
+                0.0,
+                0.09
+              ],
+              [
+                0.54,
+                3.21
+              ],
+              [
+                3.33,
+                5.46
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0001",
+            "warm_seconds": [
+              0.10723749800035876,
+              0.10759335900002043,
+              0.10725397900023381,
+              0.10740993300078117,
+              0.10770553099973768,
+              0.10721564699997543,
+              0.10785818900058075,
+              0.10747416499998508,
+              0.10725061299945082,
+              0.1084570499997426
+            ],
+            "segments": [
+              [
+                0.54,
+                4.41
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0002",
+            "warm_seconds": [
+              0.2794606870002099,
+              0.28015631000016583,
+              0.2797655519998443,
+              0.2805495009997685,
+              0.27984927000034077,
+              0.28046514200013917,
+              0.27997674999915034,
+              0.2777896839997993,
+              0.2791147339994495,
+              0.2792018480004117
+            ],
+            "segments": [
+              [
+                0.6,
+                3.96
+              ],
+              [
+                4.2,
+                4.47
+              ],
+              [
+                4.5,
+                5.52
+              ],
+              [
+                5.58,
+                7.05
+              ],
+              [
+                7.65,
+                7.77
+              ],
+              [
+                7.8,
+                10.08
+              ],
+              [
+                10.14,
+                12.03
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0003",
+            "warm_seconds": [
+              0.2194489129997237,
+              0.21888155200031179,
+              0.2191896940003062,
+              0.2187730069999816,
+              0.21910888100046577,
+              0.21949786499953916,
+              0.21895990900065954,
+              0.2193915840007321,
+              0.21948884799985535,
+              0.21927568600040104
+            ],
+            "segments": [
+              [
+                0.57,
+                4.26
+              ],
+              [
+                4.35,
+                5.76
+              ],
+              [
+                6.12,
+                7.35
+              ],
+              [
+                7.38,
+                8.28
+              ],
+              [
+                8.4,
+                9.54
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0004",
+            "warm_seconds": [
+              0.6527937170003497,
+              0.6534952299998622,
+              0.6512336619998678,
+              0.6547866159999103,
+              0.6513843049997377,
+              0.6494951399999991,
+              0.6528311359998042,
+              0.654018155999438,
+              0.6518919829995866,
+              0.6502065320000838
+            ],
+            "segments": [
+              [
+                0.0,
+                0.09
+              ],
+              [
+                0.54,
+                1.77
+              ],
+              [
+                1.8,
+                2.58
+              ],
+              [
+                3.0,
+                3.18
+              ],
+              [
+                3.24,
+                4.23
+              ],
+              [
+                4.38,
+                4.98
+              ],
+              [
+                5.4,
+                6.15
+              ],
+              [
+                6.18,
+                7.83
+              ],
+              [
+                7.98,
+                9.99
+              ],
+              [
+                10.95,
+                11.16
+              ],
+              [
+                11.52,
+                13.44
+              ],
+              [
+                13.53,
+                13.65
+              ],
+              [
+                13.68,
+                16.23
+              ],
+              [
+                16.26,
+                16.92
+              ],
+              [
+                17.16,
+                18.03
+              ],
+              [
+                18.09,
+                18.45
+              ],
+              [
+                18.51,
+                18.69
+              ],
+              [
+                19.77,
+                21.21
+              ],
+              [
+                21.36,
+                22.2
+              ],
+              [
+                22.23,
+                22.38
+              ],
+              [
+                22.41,
+                24.39
+              ],
+              [
+                24.54,
+                28.17
+              ],
+              [
+                28.2,
+                29.04
+              ]
+            ]
+          }
+        ],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cpu",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "load_seconds": 0.11670519600011175,
+        "returncode": 0,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/vad_webrtc.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/vad_webrtc/voicehub.json"
+        ],
+        "wall_seconds": 17.938333574000353,
+        "log": ".cache/upstream-parity/paired-results/vad_webrtc/voicehub.log",
+        "request_sha256": "d35b88edbcefdc9984ed60389d38e4b1bb86ca3d843433949babb6980dddd552"
+      },
+      "comparison": {
+        "status": "not-comparable",
+        "reason": "Both executions must succeed."
+      }
+    },
+    {
+      "name": "vad_auditok",
+      "provenance": {},
+      "upstream": {
+        "status": "error",
+        "task": "vad",
+        "samples": [],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cpu",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "load_seconds": 0.016183421999812708,
+        "error_type": "AttributeError",
+        "error": "'AudioRegion' object has no attribute 'meta'",
+        "returncode": 1,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_auditok",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_auditok/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/vad_auditok.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/vad_auditok/upstream.json"
+        ],
+        "wall_seconds": 3.1686054989995682,
+        "log": ".cache/upstream-parity/paired-results/vad_auditok/upstream.log",
+        "request_sha256": "109f1d1227e04bbc4c5473b89c37f538876b85ee3355603a00ffb5975344d3c5"
+      },
+      "voicehub": {
+        "status": "ok",
+        "task": "vad",
+        "samples": [
+          {
+            "id": "1272-128104-0000",
+            "warm_seconds": [
+              0.0005502389994944679,
+              0.0005484660005095066,
+              0.0005454090005514445,
+              0.0005478539997056942,
+              0.000547362999895995,
+              0.0005386969996834523,
+              0.0005408300003182376,
+              0.000543835999451403,
+              0.0005363219997889246,
+              0.000546362000022782
+            ],
+            "segments": [
+              [
+                0.55,
+                5.4
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0001",
+            "warm_seconds": [
+              0.0004897150001852424,
+              0.0004844940003749798,
+              0.000481217999549699,
+              0.00047804199948586756,
+              0.00048264100041706115,
+              0.00048253000022668857,
+              0.00048093700024764985,
+              0.00047520699990855064,
+              0.0004801260001841001,
+              0.0004764300001625088
+            ],
+            "segments": [
+              [
+                0.55,
+                4.3
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0002",
+            "warm_seconds": [
+              0.0009417370001756353,
+              0.000914715999897453,
+              0.0009248950000255718,
+              0.0009127620005529025,
+              0.0009111099998335703,
+              0.0009100070001295535,
+              0.0009096569992834702,
+              0.0009098070004256442,
+              0.0009082739998120815,
+              0.0009118309999394114
+            ],
+            "segments": [
+              [
+                0.6,
+                3.9
+              ],
+              [
+                4.2,
+                6.95
+              ],
+              [
+                7.65,
+                11.9
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0003",
+            "warm_seconds": [
+              0.0007724180004515802,
+              0.0007648430000699591,
+              0.0007700330006628064,
+              0.0007577699998364551,
+              0.0007601850002174615,
+              0.0007783089995427872,
+              0.0007665570001336164,
+              0.0007632509996255976,
+              0.0007624190002388787,
+              0.000767688999985694
+            ],
+            "segments": [
+              [
+                0.6,
+                4.15
+              ],
+              [
+                4.35,
+                5.55
+              ],
+              [
+                6.1,
+                8.15
+              ],
+              [
+                8.35,
+                9.4
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0004",
+            "warm_seconds": [
+              0.001868456000011065,
+              0.001827958999456314,
+              0.0018416949997117626,
+              0.0018725039999480941,
+              0.001853046999713115,
+              0.0018471960001988919,
+              0.0018464550003045588,
+              0.0018394409999018535,
+              0.0018535680001150467,
+              0.0018571849996078527
+            ],
+            "segments": [
+              [
+                0.55,
+                2.45
+              ],
+              [
+                3.25,
+                4.15
+              ],
+              [
+                4.4,
+                4.95
+              ],
+              [
+                5.4,
+                7.75
+              ],
+              [
+                7.95,
+                9.9
+              ],
+              [
+                11.5,
+                13.35
+              ],
+              [
+                13.5,
+                16.8
+              ],
+              [
+                17.15,
+                18.6
+              ],
+              [
+                19.75,
+                21.05
+              ],
+              [
+                21.35,
+                24.3
+              ],
+              [
+                24.55,
+                28.05
+              ],
+              [
+                28.2,
+                28.95
+              ]
+            ]
+          }
+        ],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cpu",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "load_seconds": 0.11928950099991198,
+        "returncode": 0,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/vad_auditok.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/vad_auditok/voicehub.json"
+        ],
+        "wall_seconds": 1.366626186000758,
+        "log": ".cache/upstream-parity/paired-results/vad_auditok/voicehub.log",
+        "request_sha256": "109f1d1227e04bbc4c5473b89c37f538876b85ee3355603a00ffb5975344d3c5"
+      },
+      "comparison": {
+        "status": "not-comparable",
+        "reason": "Both executions must succeed."
+      }
+    },
+    {
+      "name": "asr_whisper",
+      "provenance": {},
+      "upstream": {
+        "status": "error",
+        "task": "asr",
+        "samples": [],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cuda",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "error_type": "RuntimeError",
+        "error": "Model has been downloaded but the SHA256 checksum does not not match. Please retry loading the model.",
+        "returncode": 1,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_whisper",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_whisper/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/asr_whisper.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/asr_whisper/upstream.json"
+        ],
+        "wall_seconds": 217.2207781320003,
+        "log": ".cache/upstream-parity/paired-results/asr_whisper/upstream.log",
+        "request_sha256": "77695795d3c179a86ac6f443ebcc0de6c314f4e637ee194e6b21b5b3e681da5e"
+      },
+      "voicehub": {
+        "status": "error",
+        "task": "asr",
+        "samples": [],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cuda",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti"
+        },
+        "load_seconds": 0.9457964290004384,
+        "error_type": "ValueError",
+        "error": "Language 'en' is not declared by the checkpoint's generation configuration.",
+        "returncode": 1,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/requests/asr_whisper.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/paired-results/asr_whisper/voicehub.json"
+        ],
+        "wall_seconds": 2.3176851690004696,
+        "log": ".cache/upstream-parity/paired-results/asr_whisper/voicehub.log",
+        "request_sha256": "77695795d3c179a86ac6f443ebcc0de6c314f4e637ee194e6b21b5b3e681da5e"
+      },
+      "comparison": {
+        "status": "not-comparable",
+        "reason": "Both executions must succeed."
+      }
+    }
+  ]
+}

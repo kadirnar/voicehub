@@ -1,0 +1,236 @@
+{
+  "cases": [
+    {
+      "name": "asr_transformers",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/expanded-results/asr_transformers/request.json",
+      "provenance": {
+        "model_type": "asr_transformers",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "openai/whisper-small",
+        "repository": "https://github.com/huggingface/transformers",
+        "source_revision": null,
+        "resolved_source_revision": "3f162ca5fd2daef9cb36841be1337ad657addbfe",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_transformers",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_transformers/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_qwen3",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/expanded-results/asr_qwen3/request.json",
+      "provenance": {
+        "model_type": "asr_qwen3",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "Qwen/Qwen3-ASR-0.6B",
+        "repository": "https://github.com/QwenLM/Qwen3-ASR",
+        "source_revision": "7c6daf77a2421100f5fb066495372c00129d39ff",
+        "resolved_source_revision": "7c6daf77a2421100f5fb066495372c00129d39ff",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_qwen3",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_qwen3/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_parakeet_tdt",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/expanded-results/asr_parakeet_tdt/request.json",
+      "provenance": {
+        "model_type": "asr_parakeet_tdt",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "nvidia/parakeet-tdt-0.6b-v3",
+        "repository": "https://github.com/NVIDIA/NeMo",
+        "source_revision": "2381f42f6979449b5b99538f8f80135831009b51",
+        "resolved_source_revision": "2381f42f6979449b5b99538f8f80135831009b51",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_parakeet_tdt",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_parakeet_tdt/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_nemotron",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/expanded-results/asr_nemotron/request.json",
+      "provenance": {
+        "model_type": "asr_nemotron",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+        "repository": "https://github.com/NVIDIA/NeMo",
+        "source_revision": null,
+        "resolved_source_revision": "1ef51bc0fc52dadd5782371aa37f1d3150683b01",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemotron/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_nemo",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/expanded-results/asr_nemo/request.json",
+      "provenance": {
+        "model_type": "asr_nemo",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "nvidia/nemo/stt_en_quartznet15x5",
+        "repository": "https://github.com/NVIDIA/NeMo",
+        "source_revision": null,
+        "resolved_source_revision": "1ef51bc0fc52dadd5782371aa37f1d3150683b01",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemo",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_nemo/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_speechbrain",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/expanded-results/asr_speechbrain/request.json",
+      "provenance": {
+        "model_type": "asr_speechbrain",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "speechbrain/asr-crdnn-rnnlm-librispeech",
+        "repository": "https://github.com/speechbrain/speechbrain",
+        "source_revision": null,
+        "resolved_source_revision": "89ead74d163463d30c62329a09cfdb4c54f5abc1",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_speechbrain/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_funasr",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/expanded-results/asr_funasr/request.json",
+      "provenance": {
+        "model_type": "asr_funasr",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "FunAudioLLM/SenseVoiceSmall",
+        "repository": "https://github.com/modelscope/FunASR",
+        "source_revision": null,
+        "resolved_source_revision": "486b4b7ceb27b72db24a84c6e1be7cf6c5be6609",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_funasr",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_funasr/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_funasr",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/expanded-results/vad_funasr/request.json",
+      "provenance": {
+        "model_type": "vad_funasr",
+        "task": "voice-activity-detection",
+        "checkpoint": "funasr/fsmn-vad",
+        "repository": "https://github.com/modelscope/FunASR",
+        "source_revision": "16cd165ac3946cc8c08bf845331f91fefec8e1a9",
+        "resolved_source_revision": "16cd165ac3946cc8c08bf845331f91fefec8e1a9",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_funasr",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_funasr/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

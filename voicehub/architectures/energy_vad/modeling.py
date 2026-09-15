@@ -212,7 +212,10 @@ class EnergyVoiceActivityDetector:
         max_speech_duration_s: float | None,
         strict_min_duration: bool,
         window_size_samples: int | None = None,
+        drop_trailing_silence: bool = True,
     ) -> EnergyDetection:
+        if not isinstance(drop_trailing_silence, bool):
+            raise TypeError("`drop_trailing_silence` must be a boolean.")
         if (isinstance(sampling_rate, bool) or not isinstance(sampling_rate, int) or sampling_rate <= 0):
             raise ValueError("`sampling_rate` must be a positive integer.")
         if window_size_samples is None:
@@ -261,6 +264,11 @@ class EnergyVoiceActivityDetector:
         regions: list[EnergyRegion] = []
         for start_frame, end_frame in runs:
             raw_start = start_frame * window_samples
+            # Auditok keeps up to max_silence trailing frames by default.
+            # Its DROP_TRAILING_SILENCE mode (and the generic energy graph's
+            # historical behavior) ends at the last active frame instead.
+            if not drop_trailing_silence:
+                end_frame += maximum_gap_frames
             raw_end = min(end_frame * window_samples, duration_samples)
             if raw_end - raw_start < minimum_samples:
                 continue

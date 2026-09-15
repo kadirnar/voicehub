@@ -53,6 +53,7 @@ nav:
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
       - Inference: guides/inference.md
+      - Upstream comparisons: guides/upstream-parity.md
   - Models:
       - Model list: models/providers/index.md
       # BEGIN GENERATED MODEL GUIDE NAVIGATION
@@ -170,6 +171,7 @@ plugins:
           name: Türkçe
           build: true
           nav_translations:
+            Upstream comparisons: Üst kaynak karşılaştırmaları
             Get started: Hızlı Başlangıç
             Model list: Model listesi
             Models API: Model API'si
@@ -251,6 +253,7 @@ plugins:
           name: Español
           build: true
           nav_translations:
+            Upstream comparisons: Comparaciones con el original
             Get started: Inicio rápido
             Model list: Lista de modelos
             Models API: API de modelos
@@ -332,6 +335,7 @@ plugins:
           name: Français
           build: true
           nav_translations:
+            Upstream comparisons: Comparaisons avec les sources
             Get started: Démarrage rapide
             Model list: Liste des modèles
             Models API: API des modèles
@@ -413,6 +417,7 @@ plugins:
           name: Deutsch
           build: true
           nav_translations:
+            Upstream comparisons: Vergleiche mit dem Original
             Get started: Schnellstart
             Model list: Modellliste
             Models API: Modell-API
@@ -494,6 +499,7 @@ plugins:
           name: Português
           build: true
           nav_translations:
+            Upstream comparisons: Comparações com o original
             Get started: Início rápido
             Model list: Lista de modelos
             Models API: API de modelos
@@ -575,6 +581,7 @@ plugins:
           name: 简体中文
           build: true
           nav_translations:
+            Upstream comparisons: 上游对比
             Get started: 快速开始
             Model list: 模型列表
             Models API: 模型 API
@@ -656,6 +663,7 @@ plugins:
           name: 日本語
           build: true
           nav_translations:
+            Upstream comparisons: 上流実装との比較
             Get started: クイックスタート
             Model list: モデル一覧
             Models API: モデル API
@@ -737,6 +745,7 @@ plugins:
           name: 한국어
           build: true
           nav_translations:
+            Upstream comparisons: 원본 구현 비교
             Get started: 빠른 시작
             Model list: 모델 목록
             Models API: 모델 API
@@ -818,6 +827,7 @@ plugins:
           name: Русский
           build: true
           nav_translations:
+            Upstream comparisons: Сравнения с оригиналом
             Get started: Быстрый старт
             Model list: Список моделей
             Models API: API моделей
@@ -899,6 +909,7 @@ plugins:
           name: العربية
           build: true
           nav_translations:
+            Upstream comparisons: مقارنات مع المصدر الأصلي
             Get started: البدء السريع
             Model list: قائمة النماذج
             Models API: واجهة نماذج API
@@ -1001,6 +1012,7 @@ markdown_extensions:
 
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/welcome.css
 
 extra_javascript:
   - javascripts/header-controls.js

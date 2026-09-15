@@ -114,6 +114,7 @@ class AuditokVADForVoiceActivityDetection(PreTrainedVADModel):
             speech_pad_ms=speech_pad_ms,
             max_speech_duration_s=max_speech_duration_s,
             strict_min_duration=self.config.strict_min_duration,
+            drop_trailing_silence=self.config.drop_trailing_silence,
             window_size_samples=window_size_samples,
         )
         segments = []

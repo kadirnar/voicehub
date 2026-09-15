@@ -1,0 +1,23 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+Loading weights:   0%|          | 0/223 [00:00<?, ?it/s]
+Loading weights: 100%|██████████| 223/223 [00:00<00:00, 17303.94it/s]
+[transformers] Passing `pad_token_id` to `DiaConfig` is deprecated. Please set it directly on `DiaDecoderConfig` instead.
+[transformers] Passing `eos_token_id` to `DiaConfig` is deprecated. Please set it directly on `DiaDecoderConfig` instead.
+[transformers] Passing `bos_token_id` to `DiaConfig` is deprecated. Please set it directly on `DiaDecoderConfig` instead.
+
+Loading weights:   0%|          | 0/335 [00:00<?, ?it/s]
+Loading weights: 100%|██████████| 335/335 [00:00<00:00, 14245.51it/s]
+/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/dia/.venv-parity/lib/python3.12/site-packages/transformers/tokenization_utils_base.py:2355: UserWarning: `max_length` is ignored when `padding`=`True` and there is no truncation strategy. To pad to max length, use `padding='max_length'`.
+  warnings.warn(
+Timeout (0:00:45)!
+Thread 0x00007fdb27eff6c0 (most recent call first):
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 359 in wait
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 655 in wait
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/dia/.venv-parity/lib/python3.12/site-packages/tqdm/_monitor.py", line 69 in run
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1075 in _bootstrap_inner
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/threading.py", line 1032 in _bootstrap
+
+Thread 0x00007fde5f4b5780 (most recent call first):
+  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/dia/.venv-parity/lib/python3.12/site-packages/transformers/utils/generic.py", line ??? in __getitem__
+  File

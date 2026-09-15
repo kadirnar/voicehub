@@ -1,0 +1,28 @@
+{
+  "model_type": "dia",
+  "task": "tts",
+  "device": "cuda",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 1,
+  "repeats": 5,
+  "samples": [
+    {
+      "id": "1272-128104-0000",
+      "text": "[S1] Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "public_transcript_source": "LibriSpeech clean validation 1272-128104-0000"
+    }
+  ],
+  "checkpoint": "/home/kadir/.cache/huggingface/hub/models--nari-labs--Dia-1.6B-0626/snapshots/ef2795fcc29c5abe6ffc91fd33808588b49bbc66",
+  "config": {
+    "compute_dtype": "float32"
+  },
+  "generation": {
+    "max_new_tokens": 512,
+    "do_sample": true,
+    "guidance_scale": 3.0,
+    "temperature": 1.8,
+    "top_p": 0.9,
+    "top_k": 45
+  }
+}

@@ -49,6 +49,7 @@ class AuditokVADConfig(VoiceHubConfig):
         calibration_duration_s: float = 3.0,
         minimum_energy_threshold_db: float = 40.0,
         strict_min_duration: bool = False,
+        drop_trailing_silence: bool = False,
         inference_config=None,
         **kwargs,
     ):
@@ -83,6 +84,8 @@ class AuditokVADConfig(VoiceHubConfig):
             raise ValueError("`calibration_duration_s` must be greater than zero.")
         if not isinstance(strict_min_duration, bool):
             raise TypeError("`strict_min_duration` must be a boolean.")
+        if not isinstance(drop_trailing_silence, bool):
+            raise TypeError("`drop_trailing_silence` must be a boolean.")
 
         super().__init__(
             sample_rate=sample_rate,
@@ -92,6 +95,7 @@ class AuditokVADConfig(VoiceHubConfig):
             calibration_duration_s=calibration_duration_s,
             minimum_energy_threshold_db=minimum_energy_threshold_db,
             strict_min_duration=strict_min_duration,
+            drop_trailing_silence=drop_trailing_silence,
             inference_config=inference_config or {},
             **kwargs,
         )

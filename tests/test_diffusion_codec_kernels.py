@@ -119,6 +119,18 @@ def _codec_snake_betas() -> tuple[nn.Module, ...]:
 
 class DiffusionFusedModulateTests(unittest.TestCase):
 
+    def test_irodori_retains_bfloat16_gain_rounding_before_float32_modulation(self):
+        layer = IrodoriLowRankAdaLN(4, 2, 1e-6).to(torch.bfloat16)
+        inputs = torch.tensor([[[1.0, -0.5, 0.25, 0.75]]], dtype=torch.bfloat16)
+        # Output projections are zero-initialized in the published block.
+        shift = torch.zeros_like(inputs)
+        scale = torch.tensor([[[0.003, 0.006, -0.003, -0.006]]], dtype=torch.bfloat16)
+        condition = torch.cat([shift, scale, shift], dim=-1)
+        normalized = inputs.float() * torch.rsqrt(inputs.float().square().mean(-1, keepdim=True) + 1e-6)
+        expected = (normalized * (1.0 + scale) + shift).to(torch.bfloat16)
+        actual, _ = layer(inputs, condition)
+        torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+
     def test_broadcast_noncontiguous_forward_and_backward_match_reference(self):
         torch.manual_seed(101)
         hidden_states = (torch.randn(2, 7, 4, dtype=torch.float64).transpose(1, 2).requires_grad_())

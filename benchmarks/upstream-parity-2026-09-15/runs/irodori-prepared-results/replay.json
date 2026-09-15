@@ -1,0 +1,70 @@
+{
+  "cases": [
+    {
+      "name": "irodori-fp32-public-text",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/irodori-prepared-results/irodori-fp32-public-text/request.json",
+      "provenance": {
+        "model_type": "irodoritts",
+        "task": "text-to-speech",
+        "checkpoint": "Aratako/Irodori-TTS-500M-v3",
+        "repository": "https://github.com/Aratako/Irodori-TTS",
+        "source_revision": "eaf74d6a19138f743acb5b71a445fd25a57db987",
+        "resolved_source_revision": "eaf74d6a19138f743acb5b71a445fd25a57db987",
+        "checkout_status": "ready",
+        "timing_scope": "Exploratory public Japanese example, serial paired runs, 2 warmups and 10 repeats",
+        "sample_source": "https://huggingface.co/Aratako/Irodori-TTS-500M-v3/blob/236c1e56591279fc24e3c1bf6609fc06e48dde28/README.md",
+        "sample_scope": "Public model-card demonstration sentence; not a representative held-out evaluation corpus",
+        "reference_compatibility": "Original repository installed dependencies; both processes Python 3.11 and Torch 2.14.0+cu130; pinned tokenizer/codec artifacts; no original graph changes"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/irodoritts",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/irodoritts/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/voicehub-irodori-env/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "irodori-bf16-public-text",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/irodori-prepared-results/irodori-bf16-public-text/request.json",
+      "provenance": {
+        "model_type": "irodoritts",
+        "task": "text-to-speech",
+        "checkpoint": "Aratako/Irodori-TTS-500M-v3",
+        "repository": "https://github.com/Aratako/Irodori-TTS",
+        "source_revision": "eaf74d6a19138f743acb5b71a445fd25a57db987",
+        "resolved_source_revision": "eaf74d6a19138f743acb5b71a445fd25a57db987",
+        "checkout_status": "ready",
+        "timing_scope": "Exploratory public Japanese example, serial paired runs, 2 warmups and 10 repeats",
+        "sample_source": "https://huggingface.co/Aratako/Irodori-TTS-500M-v3/blob/236c1e56591279fc24e3c1bf6609fc06e48dde28/README.md",
+        "sample_scope": "Public model-card demonstration sentence; not a representative held-out evaluation corpus",
+        "reference_compatibility": "Original repository installed dependencies; both processes Python 3.11 and Torch 2.14.0+cu130; pinned tokenizer/codec artifacts; no original graph changes"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/irodoritts",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/irodoritts/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/voicehub-irodori-env/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

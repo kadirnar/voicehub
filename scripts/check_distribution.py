@@ -25,6 +25,10 @@ REPRESENTATIVE_PACKAGE_FILES = (
     ("voicehub/models/chatterbox/source/perth/perth_net/pretrained/implicit/"
      "perth_net_250000.pth.tar"),
     "voicehub/kernels/csrc/activations.cpp",
+    "voicehub/architectures/webrtc_vad/batch.c",
+    "voicehub/architectures/webrtc_vad/source/webrtc/common_audio/vad/webrtc_vad.c",
+    "voicehub/architectures/webrtc_vad/source/webrtc/common_audio/vad/include/webrtc_vad.h",
+    "voicehub/architectures/webrtc_vad/source/webrtc/rtc_base/checks.cc",
 )
 COMPLIANCE_NAME_TOKENS = ("LICENSE", "LICENCE", "NOTICE", "COPYING")
 
@@ -182,6 +186,13 @@ required = {
     ).is_file(),
     "kernel_source": files("voicehub").joinpath(
         "kernels", "csrc", "activations.cpp"
+    ).is_file(),
+    "webrtc_batch_source": files("voicehub").joinpath(
+        "architectures", "webrtc_vad", "batch.c"
+    ).is_file(),
+    "webrtc_vad_source": files("voicehub").joinpath(
+        "architectures", "webrtc_vad", "source", "webrtc", "common_audio",
+        "vad", "webrtc_vad.c"
     ).is_file(),
 }
 if not all(required.values()):

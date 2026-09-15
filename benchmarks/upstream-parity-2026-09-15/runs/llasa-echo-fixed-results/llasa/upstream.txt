@@ -1,0 +1,17 @@
+
+Loading weights:   0%|          | 0/147 [00:00<?, ?it/s]
+Loading weights:   1%|          | 1/147 [00:00<01:58,  1.24it/s]
+Loading weights:  95%|█████████▌| 140/147 [00:00<00:00, 208.46it/s]
+Loading weights: 100%|██████████| 147/147 [00:00<00:00, 160.82it/s]
+
+Loading weights:   0%|          | 0/811 [00:00<?, ?it/s]
+Loading weights: 100%|██████████| 811/811 [00:00<00:00, 14305.94it/s]
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer TokenizersBackend. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 627, in main
+    result = infer(sample)
+             ^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 120, in infer
+    codes = [int(token[4:-2]) for token in tokens if token.startswith("<|s_") and token.endswith("|>")]
+             ^^^^^^^^^^^^^^^^
+ValueError: invalid literal for int() with base 10: '44542|><|s_19818|><|s_40297|><|s_56630|><|s_27945|><|s_39223|><|s_44325|><|s_23846|><|s_55606|><|s_22825|><|s_39223|><|s_40553|><|s_43318|><|s_40553|><|s_39226|><|s_56694|><|s_22825|><|s_56630|><|s_2

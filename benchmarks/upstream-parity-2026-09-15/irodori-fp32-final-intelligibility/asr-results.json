@@ -1,0 +1,152 @@
+{
+  "status": "ok",
+  "task": "asr",
+  "samples": [
+    {
+      "id": "irodoritts--irodori-card-ja-1--upstream",
+      "input_sha256": "ae141f30622520de04a26f59bb0e80d20c2419de7d3debc30f02490bec4ceb70",
+      "warm_seconds": [
+        5.290480127001501
+      ],
+      "peak_cuda_memory_bytes": null,
+      "text": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059 \u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u8fbc\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u304a\u305d\u308c\u3044\u308a\u307e\u3059\u304c\u767a\u4fe1\u97f3\u306e\u5f8c\u306b\u3054\u8981\u4ef6 \u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044",
+      "reference": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002"
+    },
+    {
+      "id": "irodoritts--irodori-card-ja-1--voicehub",
+      "input_sha256": "4771676baef5611385bf9b8da9ca477697ee1afeca154d8e07ff983d993ce179",
+      "warm_seconds": [
+        5.318723920001503
+      ],
+      "peak_cuda_memory_bytes": null,
+      "text": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059 \u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u8fbc\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u304a\u305d\u308c\u3044\u308a\u307e\u3059\u304c\u767a\u4fe1\u97f3\u306e\u5f8c\u306b\u3054\u8981\u4ef6 \u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044",
+      "reference": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002"
+    }
+  ],
+  "runtime": {
+    "python": "3.12.13",
+    "torch": "2.8.0+cu128",
+    "device": "cpu",
+    "threads": 1,
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "packages": {
+      "transformers": "5.18.0.dev0",
+      "h11": "0.16.0",
+      "regex": "2026.9.10",
+      "PyYAML": "6.0.3",
+      "annotated-doc": "0.0.5",
+      "httpcore": "1.0.9",
+      "soundfile": "0.14.0",
+      "idna": "3.19",
+      "mpmath": "1.3.0",
+      "markdown-it-py": "4.2.0",
+      "rich": "15.0.0",
+      "nvidia-cufile-cu12": "1.13.1.3",
+      "typing_extensions": "4.16.0",
+      "Jinja2": "3.1.6",
+      "nvidia-cusolver-cu12": "11.7.3.90",
+      "nvidia-nvjitlink-cu12": "12.8.93",
+      "MarkupSafe": "3.0.3",
+      "fsspec": "2026.7.0",
+      "httpx": "0.28.1",
+      "hf-xet": "1.6.0",
+      "shellingham": "1.5.4",
+      "nvidia-cusparselt-cu12": "0.7.1",
+      "nvidia-cufft-cu12": "11.3.3.83",
+      "nvidia-nccl-cu12": "2.27.3",
+      "nvidia-cuda-cupti-cu12": "12.8.90",
+      "Pygments": "2.21.0",
+      "filelock": "3.32.6",
+      "click": "8.5.0",
+      "mdurl": "0.1.2",
+      "anyio": "4.15.1",
+      "safetensors": "0.8.0",
+      "setuptools": "80.10.2",
+      "tqdm": "4.70.1",
+      "typer": "0.27.2",
+      "nvidia-curand-cu12": "10.3.9.90",
+      "nvidia-cuda-nvrtc-cu12": "12.8.93",
+      "packaging": "26.3",
+      "nvidia-cuda-runtime-cu12": "12.8.90",
+      "pycparser": "3.0",
+      "certifi": "2026.7.22",
+      "huggingface_hub": "1.31.0",
+      "nvidia-nvtx-cu12": "12.8.90",
+      "cffi": "2.1.1",
+      "tokenizers": "0.23.2",
+      "nvidia-cublas-cu12": "12.8.4.1",
+      "nvidia-cudnn-cu12": "9.10.2.21",
+      "nvidia-cusparse-cu12": "12.5.8.93",
+      "torchaudio": "2.8.0",
+      "networkx": "3.6.1",
+      "numpy": "2.5.3",
+      "triton": "3.4.0",
+      "sympy": "1.14.0",
+      "torch": "2.8.0"
+    },
+    "platform": "Linux-7.2.4-3-cachyos-x86_64-with-glibc2.44",
+    "worker_sha256": "2912c7b99ce057873b5dde06d0106550893dea3ff08d2f946bcf8d5531adfdc1",
+    "repository_revision": "3f162ca5fd2daef9cb36841be1337ad657addbfe",
+    "repository_dirty": false,
+    "repository_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "checkpoint_sha256": {
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/config.json": "e6a2b489da1b5aed65a8eb8d1e7466fa867ad5643a8bc138ba708bd56b2875c4",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/added_tokens.json": "9715fd2243b6f06a5858b5e32950d2853f73dd5bc201aafcf76f5082a2d8acd1",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/generation_config.json": "71565b8ef50d0bf7a1193ed4bbed195b94e70c18894d81bba2f1233dcec3ab53",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/merges.txt": "2df2990a395e35e8dfbc7511e08c12d56018d8d04691e0133e5d63b21e154dc6",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/normalizer.json": "bf1c507dc8724ca9cf9903640dacfb69dae2f00edee4f21ceba106a7392f26dd",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/preprocessor_config.json": "9b5cd03a36fbb8a627c64d98a5b5b126ead95a77720723944487311f0110b666",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/special_tokens_map.json": "e67ae3a0aaa99abcd9f187138e12db1f65c16a14761c50ef10eef2c174a7a691",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/tokenizer.json": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/tokenizer_config.json": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/vocab.json": "8f680bba319e01a653d2e8a5dbc17a9157179e0576e6ce74ce0c06356c6e24f9",
+    "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d/model.safetensors": "1d7734884874f1a1513ed9aa760a4f8e97aaa02fd6d93a3a85d27b2ae9ca596b"
+  },
+  "load_seconds": 1.819256224000128,
+  "load_peak_cuda_memory_bytes": null,
+  "process_peak_rss_bytes": 1973886976,
+  "returncode": 0,
+  "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_transformers",
+  "command": [
+    "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_transformers/.venv-parity/bin/python",
+    "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+    "upstream",
+    "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-fp32-final-intelligibility/asr-results.request.json",
+    "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-fp32-final-intelligibility/asr-results.json"
+  ],
+  "wall_seconds": 14.591017168997496,
+  "log": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-fp32-final-intelligibility/asr-results.log",
+  "request_sha256": "6c4de527ebb8e7f7f82d8c62d01779198f05a211f1a517e56b4c8ffb90ad023e",
+  "request": {
+    "model_type": "asr_transformers",
+    "task": "asr",
+    "device": "cpu",
+    "seed": 123,
+    "threads": 1,
+    "warmup": 0,
+    "repeats": 1,
+    "samples": [
+      {
+        "id": "irodoritts--irodori-card-ja-1--upstream",
+        "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-fp32-final-intelligibility/asr-inputs/irodoritts--irodori-card-ja-1--upstream.wav",
+        "reference": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002",
+        "sha256": "ae141f30622520de04a26f59bb0e80d20c2419de7d3debc30f02490bec4ceb70"
+      },
+      {
+        "id": "irodoritts--irodori-card-ja-1--voicehub",
+        "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-fp32-final-intelligibility/asr-inputs/irodoritts--irodori-card-ja-1--voicehub.wav",
+        "reference": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002",
+        "sha256": "4771676baef5611385bf9b8da9ca477697ee1afeca154d8e07ff983d993ce179"
+      }
+    ],
+    "checkpoint": "/home/kadir/.cache/huggingface/hub/models--openai--whisper-small/snapshots/973afd24965f72e36ca33b3055d56a652f456b4d",
+    "config": {
+      "torch_dtype": "float32"
+    },
+    "generation": {
+      "language": "japanese",
+      "task": "transcribe"
+    }
+  }
+}

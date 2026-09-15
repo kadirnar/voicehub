@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 463, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 55, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/audio_modeling_utils.py", line 239, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/vad_nemo/modeling_vad_nemo.py", line 69, in _load_pretrained_model
+    artifacts = resolve_marblenet_vad_artifacts(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/vad_nemo/artifacts.py", line 112, in resolve_marblenet_vad_artifacts
+    return _local_artifacts(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/vad_nemo/artifacts.py", line 94, in _local_artifacts
+    raise FileNotFoundError(
+FileNotFoundError: No complete native MarbleNet VAD artifact was found in /home/kadir/.cache/huggingface/hub/models--nvidia--Frame_VAD_Multilingual_MarbleNet_v2.0/blobs. Expected `model.safetensors` plus `config.json`, or one reviewed `.nemo`/`.ckpt` file for explicit conversion.

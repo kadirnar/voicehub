@@ -1,0 +1,18 @@
+Timeout (0:00:45)!
+Thread 0x00007fc9cab17780 (most recent call first):
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/ssl.py", line 1115 in read
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/ssl.py", line 1263 in recv_into
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/socket.py", line 720 in readinto
+  File "/home/kadir/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/http/client.py", line 484 in read
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub_transport.py", line 1027 in _download_atomic
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub_transport.py", line 984 in _download_or_reuse
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub_transport.py", line 307 in download_hugging_face_file
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub.py", line 45 in resolve_pretrained_file
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/qwen3_asr/artifacts.py", line 118 in _resolve_optional_remote
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/qwen3_asr/artifacts.py", line 177 in resolve_qwen3_asr_artifacts
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/qwen3_asr/runtime.py", line 111 in load_qwen3_asr_runtime
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/asr_qwen3/modeling_asr_qwen3.py", line 118 in _load_pretrained_model
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/audio_modeling_utils.py", line 239 in load
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 39 in prepare
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 337 in main
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 391 in <module>
