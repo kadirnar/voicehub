@@ -94,12 +94,12 @@ def resolve_parlertts_artifacts(
             raise ValueError("Native Parler-TTS checkpoints use Safetensors.")
         root = checkpoint.parent
         artifacts = ParlerTTSArtifacts(
-            source=str(local.resolve()),
+            source=str(local.absolute()),
             revision=None,
             config=_required(root, _CONFIG_FILE),
             generation_config=_required(root, _GENERATION_CONFIG_FILE),
             tokenizer_model=_required(root, _TOKENIZER_MODEL_FILE),
-            checkpoint=checkpoint.resolve(),
+            checkpoint=checkpoint.absolute(),
             official_snapshot=False,
         )
     else:

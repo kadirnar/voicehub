@@ -17,23 +17,9 @@
     ]
   },
   "compatibility": {
-    "sample_rates": [
-      8000,
-      16000,
-      32000,
-      48000
-    ],
-    "frame_durations_ms": [
-      10,
-      20,
-      30
-    ],
-    "modes": [
-      0,
-      1,
-      2,
-      3
-    ],
+    "sample_rates": [8000, 16000, 32000, 48000],
+    "frame_durations_ms": [10, 20, 30],
+    "modes": [0, 1, 2, 3],
     "state": "per-stream adaptive GMM, filter, resampler, and hangover state"
   },
   "training": {
@@ -45,32 +31,10 @@
     "randomized_sequential_decisions": 19200,
     "decision_mismatches": 0,
     "matrix": {
-      "sample_rates": [
-        8000,
-        16000,
-        32000,
-        48000
-      ],
-      "frame_durations_ms": [
-        10,
-        20,
-        30
-      ],
-      "modes": [
-        0,
-        1,
-        2,
-        3
-      ],
+      "sample_rates": [8000, 16000, 32000, 48000],
+      "frame_durations_ms": [10, 20, 30],
+      "modes": [0, 1, 2, 3],
       "frames_per_combination": 400
     }
-  },
-  "native_acceleration": {
-    "source": "voicehub/architectures/webrtc_vad/source/webrtc",
-    "batch_framing": "voicehub/architectures/webrtc_vad/batch.c",
-    "loading": "Compiled lazily with local C/C++ compilers on Linux or macOS; cached by source/build digest. Python fallback is used when compilation is unavailable.",
-    "tested_platform": "Linux x86_64, GCC 16.2.1",
-    "differential_validation": "48 configurations covering all supported rates, durations, and modes; 40 sequential frames and a padded tail per configuration, repeated with fresh request state.",
-    "runtime_observability": "VADOutput.metadata.execution_engine identifies compiled-c or the Python fallback reason."
   }
 }

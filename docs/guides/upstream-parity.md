@@ -146,10 +146,12 @@ with upstream-generated phonemes: the latter only verify the downstream graph.
 
 ## Findings from the September 2026 audit
 
-The repository's `benchmarks/upstream-parity-2026-09-15/` audit contains
-source revisions, individual attempts, raw measurements, and listening
-outputs. Full quality and performance parity across the 68 integrations has
-**not** been established.
+The local audit records source revisions, individual attempts, raw measurements,
+and listening outputs under the ignored `.cache/upstream-parity/` directory.
+Keep generated WAV/NumPy files, JSON reports, logs, and screenshots out of pull
+requests. Commit the comparison code, tests, and written findings instead.
+Full quality and performance parity across the 68 integrations has **not**
+been established. See [the comparison status](upstream-parity-status.md).
 
 The audit fixed English-only Whisper language handling, Auditok's default
 trailing-silence behavior, and recovery of download locks left by dead local

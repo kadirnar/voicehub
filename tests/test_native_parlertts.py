@@ -421,6 +421,34 @@ class NativeParlerTTSGraphTests(unittest.TestCase):
         for name, expected in source.state_dict().items():
             torch.testing.assert_close(target.state_dict()[name], expected)
 
+    def test_snapshot_symlink_preserves_checkpoint_name_and_sibling_files(self):
+        source = ParlerTTSForConditionalGeneration(_tiny_config())
+        target = ParlerTTSForConditionalGeneration(_tiny_config())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blob = root / "blobs" / "content-hash"
+            blob.parent.mkdir()
+            snapshot = root / "snapshots" / "revision"
+            snapshot.mkdir(parents=True)
+            checkpoint = snapshot / "model.safetensors"
+            export_parlertts_checkpoint(source, checkpoint)
+            checkpoint.rename(blob)
+            try:
+                checkpoint.symlink_to(blob)
+            except OSError as error:
+                self.skipTest(f"Symlinks are unavailable: {error}")
+            for name in ("config.json", "generation_config.json", "spiece.model"):
+                (snapshot / name).write_text("fixture", encoding="utf-8")
+            for location in (snapshot, checkpoint):
+                with self.subTest(location=location):
+                    artifacts = resolve_parlertts_artifacts(location)
+                    self.assertEqual(artifacts.checkpoint, checkpoint)
+                    self.assertEqual(artifacts.config.parent, snapshot)
+                    self.assertEqual(artifacts.source, str(location))
+                    load_parlertts_checkpoint(target, artifacts.checkpoint)
+            for name, expected in source.state_dict().items():
+                torch.testing.assert_close(target.state_dict()[name], expected)
+
     def test_training_export_is_a_complete_fresh_inference_snapshot(self):
         config = _tiny_config()
         runtime = ParlerTTSForConditionalGeneration(config)

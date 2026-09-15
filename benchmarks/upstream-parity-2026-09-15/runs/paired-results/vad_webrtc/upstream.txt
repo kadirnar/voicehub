@@ -1,9 +1,0 @@
-Traceback (most recent call last):
-  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 173, in main
-    infer = prepare(request, side)
-            ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 109, in prepare
-    import webrtcvad
-  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_webrtc/webrtcvad.py", line 1, in <module>
-    import pkg_resources
-ModuleNotFoundError: No module named 'pkg_resources'

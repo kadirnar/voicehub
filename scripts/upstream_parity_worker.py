@@ -176,6 +176,38 @@ def prepare(request, side):
             }
 
         return infer
+    if model_type == "parlertts":
+        from parler_tts import ParlerTTSForConditionalGeneration
+        from transformers import AutoTokenizer
+
+        tokenizer = AutoTokenizer.from_pretrained(request["checkpoint"])
+        model = ParlerTTSForConditionalGeneration.from_pretrained(
+            request["checkpoint"],
+            torch_dtype=torch.float32,
+            attn_implementation=config.get("attention_implementation", "sdpa"),
+        ).to(device).eval()
+
+        def infer(sample):
+            options = dict(generation)
+            description = options.pop("description")
+            conditioning = tokenizer(description, return_tensors="pt").to(device)
+            prompt = tokenizer(sample["text"], return_tensors="pt").to(device)
+            audio = model.generate(
+                input_ids=conditioning.input_ids,
+                attention_mask=conditioning.attention_mask,
+                prompt_input_ids=prompt.input_ids,
+                prompt_attention_mask=prompt.attention_mask,
+                **options,
+            )
+            return {
+                "audio_array": audio.detach().float().cpu().numpy().reshape(-1),
+                "sample_rate": model.config.sampling_rate,
+                "metadata": {
+                    "description": description
+                },
+            }
+
+        return infer
     if model_type == "irodoritts":
         from unittest.mock import patch
 

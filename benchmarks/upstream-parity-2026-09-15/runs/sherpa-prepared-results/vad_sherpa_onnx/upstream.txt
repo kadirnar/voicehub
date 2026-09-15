@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_sherpa_vad_worker.py", line 24, in main
-    import sherpa_onnx
-  File "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_sherpa_onnx/.venv/lib/python3.11/site-packages/sherpa_onnx/__init__.py", line 1, in <module>
-    from sherpa_onnx.lib._sherpa_onnx import (
-ImportError: cannot import name 'GenerationConfig' from 'sherpa_onnx.lib._sherpa_onnx' (/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_sherpa_onnx/.venv/lib/python3.11/site-packages/sherpa_onnx/lib/_sherpa_onnx.cpython-311-x86_64-linux-gnu.so)

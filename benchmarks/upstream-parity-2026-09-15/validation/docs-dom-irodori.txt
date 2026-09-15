@@ -1,9 +1,0 @@
-{
-  "representative_routes": 11,
-  "top_level_navigation": [
-    "Get started",
-    "Models",
-    "Train",
-    "Optimize"
-  ]
-}
