@@ -1,0 +1,22 @@
+{
+  "model_type": "kokoro",
+  "task": "tts",
+  "device": "cpu",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 1,
+  "repeats": 5,
+  "samples": [
+    {
+      "id": "1272-128104-0000",
+      "text": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "public_transcript_source": "LibriSpeech clean validation 1272-128104-0000"
+    }
+  ],
+  "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/kokoro",
+  "config": {
+    "torch_dtype": "float32",
+    "allow_legacy_checkpoint_conversion": true
+  },
+  "evaluation_variant": "builtin_default"
+}

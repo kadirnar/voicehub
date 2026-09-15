@@ -14,7 +14,7 @@ from voicehub.models.vad_webrtc.configuration_vad_webrtc import WebRTCVADConfig
 from voicehub.vad_utils import frame_probabilities_to_segments
 
 
-def _pcm16_samples(waveform: Any) -> list[int]:
+def _pcm16_tensor(waveform: Any) -> Any:
     """Convert normalized audio with the reference scalar rounding rules."""
     import torch
 
@@ -28,7 +28,11 @@ def _pcm16_samples(waveform: Any) -> list[int]:
         posinf=0.0,
         neginf=0.0,
     )
-    return (values.clamp(-1.0, 1.0).mul(32767.0).round().to(torch.int32).tolist())
+    return values.clamp(-1.0, 1.0).mul(32767.0).round().to(torch.int16).contiguous()
+
+
+def _pcm16_samples(waveform: Any) -> list[int]:
+    return _pcm16_tensor(waveform).tolist()
 
 
 class WebRTCVADForVoiceActivityDetection(PreTrainedVADModel):
@@ -56,7 +60,10 @@ class WebRTCVADForVoiceActivityDetection(PreTrainedVADModel):
         return "cpu"
 
     def _load_pretrained_model(self) -> None:
+        from voicehub.architectures.webrtc_vad.acceleration import get_accelerator
+
         self.model = NativeWebRTCVAD(self.config.aggressiveness)
+        self._accelerator, self._acceleration_status = get_accelerator()
 
     def _detect(
         self,
@@ -98,17 +105,23 @@ class WebRTCVADForVoiceActivityDetection(PreTrainedVADModel):
             raise ValueError(
                 "WebRTC requires the configured 10/20/30 ms frame size; "
                 f"expected {frame_samples} samples.")
-        pcm = _pcm16_samples(materialized.waveform)
-        vad = NativeWebRTCVAD(self.config.aggressiveness)
-        flags = []
-        for start in range(0, len(pcm), frame_samples):
-            frame = pcm[start:start + frame_samples]
-            if len(frame) < frame_samples:
-                frame.extend([0] * (frame_samples - len(frame)))
-            flags.append(1.0 if vad.is_speech(
-                frame,
-                materialized.sampling_rate,
-            ) else 0.0)
+        accelerator = getattr(self, "_accelerator", None)
+        if accelerator is not None:
+            flags = accelerator(
+                _pcm16_tensor(materialized.waveform), materialized.sampling_rate, frame_samples,
+                self.config.aggressiveness)
+        else:
+            pcm = _pcm16_samples(materialized.waveform)
+            vad = NativeWebRTCVAD(self.config.aggressiveness)
+            flags = []
+            for start in range(0, len(pcm), frame_samples):
+                frame = pcm[start:start + frame_samples]
+                if len(frame) < frame_samples:
+                    frame.extend([0] * (frame_samples - len(frame)))
+                flags.append(1.0 if vad.is_speech(
+                    frame,
+                    materialized.sampling_rate,
+                ) else 0.0)
         postprocessing = VADInferenceConfig(
             threshold=0.5,
             onset=0.5,
@@ -143,6 +156,7 @@ class WebRTCVADForVoiceActivityDetection(PreTrainedVADModel):
                 "aggressiveness": self.config.aggressiveness,
                 "frame_duration_ms": self.config.frame_duration_ms,
                 "frame_scores_available": False,
+                "execution_engine": getattr(self, "_acceleration_status", "python"),
             },
         )
 

@@ -1,0 +1,34 @@
+{
+  "status": "invalid-recognizer-configuration",
+  "scope": "Single-recognizer intelligibility proxy; not MOS, a listening panel, or full quality parity.",
+  "resampling": "FFmpeg mono 16 kHz PCM16, identical conversion for both sides",
+  "ffmpeg_version": "ffmpeg version n9.0.1 Copyright (c) 2000-2026 the FFmpeg developers",
+  "recognizer_evidence": "asr-results.json",
+  "scores": [
+    {
+      "model_type": "irodoritts",
+      "side": "upstream",
+      "sample_id": "irodori-card-ja-1",
+      "report": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-bf16-scoring-source.json",
+      "source_audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-bf16-public-text/upstream-irodori-card-ja-1.wav",
+      "source_audio_sha256": "abb6e601f54cffa2b7e5e5a5274d5f424f68d195051fe41ef3e7d81f47e6b937",
+      "reference": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002",
+      "transcript": " The most important thing is that the world is not only the world, but the world is the world's world.",
+      "wer": 4.2,
+      "cer": 1.4107142857142858
+    },
+    {
+      "model_type": "irodoritts",
+      "side": "voicehub",
+      "sample_id": "irodori-card-ja-1",
+      "report": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-bf16-scoring-source.json",
+      "source_audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/irodori-bf16-public-text/voicehub-irodori-card-ja-1.wav",
+      "source_audio_sha256": "92bab35109231246f3985d27cdab6d324078db9e566914954287e79a6b1c5c88",
+      "reference": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002",
+      "transcript": " or the other thing is that we are going to be able to see the same thing as the other thing.",
+      "wer": 4.2,
+      "cer": 1.2678571428571428
+    }
+  ],
+  "exclusion_reason": "This attempt used an English-only tiny.en recognizer on Japanese text; these scores are not intelligibility evidence."
+}

@@ -38,6 +38,27 @@ if torch is not None:
 @unittest.skipUnless(torch is not None, "Native Silero VAD uses PyTorch")
 class SileroVADConfigurationTests(unittest.TestCase):
 
+    def test_sherpa_scorer_consumes_overlapping_context_without_zero_prefix(self):
+        from voicehub.models.vad_sherpa_onnx.streaming import NativeSileroScorer
+
+        model = SileroVADModel(SileroVADConfig(sampling_rate=16_000)).eval()
+        scorer = NativeSileroScorer(model)
+        self.assertEqual(scorer.window_size, 576)
+        self.assertEqual(scorer.window_shift, 512)
+        waveform = torch.randn(3 * 512 + 64, generator=torch.Generator().manual_seed(37))
+        state = model.initial_state(1)
+        expected = []
+        with torch.inference_mode():
+            recurrent = (state.hidden, state.cell)
+            for start in range(0, 3 * 512, 512):
+                values = waveform[start:start + 576].unsqueeze(0)
+                probabilities, _, recurrent = model.forward_with_context(values, recurrent)
+                expected.append(float(probabilities.item()))
+        for _ in range(2):
+            actual = [scorer.compute(waveform[start:start + 576]) for start in range(0, 3 * 512, 512)]
+            self.assertEqual(actual, expected)
+            scorer.reset()
+
     def test_official_sample_rate_layouts_are_derived_and_round_trip(self):
         sixteen = SileroVADConfig.from_dict({
             "sampling_rate": 16_000,
@@ -135,6 +156,33 @@ class SileroVADModelTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "Context"):
             model(torch.zeros(1, 512), state=bad_state)
+
+    def test_complete_audio_matches_public_frames_with_initial_state_and_padding(self):
+        for rate in (8_000, 16_000):
+            with self.subTest(sampling_rate=rate):
+                model = SileroVADModel(SileroVADConfig(sampling_rate=rate)).eval()
+                width = model.config.frame_size
+                initial = model(torch.randn(2, width)).state
+                audio = torch.randn(2, 3 * width + 17)
+                actual = model.frame_probabilities(audio, state=initial)
+                padded = torch.nn.functional.pad(audio, (0, width - 17))
+                state, expected = initial, []
+                for frame in padded.split(width, dim=1):
+                    output = model(frame, state=state)
+                    expected.append(output.probabilities)
+                    state = output.state
+                torch.testing.assert_close(actual.probabilities, torch.cat(expected, dim=1), rtol=0, atol=0)
+                for name in ("hidden", "cell", "context"):
+                    torch.testing.assert_close(
+                        getattr(actual.state, name), getattr(state, name), rtol=0, atol=0)
+                self.assertEqual(actual.valid_samples, audio.shape[1])
+
+    def test_complete_audio_still_validates_before_scoring(self):
+        model = SileroVADModel().eval()
+        with self.assertRaisesRegex(ValueError, "NaN"):
+            model.frame_probabilities(torch.full((1, 1024), float("nan")))
+        with self.assertRaisesRegex(TypeError, "float32"):
+            model.double().frame_probabilities(torch.zeros(1, 1024))
 
     def test_stream_sessions_are_isolated_and_resettable(self):
         model = SileroVADModel().eval()

@@ -19,23 +19,21 @@ def _postprocess_segments(
     *,
     duration: float,
     min_speech_duration_ms: int,
-    min_silence_duration_ms: int,
     speech_pad_ms: int,
     max_speech_duration_s: float | None,
 ) -> tuple[SpeechSegment, ...]:
     minimum_speech = min_speech_duration_ms / 1_000.0
     retained = tuple(segment for segment in segments if segment.end - segment.start >= minimum_speech)
-    joined = merge_speech_segments(
-        retained,
-        max_gap=min_silence_duration_ms / 1_000.0,
-    )
+    # The FSMN endpoint decoder already applies the silence duration. Its
+    # lookback/lookahead can leave a shorter gap between completed regions;
+    # applying the duration again would erase valid upstream boundaries.
     padding = speech_pad_ms / 1_000.0
     padded = tuple(
         SpeechSegment(
             start=max(0.0, segment.start - padding),
             end=min(duration, segment.end + padding),
             score=segment.score,
-        ) for segment in joined if min(duration, segment.end + padding) > max(0.0, segment.start - padding))
+        ) for segment in retained if min(duration, segment.end + padding) > max(0.0, segment.start - padding))
     merged = merge_speech_segments(padded)
     if max_speech_duration_s is None:
         return merged
@@ -257,7 +255,6 @@ class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
             raw_segments,
             duration=materialized.duration,
             min_speech_duration_ms=min_speech_duration_ms,
-            min_silence_duration_ms=min_silence_duration_ms,
             speech_pad_ms=speech_pad_ms,
             max_speech_duration_s=max_speech_duration_s,
         )

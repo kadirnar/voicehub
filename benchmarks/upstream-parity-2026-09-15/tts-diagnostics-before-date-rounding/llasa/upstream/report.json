@@ -1,0 +1,11 @@
+{
+  "sample_rate": 16000,
+  "metadata": {
+    "audio_tokens": 511,
+    "speech_end_reached": false,
+    "top_k": 50,
+    "codec_recipe": "Authors' HKUSTAudio/xcodec2-hf Transformers release"
+  },
+  "request_sha256": "095f0119b98eb0b67a9c9bc8a8bb6f69f9095cff4b36eccbeca2a825421a645f",
+  "worker_sha256": "5a45c4a79ac7da6594bf4ff0fa66e424596cb600952cf8727cb19eb769fbfa41"
+}

@@ -215,6 +215,12 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
         )
 
     def _normalized_language(self, language: str | None) -> str | None:
+        if self.generation_adapter is not None and not self.generation_adapter.token_set.is_multilingual:
+            # English-only releases have no language-control tokens. They
+            # still accept an explicit English language, as upstream does.
+            if language is None or language.strip().lower() in {"en", "english", "<|en|>"}:
+                return "en"
+            raise ValueError("This English-only Whisper checkpoint supports only English.")
         if language is None:
             return None
         if self.tokenizer is None or self.generation_adapter is None:
@@ -381,7 +387,7 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
                     use_cache=True,
                 ),
                 task=task,
-                language=requested_language,
+                language=(requested_language if self.generation_adapter.token_set.is_multilingual else None),
                 return_timestamps=bool(return_timestamps),
                 suppress_tokens=tuple(self._generation_values.get("suppress_tokens", ())),
             )

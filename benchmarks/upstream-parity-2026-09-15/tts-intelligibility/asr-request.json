@@ -1,0 +1,71 @@
+{
+  "model_type": "asr_whisper",
+  "task": "asr",
+  "device": "cpu",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 0,
+  "repeats": 1,
+  "samples": [
+    {
+      "id": "echo--1272-128104-0000--upstream",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/tts-intelligibility/asr-inputs/echo--1272-128104-0000--upstream.wav",
+      "reference": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "sha256": "12e07a02853d3db6b8e2142eb95f4c0829f50461b39bb0518d26ffb5f5202f3d"
+    },
+    {
+      "id": "echo--1272-128104-0000--voicehub",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/tts-intelligibility/asr-inputs/echo--1272-128104-0000--voicehub.wav",
+      "reference": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "sha256": "761b827186b53975342fc9e6282cf095970ebce0c5d1a26153dcb7ce5acc1196"
+    },
+    {
+      "id": "llasa--1272-128104-0000--upstream",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/tts-intelligibility/asr-inputs/llasa--1272-128104-0000--upstream.wav",
+      "reference": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "sha256": "51a8f11496c16ea0b6c5667d324c1f84a6d0d4e28f6d760fb7d8339c3df96e06"
+    },
+    {
+      "id": "llasa--1272-128104-0000--voicehub",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/tts-intelligibility/asr-inputs/llasa--1272-128104-0000--voicehub.wav",
+      "reference": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "sha256": "f7522d770df85fb675d3ead0d183ce271ed85b89f9249ab102f1d86aba89f4e8"
+    },
+    {
+      "id": "dia--1272-128104-0000--upstream",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/tts-intelligibility/asr-inputs/dia--1272-128104-0000--upstream.wav",
+      "reference": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "sha256": "bfe9f473e5307687710fd752c1e0fb170f489eec8e246b21c5bc11b49164539d"
+    },
+    {
+      "id": "dia--1272-128104-0000--voicehub",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/tts-intelligibility/asr-inputs/dia--1272-128104-0000--voicehub.wav",
+      "reference": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "sha256": "d4250eb316fc554e8856c2ddd5b1441ba9ccc828eba5d179963fde7c98e5203f"
+    },
+    {
+      "id": "kokoro--1272-128104-0000--upstream",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/tts-intelligibility/asr-inputs/kokoro--1272-128104-0000--upstream.wav",
+      "reference": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "sha256": "f264f50b58b4b120e0975029f1b106e92a45f910696311f61d8082041d6c3fd8"
+    },
+    {
+      "id": "kokoro--1272-128104-0000--voicehub",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/tts-intelligibility/asr-inputs/kokoro--1272-128104-0000--voicehub.wav",
+      "reference": "Mister quilter is the apostle of the middle classes and we are glad to welcome his gospel.",
+      "sha256": "f264f50b58b4b120e0975029f1b106e92a45f910696311f61d8082041d6c3fd8"
+    }
+  ],
+  "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/whisper-tiny.en",
+  "upstream_checkpoint": "tiny.en",
+  "upstream_weights": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/openai-whisper",
+  "config": {
+    "torch_dtype": "float32"
+  },
+  "generation": {
+    "language": "en",
+    "return_timestamps": false,
+    "num_beams": 1
+  },
+  "hf_conversion_source": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_transformers/src/transformers/models/whisper/convert_openai_to_hf.py"
+}

@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 188, in main
+    result = infer(sample)
+             ^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 47, in infer
+    out = model.transcribe(audio, sampling_rate=sample["sampling_rate"], **generation)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/audio_modeling_utils.py", line 596, in transcribe
+    return self.forward(
+           ^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/audio_modeling_utils.py", line 405, in forward
+    output = self._inference_callable()(**model_inputs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/asr_whisper_native/modeling_asr_whisper_native.py", line 359, in _transcribe
+    requested_language = self._normalized_language(language)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/asr_whisper_native/modeling_asr_whisper_native.py", line 226, in _normalized_language
+    raise ValueError(
+ValueError: Language 'en' is not declared by the checkpoint's generation configuration.

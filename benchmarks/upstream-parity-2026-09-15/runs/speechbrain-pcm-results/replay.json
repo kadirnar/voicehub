@@ -1,0 +1,33 @@
+{
+  "cases": [
+    {
+      "name": "vad_speechbrain",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/speechbrain-pcm-results/vad_speechbrain/request.json",
+      "provenance": {
+        "model_type": "vad_speechbrain",
+        "task": "voice-activity-detection",
+        "checkpoint": "speechbrain/vad-crdnn-libriparty",
+        "repository": "https://github.com/speechbrain/speechbrain",
+        "source_revision": null,
+        "resolved_source_revision": "89ead74d163463d30c62329a09cfdb4c54f5abc1",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_speechbrain",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_speechbrain/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

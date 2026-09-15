@@ -1,0 +1,26 @@
+{
+  "model_type": "irodoritts",
+  "task": "tts",
+  "device": "cuda",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 2,
+  "repeats": 10,
+  "samples": [
+    {
+      "id": "irodori-card-ja-1",
+      "text": "\u304a\u96fb\u8a71\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059\u3002\u305f\u3060\u3044\u307e\u96fb\u8a71\u304c\u5927\u5909\u6df7\u307f\u5408\u3063\u3066\u304a\u308a\u307e\u3059\u3002\u6050\u308c\u5165\u308a\u307e\u3059\u304c\u3001\u767a\u4fe1\u97f3\u306e\u3042\u3068\u306b\u3001\u3054\u7528\u4ef6\u3092\u304a\u8a71\u3057\u304f\u3060\u3055\u3044\u3002"
+    }
+  ],
+  "checkpoint": "/home/kadir/.cache/huggingface/hub/models--Aratako--Irodori-TTS-500M-v3/snapshots/236c1e56591279fc24e3c1bf6609fc06e48dde28",
+  "config": {
+    "codec_name_or_path": "/home/kadir/.cache/huggingface/hub/models--Aratako--Semantic-DACVAE-Japanese-32dim/snapshots/47376ee24834d7a05a48ebabfe3cde29b3c5e214",
+    "tokenizer_name_or_path": "/home/kadir/.cache/huggingface/hub/models--llm-jp--llm-jp-3-150m/snapshots/b112feef602fff752e4dac4c30af6a2c2fa41c7a",
+    "model_precision": "bf16",
+    "codec_precision": "fp32"
+  },
+  "generation": {
+    "no_reference": true,
+    "num_steps": 40
+  }
+}

@@ -79,6 +79,8 @@ class LlasaConfig(VoiceHubConfig):
         max_total_tokens: int = 2_048,
         temperature: float = 0.8,
         top_p: float = 1.0,
+        top_k: int = 50,
+        date_string: str | None = None,
         sample_rate: int = 16_000,
         trust_remote_code: bool = False,
         use_safetensors: bool | None = None,
@@ -107,6 +109,8 @@ class LlasaConfig(VoiceHubConfig):
         self.max_total_tokens = max_total_tokens
         self.temperature = temperature
         self.top_p = top_p
+        self.top_k = top_k
+        self.date_string = date_string
         self.trust_remote_code = trust_remote_code
         self.use_safetensors = use_safetensors
         self.model_kwargs = {} if model_kwargs is None else dict(model_kwargs)
@@ -169,6 +173,13 @@ class LlasaConfig(VoiceHubConfig):
         self.top_p = _sampling_value(self.top_p, name="top_p")
         if not 0.0 < self.top_p <= 1.0:
             raise ValueError("`top_p` must be in the interval (0, 1].")
+        if isinstance(self.top_k, bool) or not isinstance(self.top_k, int):
+            raise TypeError("`top_k` must be an integer.")
+        if self.top_k < 0:
+            raise ValueError("`top_k` cannot be negative; use zero to disable filtering.")
+        if self.date_string is not None and (not isinstance(self.date_string, str) or
+                                             not self.date_string.strip()):
+            raise ValueError("`date_string` must be a non-empty string or None.")
         if not isinstance(self.trust_remote_code, bool):
             raise TypeError("`trust_remote_code` must be a boolean.")
         if self.trust_remote_code:

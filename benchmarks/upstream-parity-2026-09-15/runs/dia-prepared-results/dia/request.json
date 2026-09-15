@@ -1,0 +1,28 @@
+{
+  "model_type": "dia",
+  "task": "tts",
+  "device": "cuda",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 1,
+  "repeats": 5,
+  "samples": [
+    {
+      "id": "hello",
+      "text": "[S1] Hello, world. This is a speech quality comparison. [S2] We are testing the same model with the same settings."
+    }
+  ],
+  "diagnostics_after_seconds": 45,
+  "checkpoint": "/home/kadir/.cache/huggingface/hub/models--nari-labs--Dia-1.6B-0626/snapshots/ef2795fcc29c5abe6ffc91fd33808588b49bbc66",
+  "config": {
+    "compute_dtype": "float32"
+  },
+  "generation": {
+    "max_new_tokens": 512,
+    "do_sample": true,
+    "guidance_scale": 3.0,
+    "temperature": 1.8,
+    "top_p": 0.9,
+    "top_k": 45
+  }
+}

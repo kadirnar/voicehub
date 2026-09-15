@@ -110,7 +110,7 @@ class NativeSileroScorer:
 
     @property
     def window_size(self) -> int:
-        return self.model.config.frame_size
+        return self.model.config.frame_size + self.model.config.context_size
 
     @property
     def window_shift(self) -> int:
@@ -124,12 +124,17 @@ class NativeSileroScorer:
             dtype=torch.float32,
         ).unsqueeze(0)
         with torch.inference_mode():
-            output = self.model(
-                values,
-                state=self.state,
-            )
-        self.state = output.state.detached()
-        return float(output.probabilities.item())
+            self.model._validate_model_input(values)
+            probabilities, _, (hidden, cell) = self.model.forward_with_context(
+                values, (self.state.hidden, self.state.cell))
+        # Sherpa supplies overlapping context+frame windows (576 samples at
+        # 16 kHz), rather than the zero-prefixed first frame of the standalone
+        # Silero API. Do not prepend another context or shift its timestamps.
+        self.state = type(self.state)(
+            hidden=hidden.detach(),
+            cell=cell.detach(),
+            context=values[:, -self.model.config.context_size:].detach())
+        return float(probabilities.item())
 
     def reset(self) -> None:
         self.state = self.model.initial_state(

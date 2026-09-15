@@ -169,13 +169,12 @@ class FSMNVADDecoder:
             raise ValueError("FSMN decoder probabilities must be in [0, 1].")
 
         emitted: list[FSMNVADBoundary] = []
-        for local_index in range(speech_values.numel()):
+        # Convert once: indexing three scalar tensors per 10 ms frame adds
+        # substantial Python/PyTorch dispatch overhead to endpoint decoding.
+        for probability, silence, decibel in zip(speech_values.tolist(), silence_values.tolist(),
+                                                 decibel_values.tolist()):
             frame = self.frame_index
-            is_speech = self._is_speech(
-                float(speech_values[local_index]),
-                float(silence_values[local_index]),
-                float(decibel_values[local_index]),
-            )
+            is_speech = self._is_speech(probability, silence, decibel)
             change = self.window.update(is_speech)
             if change == "silence-to-speech":
                 self.continuous_silence_frames = 0

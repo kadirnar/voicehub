@@ -1,0 +1,22 @@
+{
+  "model_type": "kokoro",
+  "task": "tts",
+  "device": "cpu",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 2,
+  "repeats": 10,
+  "samples": [
+    {
+      "id": "hello",
+      "text": "Hello, world. This is a speech quality comparison."
+    }
+  ],
+  "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/kokoro",
+  "config": {
+    "torch_dtype": "float32",
+    "allow_legacy_checkpoint_conversion": true
+  },
+  "diagnostics_after_seconds": 45,
+  "text_frontend": "misaki_en"
+}

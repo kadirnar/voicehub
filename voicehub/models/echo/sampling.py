@@ -59,6 +59,25 @@ def _assign_validated_state(
 ) -> None:
     """Assign a safe state only when its complete tensor inventory is known."""
     expected = set(model.state_dict())
+    # Released Fish quantizers use torch's legacy weight_norm spelling.
+    # Translate only aliases whose modern parametrization is in this graph;
+    # retain strict inventory checks and reject ambiguous duplicate tensors.
+    normalized = {}
+    for name, value in state.items():
+        destination = name
+        for old_suffix, new_suffix in (
+            (".weight_g", ".parametrizations.weight.original0"),
+            (".weight_v", ".parametrizations.weight.original1"),
+        ):
+            if name.endswith(old_suffix):
+                candidate = name[:-len(old_suffix)] + new_suffix
+                if candidate in expected:
+                    destination = candidate
+                break
+        if destination in normalized:
+            raise RuntimeError(f"Echo checkpoint contains duplicate weight aliases for {destination}.")
+        normalized[destination] = value
+    state = normalized
     supplied = set(state)
     allowed_missing = {
         name

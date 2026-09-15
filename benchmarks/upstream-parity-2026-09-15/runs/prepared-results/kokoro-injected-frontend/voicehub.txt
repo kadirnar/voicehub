@@ -1,0 +1,25 @@
+Timeout (0:00:45)!
+Thread 0x00007f17670da780 (most recent call first):
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/istftnet.py", line 103 in forward
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784 in _call_impl
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773 in _wrapped_call_impl
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/istftnet.py", line 395 in forward
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784 in _call_impl
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773 in _wrapped_call_impl
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/istftnet.py", line 521 in forward
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784 in _call_impl
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773 in _wrapped_call_impl
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/model.py", line 317 in decode_aligned
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/model.py", line 403 in forward_with_tokens
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120 in decorate_context
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/model.py", line 442 in forward
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784 in _call_impl
+  File "/home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773 in _wrapped_call_impl
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/pipeline.py", line 395 in infer
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/pipeline.py", line 536 in __call__
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/kokoro/inference.py", line 350 in _generate
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/modeling_utils.py", line 894 in _forward_with_llm_backend
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/modeling_utils.py", line 984 in generate
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 62 in infer
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 398 in main
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 441 in <module>

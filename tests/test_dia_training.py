@@ -19,6 +19,32 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 @unittest.skipUnless(TORCH_AVAILABLE, "PyTorch is VoiceHub's compute runtime")
 class NativeDiaTests(unittest.TestCase):
 
+    def test_generation_budget_includes_delayed_eos_and_pads_finished_channels(self):
+        import torch
+
+        from voicehub.architectures.dac.modeling import DacModel
+        from voicehub.architectures.dia.modeling import DiaForConditionalGeneration
+        from voicehub.architectures.dia.processing import DiaProcessor
+
+        config = self.dia_config()
+        model = DiaForConditionalGeneration(config).eval()
+        codec = DacModel(self.dac_config()).eval()
+        processor = DiaProcessor(config, audio_tokenizer=codec, sampling_rate=16_000, hop_length=4)
+        batch = processor(text=["Hello"], generation=True)
+
+        def fixed_logits(**kwargs):
+            sequence_length = kwargs["decoder_input_ids"].shape[1]
+            return SimpleNamespace(logits=torch.zeros(2, sequence_length, 12))
+
+        with patch.object(model, "forward", side_effect=fixed_logits):
+            tokens = model.generate(
+                **batch, max_new_tokens=7, do_sample=False, guidance_scale=None, top_k=None, top_p=1.0)
+        self.assertEqual(tokens.shape, (1, 8, 2))
+        self.assertEqual(tokens[0, -2:].tolist(), [[8, 0], [9, 8]])
+        audio = processor.batch_decode(tokens)[0]
+        self.assertEqual(audio.numel(), 5 * 4)
+        self.assertTrue(torch.isfinite(audio).all())
+
     @staticmethod
     def dia_config():
         from voicehub.architectures.dia.configuration import DiaArchitectureConfig, DiaDecoderConfig, DiaEncoderConfig

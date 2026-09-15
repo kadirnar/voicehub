@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 382, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 55, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/modeling_utils.py", line 546, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/openvoice/inference.py", line 63, in _load_pretrained_model
+    self.runtime = load_openvoice_runtime(
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/openvoice/runtime.py", line 269, in load_openvoice_runtime
+    artifacts = resolve_openvoice_artifacts(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/openvoice/artifacts.py", line 118, in resolve_openvoice_artifacts
+    checkpoint_path = resolve_pretrained_file(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub.py", line 45, in resolve_pretrained_file
+    return download_hugging_face_file(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub_transport.py", line 287, in download_hugging_face_file
+    raise FileNotFoundError(
+FileNotFoundError: The requested Hub file is not available in the local cache: myshell-ai/OpenVoiceV2@f36e7edfe1684461a8343844af60babc2efbb727/converter/checkpoint.pth (cache: /home/kadir/.cache/huggingface/hub).

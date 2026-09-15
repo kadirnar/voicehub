@@ -1,0 +1,8 @@
+{
+  "status": "error",
+  "scope": "Single-recognizer intelligibility proxy; not MOS, a listening panel, or full quality parity.",
+  "resampling": "FFmpeg mono 16 kHz PCM16, identical conversion for both sides",
+  "ffmpeg_version": "ffmpeg version n9.0.1 Copyright (c) 2000-2026 the FFmpeg developers",
+  "recognizer_evidence": "asr-results.json",
+  "scores": []
+}

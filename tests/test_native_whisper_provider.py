@@ -167,6 +167,15 @@ def _tiny_artifact(root: Path):
 
 class NativeWhisperProviderTests(unittest.TestCase):
 
+    def test_english_only_release_accepts_english_without_language_tokens(self):
+        wrapper = WhisperForSpeechRecognition(device="cpu")
+        wrapper.generation_adapter = SimpleNamespace(token_set=SimpleNamespace(is_multilingual=False))
+        for language in (None, "en", "English", "<|en|>"):
+            with self.subTest(language=language):
+                self.assertEqual(wrapper._normalized_language(language), "en")
+        with self.assertRaisesRegex(ValueError, "English-only"):
+            wrapper._normalized_language("de")
+
     def test_provider_import_does_not_load_external_model_runtimes(self):
         code = """
 import json

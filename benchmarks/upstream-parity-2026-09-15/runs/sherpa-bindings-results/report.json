@@ -1,0 +1,922 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "name": "vad_sherpa_onnx",
+      "provenance": {
+        "model_type": "vad_sherpa_onnx",
+        "task": "voice-activity-detection",
+        "checkpoint": "safestack/silero-vad",
+        "repository": "https://github.com/k2-fsa/sherpa-onnx",
+        "source_revision": null,
+        "resolved_source_revision": "7c4ccdff34a3a8e858d834c0793f3512d25b4241",
+        "checkout_status": "ready",
+        "artifact_relationship": "Original Silero JIT and ONNX exports from the same pinned upstream checkout; different containers, not byte-identical artifacts."
+      },
+      "upstream": {
+        "status": "ok",
+        "task": "vad",
+        "samples": [
+          {
+            "id": "1272-128104-0000",
+            "input_sha256": "a7218a38547d31138ceab661c082d517825d35658a67d566c6c5a0e33bc62e36",
+            "warm_seconds": [
+              0.017208854000273277,
+              0.017115708000346785,
+              0.01716903899978206,
+              0.017092833999413415,
+              0.017015859000821365,
+              0.017037229999914416,
+              0.017135566000433755,
+              0.017101360999731696,
+              0.0175422640004399,
+              0.017161263998787035
+            ],
+            "segments": [
+              [
+                5.502,
+                5.824
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0001",
+            "input_sha256": "9959a6750d124e5f272d61e124e23f2b0a0c10727a44183974c69abd4edf350a",
+            "warm_seconds": [
+              0.01405955200061726,
+              0.014093296000282862,
+              0.014114565999989281,
+              0.01400696300152049,
+              0.014318501000161632,
+              0.014067936999708763,
+              0.014087234001635807,
+              0.014373926000189385,
+              0.014758602999791037,
+              0.016750366999986
+            ],
+            "segments": [
+              [
+                4.478,
+                4.8
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0002",
+            "input_sha256": "db78c045e290f35260c17507693ec49560d0d8a7f88d9308fa948eb8968812b6",
+            "warm_seconds": [
+              0.036708837000333006,
+              0.036647921999247046,
+              0.036637663000874454,
+              0.036647592000008444,
+              0.03655029800029297,
+              0.0365658179998718,
+              0.036663181001131306,
+              0.03665934499986179,
+              0.03691729199999827,
+              0.03686121500140871
+            ],
+            "segments": [
+              [
+                12.158,
+                12.48
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0003",
+            "input_sha256": "8056b7d1fb28420848ac2e96d9ca2cc977aa3b500ec1349bb69e6abca5e7004b",
+            "warm_seconds": [
+              0.02960345899919048,
+              0.029315333998965798,
+              0.029630519999045646,
+              0.02953882700057875,
+              0.03166321199933009,
+              0.029221857001175522,
+              0.029210856999270618,
+              0.029138289000911755,
+              0.02891622999959509,
+              0.02916322700002638
+            ],
+            "segments": [
+              [
+                9.566,
+                9.888
+              ]
+            ]
+          },
+          {
+            "id": "1272-128104-0004",
+            "input_sha256": "96542a7c34125ed8a9dc0ce9cbcfc2d91f5c337735f0b2b46afb054ddf5eeb2c",
+            "warm_seconds": [
+              0.08652271299979475,
+              0.08642871600022772,
+              0.08652731199981645,
+              0.0863075969991769,
+              0.08616305400028068,
+              0.08696576100010134,
+              0.08632861699879868,
+              0.08625949599991145,
+              0.08620852999956696,
+              0.08620125600100437
+            ],
+            "segments": [
+              [
+                29.054,
+                29.376
+              ]
+            ]
+          }
+        ],
+        "runtime": {
+          "python": "3.11.15",
+          "platform": "Linux-7.2.4-3-cachyos-x86_64-with-glibc2.44",
+          "device": "cpu",
+          "threads": 1,
+          "worker_sha256": "e97d43720b9bdbd26edbb7ccd746a02719552d297b9971709d54a52a09ddd6db",
+          "repository_revision": "7c4ccdff34a3a8e858d834c0793f3512d25b4241",
+          "packages": {
+            "ninja": "1.13.2",
+            "cmake": "4.4.3",
+            "typing_extensions": "4.16.0",
+            "pycparser": "3.0",
+            "soundfile": "0.14.0",
+            "cffi": "2.1.1",
+            "numpy": "2.4.6",
+            "sherpa_onnx": "1.13.8"
+          },
+          "backend": "original Sherpa C++ with ONNX Runtime; no Torch backend",
+          "build_configuration": "TTS, tests, and standalone binaries disabled; direct VAD bindings",
+          "extension_sha256": "05c407d503531ae2ae7b594dec87346e679191a8b701a02d7782cc1ae237bf30"
+        },
+        "checkpoint_sha256": {
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.onnx": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3"
+        },
+        "load_seconds": 0.04229952400055481,
+        "returncode": 0,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_sherpa_onnx",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_sherpa_onnx/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_sherpa_vad_worker.py",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/sherpa-bindings-results/vad_sherpa_onnx/upstream.request.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/sherpa-bindings-results/vad_sherpa_onnx/upstream.json"
+        ],
+        "wall_seconds": 2.467639730000883,
+        "log": ".cache/upstream-parity/sherpa-bindings-results/vad_sherpa_onnx/upstream.log",
+        "request_sha256": "0e46b21013fdc80f72fae1691128819523e05736222e17908bc44a07368f8ad2",
+        "request": {
+          "model_type": "vad_sherpa_onnx",
+          "task": "vad",
+          "device": "cpu",
+          "seed": 123,
+          "threads": 1,
+          "warmup": 2,
+          "repeats": 10,
+          "samples": [
+            {
+              "id": "1272-128104-0000",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0000.wav",
+              "reference": "MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL",
+              "sampling_rate": 16000,
+              "duration": 5.855,
+              "sha256": "a7218a38547d31138ceab661c082d517825d35658a67d566c6c5a0e33bc62e36"
+            },
+            {
+              "id": "1272-128104-0001",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0001.wav",
+              "reference": "NOR IS MISTER QUILTER'S MANNER LESS INTERESTING THAN HIS MATTER",
+              "sampling_rate": 16000,
+              "duration": 4.815,
+              "sha256": "9959a6750d124e5f272d61e124e23f2b0a0c10727a44183974c69abd4edf350a"
+            },
+            {
+              "id": "1272-128104-0002",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0002.wav",
+              "reference": "HE TELLS US THAT AT THIS FESTIVE SEASON OF THE YEAR WITH CHRISTMAS AND ROAST BEEF LOOMING BEFORE US SIMILES DRAWN FROM EATING AND ITS RESULTS OCCUR MOST READILY TO THE MIND",
+              "sampling_rate": 16000,
+              "duration": 12.485,
+              "sha256": "db78c045e290f35260c17507693ec49560d0d8a7f88d9308fa948eb8968812b6"
+            },
+            {
+              "id": "1272-128104-0003",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0003.wav",
+              "reference": "HE HAS GRAVE DOUBTS WHETHER SIR FREDERICK LEIGHTON'S WORK IS REALLY GREEK AFTER ALL AND CAN DISCOVER IN IT BUT LITTLE OF ROCKY ITHACA",
+              "sampling_rate": 16000,
+              "duration": 9.9,
+              "sha256": "8056b7d1fb28420848ac2e96d9ca2cc977aa3b500ec1349bb69e6abca5e7004b"
+            },
+            {
+              "id": "1272-128104-0004",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0004.wav",
+              "reference": "LINNELL'S PICTURES ARE A SORT OF UP GUARDS AND AT EM PAINTINGS AND MASON'S EXQUISITE IDYLLS ARE AS NATIONAL AS A JINGO POEM MISTER BIRKET FOSTER'S LANDSCAPES SMILE AT ONE MUCH IN THE SAME WAY THAT MISTER CARKER USED TO FLASH HIS TEETH AND MISTER JOHN COLLIER GIVES HIS SITTER A CHEERFUL SLAP ON THE BACK BEFORE HE SAYS LIKE A SHAMPOOER IN A TURKISH BATH NEXT MAN",
+              "sampling_rate": 16000,
+              "duration": 29.4,
+              "sha256": "96542a7c34125ed8a9dc0ce9cbcfc2d91f5c337735f0b2b46afb054ddf5eeb2c"
+            }
+          ],
+          "config": {},
+          "generation": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 250,
+            "min_silence_duration_ms": 100,
+            "speech_pad_ms": 0,
+            "max_speech_duration_s": 60
+          },
+          "diagnostics_after_seconds": 45,
+          "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.jit",
+          "upstream_checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.onnx"
+        }
+      },
+      "voicehub": {
+        "status": "ok",
+        "task": "vad",
+        "samples": [
+          {
+            "id": "1272-128104-0000",
+            "input_sha256": "a7218a38547d31138ceab661c082d517825d35658a67d566c6c5a0e33bc62e36",
+            "warm_seconds": [
+              0.08345699900019099,
+              0.08393519300079788,
+              0.08312621400000353,
+              0.08333073100038746,
+              0.0832394179997209,
+              0.08341442899836693,
+              0.08303100400007679,
+              0.08329602500089095,
+              0.08352309499969124,
+              0.08324298499974248
+            ],
+            "peak_cuda_memory_bytes": null,
+            "segments": [
+              [
+                0.518,
+                5.564
+              ]
+            ],
+            "metadata": {
+              "backend": "voicehub-native",
+              "compatibility": "sherpa-onnx-segmentation",
+              "model_family": "silero",
+              "architecture": "silero-vad",
+              "checkpoint_path": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.jit",
+              "checkpoint_format": "torchscript-state-dict",
+              "checkpoint_adapter": "official-silero-vad-torchscript-state-dict@1",
+              "checkpoint_revision": null,
+              "converted_from_onnx": false,
+              "provider": "cpu",
+              "window_size_samples": 512,
+              "score_window_size_samples": 576,
+              "frame_scores_available": true,
+              "streaming": true
+            }
+          },
+          {
+            "id": "1272-128104-0001",
+            "input_sha256": "9959a6750d124e5f272d61e124e23f2b0a0c10727a44183974c69abd4edf350a",
+            "warm_seconds": [
+              0.06852326499938499,
+              0.06933029100036947,
+              0.06848690700098814,
+              0.06859219599937205,
+              0.06862401599937584,
+              0.06859197500125447,
+              0.0682808470010059,
+              0.06854409500010661,
+              0.06853601900002104,
+              0.0683512609994068
+            ],
+            "peak_cuda_memory_bytes": null,
+            "segments": [
+              [
+                0.518,
+                4.54
+              ]
+            ],
+            "metadata": {
+              "backend": "voicehub-native",
+              "compatibility": "sherpa-onnx-segmentation",
+              "model_family": "silero",
+              "architecture": "silero-vad",
+              "checkpoint_path": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.jit",
+              "checkpoint_format": "torchscript-state-dict",
+              "checkpoint_adapter": "official-silero-vad-torchscript-state-dict@1",
+              "checkpoint_revision": null,
+              "converted_from_onnx": false,
+              "provider": "cpu",
+              "window_size_samples": 512,
+              "score_window_size_samples": 576,
+              "frame_scores_available": true,
+              "streaming": true
+            }
+          },
+          {
+            "id": "1272-128104-0002",
+            "input_sha256": "db78c045e290f35260c17507693ec49560d0d8a7f88d9308fa948eb8968812b6",
+            "warm_seconds": [
+              0.17826674400021147,
+              0.17748560799918778,
+              0.17791331599983096,
+              0.17823029500141274,
+              0.177430183000979,
+              0.1775764000012714,
+              0.17842339999879187,
+              0.17744239599960565,
+              0.1775455309998506,
+              0.17754795600012585
+            ],
+            "peak_cuda_memory_bytes": null,
+            "segments": [
+              [
+                0.582,
+                7.1
+              ],
+              [
+                7.622,
+                12.092
+              ]
+            ],
+            "metadata": {
+              "backend": "voicehub-native",
+              "compatibility": "sherpa-onnx-segmentation",
+              "model_family": "silero",
+              "architecture": "silero-vad",
+              "checkpoint_path": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.jit",
+              "checkpoint_format": "torchscript-state-dict",
+              "checkpoint_adapter": "official-silero-vad-torchscript-state-dict@1",
+              "checkpoint_revision": null,
+              "converted_from_onnx": false,
+              "provider": "cpu",
+              "window_size_samples": 512,
+              "score_window_size_samples": 576,
+              "frame_scores_available": true,
+              "streaming": true
+            }
+          },
+          {
+            "id": "1272-128104-0003",
+            "input_sha256": "8056b7d1fb28420848ac2e96d9ca2cc977aa3b500ec1349bb69e6abca5e7004b",
+            "warm_seconds": [
+              0.14273918900107674,
+              0.14241569799924036,
+              0.14278136900065874,
+              0.14313016800042533,
+              0.14327567300097144,
+              0.14280274900011136,
+              0.14294126099957793,
+              0.1432802420004009,
+              0.14271660700069333,
+              0.14312200300082623
+            ],
+            "peak_cuda_memory_bytes": null,
+            "segments": [
+              [
+                0.582,
+                9.564
+              ]
+            ],
+            "metadata": {
+              "backend": "voicehub-native",
+              "compatibility": "sherpa-onnx-segmentation",
+              "model_family": "silero",
+              "architecture": "silero-vad",
+              "checkpoint_path": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.jit",
+              "checkpoint_format": "torchscript-state-dict",
+              "checkpoint_adapter": "official-silero-vad-torchscript-state-dict@1",
+              "checkpoint_revision": null,
+              "converted_from_onnx": false,
+              "provider": "cpu",
+              "window_size_samples": 512,
+              "score_window_size_samples": 576,
+              "frame_scores_available": true,
+              "streaming": true
+            }
+          },
+          {
+            "id": "1272-128104-0004",
+            "input_sha256": "96542a7c34125ed8a9dc0ce9cbcfc2d91f5c337735f0b2b46afb054ddf5eeb2c",
+            "warm_seconds": [
+              0.4164055439996446,
+              0.4172650269993028,
+              0.41864809099934064,
+              0.41737344300054247,
+              0.4259730150006362,
+              0.4271104749986989,
+              0.4271066979999887,
+              0.4236111409991281,
+              0.4199505130000034,
+              0.43066891899979964
+            ],
+            "peak_cuda_memory_bytes": null,
+            "segments": [
+              [
+                0.55,
+                2.716
+              ],
+              [
+                2.982,
+                5.084
+              ],
+              [
+                5.382,
+                10.076
+              ],
+              [
+                11.494,
+                18.748
+              ],
+              [
+                19.75,
+                24.444
+              ],
+              [
+                24.518,
+                29.148
+              ]
+            ],
+            "metadata": {
+              "backend": "voicehub-native",
+              "compatibility": "sherpa-onnx-segmentation",
+              "model_family": "silero",
+              "architecture": "silero-vad",
+              "checkpoint_path": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.jit",
+              "checkpoint_format": "torchscript-state-dict",
+              "checkpoint_adapter": "official-silero-vad-torchscript-state-dict@1",
+              "checkpoint_revision": null,
+              "converted_from_onnx": false,
+              "provider": "cpu",
+              "window_size_samples": 512,
+              "score_window_size_samples": 576,
+              "frame_scores_available": true,
+              "streaming": true
+            }
+          }
+        ],
+        "runtime": {
+          "python": "3.12.13",
+          "torch": "2.8.0+cu128",
+          "device": "cpu",
+          "threads": 1,
+          "gpu": "NVIDIA GeForce RTX 5070 Ti",
+          "packages": {
+            "typer": "0.27.2",
+            "annotated-doc": "0.0.5",
+            "certifi": "2026.7.22",
+            "h11": "0.16.0",
+            "referencing": "0.37.0",
+            "lazy-loader": "0.5",
+            "cffi": "2.1.1",
+            "soxr": "1.1.0",
+            "shellingham": "1.5.4",
+            "urllib3": "2.7.0",
+            "packaging": "26.3",
+            "python-dateutil": "2.9.0.post0",
+            "coqpit": "0.0.17",
+            "build": "1.6.1",
+            "python-discovery": "1.6.0",
+            "einops": "0.8.2",
+            "traitlets": "5.16.1",
+            "decorator": "5.3.1",
+            "pooch": "1.9.0",
+            "msgpack": "1.2.2",
+            "librosa": "1.0.0",
+            "distlib": "0.4.3",
+            "nvidia-cuda-runtime-cu12": "12.8.90",
+            "nvidia-cusolver-cu12": "11.7.3.90",
+            "iniconfig": "2.3.0",
+            "pycparser": "3.0",
+            "nvidia-nvtx-cu12": "12.8.90",
+            "markdown-it-py": "4.2.0",
+            "nvidia-cufft-cu12": "11.3.3.83",
+            "identify": "2.6.19",
+            "nvidia-curand-cu12": "10.3.9.90",
+            "typing_extensions": "4.16.0",
+            "rpds-py": "2026.6.3",
+            "joblib": "1.6.0",
+            "requests": "2.34.2",
+            "contourpy": "1.4.0",
+            "pluggy": "1.6.0",
+            "anyio": "4.15.1",
+            "huggingface_hub": "1.31.0",
+            "fastjsonschema": "2.22.2",
+            "six": "1.17.0",
+            "hf-xet": "1.6.0",
+            "platformdirs": "4.11.8",
+            "jupyter_core": "5.9.1",
+            "pre_commit": "4.6.2",
+            "filelock": "3.32.6",
+            "llvmlite": "0.49.0",
+            "cloudpickle": "3.1.2",
+            "nvidia-cusparse-cu12": "12.5.8.93",
+            "tokenizers": "0.23.2",
+            "pyparsing": "3.3.2",
+            "virtualenv": "21.7.9",
+            "nodeenv": "1.10.0",
+            "Pygments": "2.21.0",
+            "attrs": "26.1.0",
+            "MarkupSafe": "3.0.3",
+            "PyYAML": "6.0.3",
+            "jsonschema": "4.26.0",
+            "narwhals": "2.26.0",
+            "mdurl": "0.1.2",
+            "soundfile": "0.14.0",
+            "nvidia-cufile-cu12": "1.13.1.3",
+            "mpmath": "1.3.0",
+            "tqdm": "4.70.1",
+            "cfgv": "3.5.0",
+            "fonttools": "4.65.0",
+            "charset-normalizer": "3.5.1",
+            "pillow": "12.3.0",
+            "threadpoolctl": "3.6.0",
+            "matplotlib": "3.11.2",
+            "nvidia-cusparselt-cu12": "0.7.1",
+            "regex": "2026.9.10",
+            "numba": "0.67.0",
+            "nvidia-nvjitlink-cu12": "12.8.93",
+            "Jinja2": "3.1.6",
+            "httpcore": "1.0.9",
+            "httpx": "0.28.1",
+            "mutagen": "1.48.1",
+            "nbformat": "5.11.1",
+            "rich": "15.0.0",
+            "safetensors": "0.8.0",
+            "cycler": "0.12.1",
+            "nvidia-nccl-cu12": "2.27.3",
+            "kiwisolver": "1.5.1",
+            "torchaudio": "2.8.0",
+            "setuptools": "84.0.0",
+            "click": "8.5.0",
+            "pytest": "9.1.1",
+            "nvidia-cudnn-cu12": "9.10.2.21",
+            "nvidia-cublas-cu12": "12.8.4.1",
+            "idna": "3.19",
+            "nvidia-cuda-cupti-cu12": "12.8.90",
+            "pyproject_hooks": "1.2.0",
+            "jsonschema-specifications": "2025.9.1",
+            "networkx": "3.6.1",
+            "nvidia-cuda-nvrtc-cu12": "12.8.93",
+            "numpy": "2.5.3",
+            "scipy": "1.18.1",
+            "triton": "3.4.0",
+            "pandas": "3.0.5",
+            "scikit-learn": "1.9.1",
+            "sympy": "1.14.0",
+            "transformers": "5.17.0",
+            "torch": "2.8.0",
+            "propcache": "0.5.2",
+            "frozenlist": "1.8.0",
+            "pathspec": "1.1.1",
+            "pyee": "13.0.1",
+            "dill": "0.4.1",
+            "opentelemetry-exporter-otlp-proto-http": "1.44.0",
+            "typing-inspection": "0.4.4",
+            "mkdocs-static-i18n": "1.3.1",
+            "paginate": "0.5.7",
+            "voicehub": "0.3.0",
+            "greenlet": "3.5.6",
+            "pyyaml_env_tag": "1.1",
+            "backrefs": "8.0",
+            "fsspec": "2026.6.0",
+            "aiohttp": "3.14.3",
+            "opentelemetry-proto": "1.44.0",
+            "xxhash": "4.0.1",
+            "pymdown-extensions": "12.0",
+            "axe-playwright-python": "0.1.8",
+            "pydantic_core": "2.46.5",
+            "annotated-types": "0.8.0",
+            "aiosignal": "1.4.0",
+            "watchdog": "6.0.0",
+            "mkdocs-get-deps": "0.2.2",
+            "ema-pytorch": "0.8.3",
+            "evaluate": "0.4.6",
+            "yarl": "1.24.5",
+            "opentelemetry-api": "1.44.0",
+            "opentelemetry-semantic-conventions": "0.65b0",
+            "pyworld": "0.3.5",
+            "opentelemetry-sdk": "1.44.0",
+            "ghp-import": "2.1.0",
+            "colorama": "0.4.6",
+            "multiprocess": "0.70.19",
+            "Markdown": "3.10.3",
+            "datasets": "5.0.1",
+            "mergedeep": "1.3.4",
+            "pydantic": "2.13.5",
+            "aiohappyeyeballs": "2.7.1",
+            "protobuf": "7.36.1",
+            "opentelemetry-exporter-otlp-proto-common": "1.44.0",
+            "mkdocs-material-extensions": "1.3.1",
+            "mkdocs": "1.6.1",
+            "multidict": "6.8.0",
+            "jiwer": "4.0.0",
+            "googleapis-common-protos": "1.75.3",
+            "RapidFuzz": "3.14.6",
+            "playwright": "1.62.0",
+            "pyarrow": "25.0.1",
+            "babel": "2.18.0",
+            "wandb": "0.30.0",
+            "mkdocs-material": "9.7.7",
+            "dlinfo": "2.0.0",
+            "addict": "2.4.0",
+            "catalogue": "2.0.10",
+            "termcolor": "3.3.0",
+            "rfc3986": "1.5.0",
+            "murmurhash": "1.0.15",
+            "spacy-legacy": "3.0.12",
+            "phonemizer-fork": "3.3.2",
+            "uritemplate": "4.2.0",
+            "weasel": "1.0.0",
+            "docopt": "0.6.2",
+            "isodate": "0.7.2",
+            "confection": "1.3.3",
+            "cloudpathlib": "0.25.0",
+            "preshed": "3.0.13",
+            "curated-tokenizers": "0.0.10",
+            "wrapt": "2.4.1",
+            "num2words": "0.5.14",
+            "spacy-curated-transformers": "0.3.1",
+            "wasabi": "1.1.3",
+            "spacy-loggers": "1.0.5",
+            "language-tags": "1.3.1",
+            "misaki": "0.9.4",
+            "curated-transformers": "0.1.1",
+            "segments": "2.4.0",
+            "cymem": "2.0.13",
+            "csvw": "4.1.0",
+            "smart_open": "8.0.1",
+            "blis": "1.3.3",
+            "rdflib": "7.6.0",
+            "srsly": "2.5.3",
+            "thinc": "8.3.13",
+            "espeakng-loader": "0.2.4",
+            "spacy": "3.8.16",
+            "en_core_web_sm": "3.8.0"
+          },
+          "platform": "Linux-7.2.4-3-cachyos-x86_64-with-glibc2.44",
+          "worker_sha256": "e56f396708e113f8b17b83b62f44c4a1f9caa7324b1de816992593512ff54b80",
+          "repository_revision": "d67853dcfdf4385ce504dde66d6f513a446ca294",
+          "repository_dirty": true
+        },
+        "checkpoint_sha256": {
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.jit": "e1122837f4154c511485fe0b9c64455f7b929c96fbb8d79fbdb336383ebd3720"
+        },
+        "load_seconds": 0.16256025999973645,
+        "load_peak_cuda_memory_bytes": null,
+        "process_peak_rss_bytes": 623525888,
+        "returncode": 0,
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/sherpa-bindings-results/vad_sherpa_onnx/voicehub.request.json",
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/sherpa-bindings-results/vad_sherpa_onnx/voicehub.json"
+        ],
+        "wall_seconds": 12.382211314001324,
+        "log": ".cache/upstream-parity/sherpa-bindings-results/vad_sherpa_onnx/voicehub.log",
+        "request_sha256": "0e46b21013fdc80f72fae1691128819523e05736222e17908bc44a07368f8ad2",
+        "request": {
+          "model_type": "vad_sherpa_onnx",
+          "task": "vad",
+          "device": "cpu",
+          "seed": 123,
+          "threads": 1,
+          "warmup": 2,
+          "repeats": 10,
+          "samples": [
+            {
+              "id": "1272-128104-0000",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0000.wav",
+              "reference": "MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL",
+              "sampling_rate": 16000,
+              "duration": 5.855,
+              "sha256": "a7218a38547d31138ceab661c082d517825d35658a67d566c6c5a0e33bc62e36"
+            },
+            {
+              "id": "1272-128104-0001",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0001.wav",
+              "reference": "NOR IS MISTER QUILTER'S MANNER LESS INTERESTING THAN HIS MATTER",
+              "sampling_rate": 16000,
+              "duration": 4.815,
+              "sha256": "9959a6750d124e5f272d61e124e23f2b0a0c10727a44183974c69abd4edf350a"
+            },
+            {
+              "id": "1272-128104-0002",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0002.wav",
+              "reference": "HE TELLS US THAT AT THIS FESTIVE SEASON OF THE YEAR WITH CHRISTMAS AND ROAST BEEF LOOMING BEFORE US SIMILES DRAWN FROM EATING AND ITS RESULTS OCCUR MOST READILY TO THE MIND",
+              "sampling_rate": 16000,
+              "duration": 12.485,
+              "sha256": "db78c045e290f35260c17507693ec49560d0d8a7f88d9308fa948eb8968812b6"
+            },
+            {
+              "id": "1272-128104-0003",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0003.wav",
+              "reference": "HE HAS GRAVE DOUBTS WHETHER SIR FREDERICK LEIGHTON'S WORK IS REALLY GREEK AFTER ALL AND CAN DISCOVER IN IT BUT LITTLE OF ROCKY ITHACA",
+              "sampling_rate": 16000,
+              "duration": 9.9,
+              "sha256": "8056b7d1fb28420848ac2e96d9ca2cc977aa3b500ec1349bb69e6abca5e7004b"
+            },
+            {
+              "id": "1272-128104-0004",
+              "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0004.wav",
+              "reference": "LINNELL'S PICTURES ARE A SORT OF UP GUARDS AND AT EM PAINTINGS AND MASON'S EXQUISITE IDYLLS ARE AS NATIONAL AS A JINGO POEM MISTER BIRKET FOSTER'S LANDSCAPES SMILE AT ONE MUCH IN THE SAME WAY THAT MISTER CARKER USED TO FLASH HIS TEETH AND MISTER JOHN COLLIER GIVES HIS SITTER A CHEERFUL SLAP ON THE BACK BEFORE HE SAYS LIKE A SHAMPOOER IN A TURKISH BATH NEXT MAN",
+              "sampling_rate": 16000,
+              "duration": 29.4,
+              "sha256": "96542a7c34125ed8a9dc0ce9cbcfc2d91f5c337735f0b2b46afb054ddf5eeb2c"
+            }
+          ],
+          "config": {},
+          "generation": {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 250,
+            "min_silence_duration_ms": 100,
+            "speech_pad_ms": 0,
+            "max_speech_duration_s": 60
+          },
+          "diagnostics_after_seconds": 45,
+          "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.jit",
+          "upstream_checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/src/silero_vad/data/silero_vad.onnx"
+        }
+      },
+      "comparison": {
+        "status": "not-comparable",
+        "samples": [
+          {
+            "id": "1272-128104-0000",
+            "timing": {
+              "upstream_mean_seconds": 0.017157997899994372,
+              "voicehub_mean_seconds": 0.08335960929998691,
+              "ratio": 4.858352925897855,
+              "difference_95pct_lower_seconds": 0.06602140429738103,
+              "difference_95pct_upper_seconds": 0.06638181850260404,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": false,
+            "upstream_segments": [
+              [
+                5.502,
+                5.824
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.518,
+                5.564
+              ]
+            ],
+            "boundary_max_absolute_error_seconds": 4.984,
+            "boundaries_equal_within_1ns": false,
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          },
+          {
+            "id": "1272-128104-0001",
+            "timing": {
+              "upstream_mean_seconds": 0.014463094500388251,
+              "voicehub_mean_seconds": 0.06858608720012853,
+              "ratio": 4.742144718634549,
+              "difference_95pct_lower_seconds": 0.053576528535577594,
+              "difference_95pct_upper_seconds": 0.054669456863902954,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": false,
+            "upstream_segments": [
+              [
+                4.478,
+                4.8
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.518,
+                4.54
+              ]
+            ],
+            "boundary_max_absolute_error_seconds": 3.96,
+            "boundaries_equal_within_1ns": false,
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          },
+          {
+            "id": "1272-128104-0002",
+            "timing": {
+              "upstream_mean_seconds": 0.03668591630030278,
+              "voicehub_mean_seconds": 0.17778618290012674,
+              "ratio": 4.846169888324676,
+              "difference_95pct_lower_seconds": 0.14084991142023273,
+              "difference_95pct_upper_seconds": 0.14135062177941515,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": false,
+            "upstream_segments": [
+              [
+                12.158,
+                12.48
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.582,
+                7.1
+              ],
+              [
+                7.622,
+                12.092
+              ]
+            ],
+            "boundary_max_absolute_error_seconds": null,
+            "boundaries_equal_within_1ns": false,
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          },
+          {
+            "id": "1272-128104-0003",
+            "timing": {
+              "upstream_mean_seconds": 0.029540181199809012,
+              "voicehub_mean_seconds": 0.14292049590039824,
+              "ratio": 4.8381726210034985,
+              "difference_95pct_lower_seconds": 0.11286688673127543,
+              "difference_95pct_upper_seconds": 0.11389374266990301,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": false,
+            "upstream_segments": [
+              [
+                9.566,
+                9.888
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.582,
+                9.564
+              ]
+            ],
+            "boundary_max_absolute_error_seconds": 8.984,
+            "boundaries_equal_within_1ns": false,
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          },
+          {
+            "id": "1272-128104-0004",
+            "timing": {
+              "upstream_mean_seconds": 0.08639130519986793,
+              "voicehub_mean_seconds": 0.42241128659970856,
+              "ratio": 4.889511573212744,
+              "difference_95pct_lower_seconds": 0.3328520876467065,
+              "difference_95pct_upper_seconds": 0.33918787515297477,
+              "relative_tolerance": 0.1,
+              "regression_flag": true,
+              "method": "independent means, normal approximation; screening only"
+            },
+            "segments_equal": false,
+            "upstream_segments": [
+              [
+                29.054,
+                29.376
+              ]
+            ],
+            "voicehub_segments": [
+              [
+                0.55,
+                2.716
+              ],
+              [
+                2.982,
+                5.084
+              ],
+              [
+                5.382,
+                10.076
+              ],
+              [
+                11.494,
+                18.748
+              ],
+              [
+                19.75,
+                24.444
+              ],
+              [
+                24.518,
+                29.148
+              ]
+            ],
+            "boundary_max_absolute_error_seconds": null,
+            "boundaries_equal_within_1ns": false,
+            "ground_truth_error_rate": null,
+            "ground_truth_note": "No human speech-boundary labels; agreement is not accuracy."
+          }
+        ],
+        "timing_regression_flag": true,
+        "reason": "Initial original worker used a whole-file push; the original README prescribes window-sized ingestion, required for correct C++ buffer timestamps. Superseded by the framed recipe."
+      }
+    }
+  ]
+}

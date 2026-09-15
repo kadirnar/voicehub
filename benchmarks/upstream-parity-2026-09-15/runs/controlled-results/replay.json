@@ -1,0 +1,207 @@
+{
+  "cases": [
+    {
+      "name": "kokoro",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/controlled-results/kokoro/request.json",
+      "provenance": {
+        "model_type": "kokoro",
+        "task": "text-to-speech",
+        "checkpoint": "hexgrad/Kokoro-82M",
+        "repository": "https://github.com/hexgrad/kokoro",
+        "source_revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+        "resolved_source_revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_silero",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/controlled-results/vad_silero/request.json",
+      "provenance": {
+        "model_type": "vad_silero",
+        "task": "voice-activity-detection",
+        "checkpoint": "safestack/silero-vad",
+        "repository": "https://github.com/snakers4/silero-vad",
+        "source_revision": null,
+        "resolved_source_revision": "41f03a954b841327835dea1ddb7bb28ae23ddc2c",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_silero/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_webrtc",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/controlled-results/vad_webrtc/request.json",
+      "provenance": {
+        "model_type": "vad_webrtc",
+        "task": "voice-activity-detection",
+        "checkpoint": "webrtc-vad",
+        "repository": "https://github.com/wiseman/py-webrtcvad",
+        "source_revision": "e283ca41df3a84b0e87fb1f5cb9b21580a286b09",
+        "resolved_source_revision": "e283ca41df3a84b0e87fb1f5cb9b21580a286b09",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_webrtc",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_webrtc/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "vad_auditok",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/controlled-results/vad_auditok/request.json",
+      "provenance": {
+        "model_type": "vad_auditok",
+        "task": "voice-activity-detection",
+        "checkpoint": "auditok-energy-vad",
+        "repository": "https://github.com/amsehili/auditok",
+        "source_revision": null,
+        "resolved_source_revision": "7adf4bc1ed9afff637b8b8b9b2b24e72a1afa7ac",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_auditok",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/vad_auditok/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_whisper",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/controlled-results/asr_whisper/request.json",
+      "provenance": {
+        "model_type": "asr_whisper",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "openai/whisper-large-v3-turbo",
+        "repository": "https://github.com/openai/whisper",
+        "source_revision": null,
+        "resolved_source_revision": "86098128c0b4f24f0e2aa2994de830614b474227",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_whisper",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_whisper/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "kokoro-matched-phonemes",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/controlled-results/kokoro-matched-phonemes/request.json",
+      "provenance": {
+        "model_type": "kokoro",
+        "task": "text-to-speech",
+        "checkpoint": "hexgrad/Kokoro-82M",
+        "repository": "https://github.com/hexgrad/kokoro",
+        "source_revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+        "resolved_source_revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/kokoro/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "asr_openai_whisper",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/controlled-results/asr_openai_whisper/request.json",
+      "provenance": {
+        "model_type": "asr_openai_whisper",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "openai/whisper-small",
+        "repository": "https://github.com/openai/whisper",
+        "source_revision": null,
+        "resolved_source_revision": "86098128c0b4f24f0e2aa2994de830614b474227",
+        "checkout_status": "ready"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_openai_whisper",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_openai_whisper/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

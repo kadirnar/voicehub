@@ -1,0 +1,40 @@
+{
+  "model_type": "asr_openai_whisper",
+  "task": "asr",
+  "device": "cuda",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 2,
+  "repeats": 10,
+  "samples": [
+    {
+      "id": "1272-128104-0000",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0000.wav",
+      "reference": "MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL",
+      "sampling_rate": 16000,
+      "duration": 5.855,
+      "sha256": "a7218a38547d31138ceab661c082d517825d35658a67d566c6c5a0e33bc62e36"
+    },
+    {
+      "id": "1272-128104-0001",
+      "audio": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/samples/1272-128104-0001.wav",
+      "reference": "NOR IS MISTER QUILTER'S MANNER LESS INTERESTING THAN HIS MATTER",
+      "sampling_rate": 16000,
+      "duration": 4.815,
+      "sha256": "9959a6750d124e5f272d61e124e23f2b0a0c10727a44183974c69abd4edf350a"
+    }
+  ],
+  "checkpoint": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/whisper-tiny.en",
+  "upstream_checkpoint": "tiny.en",
+  "upstream_weights": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/weights/openai-whisper",
+  "config": {
+    "torch_dtype": "float32"
+  },
+  "generation": {
+    "language": "en",
+    "return_timestamps": false,
+    "num_beams": 1
+  },
+  "hf_conversion_source": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_transformers/src/transformers/models/whisper/convert_openai_to_hf.py",
+  "diagnostics_after_seconds": 45
+}

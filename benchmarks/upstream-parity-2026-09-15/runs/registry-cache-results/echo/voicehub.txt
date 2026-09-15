@@ -1,0 +1,26 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 382, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 55, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/modeling_utils.py", line 546, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/echo/inference.py", line 95, in _load_pretrained_model
+    model, fish_ae, pca_state = self._build_runtime_components()
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/echo/inference.py", line 72, in _build_runtime_components
+    model = load_model_from_hf(
+            ^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/echo/sampling.py", line 134, in load_model_from_hf
+    w_path = _resolve_checkpoint_file(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/echo/sampling.py", line 22, in _resolve_checkpoint_file
+    return resolve_pretrained_file(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub.py", line 45, in resolve_pretrained_file
+    return download_hugging_face_file(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/hub_transport.py", line 287, in download_hugging_face_file
+    raise FileNotFoundError(
+FileNotFoundError: The requested Hub file is not available in the local cache: jordand/echo-tts-base@main/pytorch_model.safetensors (cache: /home/kadir/.cache/huggingface/hub).

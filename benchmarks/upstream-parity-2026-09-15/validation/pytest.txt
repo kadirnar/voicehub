@@ -1,0 +1,64 @@
+.............................................................. [  2%]
+...................................... [  3%]
+............................................... [  5%]
+........................... [  6%]
+.................................................... [  8%]
+............................................................ [ 10%]
+.......................................sss............... [ 12%]
+..................................................... [ 15%]
+................................................. [ 16%]
+.......................................................................................................................................................... [ 22%]
+..................................................... [ 24%]
+............................................................ [ 26%]
+.......................................................................... [ 29%]
+......................................... [ 31%]
+................................................. [ 33%]
+................................................... [ 35%]
+............................................................... [ 37%]
+................................................................s.. [ 40%]
+................................................... [ 41%]
+........................................................................................... [ 45%]
+......sssss.............................................. [ 47%]
+................................................................s.............s............................... [ 51%]
+....................................................................................... [ 55%]
+............................................................... [ 57%]
+.........................s.......................................... [ 60%]
+s..............................................................s.... [ 62%]
+.............................................................. [ 64%]
+............................................................................................................................. [ 69%]
+.......................s...........s............................. [ 72%]
+........................................................................ [ 74%]
+.......................................................................................... [ 78%]
+.................................... [ 79%]
+........................................................................................................................................................... [ 85%]
+............................................................ [ 87%]
+....................................................... [ 89%]
+........................................ [ 91%]
+................................................................... [ 93%]
+.......................................................................................................... [ 97%]
+.................................................... [ 99%]
+...                                                                  [100%]
+=============================== warnings summary ===============================
+tests/test_codec_cute_kernels.py: 4 warnings
+tests/test_dia_training.py: 3 warnings
+tests/test_native_dac_model.py: 3 warnings
+tests/test_native_dac_training.py: 2 warnings
+tests/test_native_echo_runtime.py: 1 warning
+tests/test_native_openvoice.py: 6 warnings
+tests/test_native_parlertts.py: 7 warnings
+tests/test_native_vocos.py: 1 warning
+tests/test_native_voxcpm2.py: 4 warnings
+tests/test_vits_optimization_system.py: 3 warnings
+  /home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/utils/weight_norm.py:144: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+    WeightNorm.apply(module, name, dim)
+
+tests/test_native_medasr.py::MedASRArchitectureTests::test_full_ctc_backward_and_gradient_checkpointing
+  /home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/torch/nn/modules/conv.py:366: UserWarning: Using padding='same' with even kernel lengths and odd dilation may require a zero-padded copy of the input be created (Triggered internally at /pytorch/aten/src/ATen/native/Convolution.cpp:1027.)
+    return F.conv1d(
+
+tests/test_native_parlertts.py::NativeParlerTTSGraphTests::test_decoder_is_bit_exact_to_pinned_upstream_on_a_tiny_graph
+  /home/kadir/kadir_projects/github/voicehub/.venv/lib/python3.12/site-packages/transformers/modeling_attn_mask_utils.py:202: FutureWarning: The attention mask API under `transformers.modeling_attn_mask_utils` (`AttentionMaskConverter`) is deprecated and will be removed in Transformers v5.10. Please use the new API in `transformers.masking_utils`.
+    warnings.warn(DEPRECATION_MESSAGE, FutureWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2624 passed, 16 skipped, 36 warnings, 4999 subtests passed in 141.08s (0:02:21)

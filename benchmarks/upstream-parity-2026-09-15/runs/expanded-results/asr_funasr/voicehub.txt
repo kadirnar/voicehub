@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 382, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 55, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/audio_modeling_utils.py", line 239, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/asr_native/funasr.py", line 312, in _load_pretrained_model
+    artifacts = resolve_sensevoice_artifacts(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/architectures/sensevoice/artifacts.py", line 199, in resolve_sensevoice_artifacts
+    raise ValueError(
+ValueError: The official SenseVoiceSmall release is a hash-pinned pickle-based PyTorch checkpoint. Review its model license and pass `trust_pickle_checkpoint=True` for one-time restricted conversion. A cached native Safetensors conversion needs no future trust override.

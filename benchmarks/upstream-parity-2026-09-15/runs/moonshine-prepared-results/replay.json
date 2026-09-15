@@ -1,0 +1,35 @@
+{
+  "cases": [
+    {
+      "name": "asr_moonshine",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/moonshine-prepared-results/asr_moonshine/request.json",
+      "provenance": {
+        "model_type": "asr_moonshine",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "UsefulSensors/moonshine-tiny",
+        "repository": "https://github.com/moonshine-ai/moonshine",
+        "source_revision": "cc1695646a560f2eec7f7c058f3c4d580f039e4b",
+        "resolved_source_revision": "cc1695646a560f2eec7f7c058f3c4d580f039e4b",
+        "checkout_status": "ready",
+        "recipe": "Hugging Face Safetensors release linked from original repository README; Transformers inference, not the quantized Moonshine Voice ORT runtime.",
+        "checkpoint_revision": "390624ed33d594443aa4aa221f5b9f283b545b5a"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_moonshine",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_moonshine/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

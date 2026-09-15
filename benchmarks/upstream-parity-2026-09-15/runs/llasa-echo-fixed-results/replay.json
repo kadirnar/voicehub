@@ -1,0 +1,79 @@
+{
+  "cases": [
+    {
+      "name": "llasa",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/llasa-echo-fixed-results/llasa/request.json",
+      "provenance": {
+        "model_type": "llasa",
+        "task": "text-to-speech",
+        "checkpoint": "HKUSTAudio/Llasa-1B-Multilingual",
+        "repository": "https://github.com/zhenye234/LLaSA_training",
+        "source_revision": "479acd5277220f78a72093f63755c0892838d0c5",
+        "resolved_source_revision": "479acd5277220f78a72093f63755c0892838d0c5",
+        "checkout_status": "ready",
+        "audio_codec": {
+          "repository": "HKUSTAudio/xcodec2-hf",
+          "revision": "64bd034d12d441299cdd535b15c33efd6ccdf252",
+          "path": "/home/kadir/.cache/huggingface/hub/models--HKUSTAudio--xcodec2-hf/snapshots/64bd034d12d441299cdd535b15c33efd6ccdf252",
+          "status": "cached"
+        },
+        "timing_scope": "Exploratory single-sentence smoke run",
+        "reference_compatibility": "Original model-card LLaSA recipe with authors published xcodec2-hf codec implementation; both sides float32",
+        "length_limit": "512 generated tokens; original recipe always drops the final token, even when EOS was not reached"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/llasa",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/llasa/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    },
+    {
+      "name": "echo",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/llasa-echo-fixed-results/echo/request.json",
+      "provenance": {
+        "model_type": "echo",
+        "task": "text-to-speech",
+        "checkpoint": "jordand/echo-tts-base",
+        "repository": "https://github.com/jordandare/echo-tts",
+        "source_revision": "2ed95fce62d33bf7b56f835fd9ec0f0b6fb9155e",
+        "resolved_source_revision": "2ed95fce62d33bf7b56f835fd9ec0f0b6fb9155e",
+        "checkout_status": "ready",
+        "audio_codec": {
+          "repository": "jordand/fish-s1-dac-min",
+          "revision": "18b770e5b62b1a58ebd7423401a937cc063d8729",
+          "path": "/home/kadir/.cache/huggingface/hub/models--jordand--fish-s1-dac-min/snapshots/18b770e5b62b1a58ebd7423401a937cc063d8729",
+          "status": "cached"
+        },
+        "timing_scope": "Exploratory single-sentence smoke run",
+        "reference_compatibility": "torchcodec AudioDecoder import deferred until unused load_audio; Torch 2.8 instead of upstream requested >=2.9.1 to match VoiceHub; pinned local artifact resolver"
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/echo",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/echo/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "cases": [
+    {
+      "name": "asr_wavlm",
+      "request": "/home/kadir/kadir_projects/github/voicehub/benchmarks/upstream-parity-2026-09-15/runs/wavlm-prepared-results/asr_wavlm/request.json",
+      "provenance": {
+        "model_type": "asr_wavlm",
+        "task": "automatic-speech-recognition",
+        "checkpoint": "patrickvonplaten/wavlm-libri-clean-100h-base-plus",
+        "repository": "https://github.com/microsoft/unilm",
+        "source_revision": null,
+        "resolved_source_revision": "50224e387211f15ac6a3b2685730b9a0c850f145",
+        "checkout_status": "ready",
+        "recipe": "WavLM README Hugging Face support, shared published CTC fine-tune",
+        "checkpoint_conversion": {
+          "model_type": "asr_wavlm",
+          "repository": "patrickvonplaten/wavlm-libri-clean-100h-base-plus",
+          "revision": "02c289c4471cd1ba4b0ff3e7c304afe395c5026a",
+          "status": "cached",
+          "path": "/home/kadir/.cache/huggingface/hub/models--patrickvonplaten--wavlm-libri-clean-100h-base-plus/snapshots/02c289c4471cd1ba4b0ff3e7c304afe395c5026a",
+          "source_sha256": "31ead7cf6d5a3acd93e62971d177d16c2a702721e53ca10856c969abe633a89c",
+          "converted_sha256": "cc6b213ad14d4589568ad844841f6d3b3c58d12f2326cce14804530c02ff2dd1",
+          "conversion": "torch.load(weights_only=True); all tensor names and values verified bit-identical after Safetensors serialization",
+          "tensor_count": 250
+        }
+      },
+      "upstream": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_wavlm",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.cache/upstream-parity/repos/asr_wavlm/.venv-parity/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "upstream"
+        ]
+      },
+      "voicehub": {
+        "cwd": "/home/kadir/kadir_projects/github/voicehub",
+        "command": [
+          "/home/kadir/kadir_projects/github/voicehub/.venv/bin/python",
+          "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py",
+          "voicehub"
+        ]
+      }
+    }
+  ]
+}

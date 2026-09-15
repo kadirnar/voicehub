@@ -1,0 +1,9 @@
+{
+  "sample_rate": 44100,
+  "metadata": {
+    "normalized_text": "[S1] Hello, world. This is a speech quality comparison.",
+    "artifact_resolver": "Pinned local files"
+  },
+  "request_sha256": "0f52010595c0ec9844a01c5aaf78b4e9f60f56f31644c7e9060bb3cba67d9264",
+  "worker_sha256": "5a45c4a79ac7da6594bf4ff0fa66e424596cb600952cf8727cb19eb769fbfa41"
+}

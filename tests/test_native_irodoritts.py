@@ -24,6 +24,7 @@ from voicehub.architectures.irodoritts.codec import load_digest_gated_codec_payl
 from voicehub.architectures.irodoritts.configuration import IrodoriModelConfig
 from voicehub.architectures.irodoritts.metadata import IRODORI_CHECKPOINTS, IRODORI_CODEC_CHECKPOINT
 from voicehub.architectures.irodoritts.modeling import TextToLatentRFDiT
+from voicehub.architectures.irodoritts.runtime import InferenceRuntime, SamplingRequest
 from voicehub.architectures.irodoritts.tokenization import IrodoriTokenizer
 from voicehub.architectures.irodoritts.training import IrodoriBatchProcessor, irodori_training_step
 from voicehub.checkpointing import save_safetensors
@@ -165,6 +166,56 @@ class _FakeCodec:
 
 
 class NativeIrodoriTests(unittest.TestCase):
+
+    def test_no_reference_synthesis_matches_fixed_padding_and_omits_speaker_guidance(self):
+        torch.manual_seed(12)
+        config = _tiny_config(use_duration_predictor=False)
+        model = TextToLatentRFDiT(config).eval()
+        nn.init.normal_(model.out_proj.weight, std=0.02)
+        codec = SimpleNamespace(
+            device=torch.device("cpu"),
+            sample_rate=48_000,
+            hop_length=1920,
+            decode_latent=lambda latent: latent[:, :, 0].repeat_interleave(1920, dim=1),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = InferenceRuntime(
+                model=model,
+                model_cfg=config,
+                tokenizer=_write_tokenizer(Path(directory)),
+                codec=codec,
+                model_device="cpu",
+            )
+            ids, mask = runtime._batch_tokens("known", batch_size=2, max_length=8)
+            self.assertEqual(ids.tolist(), [[1, 264, 265, 4, 4, 4, 4, 4]] * 2)
+            self.assertEqual(mask.tolist(), [[True] * 3 + [False] * 5] * 2)
+            empty_ids, empty_mask = runtime._batch_tokens("", batch_size=1, max_length=8, allow_empty=True)
+            self.assertEqual(empty_ids.tolist(), [[1] + [4] * 7])
+            self.assertFalse(empty_mask.any())
+            batches = []
+            handle = model.blocks[0].register_forward_pre_hook(
+                lambda module, args, kwargs: batches.append(kwargs["x"].shape[0]), with_kwargs=True)
+            try:
+                for mode, scale in (("independent", None), ("joint", None), ("independent", 4.0)):
+                    with self.subTest(mode=mode, scale=scale):
+                        batches.clear()
+                        result = runtime.synthesize(
+                            SamplingRequest(
+                                text="known",
+                                no_ref=True,
+                                seconds=0.08,
+                                min_seconds=0.01,
+                                max_text_len=8,
+                                num_steps=3,
+                                seed=12,
+                                cfg_guidance_mode=mode,
+                                cfg_scale=scale,
+                                speaker_kv_scale=2.0,
+                                trim_tail=False))
+                        self.assertTrue(torch.isfinite(result.audio).all())
+                        self.assertEqual(max(batches), 1 if mode == "joint" else 2)
+            finally:
+                handle.remove()
 
     def test_public_namespaces_stay_lazy_and_registry_points_to_native_graph(self):
         result = subprocess.run(

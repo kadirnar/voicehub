@@ -294,19 +294,25 @@ class InferenceRuntime:
     ) -> tuple[torch.Tensor, torch.Tensor]:
         if not text and allow_empty:
             ids = torch.full(
-                (batch_size, 1),
-                self.tokenizer.bos_token_id,
+                (batch_size, max_length),
+                self.tokenizer.pad_token_id,
                 dtype=torch.long,
                 device=self.model_device,
             )
+            ids[:, 0] = self.tokenizer.bos_token_id
             return ids, torch.zeros_like(ids, dtype=torch.bool)
         rows, masks = self.tokenizer.encode_batch(
             [text] * batch_size,
             max_length=max_length,
         )
+        ids = torch.tensor(rows, dtype=torch.long, device=self.model_device)
+        mask = torch.tensor(masks, dtype=torch.bool, device=self.model_device)
+        # The released runtime pads to the configured width. Shortening masked
+        # inputs changes attention kernels and low-precision sampling results.
+        padding = max_length - ids.shape[1]
         return (
-            torch.tensor(rows, dtype=torch.long, device=self.model_device),
-            torch.tensor(masks, dtype=torch.bool, device=self.model_device),
+            torch.nn.functional.pad(ids, (0, padding), value=self.tokenizer.pad_token_id),
+            torch.nn.functional.pad(mask, (0, padding), value=False),
         )
 
     def _load_preencoded_latent(self, value: str | torch.Tensor) -> torch.Tensor:
@@ -520,6 +526,12 @@ class InferenceRuntime:
         patched_steps = math.ceil(latent_steps / self.model_cfg.latent_patch_size)
         used_seed = secrets.randbits(63) if request.seed is None else int(request.seed)
         sampled_started = time.perf_counter()
+        text_scale = request.cfg_scale_text if request.cfg_scale is None else request.cfg_scale
+        caption_scale = request.cfg_scale_caption if request.cfg_scale is None else request.cfg_scale
+        speaker_scale = request.cfg_scale_speaker if request.cfg_scale is None else request.cfg_scale
+        use_speaker = self.model_cfg.use_speaker_condition_resolved and not request.no_ref
+        if not use_speaker:
+            speaker_scale = 0.0
         sampled = sample_euler_rf_cfg(
             model=self.model,
             text_input_ids=text_ids,
@@ -533,19 +545,18 @@ class InferenceRuntime:
             speaker_mask_override=speaker_mask,
             speaker_uncond_mode=request.speaker_uncond_mode,
             num_steps=request.num_steps,
-            cfg_scale_text=request.cfg_scale_text,
-            cfg_scale_caption=request.cfg_scale_caption,
-            cfg_scale_speaker=request.cfg_scale_speaker,
+            cfg_scale_text=text_scale,
+            cfg_scale_caption=caption_scale,
+            cfg_scale_speaker=speaker_scale,
             cfg_guidance_mode=request.cfg_guidance_mode,
             cfg_min_t=request.cfg_min_t,
             cfg_max_t=request.cfg_max_t,
             seed=used_seed,
-            cfg_scale=request.cfg_scale,
             truncation_factor=request.truncation_factor,
             rescale_k=request.rescale_k,
             rescale_sigma=request.rescale_sigma,
             use_context_kv_cache=request.context_kv_cache,
-            speaker_kv_scale=request.speaker_kv_scale,
+            speaker_kv_scale=request.speaker_kv_scale if use_speaker else None,
             speaker_kv_max_layers=request.speaker_kv_max_layers,
             speaker_kv_min_t=request.speaker_kv_min_t,
             t_schedule_mode=request.t_schedule_mode,

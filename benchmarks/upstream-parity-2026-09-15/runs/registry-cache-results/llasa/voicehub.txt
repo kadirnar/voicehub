@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 382, in main
+    infer = prepare(request, side)
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/scripts/upstream_parity_worker.py", line 55, in prepare
+    model.load()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/modeling_utils.py", line 546, in load
+    self._load_pretrained_model()
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/llasa/inference.py", line 107, in _load_pretrained_model
+    artifacts = resolve_llasa_artifacts(
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/llasa/artifacts.py", line 280, in resolve_llasa_artifacts
+    _remote_checkpoint(
+  File "/home/kadir/kadir_projects/github/voicehub/voicehub/models/llasa/artifacts.py", line 169, in _remote_checkpoint
+    raise FileNotFoundError(
+FileNotFoundError: Native LLaSA found none of: 'model.safetensors', 'model.safetensors.index.json'.

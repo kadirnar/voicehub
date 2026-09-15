@@ -1,0 +1,16 @@
+{
+  "model_type": "chatterbox",
+  "task": "tts",
+  "device": "cuda",
+  "seed": 123,
+  "threads": 1,
+  "warmup": 1,
+  "repeats": 5,
+  "samples": [
+    {
+      "id": "hello",
+      "text": "Hello, world. This is a speech quality comparison."
+    }
+  ],
+  "diagnostics_after_seconds": 45
+}

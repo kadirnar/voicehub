@@ -1,0 +1,10 @@
+
+Loading weights:   0%|          | 0/212 [00:00<?, ?it/s]
+Loading weights: 100%|██████████| 212/212 [00:00<00:00, 19780.93it/s]
+[transformers] [1mWav2Vec2ForCTC LOAD REPORT[0m from: /home/kadir/.cache/huggingface/hub/models--facebook--wav2vec2-base-960h/snapshots/22aad52d435eb6dbaf354bdad9b0da84ce7d6156
+Key                        | Status  |
+---------------------------+---------+-
+wav2vec2.masked_spec_embed | MISSING |
+
+Notes:
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.

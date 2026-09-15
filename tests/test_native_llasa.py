@@ -7,12 +7,18 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import torch
 from torch import nn
 
 from voicehub.architectures.causal_lm import LlamaConfig, LlamaForCausalLM
-from voicehub.models.llasa.artifacts import LLASA_MULTILINGUAL_REVISION, XCODEC2_HF_REVISION, resolve_xcodec2_artifacts
+from voicehub.models.llasa.artifacts import (
+    LLASA_MULTILINGUAL_REVISION,
+    XCODEC2_HF_REVISION,
+    resolve_llasa_artifacts,
+    resolve_xcodec2_artifacts,
+)
 from voicehub.models.llasa.checkpoint import (
     REFERENCE_LLASSA_CHECKPOINT,
     REFERENCE_XCODEC2_CHECKPOINT,
@@ -86,8 +92,9 @@ class _FakeLlasaTokenizer:
         return_tensors=None,
         continue_final_message=False,
         add_generation_prompt=False,
+        date_string=None,
     ):
-        del tokenize, continue_final_message, add_generation_prompt
+        del tokenize, continue_final_message, add_generation_prompt, date_string
         self.last_messages = messages
         if return_tensors == "pt":
             return torch.tensor([[10, 11]], dtype=torch.long)
@@ -266,6 +273,41 @@ class LlasaDependencyAndProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Safetensors only"):
             LlasaConfig(use_safetensors=False)
 
+    def test_snapshot_symlinks_preserve_artifact_names_and_shard_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            snapshot = root / "snapshot"
+            snapshot.mkdir()
+            names = {
+                "config.json": "{}",
+                "tokenizer.json": "{}",
+                "model.safetensors": "placeholder",
+            }
+            for number, (name, content) in enumerate(names.items()):
+                blob = root / str(number)
+                blob.write_text(content)
+                (snapshot / name).symlink_to(blob)
+            for resolver in (resolve_llasa_artifacts, resolve_xcodec2_artifacts):
+                artifacts = resolver(snapshot)
+                self.assertEqual(artifacts.checkpoint, snapshot / "model.safetensors")
+                self.assertEqual(artifacts.root, snapshot)
+            (snapshot / "model.safetensors").rename(snapshot / "part.safetensors")
+            index_blob = root / "index-blob"
+            index_blob.write_text(json.dumps({"weight_map": {"weight": "part.safetensors"}}))
+            (snapshot / "model.safetensors.index.json").symlink_to(index_blob)
+            for resolver in (resolve_llasa_artifacts, resolve_xcodec2_artifacts):
+                self.assertEqual(resolver(snapshot).checkpoint, snapshot / "model.safetensors.index.json")
+            (snapshot / "part.safetensors").unlink()
+            with self.assertRaises(FileNotFoundError):
+                resolve_llasa_artifacts(snapshot)
+
+    def test_top_k_default_matches_original_transformers_sampling(self):
+        self.assertEqual(LlasaConfig().top_k, 50)
+        self.assertEqual(LlasaConfig(top_k=0).to_dict()["top_k"], 0)
+        for value in (True, 1.5, -1):
+            with self.subTest(value=value), self.assertRaises((ValueError, TypeError)):
+                LlasaConfig(top_k=value)
+
 
 class LlasaProtocolTests(unittest.TestCase):
 
@@ -295,6 +337,7 @@ class LlasaProtocolTests(unittest.TestCase):
                 },
             ],
             continue_final_message=True,
+            date_string="26 Jul 2024",
         )
         self.assertTrue(
             rendered.startswith(
@@ -302,6 +345,13 @@ class LlasaProtocolTests(unittest.TestCase):
                 "Cutting Knowledge Date: December 2023\n" + "Today Date: 26 Jul 2024\n\n" + EOT_TOKEN))
         self.assertTrue(rendered.endswith("\n\nanswer"))
         self.assertNotIn(EOT_TOKEN, rendered[-len(EOT_TOKEN):])
+
+    def test_default_chat_date_follows_the_original_runtime_clock(self):
+        with patch("voicehub.models.llasa.tokenization_llasa.datetime") as clock:
+            clock.now.return_value.strftime.return_value = "15 Sep 2026"
+            rendered = LlasaTokenizer.format_chat([{"role": "user", "content": "hello"}])
+        self.assertIn("Today Date: 15 Sep 2026\n", rendered)
+        self.assertNotIn("26 Jul 2024", rendered)
 
     def test_malformed_and_out_of_range_speech_tokens_fail_closed(self):
         with self.assertRaisesRegex(RuntimeError, "malformed speech token"):
@@ -525,6 +575,23 @@ class LlasaTrainingAndInferenceTests(unittest.TestCase):
         self.assertEqual(output.metadata["audio_tokens"], 1)
         self.assertEqual(language_model.generation_config.max_new_tokens, 4)
         self.assertEqual(language_model.generation_config.seed, 123)
+        self.assertEqual(language_model.generation_config.top_k, 50)
+        wrapper._generate("target", max_new_tokens=4, top_k=0, seed=123)
+        self.assertEqual(language_model.generation_config.top_k, 0)
+
+    def test_length_limited_generation_omits_final_token_like_original_recipe(self):
+        wrapper = LlasaForTextToSpeech(device="cpu")
+        wrapper.tokenizer = _FakeLlasaTokenizer()
+        wrapper.codec = _FakeCodec()
+        wrapper._torch = torch
+        wrapper.model = SimpleNamespace(
+            generate=lambda **kwargs: SimpleNamespace(
+                sequences=torch.tensor(
+                    [[10, 11, LLASA_SPEECH_TOKEN_OFFSET + 5, LLASA_SPEECH_TOKEN_OFFSET + 6]])))
+        output = wrapper._generate("target", max_new_tokens=2, seed=123)
+        self.assertEqual(output.audio.numel(), 320)
+        self.assertEqual(output.metadata["audio_tokens"], 1)
+        self.assertFalse(output.metadata["speech_end_reached"])
 
 
 if __name__ == "__main__":
