@@ -189,7 +189,7 @@ class AuditokVADRuntimeTests(unittest.TestCase):
 
         self.assertEqual(
             [(segment.start, segment.end) for segment in output.segments],
-            [(0.08, 0.42), (0.68, 1.0)],
+            [(0.08, 0.54), (0.68, 1.0)],
         )
         self.assertEqual(output.metadata["backend"], "voicehub-native")
         self.assertEqual(output.metadata["threshold_method"], "otsu")
@@ -249,7 +249,7 @@ def _native_ten_artifact(directory: str | Path) -> Path:
 
 class SherpaONNXVADRuntimeTests(unittest.TestCase):
 
-    def test_silero_scorer_preserves_native_frame_and_state_contract(self):
+    def test_silero_scorer_matches_standalone_with_explicit_zero_prefix(self):
         import torch
 
         from voicehub.architectures.silero_vad.configuration import SileroVADConfig
@@ -265,9 +265,11 @@ class SherpaONNXVADRuntimeTests(unittest.TestCase):
         ).probabilities[0]
 
         scorer = NativeSileroScorer(native)
-        actual = torch.tensor([scorer.compute(frame) for frame in waveform.split(native.config.frame_size)])
+        prefixed = torch.nn.functional.pad(waveform, (native.config.context_size, 0))
+        windows = prefixed.unfold(0, scorer.window_size, scorer.window_shift)
+        actual = torch.tensor([scorer.compute(frame) for frame in windows])
 
-        self.assertEqual(scorer.window_size, native.config.frame_size)
+        self.assertEqual(scorer.window_size, native.config.frame_size + native.config.context_size)
         torch.testing.assert_close(actual, expected)
 
     @staticmethod

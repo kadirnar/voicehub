@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import shutil
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -53,8 +54,6 @@ _EXPECTED_TOKEN_IDS = {
     SPEECH_UNDERSTANDING_START: 128_262,
     SPEECH_UNDERSTANDING_END: 128_263,
 }
-_DEFAULT_SYSTEM_MESSAGE = ("Cutting Knowledge Date: December 2023\n"
-                           "Today Date: 26 Jul 2024\n\n")
 
 
 def _tokenizer_document(path: Path) -> dict[str, Any]:
@@ -228,9 +227,13 @@ class LlasaTokenizer:
         *,
         continue_final_message: bool = False,
         add_generation_prompt: bool = False,
+        date_string: str | None = None,
     ) -> str:
-        """Render the checkpoint's Llama-3.2 chat template
-        deterministically."""
+        """Render the published template, with an optional date for replay."""
+        if date_string is None:
+            date_string = datetime.now().strftime("%d %b %Y")
+        if not isinstance(date_string, str) or not date_string.strip():
+            raise ValueError("`date_string` must be a non-empty string or None.")
         normalized = list(cls._validate_messages(messages))
         if continue_final_message and add_generation_prompt:
             raise ValueError(
@@ -243,8 +246,9 @@ class LlasaTokenizer:
         else:
             system_message = ""
         rendered = (
-            BOS_TOKEN + START_HEADER_TOKEN + "system" + END_HEADER_TOKEN + "\n\n" + _DEFAULT_SYSTEM_MESSAGE +
-            system_message + EOT_TOKEN)
+            BOS_TOKEN + START_HEADER_TOKEN + "system" + END_HEADER_TOKEN + "\n\n" +
+            "Cutting Knowledge Date: December 2023\n" + f"Today Date: {date_string}\n\n" + system_message +
+            EOT_TOKEN)
         for message in normalized:
             rendered += (
                 START_HEADER_TOKEN + message["role"] + END_HEADER_TOKEN + "\n\n" +
@@ -284,11 +288,13 @@ class LlasaTokenizer:
         return_tensors: str | None = None,
         continue_final_message: bool = False,
         add_generation_prompt: bool = False,
+        date_string: str | None = None,
     ):
         rendered = self.format_chat(
             messages,
             continue_final_message=continue_final_message,
             add_generation_prompt=add_generation_prompt,
+            date_string=date_string,
         )
         if not tokenize:
             if return_tensors is not None:

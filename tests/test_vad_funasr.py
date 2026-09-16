@@ -24,7 +24,9 @@ from voicehub.architectures.fsmn_vad.metadata import (
 from voicehub.architectures.fsmn_vad.modeling import FSMNVADModel
 from voicehub.checkpointing import SafeTensorReader, save_safetensors
 from voicehub.hub import write_json_file
+from voicehub.modeling_outputs import SpeechSegment
 from voicehub.models.vad_funasr import FSMNVADTrainingDataset, FunASRVADConfig, FunASRVADForVoiceActivityDetection
+from voicehub.models.vad_funasr.modeling_vad_funasr import _postprocess_segments
 from voicehub.registry import get_model_spec
 from voicehub.training import get_training_spec
 
@@ -252,6 +254,28 @@ print(json.dumps({
 
 
 class NativeFSMNVADProviderTests(unittest.TestCase):
+
+    def test_decoder_boundaries_are_not_merged_a_second_time(self):
+        # Real upstream endpoints with an 800 ms silence setting. Lookback
+        # and lookahead make the final visible gap only 280 ms.
+        segments = tuple(
+            SpeechSegment(start=a, end=b) for a, b in ((0.19, 10.42), (11.24, 18.78), (19.06, 29.38)))
+        output = _postprocess_segments(
+            segments,
+            duration=29.4,
+            min_speech_duration_ms=0,
+            speech_pad_ms=0,
+            max_speech_duration_s=60,
+        )
+        self.assertEqual(output, segments)
+        padded = _postprocess_segments(
+            segments,
+            duration=29.4,
+            min_speech_duration_ms=0,
+            speech_pad_ms=200,
+            max_speech_duration_s=60,
+        )
+        self.assertEqual(len(padded), 2)
 
     def test_load_detect_train_export_and_reload(self):
         with tempfile.TemporaryDirectory() as directory:

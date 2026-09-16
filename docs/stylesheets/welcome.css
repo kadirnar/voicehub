@@ -1,0 +1,100 @@
+/* Welcome-page template inspired by Liquid's LFM documentation (2026-09-15).
+   Shared navigation, search, language controls, and keyboard behavior remain
+   owned by the existing documentation shell. */
+:root {
+  --vh-accent: #5603ad;
+  --vh-accent-deep: #4f46e5;
+}
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #5603ad;
+  --md-primary-fg-color: #5603ad;
+  --md-accent-fg-color: #4f46e5;
+}
+[data-md-color-scheme="slate"] {
+  --vh-accent: #c4a0eb;
+  --vh-accent-deep: #c4b5fd;
+  --md-typeset-a-color: #c4a0eb;
+  --md-accent-fg-color: #c4b5fd;
+}
+.vh-doc-home .vh-doc-eyebrow {
+  margin: 0 0 0.65rem;
+  color: var(--vh-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.vh-doc-home h1 {
+  text-align: start;
+  margin-bottom: 0.8rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+.vh-doc-home .vh-doc-tagline {
+  text-align: start;
+  max-width: 42rem;
+  margin-bottom: 1.6rem;
+  color: var(--vh-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.vh-welcome-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-height: 11rem;
+  margin: 0 0 2rem;
+  padding: 1.8rem;
+  overflow: hidden;
+  border: 1px solid #4b4659;
+  border-radius: 0.75rem;
+  background: radial-gradient(ellipse at 95% 5%, #594171 0, transparent 65%), #1c1a23;
+  color: #ffffff;
+}
+.vh-welcome-banner > div:first-child {
+  display: grid;
+  gap: 0.55rem;
+}
+.vh-welcome-banner strong {
+  font-size: 1.9rem;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+.vh-welcome-banner span {
+  font-size: 0.75rem;
+}
+.vh-welcome-tasks {
+  display: grid;
+  gap: 0.65rem;
+}
+.vh-welcome-tasks span {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #8b75a3;
+  border-radius: 0.4rem;
+  background: #2b2438;
+}
+.vh-doc-home .grid.cards > ul {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+.vh-doc-home .grid.cards > ul > li {
+  padding: 1.15rem;
+  border: 1px solid var(--vh-line);
+  border-radius: 0.65rem;
+  background: var(--vh-surface);
+  box-shadow: none;
+}
+.vh-doc-home .grid.cards > ul > li:hover {
+  border-color: var(--vh-accent);
+  box-shadow: none;
+}
+.vh-doc-home .grid.cards > ul > li > p:first-child {
+  margin-top: 0;
+}
+@media (max-width: 44.984375em) {
+  .vh-welcome-banner { padding: 1.2rem; }
+  .vh-welcome-tasks { display: none; }
+  .vh-doc-home .grid.cards > ul { grid-template-columns: 1fr; }
+  .vh-doc-home h1 { font-size: 1.55rem; }
+}

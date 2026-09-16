@@ -307,10 +307,10 @@ class WebRTCVADInferenceTests(unittest.TestCase):
                 self.calls.append((frame, sample_rate))
                 return decisions[len(self.calls) - 1]
 
-        with patch(
-                "voicehub.models.vad_webrtc.modeling_vad_webrtc."
-                "NativeWebRTCVAD",
-                NativeRuntime,
+        with (
+                patch("voicehub.models.vad_webrtc.modeling_vad_webrtc.NativeWebRTCVAD", NativeRuntime),
+                patch("voicehub.architectures.webrtc_vad.acceleration.get_accelerator",
+                      return_value=(None, "python: test fallback")),
         ):
             model = WebRTCVADForVoiceActivityDetection(
                 WebRTCVADConfig(

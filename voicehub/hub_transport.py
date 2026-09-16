@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import socket
 import tempfile
 import time
 import uuid
@@ -158,7 +159,8 @@ class _FileLock:
         self.path = path
         self.timeout = timeout
         self.stale_after = stale_after
-        self._owner = f"{os.getpid()}:{uuid.uuid4().hex}"
+        self._host = socket.gethostname()
+        self._owner = f"{self._host}:{os.getpid()}:{uuid.uuid4().hex}"
         self._acquired = False
 
     def __enter__(self) -> _FileLock:
@@ -198,10 +200,36 @@ class _FileLock:
 
     def _discard_stale_lock(self) -> None:
         try:
-            age = time.time() - self.path.stat().st_mtime
-            if age > self.stale_after:
-                self.path.unlink(missing_ok=True)
-        except FileNotFoundError:
+            initial_stat = self.path.stat()
+            owner = self.path.read_text(encoding="ascii")
+            parts = owner.split(":")
+            age = time.time() - initial_stat.st_mtime
+            discard = age > self.stale_after
+            if len(parts) == 3 and parts[0] == self._host and os.name != "nt":
+                try:
+                    pid = int(parts[1])
+                    if pid <= 0:
+                        return
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    discard = True
+                except (PermissionError, ValueError):
+                    return
+                else:
+                    # A live download must never lose its lock merely because
+                    # a large checkpoint takes longer than the stale timeout.
+                    return
+            elif len(parts) == 3 and parts[0] != self._host:
+                # A shared cache may be owned by another host. Its PID is not
+                # meaningful here, so do not infer process death locally.
+                return
+            if discard:
+                current_stat = self.path.stat()
+                if ((current_stat.st_dev, current_stat.st_ino, current_stat.st_mtime_ns)
+                        == (initial_stat.st_dev, initial_stat.st_ino, initial_stat.st_mtime_ns) and
+                        self.path.read_text(encoding="ascii") == owner):
+                    self.path.unlink(missing_ok=True)
+        except (FileNotFoundError, UnicodeError):
             pass
 
 

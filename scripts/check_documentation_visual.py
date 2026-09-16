@@ -116,41 +116,22 @@ PALETTES = {
 
 HOME_ROUTE = "index.html"
 HOME_HEADINGS = (
-    ("H1", "VoiceHub"),
-    ("H2", "Features"),
-    ("H2", "Design"),
-    ("H2", "Learn"),
+    ("H1", "Welcome to VoiceHub Docs!"),
+    ("H2", "Why VoiceHub?"),
+    ("H2", "Get started"),
 )
 HOME_TOC = (
-    "Features",
-    "Design",
-    "Learn",
+    "Why VoiceHub?",
+    "Get started",
 )
-HOME_FEATURE_TARGETS = (
-    "/guides/inference/",
-    "/guides/trainer/",
-    "/reference/api/#generation",
-)
+HOME_FEATURE_TARGETS = ("/concepts/architecture/", )
 HOME_CARD_TARGETS = (
+    "/models/providers/",
     "/getting-started/quickstart/",
-    "/guides/inference/",
-    "/guides/speech-recognition/",
-    "/guides/voice-activity-detection/",
-    "/guides/data-preparation/",
     "/guides/training/",
-    "/models/asr-vad-support/",
-    "/models/training-support/",
     "/guides/notebook/",
-    "/reference/api/",
-    "/concepts/architecture/",
-    "/project/adding-a-model/",
 )
-HOME_BADGE_TARGETS = (
-    "https://github.com/kadirnar/voicehub/actions/workflows/ci.yml",
-    "https://github.com/kadirnar/voicehub/actions/workflows/docs.yml",
-    "https://github.com/kadirnar/voicehub/blob/main/pyproject.toml",
-    "https://github.com/kadirnar/voicehub/blob/main/LICENSE",
-)
+HOME_BADGE_TARGETS = ()
 INFERENCE_ROUTE = "guides/inference/index.html"
 INFERENCE_HEADINGS = (
     ("H1", "Inference"),
@@ -470,11 +451,11 @@ REPRESENTATIVE_PAGE_ACTIONS = {
     INFERENCE_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/guides/inference.md",
         "previous": ("/getting-started/quickstart/", "Previous: Quickstart"),
-        "next": ("/models/providers/", "Next: Model list"),
+        "next": ("/guides/upstream-parity/", "Next: Upstream comparisons"),
     },
     MODEL_INDEX_ROUTE: {
         "edit": "https://github.com/kadirnar/voicehub/edit/main/docs/models/providers/index.md",
-        "previous": ("/guides/inference/", "Previous: Inference"),
+        "previous": ("/guides/upstream-parity/", "Previous: Upstream comparisons"),
         "next": ("/models/providers/bark/", "Next: Bark"),
     },
     SPEECHT5_ROUTE: {
@@ -1607,8 +1588,8 @@ def _validate_home_state(page: Page, case: str) -> None:
             toc: Array.from(document.querySelectorAll(
               ".md-sidebar--secondary a.md-nav__link"
             )).map(link => normalize(link.textContent)),
-            featureLabels: sectionLinks("features").map(link => normalize(link.textContent)),
-            featureTargets: sectionLinks("features").map(pathWithHash),
+            featureLabels: sectionLinks("why-voicehub").map(link => normalize(link.textContent)),
+            featureTargets: sectionLinks("why-voicehub").map(pathWithHash),
             orderedListRows: Array.from(content?.querySelectorAll("ol") || [])
               .map(list => list.querySelectorAll(":scope > li").length),
             tips: content?.querySelectorAll(".admonition.tip").length || 0,
@@ -1634,27 +1615,27 @@ def _validate_home_state(page: Page, case: str) -> None:
     if tuple(state["toc"]) != HOME_TOC:
         raise DocumentationVisualError(
             f"{case}: Home table of contents is {state['toc']!r}, expected {HOME_TOC!r}.")
-    if tuple(state["featureLabels"]) != ("Inference", "Trainer", "generate"):
+    if tuple(state["featureLabels"]) != ("Explore the library architecture →", ):
         raise DocumentationVisualError(f"{case}: Home feature labels are {state['featureLabels']!r}.")
     if tuple(state["featureTargets"]) != HOME_FEATURE_TARGETS:
         raise DocumentationVisualError(
             f"{case}: Home feature targets are {state['featureTargets']!r}, "
             f"expected {HOME_FEATURE_TARGETS!r}.")
-    if tuple(state["orderedListRows"]) != (2, ) or state["tips"] != 1:
+    if tuple(state["orderedListRows"]) != () or state["tips"] != 0:
         raise DocumentationVisualError(
             f"{case}: Home design inventory is orderedListRows={state['orderedListRows']!r}, "
-            f"tips={state['tips']}; expected [2] and 1.")
-    if state["cardCount"] != 12 or tuple(state["cardTargets"]) != HOME_CARD_TARGETS:
+            f"tips={state['tips']}; expected [] and 0.")
+    if state["cardCount"] != 4 or tuple(state["cardTargets"]) != HOME_CARD_TARGETS:
         raise DocumentationVisualError(
             f"{case}: Home resource cards are count={state['cardCount']}, "
             f"targets={state['cardTargets']!r}.")
     if tuple(state["badgeTargets"]) != HOME_BADGE_TARGETS:
         raise DocumentationVisualError(
             f"{case}: Home badge targets are {state['badgeTargets']!r}, expected {HOME_BADGE_TARGETS!r}.")
-    if (state["imageCount"], state["decorativeImages"], len(state["badgeAlts"])) != (6, 2, 4):
+    if (state["imageCount"], state["decorativeImages"], len(state["badgeAlts"])) != (1, 1, 0):
         raise DocumentationVisualError(
             f"{case}: Home image inventory is {state['imageCount']}/"
-            f"{state['decorativeImages']}/{len(state['badgeAlts'])}, expected 6/2/4.")
+            f"{state['decorativeImages']}/{len(state['badgeAlts'])}, expected 1/1/0.")
     if any(not label for label in state["badgeAlts"]):
         raise DocumentationVisualError(f"{case}: Home badge alternative text is incomplete.")
     if state["tables"] or state["codeBlocks"] or state["pageCopyButtons"] != 1:

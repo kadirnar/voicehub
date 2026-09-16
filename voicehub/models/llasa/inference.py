@@ -248,6 +248,11 @@ class LlasaForTextToSpeech(PreTrainedTTSModel):
         if (isinstance(top_p, bool) or not isinstance(top_p, Real) or not math.isfinite(top_p) or
                 not 0 < top_p <= 1):
             raise ValueError("LLaSA sampling requires `top_p` in the interval (0, 1].")
+        top_k = model_inputs.get("top_k")
+        if top_k is None:
+            top_k = self.config.top_k
+        if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 0:
+            raise ValueError("`top_k` must be a non-negative integer.")
 
     @staticmethod
     def _ids_to_speech_tokens(speech_ids) -> list[str]:
@@ -316,6 +321,7 @@ class LlasaForTextToSpeech(PreTrainedTTSModel):
             tokenize=True,
             return_tensors="pt",
             continue_final_message=True,
+            date_string=self.config.date_string,
         ).to(self.device)
 
     def _generate(
@@ -328,6 +334,7 @@ class LlasaForTextToSpeech(PreTrainedTTSModel):
         max_new_tokens: int | None = None,
         temperature: float | None = None,
         top_p: float | None = None,
+        top_k: int | None = None,
         seed: int | None = None,
     ) -> TTSOutput:
         """Synthesize text, optionally from an aligned reference utterance."""
@@ -336,6 +343,7 @@ class LlasaForTextToSpeech(PreTrainedTTSModel):
         requested_tokens = (self.config.max_new_tokens if max_new_tokens is None else max_new_tokens)
         sampling_temperature = (self.config.temperature if temperature is None else float(temperature))
         nucleus_probability = (self.config.top_p if top_p is None else float(top_p))
+        candidate_count = self.config.top_k if top_k is None else top_k
         seed_context = (
             nullcontext(validate_seed(seed) if seed is not None else secrets.randbits(63))
             if self.uses_llm_token_backend else seeded_inference(
@@ -373,6 +381,7 @@ class LlasaForTextToSpeech(PreTrainedTTSModel):
                         do_sample=True,
                         temperature=sampling_temperature,
                         top_p=nucleus_probability,
+                        top_k=candidate_count,
                         eos_token_id=speech_end_id,
                         pad_token_id=self.tokenizer.convert_tokens_to_ids(EOT_TOKEN),
                         seed=effective_seed,
@@ -383,6 +392,10 @@ class LlasaForTextToSpeech(PreTrainedTTSModel):
                     0,
                     input_ids.shape[1]:,
                 ]
+                speech_end_reached = int(generated_ids[-1].item()) == speech_end_id
+                # Both published recipes reserve the final generated token
+                # for termination and omit it even when the length cap wins.
+                generated_ids = generated_ids[:-1]
                 token_strings = self.tokenizer.convert_ids_to_tokens(generated_ids.detach().cpu().tolist())
                 speech_ids = prefix_ids + self._extract_speech_ids(token_strings)
                 codec_device = next(self.codec.parameters()).device
@@ -410,6 +423,7 @@ class LlasaForTextToSpeech(PreTrainedTTSModel):
                 "audio_tokens": len(speech_ids) - len(prefix_ids),
                 "prompt_audio_tokens": len(prefix_ids),
                 "max_new_tokens": effective_tokens,
+                "speech_end_reached": speech_end_reached,
             },
         )
 

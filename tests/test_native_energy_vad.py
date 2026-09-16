@@ -14,6 +14,23 @@ from voicehub.architectures.energy_vad import (
 
 class NativeEnergyVADTests(unittest.TestCase):
 
+    def test_auditok_retains_trailing_silence_by_default_and_can_trim(self):
+        from voicehub.models.vad_auditok import AuditokVADConfig, AuditokVADForVoiceActivityDetection
+
+        waveform = torch.zeros(16_000)
+        waveform[1600:8000] = 0.2
+        for trim, expected_end in ((False, 0.6), (True, 0.5)):
+            with self.subTest(drop_trailing_silence=trim):
+                config = AuditokVADConfig(drop_trailing_silence=trim)
+                restored = AuditokVADConfig.from_dict(config.to_dict())
+                self.assertEqual(restored.drop_trailing_silence, trim)
+                model = AuditokVADForVoiceActivityDetection(config, device="cpu")
+                result = model.detect(waveform, sampling_rate=16_000, speech_pad_ms=0)
+                self.assertEqual([(s.start, s.end) for s in result.segments], [(0.1, expected_end)])
+        self.assertFalse(AuditokVADConfig().drop_trailing_silence)
+        with self.assertRaisesRegex(TypeError, "drop_trailing_silence"):
+            AuditokVADConfig(drop_trailing_silence="false")
+
     def test_percentile_threshold_uses_noise_floor_plus_six_db(self):
         energies = torch.tensor([-200.0, 10.0, 20.0, 30.0])
 

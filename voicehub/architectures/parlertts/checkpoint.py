@@ -48,7 +48,8 @@ class ParlerCheckpointReport:
 
 def inspect_parlertts_checkpoint(path: str | Path, ) -> ParlerCheckpointReport:
     """Inspect the namespace without materializing its 3.5 GB payload."""
-    source = Path(path).expanduser().resolve()
+    # Hub snapshots use named symlinks to extensionless content-addressed blobs.
+    source = Path(path).expanduser().absolute()
     if source.suffix.lower() != ".safetensors":
         raise ValueError("Native Parler-TTS accepts Safetensors checkpoints.")
     with SafeTensorReader(source) as reader:

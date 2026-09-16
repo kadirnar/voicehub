@@ -11,7 +11,7 @@ ci:
     - docformatter
   # submodules: true
 
-exclude: ^(?:voicehub/models/.*/source/|voicehub/models/asr_native/_wenet/|voicehub/components/(?:audio|neural)/)
+exclude: ^(?:voicehub/(?:models|architectures)/.*/source/|voicehub/models/asr_native/_wenet/|voicehub/components/(?:audio|neural)/)
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
