@@ -247,6 +247,51 @@ class DelaySamplingTests(unittest.TestCase):
                     ))
 
 
+class HubSnapshotLayoutTests(unittest.TestCase):
+
+    def test_local_snapshot_with_blob_symlinks_resolves(self):
+        import json
+        import tempfile
+
+        from voicehub.architectures.mosstts.artifacts import resolve_mosstts_artifacts
+        from voicehub.architectures.mosstts.checkpoint import inspect_mosstts_checkpoint
+        from voicehub.checkpointing.safetensors import save_safetensors
+
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "models--org--model"
+            blobs = repository / "blobs"
+            snapshot = repository / "snapshots" / ("a" * 40)
+            blobs.mkdir(parents=True)
+            snapshot.mkdir(parents=True)
+            payloads = {
+                "config.json": b"{}",
+                "vocab.json": b"{}",
+                "merges.txt": b"#version: 0.2\n",
+                "tokenizer_config.json": b"{}",
+                "model.safetensors.index.json": json.dumps({
+                    "weight_map": {
+                        "a": "model-00001-of-00002.safetensors",
+                        "b": "model-00002-of-00002.safetensors",
+                    }
+                }).encode(),
+            }
+            for index, (name, payload) in enumerate(payloads.items()):
+                (blobs / f"blob{index}").write_bytes(payload)
+                (snapshot / name).symlink_to(Path("../..") / "blobs" / f"blob{index}")
+            for index, name in enumerate(("a", "b"), start=1):
+                blob = blobs / f"shard{index}"
+                save_safetensors({name: torch.zeros(2)}, blob.with_suffix(".safetensors"))
+                blob.with_suffix(".safetensors").rename(blob)
+                (snapshot / f"model-0000{index}-of-00002.safetensors").symlink_to(
+                    Path("../..") / "blobs" / blob.name)
+
+            artifacts = resolve_mosstts_artifacts(snapshot)
+            self.assertEqual(artifacts.checkpoint.name, "model.safetensors.index.json")
+            self.assertEqual(artifacts.checkpoint.parent, snapshot.absolute())
+            report = inspect_mosstts_checkpoint(artifacts.checkpoint)
+            self.assertEqual(report.tensor_count, 2)
+
+
 @unittest.skipUnless(TORCHAUDIO_AVAILABLE, "torchaudio is used only as an audit reference")
 class HannResamplerTests(unittest.TestCase):
 

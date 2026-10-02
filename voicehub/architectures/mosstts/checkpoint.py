@@ -75,7 +75,8 @@ def mosstts_header_fingerprint(reader: _TensorReader) -> str:
 
 
 def inspect_mosstts_checkpoint(path: str | Path, ) -> MossCheckpointReport:
-    source = Path(path).expanduser().resolve()
+    # Logical path: snapshot symlinks point at extensionless blobs.
+    source = Path(path).expanduser().absolute()
     with _open_reader(source) as reader:
         records = [_record(reader, name) for name in reader.keys()]
         report = MossCheckpointReport(
