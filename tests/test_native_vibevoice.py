@@ -12,7 +12,11 @@ from pathlib import Path
 import torch
 
 from voicehub.architectures.causal_lm import Qwen2Config
-from voicehub.architectures.vibevoice.checkpoint import VibeVoiceCheckpointAdapter, build_vibevoice_model
+from voicehub.architectures.vibevoice.checkpoint import (
+    VibeVoiceCheckpointAdapter,
+    _materialize_runtime_buffers,
+    build_vibevoice_model,
+)
 from voicehub.architectures.vibevoice.configuration import (
     VibeVoiceASRConfig,
     VibeVoiceASRTokenizerConfig,
@@ -49,6 +53,7 @@ from voicehub.models.asr_vibevoice import VibeVoiceASRConfig as ProviderConfig
 from voicehub.models.asr_vibevoice import VibeVoiceForSpeechRecognition
 from voicehub.models.asr_vibevoice.training_asr_vibevoice import NativeVibeVoiceASRTrainingAdapter
 from voicehub.models.vibevoice import VibeVoiceForTextToSpeech
+from voicehub.neural.rotary import RotaryEmbedding
 from voicehub.optimization.diffusion_sampling import DiffusionSamplingConfig, DiffusionSamplingMixin
 from voicehub.tokenization.assets import encode_gpt2_token
 from voicehub.training import AutoTrainingAdapter, get_training_spec
@@ -745,6 +750,19 @@ class NativeVibeVoiceTests(unittest.TestCase):
             generator=torch.Generator().manual_seed(5),
         )
         torch.testing.assert_close(actual, expected)
+
+    def test_materialized_rope_frequencies_match_host_reference(self):
+        # Transformers computes Qwen2 inv_freq on the host; CUDA `pow` differs
+        # by ULPs (Qwen2.5-0.5B: 1.9e-9), which flips bf16 cos/sin at long
+        # positions and changed realtime long-form audio after ~360 latents.
+        reference = 1.0 / (1_000_000.0**(torch.arange(0, 64, 2, dtype=torch.int64).float() / 64))
+        devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
+        for device in devices:
+            with self.subTest(device=device):
+                rotary = RotaryEmbedding(64, base=1_000_000.0)
+                _materialize_runtime_buffers(torch.nn.ModuleList([rotary]), device=device)
+                self.assertEqual(rotary.inverse_frequency.device.type, device)
+                self.assertTrue(torch.equal(rotary.inverse_frequency.cpu(), reference))
 
     def test_vibevoice_rejects_direct_velocity_stork_solver(self):
         head = VibeVoiceDiffusionHead(_diffusion_config())
