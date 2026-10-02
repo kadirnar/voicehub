@@ -1130,8 +1130,13 @@ def _find_legacy_cached_file(
                 commit = candidate
         except (FileNotFoundError, OSError, UnicodeError, ValueError):
             return None
+    # Snapshot entries are symlinks to content-addressed blobs. Recent
+    # huggingface_hub releases share those blobs across repositories
+    # (``<cache>/blobs/<xx>/<sha256>``), so the link target is contained in
+    # the cache root rather than in this repository's folder.
     candidate_path = _safe_join(
-        repository,
+        root,
+        repository.name,
         "snapshots",
         commit,
         *relative_file.parts,
