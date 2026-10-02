@@ -797,7 +797,7 @@ class DiaForConditionalGeneration(nn.Module):
         decoder_input_ids: Tensor | None = None,
         decoder_attention_mask: Tensor | None = None,
         *,
-        max_new_tokens: int = 256,
+        max_new_tokens: int = 3072,
         do_sample: bool = True,
         temperature: float = 1.8,
         top_k: int | None = 50,
@@ -818,10 +818,12 @@ class DiaForConditionalGeneration(nn.Module):
         max_new_tokens = _positive_integer("max_new_tokens", max_new_tokens)
         if not isinstance(do_sample, bool):
             raise TypeError("`do_sample` must be a boolean.")
-        temperature = max(
-            1.0,
-            _finite_number("temperature", temperature, minimum=0.0),
-        )
+        # The released runtime divides by any positive temperature and
+        # treats zero as greedy decoding; it never clamps values below one.
+        temperature = _finite_number("temperature", temperature, minimum=0.0)
+        if temperature == 0.0:
+            do_sample = False
+            temperature = 1.0
         if top_k is not None:
             top_k = _positive_integer("top_k", top_k)
         top_p = _finite_number("top_p", top_p, minimum=0.0)
@@ -905,10 +907,16 @@ class DiaForConditionalGeneration(nn.Module):
             dtype=torch.long,
             device=device,
         )
-        maximum_steps = max_new_tokens
+        # Never step past the decoder's positional range (audio prompts consume
+        # part of it); the forced EOS below then fits inside that range.
+        position_budget = decoder.max_position_embeddings - sequences.shape[1] + 1
+        if position_budget <= max(self.config.delay_pattern) + 1:
+            raise ValueError("The Dia audio prompt leaves no room in the decoder's "
+                             f"{decoder.max_position_embeddings}-position range.")
+        maximum_steps = min(max_new_tokens, position_budget)
         # The generation budget includes the delayed channels' EOS tail,
         # just as the upstream EOS delay processor's max_length does.
-        force_eos_length = sequences.shape[1] + max_new_tokens - max(self.config.delay_pattern) - 1
+        force_eos_length = sequences.shape[1] + maximum_steps - max(self.config.delay_pattern) - 1
 
         for step in range(maximum_steps):
             forced_sequence = self.apply_delay_mask(

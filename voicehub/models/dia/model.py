@@ -96,7 +96,7 @@ class Dia:
         text: str,
         *,
         audio_prompt: Any | None = None,
-        max_tokens: int = 256,
+        max_tokens: int = 3072,
         cfg_scale: float = 3.0,
         cfg_filter_top_k: int | None = 50,
         temperature: float = 1.8,
