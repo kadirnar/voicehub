@@ -71,7 +71,8 @@ class RotaryEmbedding(nn.Module):
                 )
         self.register_buffer(
             "inverse_frequency",
-            inverse_frequency.to(device=device),
+            # `device=None` follows the ambient default (e.g. a meta context).
+            inverse_frequency.to(device=torch.empty(0).device if device is None else device),
             persistent=False,
         )
 

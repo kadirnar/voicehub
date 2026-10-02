@@ -221,6 +221,51 @@ class DelayPromptTests(unittest.TestCase):
         self.assertFalse(uses_source_text_normalizer(artifacts))
 
 
+class LocalPromptTests(unittest.TestCase):
+    """The original Local release is frame-aligned (no delay pattern)."""
+
+    def test_generation_prompt_opens_audio_and_keeps_reference_frames(self):
+        config = _tiny_tts_config("local")
+        processor = MossTTSProcessor(config, _TinyTokenizer())
+        reference = torch.arange(3 * config.n_vq).remainder(8).view(3, config.n_vq)
+
+        rows = processor.build_generation_prompt("hi", reference_codes=(reference, )).input_ids[0]
+
+        text = rows[:, 0]
+        self.assertEqual(int(text[-1]), config.audio_start_token_id)
+        self.assertTrue(rows[-1, 1:].eq(config.audio_pad_token_id).all())
+        start = int(torch.where(text.eq(config.audio_start_token_id))[0][0])
+        end = int(torch.where(text.eq(config.audio_end_token_id))[0][0])
+        self.assertEqual(end - start - 1, reference.shape[0])
+        self.assertTrue(text[start + 1:end].eq(config.audio_user_slot_token_id).all())
+        self.assertTrue(torch.equal(rows[start + 1:end, 1:], reference))
+
+        direct = processor.build_generation_prompt("hi").input_ids[0]
+        self.assertEqual(int(direct[-1, 0]), config.audio_start_token_id)
+
+    def test_training_target_and_decode_are_frame_aligned(self):
+        config = _tiny_tts_config("local")
+        processor = MossTTSProcessor(config, _TinyTokenizer())
+        speech = torch.arange(4 * config.n_vq).remainder(8).view(4, config.n_vq)
+
+        record = processor.build_training_record(text="hi", speech_tokens=speech)
+        full = torch.cat([record.input_ids[0], record.labels[0, -1:].clamp_min(0)])
+        text = full[:, 0]
+        self.assertEqual(int(text.eq(config.audio_start_token_id).sum()), 1)
+        start = int(torch.where(text.eq(config.audio_start_token_id))[0][0])
+        self.assertTrue(text[start + 1:start + 5].eq(config.audio_assistant_slot_token_id).all())
+        self.assertTrue(torch.equal(full[start + 1:start + 5, 1:], speech))
+        self.assertEqual(int(text[start + 5]), config.audio_end_token_id)
+
+        generated = torch.cat([
+            processor._text_rows([config.audio_start_token_id]),
+            processor._audio_rows(speech, text_token_id=config.audio_assistant_slot_token_id),
+            processor._text_rows([config.audio_end_token_id]),
+        ])
+        decoded = processor.decode_generated([(0, generated)])
+        self.assertTrue(torch.equal(decoded[0].audio_codes, speech))
+
+
 class ReferenceAudioTests(unittest.TestCase):
 
     def test_loudness_normalize_matches_source_formula(self):
@@ -289,6 +334,9 @@ class RotaryFrequencyTests(unittest.TestCase):
         from voicehub.neural.rotary import RotaryEmbedding
 
         self.assertEqual(RotaryEmbedding(128, base=1e6, device="meta").inverse_frequency.device.type, "meta")
+        with torch.device("meta"):
+            ambient = RotaryEmbedding(128, base=1e6)
+        self.assertEqual(ambient.inverse_frequency.device.type, "meta")
 
     @unittest.skipUnless(torch.cuda.is_available(), "CUDA is required to compare device arithmetic")
     def test_cuda_frequencies_match_cpu_reference(self):

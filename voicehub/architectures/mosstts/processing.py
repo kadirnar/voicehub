@@ -294,7 +294,7 @@ class MossTTSProcessor:
                     self.tokenizer.encode_ids(text_part) + [self.config.audio_start_token_id],
                     device=reference.device,
                 ))
-            rows.append(self._delay_audio_block(reference, role="user"))
+            rows.append(self._reference_audio_block(reference))
             rows.append(self._text_rows(
                 [self.config.audio_end_token_id],
                 device=reference.device,
@@ -306,6 +306,18 @@ class MossTTSProcessor:
             device=references[0].device,
         ))
         return torch.cat(rows)
+
+    def _reference_audio_block(self, reference: Tensor) -> Tensor:
+        """User reference rows: delay-patterned for Delay, frame-aligned
+        (one user slot per codec frame) for the original Local release."""
+        if self.config.variant == "local":
+            if self.config.audio_user_slot_token_id is None:
+                raise ValueError("Local config has no user audio-slot token.")
+            return self._audio_rows(
+                reference,
+                text_token_id=self.config.audio_user_slot_token_id,
+            )
+        return self._delay_audio_block(reference, role="user")
 
     def _local_v15_prompt(
         self,
@@ -376,6 +388,7 @@ class MossTTSProcessor:
         ambient_sound: str | None = None,
         language: str | None = None,
         device: str | torch.device | None = None,
+        add_audio_start: bool = True,
     ) -> MossProcessorBatch:
         if self.normalize_text and isinstance(text, str):
             text = normalize_tts_text(text)
@@ -420,6 +433,16 @@ class MossTTSProcessor:
                 ambient_sound=ambient_sound,
                 language=language,
             )
+            if self.config.variant == "local" and add_audio_start:
+                # The original Local processor opens the assistant audio in
+                # generation mode with one <|audio_start|> row.
+                rows = torch.cat([
+                    rows,
+                    self._text_rows(
+                        [self.config.audio_start_token_id],
+                        device=rows.device,
+                    ),
+                ])
         rows = rows.to(device=device)
         return MossProcessorBatch(
             input_ids=rows.unsqueeze(0),
@@ -520,12 +543,17 @@ class MossTTSProcessor:
         if self.config.audio_assistant_slot_token_id is None:
             raise ValueError("MOSS config has no assistant audio-slot token.")
         if self.config.variant in {"delay", "local"}:
+            audio_block = (
+                self._audio_rows(
+                    audio_codes,
+                    text_token_id=self.config.audio_assistant_slot_token_id,
+                ) if self.config.variant == "local" else self._delay_audio_block(audio_codes, role="assistant"))
             return torch.cat([
                 self._text_rows(
                     [self.config.audio_start_token_id],
                     device=audio_codes.device,
                 ),
-                self._delay_audio_block(audio_codes, role="assistant"),
+                audio_block,
                 self._text_rows(
                     [
                         self.config.audio_end_token_id,
@@ -654,6 +682,7 @@ class MossTTSProcessor:
                 sound_event=sound_event,
                 ambient_sound=ambient_sound,
                 language=language,
+                add_audio_start=False,
             ).input_ids[0].to(speech_tokens.device)
             prompt_length = prompt.shape[0]
             full = torch.cat([prompt, self._assistant_target(speech_tokens)])
@@ -740,7 +769,9 @@ class MossTTSProcessor:
             if sequence.ndim != 2 or sequence.shape[1] != self.config.channels:
                 raise ValueError("Generated MOSS sequence has an invalid channel layout.")
             audio = sequence[:, 1:]
-            if self.config.variant in {"delay", "local"}:
+            # Only the Delay release uses the diagonal delay pattern; the
+            # original Local release emits frame-aligned codebooks.
+            if self.config.variant == "delay":
                 audio = self.remove_delay_pattern(audio)
             non_padding = ~audio.eq(self.config.audio_pad_token_id).all(dim=1)
             indices = torch.where(non_padding)[0]
