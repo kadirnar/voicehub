@@ -149,6 +149,28 @@ class _FakeSpeakerEncoder:
 
 class NativeChatterboxTests(unittest.TestCase):
 
+    def test_s3gen_reference_resampling_matches_released_torchaudio_frontend(self):
+        # Upstream S3Gen.embed_ref resamples with torchaudio.transforms.Resample;
+        # its x-vector and prompt tokens change with any other resampler.
+        from voicehub.models.chatterbox.models.s3gen.s3gen import _resample_batch
+
+        waveform = torch.sin(torch.arange(40, dtype=torch.float32) * 0.7).reshape(2, 20)
+        expected = torch.tensor([
+            0.0717478022, 0.8524141908, 0.8707162142, -0.0125372773, -0.8699551821, -0.8599711657,
+            0.0168276150, 0.8764830232, 0.8563733697, -0.0327278748, -0.8594605923, -0.8959908485,
+            0.1374603957, 0.3783452809
+        ])
+        resampled = _resample_batch(waveform, 24_000, 16_000)
+        self.assertEqual(tuple(resampled.shape), (2, 14))
+        torch.testing.assert_close(resampled[0], expected, rtol=0, atol=1e-6)
+        try:
+            from torchaudio.transforms import Resample
+        except ImportError:
+            return
+        for source_rate, target_rate in ((24_000, 16_000), (44_100, 24_000), (22_050, 16_000)):
+            reference = Resample(source_rate, target_rate)(waveform)
+            self.assertTrue(torch.equal(_resample_batch(waveform, source_rate, target_rate), reference))
+
     def test_generation_limit_rejects_values_beyond_t3_capacity(self):
         from voicehub.models.chatterbox.tts import ChatterboxTTS
 
