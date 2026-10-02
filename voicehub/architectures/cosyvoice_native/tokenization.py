@@ -30,6 +30,49 @@ PUBLISHED_SPECIAL_IDS = {
     IM_END: 151_645,
     END_OF_PROMPT: 151_646,
 }
+# Source ``CosyVoice3Tokenizer`` registers these with Hugging Face
+# ``add_special_tokens`` at load time; the published ``CosyVoice-BlankEN``
+# assets do not contain them. Missing spellings receive consecutive IDs after
+# the asset's last ID, in this order, exactly as the source tokenizer does.
+# yapf: disable
+COSYVOICE3_SPECIAL_TOKENS = (
+    "<|im_start|>", "<|im_end|>", "<|endofprompt|>", "[breath]", "<strong>", "</strong>", "[noise]", "[laughter]",
+    "[cough]", "[clucking]", "[accent]", "[quick_breath]", "<laughter>", "</laughter>", "[hissing]", "[sigh]",
+    "[vocalized-noise]", "[lipsmack]", "[mn]", "<|endofsystem|>", "[AA]", "[AA0]", "[AA1]", "[AA2]",
+    "[AE]", "[AE0]", "[AE1]", "[AE2]", "[AH]", "[AH0]", "[AH1]", "[AH2]",
+    "[AO]", "[AO0]", "[AO1]", "[AO2]", "[AW]", "[AW0]", "[AW1]", "[AW2]",
+    "[AY]", "[AY0]", "[AY1]", "[AY2]", "[B]", "[CH]", "[D]", "[DH]",
+    "[EH]", "[EH0]", "[EH1]", "[EH2]", "[ER]", "[ER0]", "[ER1]", "[ER2]",
+    "[EY]", "[EY0]", "[EY1]", "[EY2]", "[F]", "[G]", "[HH]", "[IH]",
+    "[IH0]", "[IH1]", "[IH2]", "[IY]", "[IY0]", "[IY1]", "[IY2]", "[JH]",
+    "[K]", "[L]", "[M]", "[N]", "[NG]", "[OW]", "[OW0]", "[OW1]",
+    "[OW2]", "[OY]", "[OY0]", "[OY1]", "[OY2]", "[P]", "[R]", "[S]",
+    "[SH]", "[T]", "[TH]", "[UH]", "[UH0]", "[UH1]", "[UH2]", "[UW]",
+    "[UW0]", "[UW1]", "[UW2]", "[V]", "[W]", "[Y]", "[Z]", "[ZH]",
+    "[a]", "[ai]", "[an]", "[ang]", "[ao]", "[b]", "[c]", "[ch]",
+    "[d]", "[e]", "[ei]", "[en]", "[eng]", "[f]", "[g]", "[h]",
+    "[i]", "[ian]", "[in]", "[ing]", "[iu]", "[ià]", "[iàn]", "[iàng]",
+    "[iào]", "[iá]", "[ián]", "[iáng]", "[iáo]", "[iè]", "[ié]", "[iòng]",
+    "[ióng]", "[iù]", "[iú]", "[iā]", "[iān]", "[iāng]", "[iāo]", "[iē]",
+    "[iě]", "[iōng]", "[iū]", "[iǎ]", "[iǎn]", "[iǎng]", "[iǎo]", "[iǒng]",
+    "[iǔ]", "[j]", "[k]", "[l]", "[m]", "[n]", "[o]", "[ong]",
+    "[ou]", "[p]", "[q]", "[r]", "[s]", "[sh]", "[t]", "[u]",
+    "[uang]", "[ue]", "[un]", "[uo]", "[uà]", "[uài]", "[uàn]", "[uàng]",
+    "[uá]", "[uái]", "[uán]", "[uáng]", "[uè]", "[ué]", "[uì]", "[uí]",
+    "[uò]", "[uó]", "[uā]", "[uāi]", "[uān]", "[uāng]", "[uē]", "[uě]",
+    "[uī]", "[uō]", "[uǎ]", "[uǎi]", "[uǎn]", "[uǎng]", "[uǐ]", "[uǒ]",
+    "[vè]", "[w]", "[x]", "[y]", "[z]", "[zh]", "[à]", "[ài]",
+    "[àn]", "[àng]", "[ào]", "[á]", "[ái]", "[án]", "[áng]", "[áo]",
+    "[è]", "[èi]", "[èn]", "[èng]", "[èr]", "[é]", "[éi]", "[én]",
+    "[éng]", "[ér]", "[ì]", "[ìn]", "[ìng]", "[í]", "[ín]", "[íng]",
+    "[ò]", "[òng]", "[òu]", "[ó]", "[óng]", "[óu]", "[ù]", "[ùn]",
+    "[ú]", "[ún]", "[ā]", "[āi]", "[ān]", "[āng]", "[āo]", "[ē]",
+    "[ēi]", "[ēn]", "[ēng]", "[ě]", "[ěi]", "[ěn]", "[ěng]", "[ěr]",
+    "[ī]", "[īn]", "[īng]", "[ō]", "[ōng]", "[ōu]", "[ū]", "[ūn]",
+    "[ǎ]", "[ǎi]", "[ǎn]", "[ǎng]", "[ǎo]", "[ǐ]", "[ǐn]", "[ǐng]",
+    "[ǒ]", "[ǒng]", "[ǒu]", "[ǔ]", "[ǔn]", "[ǘ]", "[ǚ]", "[ǜ]",
+)
+# yapf: enable
 
 
 def _tokenizer_metadata(path: Path, *, max_bytes: int) -> dict:
@@ -69,6 +112,7 @@ class CosyVoiceTextTokenizer:
         tokenizer_config_path: str | Path,
         *,
         validate_published_ids: bool = True,
+        register_source_special_tokens: bool | None = None,
         max_asset_bytes: int = DEFAULT_MAX_ASSET_BYTES,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         max_merges: int = DEFAULT_MAX_MERGES,
@@ -90,20 +134,28 @@ class CosyVoiceTextTokenizer:
             tokenizer_config_path,
             max_bytes=max_asset_bytes,
         )
+        # Only explicitly registered tokens are atomic. Ordinary BPE entries
+        # such as "[" or "[i" must keep merging like any other text.
         special: dict[str, int] = {}
-        for raw_token, token_id in vocabulary.items():
-            try:
-                spelling = raw_token.decode("utf-8")
-            except UnicodeDecodeError:
-                continue
-            if (spelling.startswith(("<|", "[", "</")) or
-                    spelling in {"<strong>", "</strong>", "<laughter>", "</laughter>"}):
-                special[spelling] = token_id
         records = metadata.get("added_tokens_decoder", {})
         if isinstance(records, dict):
             for raw_id, record in records.items():
                 if isinstance(record, dict) and isinstance(record.get("content"), str):
                     special[record["content"]] = int(raw_id)
+        if register_source_special_tokens is None:
+            register_source_special_tokens = validate_published_ids
+        if register_source_special_tokens:
+            used_ids = set(vocabulary.values()) | set(special.values())
+            next_id = max(used_ids) + 1 if used_ids else 0
+            for spelling in COSYVOICE3_SPECIAL_TOKENS:
+                if spelling in special:
+                    continue
+                existing = vocabulary.get(spelling.encode("utf-8"))
+                if existing is not None:
+                    special[spelling] = existing
+                    continue
+                special[spelling] = next_id
+                next_id += 1
         if validate_published_ids:
             for spelling, expected in PUBLISHED_SPECIAL_IDS.items():
                 actual = special.get(spelling)
@@ -201,6 +253,7 @@ class CosyVoiceTextTokenizer:
 
 
 __all__ = [
+    "COSYVOICE3_SPECIAL_TOKENS",
     "CosyVoiceTextTokenizer",
     "END_OF_PROMPT",
     "END_OF_TEXT",

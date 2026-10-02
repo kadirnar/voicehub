@@ -189,7 +189,13 @@ class SineGenerator(nn.Module):
         self.noise_std = noise_std
         self.voiced_threshold = voiced_threshold
 
-    def forward(self, f0: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(
+        self,
+        f0: Tensor,
+        *,
+        phase_offsets: Tensor | None = None,
+        noise: Tensor | None = None,
+    ) -> tuple[Tensor, Tensor]:
         multipliers = torch.arange(
             1,
             self.harmonics + 2,
@@ -198,6 +204,8 @@ class SineGenerator(nn.Module):
         )
         frequencies = f0 * multipliers[None, None, :]
         radians = (frequencies / self.sample_rate) % 1
+        if phase_offsets is not None:
+            radians[:, 0, :] = radians[:, 0, :] + phase_offsets.to(radians)
         radians = functional.interpolate(
             radians.transpose(1, 2),
             scale_factor=1 / self.upsample_scale,
@@ -213,7 +221,9 @@ class SineGenerator(nn.Module):
         sines = torch.sin(phases) * self.sine_amplitude
         voiced = (f0 > self.voiced_threshold).to(f0.dtype)
         noise_scale = (voiced * self.noise_std + (1 - voiced) * self.sine_amplitude / 3)
-        sines = sines * voiced + noise_scale * torch.randn_like(sines)
+        if noise is None:
+            noise = torch.randn_like(sines)
+        sines = sines * voiced + noise_scale * noise.to(sines)
         return sines, voiced
 
 
@@ -230,10 +240,102 @@ class SourceModuleHnNSF(nn.Module):
         self.l_linear = nn.Linear(config.harmonics + 1, 1)
         self.l_tanh = nn.Tanh()
 
-    def forward(self, f0: Tensor) -> Tensor:
+    def forward(
+        self,
+        f0: Tensor,
+        *,
+        phase_offsets: Tensor | None = None,
+        noise: Tensor | None = None,
+    ) -> Tensor:
         with torch.no_grad():
-            sines, _ = self.l_sin_gen(f0)
+            sines, _ = self.l_sin_gen(
+                f0,
+                phase_offsets=phase_offsets,
+                noise=noise,
+            )
         return self.l_tanh(self.l_linear(sines))
+
+
+#: Upper bound of the source's fixed inference excitation (300 s at 24 kHz).
+SOURCE_NOISE_MAX_SAMPLES = 300 * 24_000
+
+
+def _replay_kaiming_layer(
+    generator: torch.Generator,
+    out_features: int,
+    in_features: int,
+    kernel_size: int = 1,
+) -> None:
+    """Consume the CPU RNG exactly like ``nn.Conv1d``/``nn.Linear`` init."""
+    fan_in = in_features * kernel_size
+    bound = math.sqrt(3.0) * math.sqrt(2.0 / (1 + 5)) / math.sqrt(fan_in)
+    torch.empty(out_features * fan_in).uniform_(-bound, bound, generator=generator)
+    bias_bound = 1.0 / math.sqrt(fan_in)
+    torch.empty(out_features).uniform_(-bias_bound, bias_bound, generator=generator)
+
+
+class CosyVoiceSourceNoise:
+    """The source checkpoint's fixed HiFT inference excitation noise.
+
+    In source inference (``CausalHiFTGenerator`` in eval mode) the harmonic
+    source does not draw fresh noise: ``SineGen2`` uses an initial-phase
+    vector ``rand(1, 9)`` and a uniform noise table ``rand(1, 300 * 24000,
+    9)`` that are drawn once while the YAML graph is built. Their values are
+    fixed by ``CausalConditionalCFM`` reseeding the CPU generator with zero
+    and by the parameter initializations that follow before ``SineGen2``.
+    This class replays exactly that CPU random stream (no weights involved)
+    so VoiceHub's vocoder output matches the source for identical mels.
+    """
+
+    def __init__(
+        self,
+        *,
+        harmonics: int,
+        mel_channels: int,
+        speech_vocab_size: int,
+        speaker_embedding_dim: int,
+        f0_hidden_size: int,
+        f0_layers: int = 5,
+    ) -> None:
+        generator = torch.Generator(device="cpu")
+        generator.manual_seed(0)
+        # CausalConditionalCFM: fixed flow noise randn([1, 80, 50 * 300]).
+        torch.randn((1, mel_channels, 50 * 300), generator=generator)
+        # CausalMaskedDiffWithDiT: input_embedding (normal_) and the speaker
+        # affine layer.
+        torch.empty((speech_vocab_size, mel_channels)).normal_(generator=generator)
+        _replay_kaiming_layer(generator, mel_channels, speaker_embedding_dim)
+        # CausalConvRNNF0Predictor: condnet convolutions and classifier.
+        _replay_kaiming_layer(generator, f0_hidden_size, mel_channels, 4)
+        for _ in range(f0_layers - 1):
+            _replay_kaiming_layer(generator, f0_hidden_size, f0_hidden_size, 3)
+        _replay_kaiming_layer(generator, 1, f0_hidden_size)
+        # SineGen2: initial phase (fundamental fixed at zero), then the table.
+        phase_offsets = torch.rand((1, harmonics + 1), generator=generator)
+        phase_offsets[:, 0] = 0
+        self.phase_offsets = phase_offsets
+        self.channels = harmonics + 1
+        self._table_state = generator.get_state()
+        self._table = torch.empty((1, 0, self.channels))
+        self._device_cache: dict[torch.device, Tensor] = {}
+
+    def noise(self, samples: int, *, device: torch.device) -> Tensor:
+        """Leading ``samples`` rows of the uniform ``[1, T, harmonics + 1]`` table."""
+        if samples > SOURCE_NOISE_MAX_SAMPLES:
+            raise ValueError("CosyVoice HiFT supports at most 300 seconds per call.")
+        if self._table.shape[1] < samples:
+            generator = torch.Generator(device="cpu")
+            generator.set_state(self._table_state)
+            # CPU ``uniform_`` is serial, so a prefix draw equals the
+            # leading rows of the source's full-length table.
+            length = min(SOURCE_NOISE_MAX_SAMPLES, max(samples, 2 * self._table.shape[1], 24_000 * 30))
+            self._table = torch.rand((1, length, self.channels), generator=generator)
+            self._device_cache.clear()
+        cached = self._device_cache.get(device)
+        if cached is None or cached.shape[1] < samples:
+            cached = self._table.to(device)
+            self._device_cache = {device: cached}
+        return cached[:, :samples]
 
 
 class CausalConvF0Predictor(nn.Module):
@@ -338,11 +440,54 @@ class CosyVoiceHiFTGenerator(nn.Module):
             7,
         ))
         self.f0_predictor = CausalConvF0Predictor(config)
+        # The source builds this window with SciPy in float64.
         self.register_buffer(
             "stft_window",
-            torch.hann_window(config.istft_n_fft),
+            torch.hann_window(config.istft_n_fft, dtype=torch.float64).float(),
             persistent=False,
         )
+        self._source_noise: CosyVoiceSourceNoise | None = None
+        self._source_noise_dimensions = {
+            "speech_vocab_size": 6_561,
+            "speaker_embedding_dim": 192,
+        }
+
+    def configure_source_noise(
+        self,
+        *,
+        speech_vocab_size: int,
+        speaker_embedding_dim: int,
+    ) -> None:
+        """Record the flow dimensions that determine the source noise table."""
+        self._source_noise_dimensions = {
+            "speech_vocab_size": int(speech_vocab_size),
+            "speaker_embedding_dim": int(speaker_embedding_dim),
+        }
+        self._source_noise = None
+
+    @property
+    def source_noise(self) -> CosyVoiceSourceNoise:
+        if self._source_noise is None:
+            self._source_noise = CosyVoiceSourceNoise(
+                harmonics=self.config.harmonics,
+                mel_channels=self.config.mel_channels,
+                f0_hidden_size=self.config.f0_hidden_size,
+                **self._source_noise_dimensions,
+            )
+        return self._source_noise
+
+    def _predict_f0(self, speech_features: Tensor) -> Tensor:
+        if self.training:
+            return self.f0_predictor(speech_features)
+        # Source inference runs the causal F0 predictor in float64 ("f0
+        # precision is crucial for causal inference") and casts back.
+        parameters = {name: value.to(torch.float64) for name, value in self.f0_predictor.named_parameters()}
+        f0 = torch.func.functional_call(
+            self.f0_predictor,
+            parameters,
+            (speech_features.to(torch.float64), ),
+        )
+        return f0.to(speech_features.dtype)
 
     def codec_optimization_compile_targets(
         self,
@@ -374,9 +519,10 @@ class CosyVoiceHiFTGenerator(nn.Module):
 
     def _istft(self, values: Tensor) -> Tensor:
         bins = self.config.istft_n_fft // 2 + 1
-        magnitude = values[:, :bins].clamp_max(100).exp()
+        # Source: magnitude = exp(x), clipped at 1e2 (not the log-magnitude).
+        magnitude = values[:, :bins].exp().clamp_max(1e2)
         phase = values[:, bins:].sin()
-        spectrum = torch.polar(magnitude, phase)
+        spectrum = torch.complex(magnitude * phase.cos(), magnitude * phase.sin())
         return torch.istft(
             spectrum,
             self.config.istft_n_fft,
@@ -390,10 +536,18 @@ class CosyVoiceHiFTGenerator(nn.Module):
             raise ValueError("HiFT input must have shape [batch, mel, frames].")
         if speech_features.shape[1] != self.config.mel_channels:
             raise ValueError("HiFT mel channel count is invalid.")
-        f0 = self.f0_predictor(speech_features)
+        f0 = self._predict_f0(speech_features)
         source_f0 = self.f0_upsamp(f0[:, None]).transpose(1, 2)
-        source = self.m_source(source_f0).transpose(1, 2)
-        source_spectrum = self._stft(source.squeeze(1))
+        if self.training or source_f0.shape[0] != 1:
+            source = self.m_source(source_f0)
+        else:
+            fixed = self.source_noise
+            source = self.m_source(
+                source_f0,
+                phase_offsets=fixed.phase_offsets,
+                noise=fixed.noise(source_f0.shape[1], device=source_f0.device),
+            )
+        source_spectrum = self._stft(source.transpose(1, 2).squeeze(1))
 
         values = self.conv_pre(speech_features)
         for stage, upsample in enumerate(self.ups):
@@ -404,13 +558,13 @@ class CosyVoiceHiFTGenerator(nn.Module):
             source_value = self.source_resblocks[stage](source_value)
             common = min(values.shape[-1], source_value.shape[-1])
             values = values[..., :common] + source_value[..., :common]
-            candidates = [
-                block(values)
-                for block in self.resblocks[stage * len(self.config.resblock_kernel_sizes):(stage + 1) *
-                                            len(self.config.resblock_kernel_sizes)]
-            ]
-            values = torch.stack(candidates).mean(dim=0)
-        values = self.conv_post(functional.leaky_relu(values, 0.1))
+            kernels = len(self.config.resblock_kernel_sizes)
+            summed = None
+            for block in self.resblocks[stage * kernels:(stage + 1) * kernels]:
+                summed = block(values) if summed is None else summed + block(values)
+            values = summed / kernels
+        # The source applies the default 0.01 slope before ``conv_post``.
+        values = self.conv_post(functional.leaky_relu(values))
         waveform = self._istft(values).clamp(
             -self.config.audio_limit,
             self.config.audio_limit,
@@ -692,6 +846,7 @@ class CosyVoiceHiFTTrainingModel(nn.Module):
 
 
 __all__ = [
+    "CosyVoiceSourceNoise",
     "CosyVoiceHiFTDiscriminator",
     "CosyVoiceHiFTGenerator",
     "CosyVoiceHiFTTrainingModel",

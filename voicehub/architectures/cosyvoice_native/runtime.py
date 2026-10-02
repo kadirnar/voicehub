@@ -10,6 +10,11 @@ import torch
 from torch import Tensor
 
 from voicehub.architectures.cosyvoice_native.artifacts import resolve_cosyvoice_artifacts
+from voicehub.architectures.cosyvoice_native.audio import (
+    PROMPT_MEL_SAMPLE_RATE,
+    prompt_mel_features,
+    resample_hann_sinc,
+)
 from voicehub.architectures.cosyvoice_native.checkpoint import export_cosyvoice_checkpoint, load_cosyvoice_checkpoint
 from voicehub.architectures.cosyvoice_native.configuration import CosyVoiceArchitectureConfig
 from voicehub.architectures.cosyvoice_native.modeling import CosyVoiceNativeModel, CosyVoiceSynthesisOutput
@@ -101,8 +106,8 @@ class CosyVoiceNativeRuntime:
         if self.speech_tokenizer is not None:
             self.speech_tokenizer.freeze()
 
-    def _load_speech_audio(
-        self,
+    @staticmethod
+    def _load_source_audio(
         value: Any,
         *,
         sampling_rate: int | None,
@@ -113,8 +118,54 @@ class CosyVoiceNativeRuntime:
         return load_native_audio(
             value,
             sampling_rate=sampling_rate,
-            target_sampling_rate=16_000,
         )
+
+    @staticmethod
+    def _resampled(audio: NativeAudio, target_rate: int) -> NativeAudio:
+        """Resample on CPU exactly like the source's torchaudio frontend."""
+        waveform = audio.waveform.detach().to(device="cpu", dtype=torch.float32)
+        return NativeAudio(
+            waveform=resample_hann_sinc(waveform, audio.sampling_rate, target_rate),
+            sampling_rate=target_rate,
+            path=audio.path,
+        )
+
+    def _load_speech_audio(
+        self,
+        value: Any,
+        *,
+        sampling_rate: int | None,
+    ) -> NativeAudio:
+        return self._resampled(
+            self._load_source_audio(value, sampling_rate=sampling_rate),
+            16_000,
+        )
+
+    @torch.inference_mode()
+    def extract_prompt(
+        self,
+        audio: Any,
+        *,
+        sampling_rate: int | None = None,
+    ) -> tuple[Tensor, Tensor]:
+        """Return source-aligned ``(prompt_speech_tokens, prompt_features)``.
+
+        Mirrors the source ``frontend_zero_shot``: speech tokens from 16 kHz
+        audio, the flow's prompt mel from 24 kHz audio, then both truncated
+        so that ``mel frames == 2 x tokens``.
+        """
+        if self.speech_tokenizer is None:
+            raise RuntimeError(
+                "Raw prompt audio requires an attached native "
+                "`speech_tokenizer.safetensors`; supply precomputed tokens "
+                "or attach the converted tokenizer.")
+        source = self._load_source_audio(audio, sampling_rate=sampling_rate)
+        tokens, lengths = self.speech_tokenizer.encode_waveforms((self._resampled(source, 16_000), ))
+        tokens = tokens[:, :int(lengths[0])]
+        features = prompt_mel_features(self._resampled(source, PROMPT_MEL_SAMPLE_RATE).waveform)[None]
+        ratio = self.model.config.flow.token_mel_ratio
+        token_count = min(features.shape[1] // ratio, tokens.shape[1])
+        return tokens[:, :token_count], features[:, :ratio * token_count]
 
     @torch.inference_mode()
     def extract_speech_tokens(
@@ -272,7 +323,7 @@ class CosyVoiceNativeRuntime:
         prompt_audio_sample_rate: int | None = None,
         prompt_features: Tensor | None = None,
         min_new_tokens: int = 0,
-        max_new_tokens: int = 1_024,
+        max_new_tokens: int | None = None,
         top_k: int = 25,
         top_p: float = 0.8,
         temperature: float = 1.0,
@@ -299,7 +350,9 @@ class CosyVoiceNativeRuntime:
             raise ValueError("Supply either `prompt_speech_tokens` or raw `prompt_audio`, "
                              "not both.")
         if prompt_audio is not None:
-            prompt_speech_tokens, _ = self.extract_speech_tokens(
+            if prompt_features is not None:
+                raise ValueError("Raw `prompt_audio` already provides the prompt features.")
+            prompt_speech_tokens, prompt_features = self.extract_prompt(
                 prompt_audio,
                 sampling_rate=prompt_audio_sample_rate,
             )

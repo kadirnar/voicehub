@@ -51,7 +51,8 @@ class CosyVoiceConfig(VoiceHubConfig):
         reject_serialized_secrets(kwargs, owner=self.__class__.__name__)
         defaults = {
             "flow_steps": 10,
-            "max_new_tokens": 1_024,
+            # ``None`` follows the source cap: 20 x the synthesis text tokens.
+            "max_new_tokens": None,
             "min_new_tokens": 0,
             "temperature": 1.0,
             "top_k": 25,
@@ -136,10 +137,13 @@ class CosyVoiceConfig(VoiceHubConfig):
                 "top_k",
         ):
             value = generation[name]
+            if name == "max_new_tokens" and value is None:
+                continue
             if isinstance(value, bool) or not isinstance(value, int) or value < (0 if name == "min_new_tokens"
                                                                                  else 1):
                 raise ValueError(f"`generation_config.{name}` is invalid.")
-        if generation["min_new_tokens"] > generation["max_new_tokens"]:
+        if (generation["max_new_tokens"] is not None and
+                generation["min_new_tokens"] > generation["max_new_tokens"]):
             raise ValueError("Minimum generation length exceeds maximum.")
         for name in ("temperature", "top_p"):
             value = generation[name]
