@@ -694,6 +694,26 @@ class NativeOmniVoiceUpstreamParityTests(unittest.TestCase):
         )
         self.assertEqual(_chunk_text("A. B. This is it.", maximum_characters=5), ["A. B.", "This is it."])
 
+    def test_raw_training_audio_uses_the_upstream_resampler(self):
+        codec = _tiny_codec()
+        captured = []
+
+        def encode(values):
+            captured.append(values.detach().clone())
+            return SimpleNamespace(audio_codes=torch.zeros((1, 2, 3), dtype=torch.long))
+
+        codec.encode = encode
+        processor = OmniVoiceSampleProcessor(
+            _tiny_tokenizer(),
+            OmniVoiceArchitectureConfig.tiny(vocab_size=320),
+            audio_tokenizer=codec,
+        )
+        waveform = _tone(200, 0.3, sample_rate=16_000)
+        processor({"sampling_rate": 16_000, "text": "a", "waveform": waveform})
+        expected = resample_waveform_hann(waveform, 16_000, 24_000)
+        expected = expected / (expected.abs().max() + 1e-7) * 0.9
+        self.assertTrue(torch.equal(captured[-1][0, 0], expected))
+
 
 if __name__ == "__main__":
     unittest.main()
