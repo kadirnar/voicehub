@@ -163,15 +163,46 @@ def _write_sentencepiece_bpe(path: Path) -> None:
     path.write_bytes(payload)
 
 
-def _write_sentencepiece_char(path: Path, extra_pieces: tuple[str, ...] = ()) -> None:
+# Precompiled charsmap that SentencePiece built from the rules
+# U+000B -> "", U+200B -> " ", U+FB01 -> "fi", U+0065 U+0301 -> U+00E9, U+3000 -> " ".
+_TINY_CHARSMAP = base64.b64decode(
+    "AAQAAAAoAAALDQAAAAAAgMwYAgCBBQAABgAAgIAoAgCLPQAAAQAAgIAMAgCACQAArBgCAIEFAAADAACADwAAAA4AAAARAAAA"
+    "EAAAABMAAAASAAAAFQAAABQAAAAXAAAAFgAAABkAAAAYAAAAGwAAABoAAAAdAAAAHAAAAB8AAAAeAAAAIQAAACAAAAAjAAAA"
+    "IgAAACUAAAAkAAAAJwAAACYAAAApAAAAKAAAACsAAAAqAAAALQAAACwAAAAvAAAALgAAADEAAAAwAAAAMwAAADIAAAA1AAAA"
+    "NAAAADcAAAA2AAAAOQAAADgAAAA7AAAAOgAAAD0AAAA8AAAAPwAAAD4AAABBAAAAQAAAAEMAAABCAAAARQAAAEQAAABHAAAA"
+    "RgAAAEkAAABIAAAASwAAAEoAAABNAAAATAAAAE8AAABOAAAAUQAAAFAAAABTAAAAUgAAAFUAAABUAAAAVwAAAFYAAABZAAAA"
+    "WAAAAFsAAABaAAAAXQAAAFwAAABfAAAAXgAAAGEAAABgAAAAYwAAAGIAAABlAAAAZAAAAGcAAABmAAAAaQAAAGgAAABrAAAA"
+    "agAAAG0AAABsAAAAbwAAAGWAAgBxAAAAcAAAAHMAAAByAAAAdQAAAHQAAAB3AAAAdgAAAHkAAAB4AAAAewAAAHoAAAB9AAAA"
+    "fAAAAH8AAAB+AAAAgQAAAIAAAACDAAAAggAAAIUAAACEAAAAhwAAAIYAAACJAAAAiAAAAIsAAACKAAAAjQAAAIwAAACPAAAA"
+    "jgAAAJEAAACQAAAAkwAAAJIAAACVAAAAlAAAAJcAAACWAAAAmQAAAJgAAACbAAAAmgAAAJ0AAACcAAAAnwAAAJ4AAAChAAAA"
+    "oAAAAKMAAACiAAAApQAAAKQAAACnAAAApgAAAKkAAACoAAAAqwAAAKoAAACtAAAArAAAAK8AAACuAAAAsQAAALAAAACzAAAA"
+    "sgAAALUAAAC0AAAAtwAAALYAAAC5AAAAuAAAALsAAAC6AAAAvQAAALwAAAC/AAAAvgAAAMEAAADAAAAAwwAAAMIAAADFAAAA"
+    "xAAAAMcAAADGAAAAyQAAAMgAAADLAAAAygAAAM0AAADMAAAAzwAAAM4AAADRAAAA0AAAANMAAADSAAAA1QAAANQAAADXAAAA"
+    "1gAAANkAAADYAAAA2wAAANoAAADdAAAA3AAAAN8AAADeAAAA4QAAAOAAAADjAAAA4gAAAOUAAADvCAEA5wAAAOYAAADiuAEA"
+    "44ABAOsAAADqAAAA7QAAAOwAAADvAAAA7gAAAPEAAADwAAAA8wAAAPIAAAD1AAAA9AAAAPcAAAD2AAAA+QAAAPgAAAD7AAAA"
+    "+gAAAP0AAAD8AAAA/wAAAP4AAAAAIABmaQDDqQA="
+)
+
+
+def _write_sentencepiece_char(
+    path: Path,
+    extra_pieces: tuple[str, ...] = (),
+    *,
+    charsmap: bytes = b"",
+) -> None:
     pieces = (
         ("<s>", 0.0, 3),
         ("<pad>", 0.0, 3),
         ("</s>", 0.0, 3),
         ("<unk>", 0.0, 2),
         ("\u2581", -1.0, 1),
+        ("i", -2.0, 1),
+        ("f", -2.0, 1),
+        ("c", -2.0, 1),
         ("a", -2.0, 1),
         ("b", -3.0, 1),
+        ("e", -3.0, 1),
+        ("d", -3.0, 1),
         *((text, -4.0, 1) for text in extra_pieces),
     )
     trainer = b"".join((
@@ -183,6 +214,7 @@ def _write_sentencepiece_char(path: Path, extra_pieces: tuple[str, ...] = ()) ->
     ))
     normalizer = b"".join((
         _protobuf_bytes(1, b"nmt_nfkc"),
+        *((_protobuf_bytes(2, charsmap), ) if charsmap else ()),
         _protobuf_integer(3, 1),
         _protobuf_integer(4, 1),
         _protobuf_integer(5, 1),
@@ -374,10 +406,33 @@ class SentencePieceModelBPETests(unittest.TestCase):
 
             tokenizer = SentencePieceUnigramTokenizer.from_model_file(path)
 
-        self.assertEqual(tokenizer.encode_as_ids("ab  ba"), [4, 5, 6, 4, 6, 5])
-        self.assertEqual(tokenizer.encode_as_ids("axyb"), [4, 5, 3, 6])
+        self.assertEqual(tokenizer.encode_as_ids("ab  ba"), [4, 8, 9, 4, 9, 8])
+        self.assertEqual(tokenizer.encode_as_ids("axyb"), [4, 8, 3, 9])
         self.assertEqual(tokenizer.encode_as_pieces("axyb"), ["\u2581", "a", "xy", "b"])
-        self.assertEqual(tokenizer.encode_as_ids("ａｂ"), [4, 5, 6])
+        self.assertEqual(tokenizer.encode_as_ids("ａｂ"), [4, 8, 9])
+
+    def test_precompiled_charsmap_normalizes_like_sentencepiece(self):
+        # Expected IDs come from sentencepiece.SentencePieceProcessor on the
+        # same model. Python NFKC would keep U+200B (unknown) and split on
+        # U+000B instead of removing it.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "spm_char.model"
+            _write_sentencepiece_char(path, charsmap=_TINY_CHARSMAP)
+
+            tokenizer = SentencePieceUnigramTokenizer.from_model_file(path)
+
+        cases = {
+            "  ab\u200b\u200bc  ": [4, 8, 9, 4, 7],
+            "a\x0bb": [4, 8, 9],
+            "\ufb01e": [4, 6, 5, 10],
+            "e\u0301f": [4, 3, 6],
+            "\u3000\u3000": [],
+            "a\u3000 \u200bb": [4, 8, 4, 9],
+            "\x0b": [],
+        }
+        for text, expected in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(tokenizer.encode_as_ids(text), expected)
 
     def test_char_model_with_multi_character_pieces_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
