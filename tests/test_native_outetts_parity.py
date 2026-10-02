@@ -1,7 +1,7 @@
 """Regressions found by the edwko/OuteTTS upstream parity audit.
 
 Reference values were produced with the author package (outetts 0.4.4 at
-f5eac6e70d792844c6a6959d900a47af2c061a5b, pyloudnorm 0.1.x, NumPy 2.4).
+f5eac6e70d792844c6a6959d900a47af2c061a5b, pyloudnorm 0.2.0, NumPy 2.4.6).
 """
 
 from __future__ import annotations
