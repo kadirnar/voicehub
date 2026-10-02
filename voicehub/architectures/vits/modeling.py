@@ -1402,10 +1402,13 @@ class VitsTextEncoder(nn.Module):
     def __init__(self, config: VitsConfig) -> None:
         super().__init__()
         self.config = config
+        # No ``padding_idx``: in VITS/MMS the pad ID 0 is also the blank
+        # interspersed between every symbol (and a real character such as
+        # "k" for MMS eng), so its embedding must stay trainable as in the
+        # original ``nn.Embedding(n_vocab, hidden_channels)``.
         self.embed_tokens = nn.Embedding(
             config.vocab_size,
             config.hidden_size,
-            padding_idx=config.pad_token_id,
         )
         self.encoder = VitsEncoder(config)
         self.project = nn.Conv1d(

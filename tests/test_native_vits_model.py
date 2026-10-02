@@ -592,6 +592,24 @@ class VitsRuntimeTests(unittest.TestCase):
             int(first.durations.sum().item()) * 2,
         )
 
+    def test_blank_pad_token_embedding_is_trainable(self):
+        # Token 0 is both pad and the interspersed blank (and "k" for MMS
+        # eng); original VITS trains its embedding (no padding_idx).
+        from voicehub.architectures.vits.modeling import VitsModel
+
+        model = VitsModel(_tiny_config()).train()
+        embedding = model.text_encoder.embed_tokens
+        self.assertIsNone(embedding.padding_idx)
+        self.assertGreater(float(embedding.weight[0].abs().sum()), 0.0)
+        input_ids = torch.tensor([[0, 1, 0, 2, 0]])
+        output = model.text_encoder(
+            input_ids,
+            padding_mask=torch.ones(1, 5, 1),
+            attention_mask=torch.ones(1, 5),
+        )
+        output.prior_means.square().sum().backward()
+        self.assertGreater(float(embedding.weight.grad[0].abs().sum()), 0.0)
+
     def test_stochastic_duration_training_flows_follow_original_flip_order(self):
         # Original VITS StochasticDurationPredictor builds both flow stacks as
         # [ElementwiseAffine, (ConvFlow, Flip) x N]: no flip follows the
