@@ -13,6 +13,9 @@ from torch import Tensor
 from voicehub.tokenization import SentencePieceUnigramTokenizer
 
 _WHITESPACE_PIECE = "\u2581"
+# str.isspace() treats these as whitespace, but T5's nmt_nfkc normalizer
+# deletes them, so they never produce the trailing "\u2581" piece upstream.
+_DELETED_SPACE_CONTROLS = "\x0b\x1c\x1d\x1e\x1f"
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,7 +76,8 @@ class ParlerTextTokenizer:
         # Upstream inference and training tokenize with T5TokenizerFast. Its
         # Metaspace pre-tokenizer keeps trailing whitespace as one standalone
         # "\u2581" piece, which SentencePiece itself strips.
-        if unicodedata.normalize("NFKC", text)[-1:].isspace():
+        normalized = unicodedata.normalize("NFKC", text).rstrip(_DELETED_SPACE_CONTROLS)
+        if normalized[-1:].isspace():
             ids += (self.sentencepiece.piece_to_id(_WHITESPACE_PIECE), )
         return ids + (self.eos_token_id, )
 

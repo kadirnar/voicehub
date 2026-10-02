@@ -651,6 +651,12 @@ class ParlerTokenizerTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(tokenizer.encode(text), (7, 7, 3, 1))
         self.assertEqual(tokenizer.encode(" "), (3, 1))
+        # T5TokenizerFast deletes these controls instead of treating them as
+        # whitespace: "a\x0b" -> [3, 9, 1] but "a \x0b" -> [3, 9, 3, 1].
+        for text in ("a b\x0b", "a b\x1c", "a b\x1f\x0b", "\x0b"):
+            with self.subTest(text=text):
+                self.assertEqual(tokenizer.encode(text), (7, ) * len(text.split()) + (1, ))
+        self.assertEqual(tokenizer.encode("a b \x0b"), (7, 7, 3, 1))
 
 
 class ParlerTTSWrapperLoadTests(unittest.TestCase):
