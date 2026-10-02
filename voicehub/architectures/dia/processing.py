@@ -296,8 +296,9 @@ class DiaProcessor:
                     value.get("sampling_rate") if isinstance(value, Mapping) else
                     self.sampling_rate if not isinstance(value, (str, Path)) else None),
             )
-            # The released runtime resamples prompts with torchaudio's default
-            # Hann-windowed sinc before DAC encoding. The DAC codes are
+            # The released runtime (Dia.load_audio) resamples prompts with
+            # torchaudio.functional.resample before DAC encoding; the default
+            # match="functional" reproduces it bit-exactly. The DAC codes are
             # sensitive to the resampler, so the generic one is not a substitute.
             waveforms.append(resample_waveform_hann(native.waveform, native.sampling_rate, self.sampling_rate))
         return tuple(waveforms)

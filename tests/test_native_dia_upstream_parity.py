@@ -53,6 +53,33 @@ class NativeDiaUpstreamParityTests(unittest.TestCase):
         self.assertEqual(len(captured), 1)
         torch.testing.assert_close(captured[0].reshape(-1), expected, rtol=0, atol=0)
 
+    def test_audio_prompt_matches_torchaudio_functional_resample(self):
+        # Dia.load_audio calls torchaudio.functional.resample on [C, T]; for a
+        # mono prompt that is bit-exact to the shared resampler's default mode.
+        import torch
+        from torch.nn import functional as F
+
+        try:
+            import torchaudio
+        except ImportError:
+            self.skipTest("torchaudio is only a test-time reference")
+
+        _, codec, processor = self.components()
+        waveform = torch.sin(torch.arange(2_205, dtype=torch.float32) * 0.07)
+        captured = []
+        original = codec.encode_output
+
+        def capture(values, **kwargs):
+            captured.append(values.detach().clone())
+            return original(values, **kwargs)
+
+        with patch.object(codec, "encode_output", side_effect=capture):
+            processor(text=["[S1] Hi."], audio={"array": waveform, "sampling_rate": 22_050}, generation=True)
+        expected = torchaudio.functional.resample(waveform[None], 22_050, 16_000)[0]
+        expected = F.pad(expected, (0, -expected.shape[-1] % 4))
+        self.assertEqual(len(captured), 1)
+        self.assertTrue(torch.equal(captured[0].reshape(-1), expected))
+
     def test_temperature_is_not_clamped_and_zero_means_greedy(self):
         import torch
 
