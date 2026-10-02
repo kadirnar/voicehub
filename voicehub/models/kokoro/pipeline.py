@@ -182,6 +182,76 @@ def _segments(
     return segments
 
 
+# Upstream ``KPipeline.waterfall_last`` break classes, in priority order.
+_WATERFALL = ("!.?…", ":;", ",—")
+_WATERFALL_BUMPS = (")", "”")
+_PHONEME_UNIT = re.compile(r"([!.?…:;,—)”])|([^\s!.?…:;,—)”]+)")
+
+
+def _phoneme_units(phonemes: str) -> list[tuple[str, str]]:
+    """Split a phoneme string into Misaki-like (phonemes, whitespace) units.
+
+    Break punctuation is emitted as single-symbol units, matching the
+    punctuation tokens Upstream's English chunker scans for.
+    """
+    units: list[tuple[str, str]] = []
+    position = 0
+    for match in _PHONEME_UNIT.finditer(phonemes):
+        if units:
+            previous, _ = units[-1]
+            units[-1] = (previous, phonemes[position:match.start()])
+        units.append((match.group(0), ""))
+        position = match.end()
+    if units:
+        previous, _ = units[-1]
+        units[-1] = (previous, phonemes[position:])
+    return units
+
+
+def _units_to_phonemes(units: Sequence[tuple[str, str]]) -> str:
+    return "".join(symbols + whitespace for symbols, whitespace in units).strip()
+
+
+def _waterfall_last(units: list[tuple[str, str]], next_count: int, limit: int) -> int:
+    for breaks in _WATERFALL:
+        index = next((i for i in range(len(units) - 1, -1, -1) if units[i][0] in breaks), None)
+        if index is None:
+            continue
+        index += 1
+        if index < len(units) and units[index][0] in _WATERFALL_BUMPS:
+            index += 1
+        if next_count - len(_units_to_phonemes(units[:index])) <= limit:
+            return index
+    return len(units)
+
+
+def _waterfall_chunks(phonemes: str, limit: int) -> list[str]:
+    """Chunk long phoneme strings like upstream ``KPipeline.en_tokenize``.
+
+    Upstream cuts at the last sentence punctuation (then ``:;``, then
+    ``,—``) that keeps the remainder within the model context, instead of
+    packing words greedily and splitting sentences mid-phrase.
+    """
+    chunks: list[str] = []
+    pending: list[tuple[str, str]] = []
+    count = 0
+    for symbols, whitespace in _phoneme_units(phonemes):
+        next_symbols = symbols + whitespace
+        next_count = count + len(next_symbols.rstrip())
+        if next_count > limit:
+            index = _waterfall_last(pending, next_count, limit)
+            chunks.append(_units_to_phonemes(pending[:index]))
+            pending = pending[index:]
+            count = len(_units_to_phonemes(pending))
+            if not pending:
+                next_symbols = next_symbols.lstrip()
+        pending.append((symbols, whitespace))
+        count += len(next_symbols)
+    if pending:
+        chunks.append(_units_to_phonemes(pending))
+    return [chunk for chunk in chunks if chunk]
+
+
 class KPipeline:
     """Language/front-end orchestration around one native :class:`KModel`."""
 
@@ -436,22 +506,13 @@ class KPipeline:
         if len(phonemes) <= limit:
             return [phonemes]
         chunks: list[str] = []
-        current = ""
-        for item in re.split(r"(?<=[.!?…])\s+|\s+", phonemes):
-            if not item:
-                continue
-            candidate = f"{current} {item}".strip()
-            if len(candidate) <= limit:
-                current = candidate
-                continue
-            if current:
-                chunks.append(current)
-            while len(item) > limit:
-                chunks.append(item[:limit])
-                item = item[limit:]
-            current = item
-        if current:
-            chunks.append(current)
+        for chunk in _waterfall_chunks(phonemes, limit):
+            # Upstream truncates a still-oversized chunk; keep every symbol.
+            while len(chunk) > limit:
+                chunks.append(chunk[:limit])
+                chunk = chunk[limit:].lstrip()
+            if chunk:
+                chunks.append(chunk)
         return chunks
 
     def generate_from_tokens(

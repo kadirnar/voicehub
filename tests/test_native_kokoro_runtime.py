@@ -38,6 +38,7 @@ if torch is not None:
         KPipeline,
         PhonemeFrontend,
         _call_frontend,
+        _waterfall_chunks,
     )
     from voicehub.models.kokoro.training import KokoroPreprocessedTrainingModel
     from voicehub.registry import get_model_spec
@@ -274,6 +275,88 @@ class NativeKokoroRuntimeTests(unittest.TestCase):
                 voice=voice,
                 phonemes="həlo",
             ))
+
+    @staticmethod
+    def _misaki_like_phonemes():
+        # Mirrors a Misaki token stream: words separated by spaces, break
+        # punctuation as its own token, occasional closing-quote "bumps".
+        units = []
+        for sentence in range(48):
+            for word in range(5 + sentence % 7):
+                units.append(("t" + "ə" * ((sentence * 7 + word * 3) % 9), " "))
+            units[-1] = (units[-1][0], "")
+            units.append(([".", ",", ";", "!", "—"][sentence % 5], " "))
+            if sentence % 6 == 2:
+                units[-1] = (units[-1][0], "")
+                units.append(("”", " "))
+        return "".join(symbols + space for symbols, space in units).strip()
+
+    def test_long_phonemes_chunk_at_upstream_waterfall_boundaries(self):
+        phonemes = self._misaki_like_phonemes()
+        chunks = _waterfall_chunks(phonemes, 510)
+
+        # Golden values from upstream kokoro@dfb907a KPipeline.en_tokenize
+        # on the equivalent token stream. Greedy word packing instead gives
+        # [506, 509, 504, 505, 317] and cuts sentences mid-phrase.
+        self.assertEqual([len(chunk) for chunk in chunks], [499, 389, 360, 499, 468, 125])
+        self.assertEqual([chunk[-1] for chunk in chunks], [".", "!", ".", ".", ".", ";"])
+        self.assertEqual(" ".join(chunks), phonemes)
+
+        pipeline = KPipeline("a", model=self._InferenceModel())
+        pipeline.model.context_length = 512
+        self.assertEqual(pipeline._chunks(phonemes), chunks)
+        self.assertEqual(pipeline._chunks("həlo"), ["həlo"])
+        # A single unbreakable run is split rather than truncated.
+        pieces = pipeline._chunks("h" * 1200)
+        self.assertEqual([len(piece) for piece in pieces], [510, 510, 180])
+
+    def test_auto_dtype_matches_upstream_float32_default(self):
+        model = KokoroForTextToSpeech(device="cpu", lazy_load=True)
+        model.device = "cuda"
+        self.assertEqual(model._model_dtype(), torch.float32)
+        model.config.torch_dtype = "bfloat16"
+        self.assertEqual(model._model_dtype(), torch.bfloat16)
+
+    def test_reduced_precision_decoder_runs_without_dtype_mismatch(self):
+        config = {
+            "vocab": {" ": 1, "h": 2, "ə": 3, "l": 4, "o": 5},
+            "n_token": 8,
+            # The released decoder hard-codes 512 text channels.
+            "hidden_dim": 512,
+            "n_layer": 1,
+            "max_dur": 4,
+            "style_dim": 8,
+            "n_mels": 8,
+            "dim_in": 8,
+            "max_conv_dim": 16,
+            "plbert": {
+                "hidden_size": 16,
+                "num_attention_heads": 2,
+                "intermediate_size": 32,
+                "max_position_embeddings": 16,
+                "num_hidden_layers": 1,
+                "embedding_size": 8,
+            },
+            "istftnet": {
+                "upsample_kernel_sizes": [20, 12],
+                "upsample_rates": [10, 6],
+                "gen_istft_hop_size": 5,
+                "gen_istft_n_fft": 20,
+                "resblock_dilation_sizes": [[1, 3, 5]],
+                "resblock_kernel_sizes": [3],
+                "upsample_initial_channel": 512,
+            },
+        }
+        torch.manual_seed(0)
+        model = KModel(config).eval()
+        style = torch.randn(1, 16)
+        reference = model("həlo", style)
+        model = model.to(torch.bfloat16)
+        torch.manual_seed(0)
+        output = model("həlo", style)
+        self.assertEqual(output.dtype, torch.float32)
+        self.assertEqual(output.shape, reference.shape)
+        self.assertTrue(bool(torch.isfinite(output).all()))
 
     def test_preprocessed_objectives_backpropagate_and_report_scope(self):
         native_model = self._TrainingModel()

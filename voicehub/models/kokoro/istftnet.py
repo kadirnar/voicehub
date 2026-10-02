@@ -302,7 +302,9 @@ class SourceModuleHnNSF(nn.Module):
         # source for harmonic branch
         with torch.no_grad():
             sine_wavs, uv, _ = self.l_sin_gen(x)
-        sine_merge = self.l_tanh(self.l_linear(sine_wavs))
+        # The harmonic source is synthesized in float32; follow the projection
+        # dtype so float16/bfloat16 decoders do not mix dtypes.
+        sine_merge = self.l_tanh(self.l_linear(sine_wavs.to(self.l_linear.weight.dtype)))
         # source for noise branch, in the same shape as uv
         noise = torch.randn_like(uv) * self.sine_amp / 3
         return sine_merge, noise, uv
@@ -376,11 +378,14 @@ class Generator(nn.Module):
 
     def forward(self, x, s, f0):
         with torch.no_grad():
-            f0 = self.f0_upsamp(f0[:, None]).transpose(1, 2)  # bs,n,t
+            # Phase accumulation and the STFT need float32 (half-precision
+            # cumsum drifts and cuFFT rejects non-power-of-two half FFTs).
+            # These casts are no-ops for the released float32 graph.
+            f0 = self.f0_upsamp(f0[:, None].float()).transpose(1, 2)  # bs,n,t
             har_source, noi_source, uv = self.m_source(f0)
-            har_source = har_source.transpose(1, 2).squeeze(1)
+            har_source = har_source.transpose(1, 2).squeeze(1).float()
             har_spec, har_phase = self.stft.transform(har_source)
-            har = torch.cat([har_spec, har_phase], dim=1)
+            har = torch.cat([har_spec, har_phase], dim=1).to(x.dtype)
         for i in range(self.num_upsamples):
             x = F.leaky_relu(x, negative_slope=0.1)
             x_source = self.noise_convs[i](har)
@@ -400,7 +405,7 @@ class Generator(nn.Module):
         x = self.conv_post(x)
         spec = torch.exp(x[:, :self.post_n_fft // 2 + 1, :])
         phase = torch.sin(x[:, self.post_n_fft // 2 + 1:, :])
-        return self.stft.inverse(spec, phase)
+        return self.stft.inverse(spec.float(), phase.float())
 
 
 class UpSample1d(nn.Module):
