@@ -439,6 +439,9 @@ class InferenceRuntime:
         batch_size = int(request.num_candidates)
         if batch_size <= 0:
             raise ValueError("`num_candidates` must be positive.")
+        decode_mode = str(request.decode_mode).strip().lower()
+        if decode_mode not in {"sequential", "batch"}:
+            raise ValueError("`decode_mode` must be 'sequential' or 'batch'.")
         max_text_len = request.max_text_len or self.default_text_max_len
         max_caption_len = request.max_caption_len or self.default_caption_max_len
         timings = []
@@ -472,7 +475,9 @@ class InferenceRuntime:
                 float(request.max_seconds),
                 max(float(request.min_seconds), float(request.seconds)),
             )
-            latent_steps = math.ceil(seconds * self.codec.sample_rate / self.codec.hop_length)
+            # Trim to the requested sample count, not the latent-frame grid.
+            target_samples = max(1, int(seconds * self.codec.sample_rate))
+            latent_steps = math.ceil(target_samples / self.codec.hop_length)
         elif self.model_cfg.use_duration_predictor:
             (
                 text_state,
@@ -524,9 +529,10 @@ class InferenceRuntime:
             minimum = math.ceil(request.min_seconds * self.codec.sample_rate / self.codec.hop_length)
             maximum = math.floor(request.max_seconds * self.codec.sample_rate / self.codec.hop_length)
             latent_steps = min(maximum, max(minimum, latent_steps))
+            target_samples = latent_steps * self.codec.hop_length
         else:
-            latent_steps = math.ceil(30.0 * self.codec.sample_rate / self.codec.hop_length)
-        target_samples = latent_steps * self.codec.hop_length
+            target_samples = int(30.0 * self.codec.sample_rate)
+            latent_steps = math.ceil(target_samples / self.codec.hop_length)
         patched_steps = math.ceil(latent_steps / self.model_cfg.latent_patch_size)
         used_seed = secrets.randbits(63) if request.seed is None else int(request.seed)
         sampled_started = time.perf_counter()
@@ -536,6 +542,10 @@ class InferenceRuntime:
         use_speaker = self.model_cfg.use_speaker_condition_resolved and not request.no_ref
         if not use_speaker:
             speaker_scale = 0.0
+        speaker_kv_scale = request.speaker_kv_scale if use_speaker else None
+        # The released runtime only scales speaker K/V while t >= 0.9 by default.
+        speaker_kv_min_t = (None if speaker_kv_scale is None else
+                            0.9 if request.speaker_kv_min_t is None else float(request.speaker_kv_min_t))
         sampled = sample_euler_rf_cfg(
             model=self.model,
             text_input_ids=text_ids,
@@ -560,9 +570,9 @@ class InferenceRuntime:
             rescale_k=request.rescale_k,
             rescale_sigma=request.rescale_sigma,
             use_context_kv_cache=request.context_kv_cache,
-            speaker_kv_scale=request.speaker_kv_scale if use_speaker else None,
+            speaker_kv_scale=speaker_kv_scale,
             speaker_kv_max_layers=request.speaker_kv_max_layers,
-            speaker_kv_min_t=request.speaker_kv_min_t,
+            speaker_kv_min_t=speaker_kv_min_t,
             t_schedule_mode=request.t_schedule_mode,
             sway_coeff=request.sway_coeff,
         )
@@ -573,7 +583,13 @@ class InferenceRuntime:
             self.model_cfg.latent_dim,
         )[:, :latent_steps]
         decoded_started = time.perf_counter()
-        decoded = self.codec.decode_latent(latents).cpu()
+        if decode_mode == "batch":
+            decoded = self.codec.decode_latent(latents).cpu()
+        else:
+            # Default of the released runtime: one candidate per codec call.
+            decoded = [
+                self.codec.decode_latent(latents[index:index + 1]).cpu()[0] for index in range(batch_size)
+            ]
         audios = []
         for index, waveform in enumerate(decoded):
             maximum = target_samples
