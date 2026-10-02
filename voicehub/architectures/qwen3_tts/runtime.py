@@ -35,7 +35,8 @@ from voicehub.architectures.qwen3_tts.modeling import Qwen3TTSForConditionalGene
 from voicehub.architectures.qwen3_tts.tokenization import Qwen3TTSTextTokenizer
 from voicehub.hub import read_json_file
 from voicehub.optimization.protocols import OptimizationCompileTarget, OptimizationModuleRoot
-from voicehub.processing import NativeAudio, load_native_audio, mel_filter_bank
+from voicehub.processing import NativeAudio, load_native_audio
+from voicehub.processing.audio import _hz_to_mel, _mel_to_hz
 
 _MAX_REFERENCE_AUDIO_BYTES = 64 * 1024 * 1024
 
@@ -256,14 +257,45 @@ class _SpeechTokenizerExportFacade:
         self.feature_extractor = _SpeechFeatureExporter(runtime)
 
 
+def _qwen3_tts_speaker_mel_filters() -> Tensor:
+    """librosa's Slaney mel bank (24 kHz, 1024-point FFT, 128 bins, 0-12 kHz).
+
+    Mirrors ``librosa.filters.mel`` rounding exactly: float64 triangles stored
+    as float32, then scaled by the float64 Slaney norm and stored as float32.
+    """
+    sample_rate, n_fft, n_mels = 24_000, 1024, 128
+    frequencies = torch.arange(n_fft // 2 + 1, dtype=torch.float64) * (sample_rate / n_fft)
+    mel_edges = torch.linspace(
+        float(_hz_to_mel(torch.tensor(0.0, dtype=torch.float64))),
+        float(_hz_to_mel(torch.tensor(12_000.0, dtype=torch.float64))),
+        n_mels + 2,
+        dtype=torch.float64,
+    )
+    edges = _mel_to_hz(mel_edges)
+    widths = edges[1:] - edges[:-1]
+    ramps = edges[:, None] - frequencies[None, :]
+    triangles = torch.clamp(
+        torch.minimum(-ramps[:-2] / widths[:-1, None], ramps[2:] / widths[1:, None]),
+        min=0.0,
+    ).float()
+    slaney_norm = 2.0 / (edges[2:] - edges[:-2])
+    return (triangles.double() * slaney_norm[:, None]).float()
+
+
 def qwen3_tts_speaker_mel(waveform: Tensor) -> Tensor:
-    """Exact 24 kHz, 128-bin log-mel frontend used by the speaker encoder."""
+    """Exact 24 kHz, 128-bin log-mel frontend used by the speaker encoder.
+
+    Upstream evaluates this float32 frontend on the CPU (from a NumPy
+    waveform) before moving the features to the model, so it is computed
+    on the CPU here as well; the result is returned on the input's device.
+    """
     if not isinstance(waveform, Tensor) or waveform.ndim != 1:
         raise ValueError("Speaker waveform must be a rank-one tensor.")
     padding = (1024 - 256) // 2
     if waveform.numel() <= padding:
         raise ValueError("Qwen3-TTS speaker audio must contain more than 384 samples.")
-    waveform = waveform.float().unsqueeze(0)
+    output_device = waveform.device
+    waveform = waveform.detach().float().cpu().unsqueeze(0)
     waveform = torch.nn.functional.pad(
         waveform.unsqueeze(1),
         (padding, padding),
@@ -274,28 +306,16 @@ def qwen3_tts_speaker_mel(waveform: Tensor) -> Tensor:
         n_fft=1024,
         hop_length=256,
         win_length=1024,
-        window=torch.hann_window(
-            1024,
-            device=waveform.device,
-            dtype=waveform.dtype,
-        ),
+        window=torch.hann_window(1024),
         center=False,
         pad_mode="reflect",
         normalized=False,
         onesided=True,
         return_complex=True,
     )
-    magnitude = torch.sqrt(spectrum.abs().square() + 1e-9)
-    filters = mel_filter_bank(
-        sample_rate=24_000,
-        n_fft=1024,
-        n_mels=128,
-        minimum_frequency=0,
-        maximum_frequency=12_000,
-        device=waveform.device,
-        dtype=waveform.dtype,
-    )
-    return torch.log(torch.matmul(filters, magnitude).clamp_min(1e-5)).transpose(1, 2)
+    magnitude = torch.sqrt(torch.view_as_real(spectrum).pow(2).sum(-1) + 1e-9)
+    features = torch.log(torch.clamp(torch.matmul(_qwen3_tts_speaker_mel_filters(), magnitude), min=1e-5))
+    return features.transpose(1, 2).to(output_device)
 
 
 @dataclass(slots=True)
@@ -396,7 +416,7 @@ class NativeQwen3TTSRuntime:
     ) -> Tensor:
         if self.model.speaker_encoder is None:
             raise ValueError("Only Qwen3-TTS Base checkpoints expose a speaker encoder.")
-        features = qwen3_tts_speaker_mel(audio.waveform.to(self.device)).to(dtype=self.model.dtype)
+        features = qwen3_tts_speaker_mel(audio.waveform).to(device=self.device, dtype=self.model.dtype)
         return self.model.speaker_encoder(features)[0]
 
     def _speaker_embedding(self, reference_audio: Any) -> Tensor:

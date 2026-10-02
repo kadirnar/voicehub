@@ -9,6 +9,7 @@ upstream recipe on real checkpoints.
 
 from __future__ import annotations
 
+import hashlib
 import unittest
 from unittest import mock
 
@@ -167,6 +168,31 @@ class Qwen3TTSUpstreamNumericsTests(unittest.TestCase):
                         qwen3_tts_rope_inverse_frequency(base, dimension, device="cpu"),
                         _transformers_inverse_frequency(base, dimension),
                     ))
+
+    def test_speaker_mel_filters_match_librosa_slaney_bank_bitwise(self):
+        from voicehub.architectures.qwen3_tts.runtime import _qwen3_tts_speaker_mel_filters
+
+        filters = _qwen3_tts_speaker_mel_filters()
+        self.assertEqual(filters.dtype, torch.float32)
+        self.assertEqual(tuple(filters.shape), (128, 513))
+        # SHA-256 of librosa 1.0.0 `filters.mel(sr=24000, n_fft=1024,
+        # n_mels=128, fmin=0, fmax=12000)` as little-endian float32 bytes.
+        digest = hashlib.sha256(filters.numpy().astype("<f4").tobytes()).hexdigest()
+        self.assertEqual(
+            digest,
+            "634664518adebcf0e280349d8e199250cb2e195d4216f2e7ab725a2d585f4e02",
+        )
+
+    @unittest.skipUnless(torch.cuda.is_available(), "Needs CUDA to check the device-independent frontend.")
+    def test_speaker_mel_is_computed_on_cpu_like_upstream(self):
+        from voicehub.architectures.qwen3_tts.runtime import qwen3_tts_speaker_mel
+
+        torch.manual_seed(3)
+        waveform = torch.randn(24_000) * 0.1
+        on_cpu = qwen3_tts_speaker_mel(waveform)
+        on_cuda = qwen3_tts_speaker_mel(waveform.cuda())
+        self.assertEqual(on_cuda.device.type, "cuda")
+        self.assertTrue(torch.equal(on_cuda.cpu(), on_cpu))
 
     @unittest.skipUnless(torch.cuda.is_available(), "CUDA pow differs from the CPU reference only on GPU.")
     def test_materialized_cuda_rope_buffers_match_transformers_cpu_init(self):
