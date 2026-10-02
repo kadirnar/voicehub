@@ -55,8 +55,10 @@ def _tokenizer():
     return CSMTextTokenizer(tokenizer)
 
 
-def _write_test_tokenizer(path: Path) -> None:
+def _write_test_tokenizer(path: Path, *, merges: tuple[str, ...] = ()) -> None:
     vocabulary = {encode_gpt2_token(bytes((value, ))): value for value in range(256)}
+    for offset, merge in enumerate(merges):
+        vocabulary[merge.replace(" ", "")] = 256 + offset
     write_json_file(
         path, {
             "version":
@@ -92,7 +94,7 @@ def _write_test_tokenizer(path: Path) -> None:
             "model": {
                 "type": "BPE",
                 "vocab": vocabulary,
-                "merges": [],
+                "merges": list(merges),
                 "unk_token": None,
             },
         })
@@ -120,6 +122,27 @@ def _portable_test_config() -> CSMArchitectureConfig:
             max_sequence_length=4,
         ),
     )
+
+
+class NativeCSMTokenizerTests(unittest.TestCase):
+
+    def test_released_tokenizer_uses_llama3_split(self):
+        # Llama 3 splits digit runs into groups of at most three, so the
+        # "3 4" merge cannot cross the "123|456|7" boundary. The generic
+        # GPT-2 scanner kept "1234567" whole and emitted the merged token.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tokenizer.json"
+            _write_test_tokenizer(path, merges=("3 4", ))
+            tokenizer = CSMTextTokenizer.from_file(path)
+        ids = tokenizer.encode("1234567", speaker=0)
+        self.assertEqual(
+            ids,
+            (128_000, *b"[0]1234567", 128_001),
+        )
+        self.assertEqual(
+            tokenizer.encode("34", speaker=1),
+            (128_000, *b"[1]", 256, 128_001),
+        )
 
 
 class NativeCSMDependencyTests(unittest.TestCase):
