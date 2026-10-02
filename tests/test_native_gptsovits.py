@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 import warnings
 from pathlib import Path
 from types import SimpleNamespace
@@ -434,6 +435,28 @@ class NativeGPTSoVITSTests(unittest.TestCase):
         self.assertEqual(waveform.ndim, 1)
         self.assertGreater(waveform.numel(), 0)
         self.assertTrue(torch.isfinite(waveform).all())
+
+    def test_decoder_overshoot_is_peak_normalized_like_released_postprocess(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            generator = build_s2_generator().eval()
+        runtime = GPTSoVITSRuntime(GPTSoVITSSemanticModel().eval(), generator)
+        prepared = {
+            "s1_phoneme_ids": [1, 2],
+            "s1_bert_features": torch.zeros(1, 1_024, 2),
+            "s2_phoneme_ids": [3, 4, 5],
+            "prompt_semantic_ids": None,
+            "reference_spectrogram": torch.rand(1, 1_025, 4),
+            "semantic_codes": [6, 7],
+        }
+        loud = torch.tensor([[[0.5, -2.5, 1.25]]])
+        quiet = torch.tensor([[[0.3, -0.999, 1.0]]])
+        with unittest.mock.patch.object(generator, "decode", return_value=loud):
+            _, waveform = runtime.synthesize_prepared(**prepared)
+        torch.testing.assert_close(waveform, torch.tensor([0.2, -1.0, 0.5]), rtol=0, atol=0)
+        with unittest.mock.patch.object(generator, "decode", return_value=quiet):
+            _, waveform = runtime.synthesize_prepared(**prepared)
+        self.assertTrue(torch.equal(waveform, quiet[0, 0]))
 
     def test_safe_export_has_integrity_and_strict_fresh_reload(self):
         s1 = nn.Linear(2, 3)
