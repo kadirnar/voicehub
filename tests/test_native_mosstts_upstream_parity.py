@@ -283,6 +283,25 @@ class DelaySamplingTests(unittest.TestCase):
                     ))
 
 
+class RotaryFrequencyTests(unittest.TestCase):
+
+    def test_meta_construction_stays_lazy(self):
+        from voicehub.neural.rotary import RotaryEmbedding
+
+        self.assertEqual(RotaryEmbedding(128, base=1e6, device="meta").inverse_frequency.device.type, "meta")
+
+    @unittest.skipUnless(torch.cuda.is_available(), "CUDA is required to compare device arithmetic")
+    def test_cuda_frequencies_match_cpu_reference(self):
+        # CUDA pow rounded inverse_frequency[18] differently for Qwen3's
+        # base 1e6; at position 459 that flipped a bfloat16 sine near 3*pi
+        # and made long greedy MOSS generations diverge from upstream.
+        from voicehub.neural.rotary import RotaryEmbedding
+
+        cpu = RotaryEmbedding(128, base=1e6).inverse_frequency
+        cuda = RotaryEmbedding(128, base=1e6, device="cuda").inverse_frequency
+        self.assertTrue(torch.equal(cuda.cpu(), cpu))
+
+
 class HubSnapshotLayoutTests(unittest.TestCase):
 
     def test_local_snapshot_with_blob_symlinks_resolves(self):
