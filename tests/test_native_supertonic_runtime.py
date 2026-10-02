@@ -242,6 +242,24 @@ class NativeSupertonicRuntimeTests(unittest.TestCase):
         ):
             SupertonicConfig(language="xx")
 
+    def test_inference_defaults_match_the_released_recipe(self):
+        # Upstream py/example_onnx.py, the supertonic PyPI pipeline and the
+        # Supertonic 3 model card all default to 8 denoising steps at 1.05x.
+        import inspect
+
+        for function in (
+                SupertonicForTextToSpeech._generate,
+                NativeSupertonicRuntime.synthesize,
+                NativeSupertonicRuntime.infer_batch,
+        ):
+            parameters = inspect.signature(function).parameters
+            self.assertEqual(parameters["total_steps"].default, 8, function)
+            self.assertEqual(parameters["speed"].default, 1.05, function)
+        model = SupertonicForTextToSpeech()
+        model._validate_generation_inputs({})
+        with self.assertRaisesRegex(ValueError, "total_steps"):
+            model._validate_generation_inputs({"total_steps": 0})
+
     def test_latent_mask_preserves_the_released_sample_truncation(self):
         runtime = _runtime()
 

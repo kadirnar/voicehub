@@ -334,7 +334,7 @@ class NativeSupertonicRuntime(
         languages: tuple[str, ...] | list[str],
         style: SupertonicStyle,
         *,
-        total_steps: int = 5,
+        total_steps: int = 8,
         speed: float = 1.05,
         generator: torch.Generator | None = None,
     ) -> tuple[Tensor, Tensor]:
@@ -405,7 +405,7 @@ class NativeSupertonicRuntime(
         language: str,
         style: SupertonicStyle,
         *,
-        total_steps: int = 5,
+        total_steps: int = 8,
         speed: float = 1.05,
         silence_duration: float = 0.3,
         generator: torch.Generator | None = None,
