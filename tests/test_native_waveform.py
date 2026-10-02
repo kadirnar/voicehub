@@ -188,6 +188,42 @@ class NativeWaveformTests(unittest.TestCase):
             atol=1 / 32767,
         )
 
+    def test_ieee_float_wave_files_are_decoded(self):
+        import struct
+
+        def float_wave(samples, *, channels, rate, extensible):
+            data = struct.pack(f"<{len(samples)}f", *samples)
+            block = channels * 4
+            fmt = struct.pack("<HHIIHH", 0xFFFE if extensible else 3, channels, rate, rate * block, block, 32)
+            if extensible:
+                guid = struct.pack("<H", 3) + bytes.fromhex("000000001000800000aa00389b71")
+                fmt += struct.pack("<HHI", 22, 32, 0) + guid
+            else:
+                fmt += struct.pack("<H", 0)
+            fact = b"fact" + struct.pack("<II", 4, len(samples) // channels)
+            body = (
+                b"WAVE" + b"fmt " + struct.pack("<I", len(fmt)) + fmt + fact + b"data" +
+                struct.pack("<I", len(data)) + data)
+            return b"RIFF" + struct.pack("<I", len(body)) + body
+
+        stereo = [0.5, -0.25, 1.5, 0.5, -1.0, 0.0]
+        mono = [0.125, -0.875, 0.3]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "float.wav"
+            path.write_bytes(float_wave(stereo, channels=2, rate=16_000, extensible=False))
+            waveform, rate = load_pcm_wave(path)
+            channels, _ = load_pcm_wave(path, preserve_channels=True)
+            audio = load_native_audio(path)
+        self.assertEqual(rate, 16_000)
+        torch.testing.assert_close(waveform, torch.tensor([0.125, 1.0, -0.5]), rtol=0, atol=0)
+        torch.testing.assert_close(
+            channels, torch.tensor([[0.5, 1.5, -1.0], [-0.25, 0.5, 0.0]]), rtol=0, atol=0)
+        torch.testing.assert_close(audio.waveform, waveform, rtol=0, atol=0)
+
+        restored, rate = decode_pcm_wave(float_wave(mono, channels=1, rate=24_000, extensible=True))
+        self.assertEqual(rate, 24_000)
+        torch.testing.assert_close(restored, torch.tensor(mono), rtol=0, atol=0)
+
     def test_in_memory_pcm_wave_decoder_is_bounded(self):
         source = torch.linspace(-0.75, 0.75, 12)
         with tempfile.TemporaryDirectory() as directory:
