@@ -186,5 +186,29 @@ class NativeConversationTokenizerTests(unittest.TestCase):
         )
 
 
+class ConversationPromptAudioTests(unittest.TestCase):
+
+    def test_prompt_audio_is_resampled_like_torchaudio_functional_resample(self):
+        # Upstream load_prompt_audio uses torchaudio.functional.resample; the
+        # generic VoiceHub resampler differed by up to 0.13 on a 16 kHz
+        # LibriSpeech prompt, changing the prompt's Mimi codes.
+        import tempfile
+
+        from voicehub.models.conversationtts.source.conversationtts.inference import generator, generator_pod, generator_pod_cn
+        from voicehub.processing.waveform import resample_waveform, resample_waveform_hann, save_pcm_wave
+
+        source = torch.sin(torch.arange(1_600, dtype=torch.float32) * 0.37) * 0.5
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "prompt.wav"
+            save_pcm_wave(path, source, 16_000)
+            decoded = generator.load_audio(path).waveform
+            expected = resample_waveform_hann(decoded, 16_000, 24_000)
+            for module in (generator, generator_pod, generator_pod_cn):
+                actual = module.load_prompt_audio(str(path))
+                self.assertEqual(actual.shape, (2_400, ))
+                torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+            self.assertFalse(torch.equal(expected, resample_waveform(decoded, 16_000, 24_000)))
+
+
 if __name__ == "__main__":
     unittest.main()
