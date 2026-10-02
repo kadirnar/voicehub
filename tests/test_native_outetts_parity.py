@@ -11,6 +11,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import torch
 from torch import nn
@@ -26,7 +27,9 @@ from voicehub.architectures.outetts.postprocessing import (
     integrated_loudness,
     normalize_loudness,
 )
+from voicehub.architectures.outetts.prompting import normalize_outetts_text
 from voicehub.architectures.outetts.runtime import OuteTTSRuntime
+from voicehub.models.outetts.inference import OuteTTSForTextToSpeech
 
 
 def _tiny_llama3_config() -> LlamaConfig:
@@ -230,6 +233,31 @@ class OuteTTSChunkedDecodingTests(unittest.TestCase):
         padded = torch.nn.functional.pad(audio.reshape(-1), (0, 9_600 - audio.shape[-1]))
         self.assertAlmostEqual(integrated_loudness(padded, 24_000), -18.0, places=4)
         self.assertEqual(float(audio[0, 0, 0]), 0.0)
+
+
+class OuteTTSDefaultsTests(unittest.TestCase):
+
+    def test_text_normalization_joins_n_contractions_like_upstream(self):
+        self.assertEqual(normalize_outetts_text("Rock' n roll is fine."), "Rock'n roll is fine.")
+        self.assertEqual(normalize_outetts_text("I can' t go , ok ?"), "I can't go, ok?")
+
+    def test_auto_dtype_runs_cpu_in_float32_like_author_auto_config(self):
+        model = OuteTTSForTextToSpeech(device="cpu")
+        sentinel = RuntimeError("stop after dtype resolution")
+        with mock.patch(
+                "voicehub.architectures.outetts.runtime.load_outetts_runtime",
+                side_effect=sentinel,
+        ) as loader:
+            with self.assertRaises(RuntimeError):
+                model._load_pretrained_model()
+        self.assertIs(loader.call_args.kwargs["dtype"], torch.float32)
+
+    def test_auto_dtype_uses_bfloat16_on_capable_cuda(self):
+        model = OuteTTSForTextToSpeech(device="cuda")
+        with mock.patch.object(torch.cuda, "is_bf16_supported", return_value=True):
+            self.assertIs(model._auto_dtype(torch), torch.bfloat16)
+        with mock.patch.object(torch.cuda, "is_bf16_supported", return_value=False):
+            self.assertIs(model._auto_dtype(torch), torch.float16)
 
 
 if __name__ == "__main__":
