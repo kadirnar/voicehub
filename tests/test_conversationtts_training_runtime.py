@@ -61,6 +61,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
         loader.assert_called_once_with(
             checkpoint.resolve(),
             map_location="cpu",
+            mmap=True,
             weights_only=True,
         )
         self.assertEqual(report.format, "pytorch-weights-only")
@@ -89,10 +90,78 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
         loader.assert_called_once_with(
             checkpoint.resolve(),
             map_location="cpu",
+            mmap=True,
             weights_only=True,
         )
         self.assertEqual(report.parameter_count, 1)
         self.assertEqual(model.weight.item(), 5.0)
+
+    def test_official_archive_with_numpy_training_state_loads_weights_only(self):
+        # The published ckpt1.checkpoint stores optimizer/scheduler/reporter
+        # state beside `model`; reporter statistics contain NumPy scalars and
+        # a datetime.timedelta. torch>=2.6 weights-only loading rejected the
+        # whole archive, so the default checkpoint could not be loaded.
+        import datetime
+
+        try:
+            import numpy
+        except ImportError:  # pragma: no cover - NumPy is a test extra
+            self.skipTest("NumPy is required to author the legacy fixture.")
+        model = self._model()
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint = Path(directory) / "ckpt1.checkpoint"
+            self.torch.save(
+                {
+                    "model": {
+                        "module.weight": self.torch.tensor([[7.0]], dtype=self.torch.bfloat16),
+                    },
+                    "optimizer": {
+                        "state": {},
+                        "param_groups": [{
+                            "lr": 1e-4
+                        }],
+                    },
+                    "reporter": {
+                        "stats": {
+                            "loss": numpy.float64(1.5),
+                            "acc": numpy.float32(0.25),
+                            "time": datetime.timedelta(seconds=3),
+                        },
+                        "epoch": 1,
+                    },
+                },
+                checkpoint,
+            )
+            report = load_conversationtts_checkpoint(model, checkpoint, device="cpu")
+
+        self.assertEqual(report.format, "pytorch-weights-only")
+        self.assertEqual(model.weight.item(), 7.0)
+
+    def test_official_archive_allowlist_still_rejects_executable_globals(self):
+        import pickle
+
+        model = self._model()
+
+        class _Executable:
+
+            def __reduce__(self):
+                import os
+
+                return (os.getcwd, ())
+
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint = Path(directory) / "ckpt1.checkpoint"
+            self.torch.save(
+                {
+                    "model": {
+                        "weight": self.torch.tensor([[1.0]])
+                    },
+                    "reporter": _Executable(),
+                },
+                checkpoint,
+            )
+            with self.assertRaises(pickle.UnpicklingError):
+                load_conversationtts_checkpoint(model, checkpoint, device="cpu")
 
     def test_checkpoint_refuses_unsafe_fallback_when_weights_only_is_unsupported(self, ):
         model = self._model()
