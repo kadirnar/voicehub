@@ -108,9 +108,14 @@ def _channelwise_cross_entropy(
     return total, tuple(losses)
 
 
-def _find_last_equal(input_ids: Tensor, value: int) -> Tensor:
+def _find_last_equal(input_ids: Tensor, value: int, *, required: bool = True) -> Tensor:
+    """Return the last index of ``value`` per row, or ``-1`` when absent.
+
+    ``required=False`` mirrors the source ``find_last_equal_C`` helper, whose
+    missing-token sentinel is legitimate for prompts without audio.
+    """
     matches = input_ids.eq(value)
-    if not bool(matches.any(dim=1).all()):
+    if required and not bool(matches.any(dim=1).all()):
         raise ValueError(f"Every sequence must contain token ID {value}.")
     positions = torch.arange(
         input_ids.shape[1],
@@ -339,9 +344,11 @@ class MossDelayModel(nn.Module):
         maximum = torch.iinfo(torch.long).max
         delayed_lengths = torch.full_like(audio_lengths, maximum)
         text_ids = input_ids[..., 0]
+        # Direct (reference-free) prompts contain no audio-start token.
         audio_start_indices = _find_last_equal(
             text_ids,
             self.config.audio_start_token_id,
+            required=False,
         )
         continuation = (
             text_ids[:, -1].eq(self.config.audio_start_token_id)

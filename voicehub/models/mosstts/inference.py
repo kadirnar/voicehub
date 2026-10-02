@@ -526,7 +526,7 @@ class MossTTSForTextToSpeech(PreTrainedTTSModel):
             raise RuntimeError("MOSS-TTS native runtime is not loaded.")
         references = self._reference_codes(speaker_audio_codes)
         if speaker_audio_path is not None:
-            speaker_audio = runtime.load_reference_audio(speaker_audio_path)
+            speaker_audio = speaker_audio_path
         if speaker_audio is not None:
             references = (runtime.encode_reference(runtime.load_reference_audio(speaker_audio), ), )
         with seeded_inference(

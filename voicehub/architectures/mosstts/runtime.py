@@ -27,12 +27,40 @@ from voicehub.architectures.mosstts.metadata import (
     MOSS_CODEC_V1_REPOSITORY,
     MOSS_CODEC_V2_REPOSITORY,
     MOSS_TTS_CHECKPOINTS,
+    MOSS_TTS_TEXT_NORMALIZED_REPOSITORIES,
+    MOSS_TTS_TEXT_NORMALIZER_FILENAME,
 )
 from voicehub.architectures.mosstts.modeling import MossRealtimeModel, MossTTSModel, MossTTSOutput, build_mosstts_model
 from voicehub.architectures.mosstts.processing import MossGeneratedCodes, MossProcessorBatch, MossTTSProcessor
 from voicehub.architectures.mosstts.tokenization import MossTextTokenizer
 from voicehub.hub import read_json_file
-from voicehub.processing.waveform import NativeAudio, load_pcm_wave, normalize_waveform, resample_waveform_kaiser
+from voicehub.processing.waveform import NativeAudio, load_pcm_wave, normalize_waveform, resample_waveform_hann
+
+# Official MOSS processors decode generated codes with
+# ``audio_tokenizer.decode(..., chunk_duration=8)``: sequences longer than
+# eight seconds are decoded as causal streaming chunks.
+SOURCE_DECODE_CHUNK_SECONDS = 8.0
+
+
+def loudness_normalize(
+    waveform: Tensor,
+    *,
+    target_dbfs: float = -20.0,
+    gain_range: tuple[float, float] = (-3.0, 3.0),
+) -> Tensor:
+    """Apply the official MOSS reference-audio gain before codec encoding.
+
+    Mirrors ``MossTTS*Processor.loudness_normalize``: the gain toward
+    ``target_dbfs`` (mean power over all channels) is clamped to
+    ``gain_range`` decibels.
+    """
+    waveform = waveform.to(torch.float32)
+    if waveform.numel() == 0:
+        return waveform
+    current_dbfs = 10.0 * torch.log10(torch.mean(waveform**2) + 1e-9)
+    gain = float(target_dbfs - current_dbfs)
+    gain = max(gain_range[0], min(gain, gain_range[1]))
+    return waveform * (10.0**(gain / 20.0))
 
 
 def resolve_mosstts_dtype(
@@ -192,11 +220,12 @@ class MossTTSRuntime(nn.Module):
                              f"[{channels}, time].")
         if values.shape[1] < 1:
             raise ValueError("MOSS reference waveform cannot be empty.")
-        parameter = next(self.model.parameters())
-        batch = values.to(
-            device=parameter.device,
-            dtype=parameter.dtype,
-        ).unsqueeze(0)
+        # The codec consumes full-precision audio: never round the waveform
+        # through the language model's (typically bfloat16) compute dtype.
+        codec_device = getattr(self.codec, "device", None)
+        if not isinstance(codec_device, torch.device):
+            codec_device = next(self.model.parameters()).device
+        batch = loudness_normalize(values.to(device=codec_device, dtype=torch.float32)).unsqueeze(0)
         lengths = torch.tensor(
             [batch.shape[-1]],
             dtype=torch.long,
@@ -280,7 +309,8 @@ class MossTTSRuntime(nn.Module):
             raise ValueError("MOSS audio must have shape [time] or [channels, time].")
         waveform = torch.stack([normalize_waveform(channel) for channel in waveform])
         if int(source_rate) != self.codec.config.sample_rate:
-            waveform = resample_waveform_kaiser(
+            # Official processors call torchaudio's default resampler.
+            waveform = resample_waveform_hann(
                 waveform,
                 int(source_rate),
                 self.codec.config.sample_rate,
@@ -472,7 +502,11 @@ class MossTTSRuntime(nn.Module):
             dtype=torch.long,
             device=codes.device,
         )
-        output = self.codec.decode(codes.unsqueeze(0), lengths)
+        output = self.codec.decode(
+            codes.unsqueeze(0),
+            lengths,
+            chunk_duration=SOURCE_DECODE_CHUNK_SECONDS,
+        )
         if not isinstance(output, MossCodecDecodeOutput):
             raise TypeError("MOSS codec `decode` must return MossCodecDecodeOutput.")
         if output.sample_rate != self.sample_rate:
@@ -533,6 +567,17 @@ class MossTTSRuntime(nn.Module):
         return destination
 
 
+def uses_source_text_normalizer(artifacts: MossTTSArtifacts) -> bool:
+    """Whether the official processor of this snapshot normalizes text.
+
+    MOSS-TTS-v1.5 ships ``tts_robust_normalizer_single_script.py`` and its
+    processor applies it to every user text; earlier releases do not.
+    """
+    if artifacts.source in MOSS_TTS_TEXT_NORMALIZED_REPOSITORIES:
+        return True
+    return (Path(artifacts.root) / MOSS_TTS_TEXT_NORMALIZER_FILENAME).is_file()
+
+
 def load_mosstts_runtime(
     source: str | Path,
     *,
@@ -582,7 +627,11 @@ def load_mosstts_runtime(
         artifacts.tokenizer_config,
         model_config=config,
     )
-    processor = MossTTSProcessor(config, tokenizer)
+    processor = MossTTSProcessor(
+        config,
+        tokenizer,
+        normalize_text=uses_source_text_normalizer(artifacts),
+    )
     if codec is None and load_codec:
         resolved_codec_source = codec_source
         if resolved_codec_source is None:
@@ -615,5 +664,7 @@ __all__ = [
     "MossTTSRuntime",
     "default_mosstts_codec_config",
     "load_mosstts_runtime",
+    "loudness_normalize",
     "resolve_mosstts_dtype",
+    "uses_source_text_normalizer",
 ]

@@ -11,6 +11,7 @@ import torch
 from torch import Tensor
 
 from voicehub.architectures.mosstts.configuration import MossTTSConfig
+from voicehub.architectures.mosstts.text_normalization import normalize_tts_text
 from voicehub.architectures.mosstts.tokenization import IM_END, IM_START, REALTIME_AUDIO_PAD, MossTextTokenizer
 
 AUDIO_PLACEHOLDER = "<|audio|>"
@@ -89,13 +90,20 @@ class MossTTSProcessor:
         self,
         config: MossTTSConfig,
         tokenizer: MossTextTokenizer,
+        *,
+        normalize_text: bool = False,
     ) -> None:
         if not isinstance(config, MossTTSConfig):
             raise TypeError("`config` must be MossTTSConfig.")
         if not isinstance(tokenizer, MossTextTokenizer):
             raise TypeError("`tokenizer` must be MossTextTokenizer.")
+        if not isinstance(normalize_text, bool):
+            raise TypeError("`normalize_text` must be a boolean.")
         self.config = config
         self.tokenizer = tokenizer
+        # MOSS-TTS-v1.5 ships a robustness normalizer that its official
+        # processor applies to every user text before prompt rendering.
+        self.normalize_text = normalize_text
 
     def _codes(self, value: Tensor, *, name: str) -> Tensor:
         if not isinstance(value, Tensor) or value.ndim != 2:
@@ -160,8 +168,10 @@ class MossTTSProcessor:
         if (duration_tokens is not None and (isinstance(duration_tokens, bool) or
                                              not isinstance(duration_tokens, int) or duration_tokens <= 0)):
             raise ValueError("`duration_tokens` must be a positive integer.")
-        reference = (
-            "None" if reference_count == 0 else "\n".join(AUDIO_PLACEHOLDER for _ in range(reference_count)))
+        # The official UserMessage labels each reference with its 1-based
+        # speaker slot, e.g. "[S1]:\n<|audio|>".
+        reference = ("None" if reference_count == 0 else "\n".join(
+            f"[S{index + 1}]:\n{AUDIO_PLACEHOLDER}" for index in range(reference_count)))
         return _USER_TEMPLATE.format(
             reference=reference,
             instruction=_template_value(instruction),
@@ -367,6 +377,8 @@ class MossTTSProcessor:
         language: str | None = None,
         device: str | torch.device | None = None,
     ) -> MossProcessorBatch:
+        if self.normalize_text and isinstance(text, str):
+            text = normalize_tts_text(text)
         # Validate the public fields consistently before choosing a
         # release-specific matrix layout.  The Local v1.5 path assembles its
         # prompt structurally and therefore does not otherwise call
