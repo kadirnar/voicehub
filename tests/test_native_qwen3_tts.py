@@ -225,6 +225,26 @@ def _write_tokenizer_assets(directory: Path) -> None:
 
 class NativeQwen3TTSTests(unittest.TestCase):
 
+    def test_text_tokenizer_applies_qwen2_nfc_normalization(self):
+        # Upstream's Qwen2 tokenizer normalizes text to NFC before BPE, so a
+        # decomposed accent must tokenize exactly like the composed spelling.
+        from voicehub.architectures.qwen3_tts.tokenization import Qwen3TTSTextTokenizer
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_tokenizer_assets(root)
+            tokenizer = Qwen3TTSTextTokenizer.from_files(
+                root / "vocab.json",
+                root / "merges.txt",
+                root / "tokenizer_config.json",
+            )
+        composed = tokenizer.encode("<|im_start|>Café<|im_end|>").input_ids
+        decomposed = tokenizer.encode("<|im_start|>Café<|im_end|>").input_ids
+        self.assertEqual(decomposed, composed)
+        self.assertEqual(composed[0], EXPECTED_TTS_TOKEN_IDS["<|im_start|>"])
+        self.assertEqual(composed[-1], EXPECTED_TTS_TOKEN_IDS["<|im_end|>"])
+        self.assertEqual(list(composed[-3:-1]), [0xC3, 0xA9])
+
     def test_source_metadata_is_pinned_and_apache_licensed(self):
         root = Path(__file__).parents[1]
         metadata = json.loads(
