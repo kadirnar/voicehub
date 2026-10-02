@@ -33,6 +33,42 @@ def test_timing_flags_regression_and_keeps_noisy_measurements_inconclusive():
             latency_comparison(invalid, [1.0] * 10, tolerance=0.1)
 
 
+def test_too_few_timings_still_compare_outputs(tmp_path):
+    a, b = tmp_path / "a.npy", tmp_path / "b.npy"
+    np.save(a, np.array([0.1, 0.2], dtype=np.float32))
+    np.save(b, np.array([0.1, 0.2], dtype=np.float32))
+    upstream = result("tts", audio=str(a), sample_rate=16000)
+    candidate = result("tts", audio=str(b), sample_rate=16000)
+    upstream["samples"][0]["warm_seconds"] = [9.0]
+    comparison = compare_results(upstream, candidate)
+    sample = comparison["samples"][0]
+    assert comparison["status"] == "measured"
+    assert sample["waveform_exact"]
+    assert sample["timing"]["status"] == "insufficient-samples"
+    assert sample["timing"]["upstream_samples"] == 1
+    assert sample["timing"]["voicehub_samples"] == 10
+    assert sample["timing"]["regression_flag"] is None
+    assert comparison["timing_regression_flag"] is False
+    json.dumps(comparison, allow_nan=False)
+
+
+def test_enough_timings_keep_the_regression_flag():
+    upstream = result("asr", text="hello", reference="hello")
+    candidate = result("asr", text="hello", reference="hello")
+    candidate["samples"][0]["warm_seconds"] = [1.3] * 5
+    comparison = compare_results(upstream, candidate)
+    assert comparison["samples"][0]["timing"]["status"] == "measured"
+    assert comparison["samples"][0]["timing"]["regression_flag"]
+    assert comparison["timing_regression_flag"]
+
+
+def test_invalid_timings_are_rejected_even_when_insufficient():
+    upstream = result("asr", text="hello", reference="hello")
+    upstream["samples"][0]["warm_seconds"] = [float("nan")]
+    with pytest.raises(ValueError, match="finite and positive"):
+        compare_results(upstream, result("asr", text="hello", reference="hello"))
+
+
 def test_transcript_agreement_is_distinct_from_accuracy():
     original = result("asr", text="Hello there!", reference="Hello world")
     candidate = result("asr", text="hello there", reference="Hello world")

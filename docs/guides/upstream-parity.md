@@ -36,6 +36,11 @@ The timing report uses the difference between independent mean latencies with
 an approximate 95% interval. A regression is flagged when its lower bound is
 above the configured relative tolerance (10% by default). This is a screening
 rule, not a guarantee of statistical significance for correlated GPU timings.
+If either side records fewer than five warm timings for a sample (for example,
+a slow model run once for correctness), that sample's `timing` entry is
+`{"status": "insufficient-samples", ...}` with `regression_flag: null`; the
+waveform, transcript, or segment comparison still runs. Such samples never set
+the case-level `timing_regression_flag`.
 
 ## Run a comparison
 
