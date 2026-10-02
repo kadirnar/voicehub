@@ -391,10 +391,16 @@ class MossDelayModel(nn.Module):
             self.config.audio_assistant_delay_slot_token_id,
         ]] = False
 
+        # An all-ones mask carries no information. Passing it would force
+        # the explicit float32 masked-attention path, whereas the official
+        # SDPA implementation drops such a mask; keep the mask only while a
+        # row is left-padded or has already stopped.
+        prompt_padded = not bool(current_mask.all())
         for step in range(max_new_tokens):
+            step_mask = (current_mask if prompt_padded or bool(stopped.any()) else None)
             output = self(
                 current_ids,
-                attention_mask=current_mask,
+                attention_mask=step_mask,
                 past_key_values=cache,
                 use_cache=True,
             )

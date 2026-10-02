@@ -102,6 +102,42 @@ class DelayGenerationTests(unittest.TestCase):
         self.assertEqual(sequence.shape[-1], config.channels)
         self.assertEqual(sequence.shape[0], start_length + 4)
 
+    def test_unpadded_generation_uses_maskless_attention(self):
+        # The official SDPA path drops an all-ones mask; passing it would
+        # select VoiceHub's float32 masked-attention fallback and change
+        # bfloat16 numerics (greedy tokens diverged from the source).
+        config = _tiny_tts_config("delay")
+        model = build_mosstts_model(config).eval()
+        prompt = MossTTSProcessor(config, _TinyTokenizer()).build_generation_prompt("hello")
+        seen = []
+        forward = model.forward
+
+        def recording_forward(*args, **kwargs):
+            seen.append(kwargs.get("attention_mask"))
+            return forward(*args, **kwargs)
+
+        model.forward = recording_forward
+        model.generate(
+            prompt.input_ids,
+            attention_mask=prompt.attention_mask,
+            max_new_tokens=3,
+            text_temperature=0.0,
+            audio_temperature=0.0,
+        )
+        self.assertEqual(seen, [None, None, None])
+
+        seen.clear()
+        padded = prompt.attention_mask.clone()
+        padded[:, 0] = False
+        model.generate(
+            prompt.input_ids,
+            attention_mask=padded,
+            max_new_tokens=2,
+            text_temperature=0.0,
+            audio_temperature=0.0,
+        )
+        self.assertTrue(all(mask is not None for mask in seen))
+
     def test_find_last_equal_optional_sentinel(self):
         ids = torch.tensor([[1, 3, 3, 2], [1, 2, 2, 2]])
         self.assertEqual(_find_last_equal(ids, 3, required=False).tolist(), [2, -1])
