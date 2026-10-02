@@ -166,7 +166,6 @@ def _wrapper(root: Path) -> SpeechT5ForTextToSpeech:
     wrapper.vocoder = SpeechT5HifiGan(vocoder_config)
     wrapper.vocoder.requires_grad_(False)
     wrapper.transformers_processor = _processor(root)
-    wrapper.processor = wrapper.transformers_processor
     return wrapper
 
 
@@ -532,6 +531,25 @@ class NativeSpeechT5TrainingAndRuntimeTests(unittest.TestCase):
         self.assertTrue(all(parameter.grad is None for parameter in wrapper.vocoder.parameters()))
         self.assertTrue(manifest["raw_data_fine_tuning"])
         self.assertEqual(manifest["frozen_components"], ["vocoder"])
+
+    def test_public_generate_is_repeatable_after_loading(self):
+        # Regression: loading replaced the generic request processor with the
+        # keyword-only SpeechT5Processor, so every public generate() call
+        # after the first raised TypeError.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build_root = root / "build"
+            build_root.mkdir()
+            export = root / "export"
+            wrapper = _wrapper(build_root)
+            wrapper._prepare_for_inference()
+            wrapper.save_pretrained(export)
+            restored = SpeechT5ForTextToSpeech(export, device="cpu")
+            first = restored.generate("ab", speaker_embeddings=torch.ones(4), maxlenratio=2.0, seed=5)
+            second = restored.generate("ab", speaker_embeddings=torch.ones(4), maxlenratio=2.0, seed=5)
+
+        torch.testing.assert_close(first.audio, second.audio, rtol=0.0, atol=0.0)
+        self.assertEqual(second.metadata["seed"], 5)
 
     def test_native_bundle_round_trip_preserves_seeded_inference(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -366,8 +366,10 @@ class SpeechT5ForTextToSpeech(PreTrainedTTSModel):
         self._torch = torch
         self.native_config = native_config
         self.native_vocoder_config = native_vocoder_config
+        # Keep ``self.processor`` as the generic VoiceHub input processor:
+        # the public ``generate()`` path calls it positionally to normalize
+        # the request before ``_generate`` tokenizes with this processor.
         self.transformers_processor = processor
-        self.processor = processor
         self.model = model
         self.vocoder = vocoder
         self.config.sample_rate = native_vocoder_config.sampling_rate
