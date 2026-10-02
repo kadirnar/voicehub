@@ -83,6 +83,11 @@ def create_kokoro_architecture_spec() -> ArchitectureSpec:
                 "energy, and waveform targets."),
             "full_finetuning_ready":
             False,
+            "documentation_checkpoint_note": (
+                "Raw text uses VoiceHub's built-in grapheme fallback, not "
+                "upstream's Misaki/espeak G2P, so pronunciation differs from "
+                "upstream Kokoro. Pass `phonemes=` or a Misaki "
+                "`text_frontend` callable for upstream-equivalent audio."),
         },
     )
 

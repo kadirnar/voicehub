@@ -310,6 +310,16 @@ class NativeKokoroRuntimeTests(unittest.TestCase):
         pieces = pipeline._chunks("h" * 1200)
         self.assertEqual([len(piece) for piece in pieces], [510, 510, 180])
 
+    def test_raw_text_fallback_frontend_warns_once(self):
+        pipeline = KPipeline("a", model=self._InferenceModel())
+        voice = torch.ones(10, 1, 256)
+        with self.assertLogs("voicehub.models.kokoro.pipeline", level="WARNING") as logs:
+            list(pipeline("hello", voice=voice))
+            list(pipeline("hello", voice=voice))
+            list(pipeline("hello", voice=voice, phonemes="həlo"))
+        self.assertEqual(len(logs.records), 1)
+        self.assertIn("grapheme fallback", logs.output[0])
+
     def test_auto_dtype_matches_upstream_float32_default(self):
         model = KokoroForTextToSpeech(device="cpu", lazy_load=True)
         model.device = "cuda"

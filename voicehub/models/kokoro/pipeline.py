@@ -287,6 +287,7 @@ class KPipeline:
         self.allow_legacy_checkpoint_conversion = (allow_legacy_checkpoint_conversion)
         self.artifacts: KokoroArtifacts | None = None
         self.voices: dict[str, torch.Tensor] = {}
+        self._fallback_warned = False
 
         if isinstance(model, KModel):
             self.model = model
@@ -587,6 +588,12 @@ class KPipeline:
             "frontend_id",
             frontend.__class__.__name__,
         )
+        if (isinstance(frontend, GraphemeFallbackFrontend) and not self._fallback_warned):
+            self._fallback_warned = True
+            _LOGGER.warning(
+                "Kokoro is reading raw text with VoiceHub's grapheme fallback, "
+                "not upstream Misaki/espeak G2P; pronunciation will differ from "
+                "upstream Kokoro. Pass `phonemes=` or a `text_frontend` callable.")
         for text_index, (graphemes, frontend_input) in enumerate(zip(grapheme_segments, frontend_segments)):
             normalized = _call_frontend(
                 frontend,
