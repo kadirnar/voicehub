@@ -246,13 +246,22 @@ class ConditionalCFM(DiffusionSamplingMixin, BASECFM):
         return loss, y
 
 
+RAND_NOISE_SEED = 0
+
+
 class CausalConditionalCFM(ConditionalCFM):
     """Causal variant of ConditionalCFM using pre-generated random noise for
     deterministic streaming."""
 
     def __init__(self, in_channels=240, cfm_params=CFM_PARAMS, n_spks=1, spk_emb_dim=80, estimator=None):
         super().__init__(in_channels, cfm_params, n_spks, spk_emb_dim, estimator)
-        self.rand_noise = torch.randn([1, 80, 50 * 300])
+        # The pinned upstream draws this fixed noise from the global RNG at
+        # construction; torch's default CPU seed is per-process entropy, so the
+        # same seeded request produced different audio in every process. A
+        # dedicated generator keeps the per-instance fixed-noise contract while
+        # making seeded generation reproducible and leaving caller RNG intact.
+        generator = torch.Generator().manual_seed(RAND_NOISE_SEED)
+        self.rand_noise = torch.randn([1, 80, 50 * 300], generator=generator)
 
     @torch.inference_mode()
     def forward(self, mu, mask, n_timesteps, temperature=1.0, spks=None, cond=None):

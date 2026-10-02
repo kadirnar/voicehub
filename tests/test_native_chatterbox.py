@@ -171,6 +171,23 @@ class NativeChatterboxTests(unittest.TestCase):
             reference = Resample(source_rate, target_rate)(waveform)
             self.assertTrue(torch.equal(_resample_batch(waveform, source_rate, target_rate), reference))
 
+    def test_flow_noise_is_reproducible_across_processes_and_rng_states(self):
+        # The causal CFM uses construction-time noise. It must not depend on the
+        # (per-process random) global RNG, or seed= cannot reproduce audio.
+        from voicehub.models.chatterbox.models.s3gen.flow_matching import CausalConditionalCFM
+
+        torch.manual_seed(1)
+        first = CausalConditionalCFM(estimator=nn.Identity()).rand_noise
+        state = torch.random.get_rng_state()
+        torch.manual_seed(2)
+        second = CausalConditionalCFM(estimator=nn.Identity()).rand_noise
+        torch.manual_seed(1)
+        CausalConditionalCFM(estimator=nn.Identity())
+        torch.testing.assert_close(first, second, rtol=0, atol=0)
+        self.assertTrue(torch.equal(torch.random.get_rng_state(), state))
+        self.assertEqual(tuple(first.shape), (1, 80, 15_000))
+        self.assertAlmostEqual(float(first.std()), 1.0, places=2)
+
     def test_generation_limit_rejects_values_beyond_t3_capacity(self):
         from voicehub.models.chatterbox.tts import ChatterboxTTS
 
