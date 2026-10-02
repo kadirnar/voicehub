@@ -59,7 +59,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
                 )
 
         loader.assert_called_once_with(
-            checkpoint.resolve(),
+            checkpoint.absolute(),
             map_location="cpu",
             mmap=True,
             weights_only=True,
@@ -88,7 +88,7 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
                 )
 
         loader.assert_called_once_with(
-            checkpoint.resolve(),
+            checkpoint.absolute(),
             map_location="cpu",
             mmap=True,
             weights_only=True,
@@ -162,6 +162,49 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
             )
             with self.assertRaises(pickle.UnpicklingError):
                 load_conversationtts_checkpoint(model, checkpoint, device="cpu")
+
+    def test_hub_cached_safetensors_symlink_keeps_its_format(self):
+        # Hugging Face caches store files as suffix-less content-addressed
+        # blobs behind `snapshots/<rev>/<name>` symlinks. Resolving the link
+        # before choosing the format sent a cached `model.safetensors` export
+        # to torch.load instead of the Safetensors reader.
+        source = self._model()
+        with self.torch.no_grad():
+            source.weight.fill_(9.0)
+        target = self._model()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blob = root / "blobs" / ("a" * 64)
+            blob.parent.mkdir()
+            export_conversationtts_checkpoint(source, root / "export.safetensors").rename(blob)
+            snapshot = root / "snapshots" / "rev"
+            snapshot.mkdir(parents=True)
+            (snapshot / "model.safetensors").symlink_to(Path("..", "..", "blobs", blob.name))
+            report = load_conversationtts_checkpoint(target, snapshot / "model.safetensors", device="cpu")
+
+        self.assertEqual(report.format, "safetensors")
+        self.assertEqual(target.weight.item(), 9.0)
+
+    def test_mimi_tokenizer_accepts_hub_cached_safetensors_symlink(self):
+        from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.MimiCodec import mimi_tokenizer
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blob = root / "blobs" / ("b" * 64)
+            blob.parent.mkdir()
+            blob.write_bytes(b"placeholder")
+            snapshot = root / "snapshots" / "rev"
+            snapshot.mkdir(parents=True)
+            link = snapshot / "tokenizer-e351c8d8-checkpoint125.safetensors"
+            link.symlink_to(Path("..", "..", "blobs", blob.name))
+            with (
+                    patch.object(mimi_tokenizer, "MimiCodec", Mock(return_value=self._model())),
+                    patch.object(mimi_tokenizer.MimiTokenizer, "_load_checkpoint") as load,
+            ):
+                mimi_tokenizer.MimiTokenizer(link)
+            load.assert_called_once()
+            with self.assertRaisesRegex(ValueError, "must use Safetensors"):
+                mimi_tokenizer.MimiTokenizer(blob)
 
     def test_checkpoint_refuses_unsafe_fallback_when_weights_only_is_unsupported(self, ):
         model = self._model()

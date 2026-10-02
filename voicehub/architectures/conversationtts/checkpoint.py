@@ -209,7 +209,7 @@ def load_conversationtts_checkpoint(
 ) -> ConversationTTSCheckpointReport:
     """Load a native Safetensors file or the restricted official archive."""
     torch.device(device)
-    path = Path(checkpoint).expanduser().resolve()
+    path = Path(checkpoint).expanduser().absolute()
     if not path.is_file():
         raise FileNotFoundError(f"ConversationTTS checkpoint was not found: {path}.")
     if path.suffix.lower() == ".safetensors":

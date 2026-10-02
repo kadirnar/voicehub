@@ -30,7 +30,7 @@ class MimiTokenizer(AbsTokenizer):
                 "`ckpt_path` is required. Resolve Hub artifacts at the "
                 "VoiceHub wrapper boundary before constructing MimiTokenizer."
             )
-        checkpoint = Path(ckpt_path).expanduser().resolve()
+        checkpoint = Path(ckpt_path).expanduser().absolute()
         if not checkpoint.is_file():
             raise FileNotFoundError(
                 f"Mimi tokenizer checkpoint was not found: {checkpoint}."
