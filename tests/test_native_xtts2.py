@@ -259,6 +259,49 @@ class NativeXTTS2Tests(unittest.TestCase):
                 "model.safetensors",
             )
 
+    def test_legacy_conversion_reads_published_coqui_payload(self):
+        # The published model.pth pickles Coqui config objects next to the
+        # weights and stores BatchNorm step counters as int64 tensors.
+        import types
+
+        module_name = "TTS.tts.configs.xtts_config"
+        fake_module = types.ModuleType(module_name)
+        fake_config = type("XttsConfig", (), {"__module__": module_name})
+        fake_module.XttsConfig = fake_config
+        source = nn.Sequential(nn.Conv2d(1, 2, 1), nn.BatchNorm2d(2))
+        payload = {
+            "config": fake_config(),
+            "model": {"xtts." + name: value
+                      for name, value in source.state_dict().items()},
+        }
+        payload["config"].temperature = 0.75
+        with tempfile.TemporaryDirectory() as directory:
+            legacy = Path(directory) / "model.pth"
+            previous = {name: sys.modules.get(name) for name in ("TTS", "TTS.tts", "TTS.tts.configs", module_name)}
+            try:
+                for name in previous:
+                    sys.modules[name] = fake_module if name == module_name else types.ModuleType(name)
+                torch.save(payload, legacy)
+            finally:
+                for name, value in previous.items():
+                    if value is None:
+                        sys.modules.pop(name, None)
+                    else:
+                        sys.modules[name] = value
+            converted = convert_trusted_legacy_xtts2_checkpoint(
+                legacy,
+                Path(directory) / "model.safetensors",
+                trust_legacy_pickle=True,
+            )
+            target = nn.Sequential(nn.Conv2d(1, 2, 1), nn.BatchNorm2d(2))
+            load_xtts2_checkpoint(target, converted, dtype=torch.float16)
+            exported = save_xtts2_checkpoint(target, Path(directory) / "export.safetensors")
+            self.assertEqual(inspect_xtts2_checkpoint(exported).tensor_count, len(source.state_dict()))
+        counter = target.state_dict()["1.num_batches_tracked"]
+        self.assertEqual(counter.dtype, torch.int64)
+        self.assertEqual(target.state_dict()["0.weight"].dtype, torch.float16)
+        self.assertNotIn("TTS", sys.modules)
+
     def test_provenance_distinguishes_code_and_weight_licenses(self):
         root = RUNTIME_ROOTS[0]
         source = json.loads((root / "SOURCE.json").read_text(encoding="utf-8"))
