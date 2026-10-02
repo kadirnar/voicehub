@@ -37,6 +37,9 @@ _UNKNOWN = 2
 _CONTROL = 3
 _UNUSED = 5
 _BYTE = 6
+_MODEL_UNIGRAM = 1
+_MODEL_BPE = 2
+_MODEL_CHAR = 4
 _WHITESPACE_MARKER = "\u2581"
 _REPLACEMENT_CHARACTER = "\u2047"
 
@@ -205,11 +208,11 @@ def _parse_trainer(payload: bytes, ) -> tuple[int, int, int, int, str, bool]:
 def _parse_model_type(payload: bytes, ) -> int:
     """Return the SentencePiece ``TrainerSpec.model_type`` enum value."""
     fields = _wire_fields(payload)
-    model_type = _single_field(fields, 3, 0, default=1)
-    if model_type not in {1, 2}:
+    model_type = _single_field(fields, 3, 0, default=_MODEL_UNIGRAM)
+    if model_type not in {_MODEL_UNIGRAM, _MODEL_BPE, _MODEL_CHAR}:
         raise TokenizerAssetError(
-            "VoiceHub supports SentencePiece UNIGRAM and BPE model types, "
-            f"not enum value {model_type}.")
+            "VoiceHub supports SentencePiece UNIGRAM, BPE, and CHAR model "
+            f"types, not enum value {model_type}.")
     return model_type
 
 
@@ -245,10 +248,22 @@ def load_sentencepiece_unigram(
     raw_trainers = [value for number, wire_type, value in fields if number == 2 and wire_type == 2]
     if len(raw_trainers) > 1:
         raise TokenizerAssetError("SentencePiece model contains multiple trainer specifications.")
-    if raw_trainers and _parse_model_type(raw_trainers[0]) != 1:
+    model_type = (_MODEL_UNIGRAM if not raw_trainers else _parse_model_type(raw_trainers[0]))
+    if model_type == _MODEL_BPE:
         raise TokenizerAssetError(
             "SentencePiece model declares BPE; use "
             "`load_sentencepiece_model_bpe` instead of the unigram loader.")
+    if model_type == _MODEL_CHAR and any(
+            len(piece.text) != 1 for piece in pieces
+            if piece.piece_type not in {_UNKNOWN, _CONTROL, _UNUSED}):
+        # A CHAR model splits normalized text into code points. With only
+        # single-code-point pieces the unigram lattice has exactly that one
+        # path, so it reproduces SentencePiece's CHAR segmentation
+        # (including fused adjacent unknowns). Multi-character
+        # user-defined symbols would need greedy prefix matching instead.
+        raise TokenizerAssetError(
+            "SentencePiece CHAR models with multi-character pieces are not "
+            "supported.")
     trainer = ((0, 1, 2, -1, f" {_REPLACEMENT_CHARACTER} ",
                 False) if not raw_trainers else _parse_trainer(raw_trainers[0]))
     if trainer[0] != unknown_ids[0]:

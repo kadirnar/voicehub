@@ -12,6 +12,7 @@ from voicehub.tokenization import (
     ByteBPETokenizer,
     Encoding,
     SentencePieceModelBPETokenizer,
+    SentencePieceUnigramTokenizer,
     SpecialTokenError,
     Tokenizer,
     TokenizerAssetError,
@@ -160,6 +161,38 @@ def _write_sentencepiece_bpe(path: Path) -> None:
         _protobuf_bytes(3, normalizer),
     ))
     path.write_bytes(payload)
+
+
+def _write_sentencepiece_char(path: Path, extra_pieces: tuple[str, ...] = ()) -> None:
+    pieces = (
+        ("<s>", 0.0, 3),
+        ("<pad>", 0.0, 3),
+        ("</s>", 0.0, 3),
+        ("<unk>", 0.0, 2),
+        ("\u2581", -1.0, 1),
+        ("a", -2.0, 1),
+        ("b", -3.0, 1),
+        *((text, -4.0, 1) for text in extra_pieces),
+    )
+    trainer = b"".join((
+        _protobuf_integer(3, 4),
+        _protobuf_integer(40, 3),
+        _protobuf_integer(41, 0),
+        _protobuf_integer(42, 2),
+        _protobuf_integer(43, 1),
+    ))
+    normalizer = b"".join((
+        _protobuf_bytes(1, b"nmt_nfkc"),
+        _protobuf_integer(3, 1),
+        _protobuf_integer(4, 1),
+        _protobuf_integer(5, 1),
+    ))
+    path.write_bytes(b"".join((
+        *(_protobuf_bytes(1, _sentencepiece_piece(text, score, piece_type))
+          for text, score, piece_type in pieces),
+        _protobuf_bytes(2, trainer),
+        _protobuf_bytes(3, normalizer),
+    )))
 
 
 class EncodingContractTests(unittest.TestCase):
@@ -331,6 +364,30 @@ class SentencePieceModelBPETests(unittest.TestCase):
 
             with self.assertRaisesRegex(TokenizerAssetError, "declares BPE"):
                 load_sentencepiece_unigram(path)
+
+    def test_char_model_splits_code_points_and_fuses_unknowns(self):
+        # SentencePiece CHAR models (e.g. microsoft/speecht5_tts spm_char.model)
+        # split normalized text into code points; adjacent unknowns fuse.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "spm_char.model"
+            _write_sentencepiece_char(path)
+
+            tokenizer = SentencePieceUnigramTokenizer.from_model_file(path)
+
+        self.assertEqual(tokenizer.encode_as_ids("ab  ba"), [4, 5, 6, 4, 6, 5])
+        self.assertEqual(tokenizer.encode_as_ids("axyb"), [4, 5, 3, 6])
+        self.assertEqual(tokenizer.encode_as_pieces("axyb"), ["\u2581", "a", "xy", "b"])
+        self.assertEqual(tokenizer.encode_as_ids("ａｂ"), [4, 5, 6])
+
+    def test_char_model_with_multi_character_pieces_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "spm_char.model"
+            _write_sentencepiece_char(path, extra_pieces=("ab", ))
+
+            with self.assertRaisesRegex(TokenizerAssetError, "multi-character"):
+                load_sentencepiece_unigram(path)
+            with self.assertRaisesRegex(TokenizerAssetError, "UNIGRAM or CHAR"):
+                load_sentencepiece_model_bpe(path)
 
     def test_model_proto_does_not_invent_a_task_postprocessor(self):
         with tempfile.TemporaryDirectory() as directory:
