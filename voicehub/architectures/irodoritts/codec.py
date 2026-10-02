@@ -169,12 +169,7 @@ class IrodoriDACVAECodec:
             if isinstance(sample_rate, bool) or not isinstance(sample_rate, int) or sample_rate <= 0:
                 raise ValueError("Irodori codec `sample_rate` must be a positive integer.")
             if sample_rate != self.sample_rate:
-                waveform = resample_waveform_hann(
-                    waveform,
-                    sample_rate,
-                    self.sample_rate,
-                    match_functional=True,
-                )
+                waveform = resample_waveform_hann(waveform, sample_rate, self.sample_rate)
         target_db = self.normalize_db if normalize_db is _CODEC_DEFAULT else normalize_db
         if target_db is not None and (isinstance(target_db, bool) or not isinstance(target_db,
                                                                                     (int, float)) or

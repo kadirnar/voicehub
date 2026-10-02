@@ -126,7 +126,7 @@ class IrodoriReferenceFrontendTests(unittest.TestCase):
         codec, graph = _recording_codec()
         reference = _sine(220.0, 0.75, 0.2).float()[::3].contiguous()  # 16 kHz
         codec.encode_waveform(reference, sample_rate=16_000, normalize_db=None)
-        expected = resample_waveform_hann(reference[None, None], 16_000, RATE, match_functional=True)
+        expected = resample_waveform_hann(reference[None, None], 16_000, RATE)
         torch.testing.assert_close(graph.seen[-1][..., :expected.shape[-1]], expected, rtol=0, atol=0)
 
     def test_runtime_reads_float_wave_references_and_forwards_frontend_options(self):
