@@ -11,8 +11,8 @@ from unittest.mock import patch
 
 import torch
 
-from voicehub.architectures.zonos2.configuration import Zonos2ArchitectureConfig
-from voicehub.architectures.zonos2.modeling import Zonos2ForCausalLM
+from voicehub.architectures.zonos2.configuration import Zonos2ArchitectureConfig, normalize_moe_balancing_strategy
+from voicehub.architectures.zonos2.modeling import Zonos2ForCausalLM, Zonos2Router
 from voicehub.architectures.zonos2.prompting import build_zonos2_prompt
 from voicehub.architectures.zonos2.runtime import (
     ZONOS2_DEFAULT_QUALITY_BUCKETS,
@@ -203,6 +203,40 @@ class Zonos2RepetitionPenaltyParityTests(unittest.TestCase):
                 options=Zonos2SamplingOptions(max_new_tokens=2, seed=0),
             )
         self.assertEqual(penalty.call_args.kwargs["codebook_size"], 4)
+
+
+class Zonos2MoEBalancingParityTests(unittest.TestCase):
+
+    def _router(self, strategy):
+        config = Zonos2ArchitectureConfig(moe_balancing_strategy=strategy)
+        router = Zonos2Router(config, layer_index=4).eval()
+        with torch.no_grad():
+            router.router_mlp[-1].weight.zero_()  # uniform expert probabilities
+            router.balancing_biases.zero_()
+            router.balancing_biases[5] = 0.5
+        return router
+
+    def test_published_params_default_to_legacy_bias_addition(self):
+        self.assertEqual(Zonos2ArchitectureConfig().moe_balancing_strategy, "legacy")
+        self.assertEqual(
+            Zonos2ArchitectureConfig.from_dict({}).moe_balancing_strategy,
+            "legacy",
+        )
+        _, experts, _ = self._router("legacy")(torch.randn(3, 2048), None)
+        self.assertTrue(bool((experts[:, 0] == 5).all()))
+
+    def test_quantile_strategy_subtracts_balancing_biases_like_upstream(self):
+        for alias in ("quantile", "current", "qbalancing"):
+            self.assertEqual(normalize_moe_balancing_strategy(alias), "quantile")
+        config = Zonos2ArchitectureConfig.from_dict({"moe_balancing_strategy": "current"})
+        self.assertEqual(config.moe_balancing_strategy, "quantile")
+        self.assertNotIn("moe_balancing_strategy", config.extra)
+        _, experts, _ = self._router("quantile")(torch.randn(3, 2048), None)
+        self.assertFalse(bool((experts[:, 0] == 5).any()))
+
+    def test_unknown_balancing_strategy_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "moe_balancing_strategy"):
+            Zonos2ArchitectureConfig(moe_balancing_strategy="adaptive")
 
 
 if __name__ == "__main__":

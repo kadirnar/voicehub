@@ -451,6 +451,9 @@ class Zonos2Router(nn.Module):
             requires_grad=False,
         )
         self.top_k = config.top_k_for_layer(layer_index)
+        # Upstream: legacy checkpoints add the balancing biases, quantile
+        # (current) checkpoints subtract them before expert selection.
+        self.subtract_balancing_biases = config.moe_balancing_strategy == "quantile"
 
     def forward(
         self,
@@ -466,8 +469,10 @@ class Zonos2Router(nn.Module):
             dim=-1,
         )
         with torch.no_grad():
+            biases = self.balancing_biases.float()
+            scores = (probabilities - biases if self.subtract_balancing_biases else probabilities + biases)
             expert_indices = torch.topk(
-                probabilities + self.balancing_biases.float(),
+                scores,
                 self.top_k,
                 dim=-1,
             ).indices
