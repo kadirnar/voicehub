@@ -1000,13 +1000,16 @@ class VitsStochasticDurationPredictor(nn.Module):
             dtype=inputs.dtype,
             device=inputs.device,
         )
-        for flow in self.post_flows:
+        # Original VITS order: ElementwiseAffine, then (ConvFlow, Flip) x N;
+        # no channel flip follows the leading affine transform.
+        for index, flow in enumerate(self.post_flows):
             posterior, determinant = flow(
                 posterior,
                 padding_mask,
                 inputs + hidden,
             )
-            posterior = torch.flip(posterior, (1, ))
+            if index > 0:
+                posterior = torch.flip(posterior, (1, ))
             posterior_logdet = posterior_logdet + determinant
 
         first, second = torch.split(posterior, (1, 1), dim=1)
@@ -1023,13 +1026,14 @@ class VitsStochasticDurationPredictor(nn.Module):
         first = torch.log(first.clamp_min(1e-5)) * padding_mask
         flow_logdet = torch.sum(-first, dim=(1, 2))
         latents = torch.cat((first, second), dim=1)
-        for flow in self.flows:
+        for index, flow in enumerate(self.flows):
             latents, determinant = flow(
                 latents,
                 padding_mask,
                 inputs,
             )
-            latents = torch.flip(latents, (1, ))
+            if index > 0:
+                latents = torch.flip(latents, (1, ))
             flow_logdet = flow_logdet + determinant
         negative_log_likelihood = torch.sum(
             0.5 * (math.log(2 * math.pi) + latents.square()) * padding_mask,

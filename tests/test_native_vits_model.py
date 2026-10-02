@@ -592,6 +592,42 @@ class VitsRuntimeTests(unittest.TestCase):
             int(first.durations.sum().item()) * 2,
         )
 
+    def test_stochastic_duration_training_flows_follow_original_flip_order(self):
+        # Original VITS StochasticDurationPredictor builds both flow stacks as
+        # [ElementwiseAffine, (ConvFlow, Flip) x N]: no flip follows the
+        # affine transform, so the first ConvFlow sees its unflipped output.
+        from voicehub.architectures.vits.modeling import VitsModel
+
+        predictor = VitsModel(_tiny_config(stochastic=True)).eval().duration_predictor
+
+        class Recorder(torch.nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.seen = None
+
+            def forward(self, inputs, padding_mask, global_conditioning=None, *, reverse=False):
+                self.seen = inputs.detach().clone()
+                return inputs, inputs.new_zeros(inputs.shape[0])
+
+        for name in ("flows", "post_flows"):
+            count = len(getattr(predictor, name))
+            setattr(predictor, name, torch.nn.ModuleList(Recorder() for _ in range(count)))
+        hidden = torch.randn(1, 8, 4)
+        mask = torch.ones(1, 1, 4)
+        durations = torch.tensor([[[1.0, 2.0, 3.0, 1.0]]])
+        with torch.no_grad():
+            predictor(hidden, mask, durations=durations)
+        for name in ("flows", "post_flows"):
+            recorders = list(getattr(predictor, name))
+            initial = recorders[0].seen
+            self.assertFalse(torch.equal(initial, torch.flip(initial, (1, ))))
+            for index, recorder in enumerate(recorders):
+                flips_before = max(index - 1, 0)
+                expected = initial if flips_before % 2 == 0 else torch.flip(initial, (1, ))
+                with self.subTest(stack=name, index=index):
+                    self.assertTrue(torch.equal(recorder.seen, expected))
+
     def test_supervised_generator_graph_runs_mas_and_backward(self):
         from voicehub.architectures.vits.losses import vits_kl_loss
         from voicehub.architectures.vits.modeling import VitsModel
