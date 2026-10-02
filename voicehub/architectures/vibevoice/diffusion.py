@@ -340,7 +340,9 @@ def cosine_betas(
         first = index / num_train_timesteps
         second = (index + 1) / num_train_timesteps
         values.append(min(1 - alpha_bar(second) / alpha_bar(first), maximum_beta))
-    return torch.tensor(values, dtype=torch.float32)
+    # The schedule is host-side solver state, never a module buffer: pin it
+    # to the CPU so graphs built under ``torch.device("meta")`` still sample.
+    return torch.tensor(values, dtype=torch.float32, device="cpu")
 
 
 @dataclass(frozen=True)
@@ -368,8 +370,8 @@ class VibeVoiceDPMSolver:
         self.alpha_t = self.alphas_cumprod.sqrt()
         self.sigma_t = (1.0 - self.alphas_cumprod).sqrt()
         self.training_sigmas = ((1.0 - self.alphas_cumprod) / self.alphas_cumprod).sqrt()
-        self.timesteps = torch.empty(0, dtype=torch.long)
-        self.sigmas = torch.empty(0, dtype=torch.float32)
+        self.timesteps = torch.empty(0, dtype=torch.long, device="cpu")
+        self.sigmas = torch.empty(0, dtype=torch.float32, device="cpu")
         self._model_outputs: list[Tensor | None] = [None, None]
         self._step_index: int | None = None
         self._lower_order_steps = 0

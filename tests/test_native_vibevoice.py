@@ -37,7 +37,12 @@ from voicehub.architectures.vibevoice.registration import (
 )
 from voicehub.architectures.vibevoice.runtime import load_vibevoice_runtime, save_vibevoice_runtime
 from voicehub.architectures.vibevoice.tokenization import VIBEVOICE_TOKEN_IDS
-from voicehub.checkpointing import CheckpointCompatibilityError, ShardedSafeTensorReader, save_safetensors
+from voicehub.checkpointing import (
+    CheckpointCompatibilityError,
+    SafeTensorReader,
+    ShardedSafeTensorReader,
+    save_safetensors,
+)
 from voicehub.hub import write_json_file
 from voicehub.models.asr_vibevoice import VibeVoiceASRConfig as ProviderConfig
 from voicehub.models.asr_vibevoice import VibeVoiceForSpeechRecognition
@@ -627,6 +632,53 @@ class NativeVibeVoiceTests(unittest.TestCase):
             solver.training_sigmas[torch.tensor([9, 6])],
         )
         self.assertEqual(solver._step_index, 2)
+
+    def test_meta_built_realtime_graph_samples_after_streaming_load(self):
+        # `load_vibevoice_runtime` builds the graph under torch.device("meta");
+        # the host-side DPM schedule is not checkpoint state and must stay real.
+        config = _realtime_config()
+        source = VibeVoiceRealtimeForConditionalGeneration(config).eval()
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "model.safetensors"
+            save_safetensors(dict(source.state_dict()), path)
+            with torch.device("meta"):
+                restored = build_vibevoice_model(
+                    config,
+                    initialize=False,
+                )
+            with SafeTensorReader(path) as reader:
+                VibeVoiceCheckpointAdapter().load_assign_streaming(
+                    restored,
+                    reader,
+                    config,
+                    device="cpu",
+                    dtype=torch.float32,
+                )
+        restored.eval()
+        solver = restored.model.noise_scheduler
+        for tensor in (
+                solver.betas,
+                solver.alphas_cumprod,
+                solver.training_sigmas,
+                solver.timesteps,
+                solver.sigmas,
+        ):
+            self.assertEqual(tensor.device.type, "cpu")
+        condition = torch.randn(1, 8)
+        negative_condition = torch.randn(1, 8)
+        expected = source.sample_speech_latents(
+            condition,
+            negative_condition,
+            inference_steps=2,
+            generator=torch.Generator().manual_seed(5),
+        )
+        actual = restored.sample_speech_latents(
+            condition,
+            negative_condition,
+            inference_steps=2,
+            generator=torch.Generator().manual_seed(5),
+        )
+        torch.testing.assert_close(actual, expected)
 
     def test_vibevoice_rejects_direct_velocity_stork_solver(self):
         head = VibeVoiceDiffusionHead(_diffusion_config())
