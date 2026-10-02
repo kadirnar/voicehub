@@ -10,6 +10,7 @@ from pathlib import Path
 
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 from voicehub.architectures.xtts2.checkpoint import (
     convert_trusted_legacy_xtts2_checkpoint,
@@ -189,13 +190,15 @@ class NativeXTTS2Tests(unittest.TestCase):
     def test_native_generation_uses_signed_repetition_penalty(self):
         model = _tiny_gpt().eval()
 
-        def logits(_prefix, generated):
-            value = torch.full((generated.shape[0], 18), -4.0)
-            value[:, 0] = -0.9
-            value[:, model.start_audio_token] = -1.0
-            return value
+        class Logits(nn.Module):
 
-        model.autoregressive_step = logits
+            def forward(self, hidden):
+                value = torch.full((*hidden.shape[:-1], 18), -4.0)
+                value[..., 0] = -0.9
+                value[..., model.start_audio_token] = -1.0
+                return value
+
+        model.mel_head = Logits()
         generated = model.generate(
             torch.randn(1, 2, 32),
             torch.tensor([[2, 3]]),
@@ -206,6 +209,106 @@ class NativeXTTS2Tests(unittest.TestCase):
             repetition_penalty=2.0,
         )
         self.assertEqual(generated.tolist(), [[0]])
+
+    def test_native_generation_penalizes_source_placeholder_code(self):
+        # Coqui feeds placeholder id 1 for every prefix position to Hugging
+        # Face generate, so the repetition penalty also covers code 1.
+        model = _tiny_gpt().eval()
+
+        class Logits(nn.Module):
+
+            def forward(self, hidden):
+                value = torch.full((*hidden.shape[:-1], 18), -4.0)
+                value[..., 1] = 1.0
+                value[..., 0] = 0.6
+                return value
+
+        model.mel_head = Logits()
+        generated = model.generate(
+            torch.randn(1, 2, 32),
+            torch.tensor([[2, 3]]),
+            max_new_tokens=1,
+            do_sample=False,
+            repetition_penalty=2.0,
+        )
+        self.assertEqual(generated.tolist(), [[0]])
+
+    def test_cached_generation_matches_full_recomputation(self):
+        torch.manual_seed(0)
+        model = _tiny_gpt().eval()
+        conditioning = torch.randn(1, 3, 32)
+        text = torch.tensor([[2, 3, 4]])
+        generated = model.generate(
+            conditioning,
+            text,
+            max_new_tokens=8,
+            do_sample=False,
+            repetition_penalty=1.0,
+        )
+        padded = F.pad(text, (1, 1), value=model.stop_text_token)
+        padded[:, 0] = model.start_text_token
+        prefix = torch.cat((conditioning, model.text_embedding(padded) + model.text_pos_embedding(padded)), dim=1)
+        expected = torch.full((1, 1), model.start_audio_token)
+        with torch.no_grad():
+            for _ in range(generated.shape[1]):
+                token = model.autoregressive_step(prefix, expected).argmax(dim=-1, keepdim=True)
+                expected = torch.cat((expected, token), dim=1)
+        self.assertEqual(generated.tolist(), expected[:, 1:].tolist())
+
+    def test_sampling_filters_follow_hugging_face_warpers(self):
+        try:
+            from transformers.generation.logits_process import TopKLogitsWarper, TopPLogitsWarper
+        except ImportError:  # pragma: no cover - transformers is a test extra
+            self.skipTest("transformers is not installed")
+        from voicehub.architectures.xtts2.gpt import _filter_logits
+
+        generator = torch.Generator().manual_seed(0)
+        for _ in range(20):
+            logits = torch.randn(3, 1026, generator=generator) * 4
+            logits[:, :8] = logits[:, :1]  # ties at the boundary
+            expected = TopPLogitsWarper(0.85)(None, TopKLogitsWarper(50)(None, logits.clone()))
+            torch.testing.assert_close(_filter_logits(logits, top_k=50, top_p=0.85), expected, rtol=0, atol=0)
+
+    def test_synthesis_decodes_one_latent_per_generated_code(self):
+        from types import SimpleNamespace
+
+        from voicehub.architectures.xtts2.modeling import XTTS2Model
+
+        torch.manual_seed(0)
+        gpt = _tiny_gpt().eval()
+        codes = torch.tensor([[3, 4, 5, 6, gpt.stop_audio_token]])
+        gpt.generate = lambda *args, **kwargs: codes
+        runtime = SimpleNamespace(gpt=gpt, hifigan_decoder=lambda latents, g: latents)
+        latents = XTTS2Model.synthesize_tokens(
+            runtime,
+            torch.tensor([[2, 3]]),
+            torch.randn(1, 3, 32),
+            torch.randn(1, 8, 1),
+        )
+        self.assertEqual(latents.shape[1], codes.shape[1])
+
+    def test_tokenizer_matches_source_multilingual_cleaners(self):
+        cases = (
+            ("en", 'Mr. Smith & Dr. "Jones" met at St. Paul\'s.', "mister smith and doctor jones met at saint paul's."),
+            # The source lowercases before its Turkish capital replacements.
+            ("tr", "İstanbul'da Dr. Öz", "i\u0307stanbul'da doktor öz"),
+            ("hi", 'नमस्ते "दोस्त"  & आप', 'नमस्ते "दोस्त" & आप'),
+            ("ru", "Г-н Петров и д-р Иванов", "господин петров и доктор иванов"),
+        )
+        for language, text, expected in cases:
+            with self.subTest(language=language):
+                self.assertEqual(
+                    XTTS2Tokenizer._preprocess_text(text, language=language, preprocessed=False),
+                    expected,
+                )
+
+    def test_tokenizer_pretokenizes_combining_marks_like_onig_word_class(self):
+        from voicehub.architectures.xtts2.tokenizer import _pretokenize
+
+        self.assertEqual(_pretokenize("नमस्ते,"), ["नमस्ते", ","])
+        self.assertEqual(_pretokenize("مَرْحَبًا"), ["مَرْحَبًا"])
+        self.assertEqual(_pretokenize("i\u0307stanbul'da"), ["i\u0307stanbul", "'", "da"])
+        self.assertEqual(_pretokenize("a_b...c"), ["a_b", "...", "c"])
 
     def test_safetensors_inventory_and_strict_namespace(self):
         source = nn.Sequential(nn.Linear(3, 4), nn.LayerNorm(4))

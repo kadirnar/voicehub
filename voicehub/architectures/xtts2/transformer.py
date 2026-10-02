@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
+
+
+def _gelu_new(value: Tensor) -> Tensor:
+    """GPT-2 ``gelu_new`` evaluated term by term like the reference model.
+
+    ``F.gelu(approximate="tanh")`` is the same function but a fused kernel
+    that rounds differently, which perturbs autoregressive decoding.
+    """
+    return 0.5 * value * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (value + 0.044715 * torch.pow(value, 3.0))))
 
 
 class Conv1D(nn.Module):
@@ -96,7 +106,7 @@ class GPT2MLP(nn.Module):
         self.dropout = nn.Dropout(0.1)
 
     def forward(self, value: Tensor) -> Tensor:
-        return self.dropout(self.c_proj(F.gelu(self.c_fc(value), approximate="tanh")))
+        return self.dropout(self.c_proj(_gelu_new(self.c_fc(value))))
 
 
 class GPT2Block(nn.Module):

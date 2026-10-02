@@ -7,7 +7,7 @@ import math
 import torch
 from torch import Tensor, nn
 
-from voicehub.processing.waveform import load_pcm_wave, resample_waveform
+from voicehub.processing.waveform import load_pcm_wave, resample_waveform_hann
 
 
 def load_reference_audio(
@@ -16,14 +16,22 @@ def load_reference_audio(
     sample_rate: int,
     device: torch.device | str | None = None,
 ) -> Tensor:
+    """Load like the source ``load_audio``: float32 CPU resampling with
+    ``torchaudio.functional.resample`` semantics, then clipping."""
     waveform, source_rate = load_pcm_wave(path)
+    waveform = waveform.to(dtype=torch.float32)
     if source_rate != sample_rate:
-        waveform = resample_waveform(waveform, source_rate, sample_rate)
+        waveform = resample_waveform_hann(
+            waveform,
+            source_rate,
+            sample_rate,
+            match_functional=True,
+        )
     return waveform.clamp(-1, 1).unsqueeze(0).to(device=device)
 
 
-def _hz_to_mel(value: Tensor) -> Tensor:
-    return 2_595.0 * torch.log10(1.0 + value / 700.0)
+def _hz_to_mel(value: float) -> float:
+    return 2_595.0 * math.log10(1.0 + value / 700.0)
 
 
 def _mel_to_hz(value: Tensor) -> Tensor:
@@ -40,24 +48,29 @@ def mel_filterbank(
     slaney_norm: bool = True,
     device: torch.device | str | None = None,
 ) -> Tensor:
-    frequencies = torch.linspace(0, sample_rate / 2, n_fft // 2 + 1, device=device)
+    """HTK triangular filters, ``[n_mels, n_fft // 2 + 1]``.
+
+    Evaluated with the operation order of
+    ``torchaudio.functional.melscale_fbanks`` so cloning mels match the
+    source frontend bit for bit.
+    """
+    frequencies = torch.linspace(0, sample_rate // 2, n_fft // 2 + 1, device=device)
     mel_edges = torch.linspace(
-        _hz_to_mel(torch.tensor(float(f_min), device=device)),
-        _hz_to_mel(torch.tensor(float(f_max), device=device)),
+        _hz_to_mel(float(f_min)),
+        _hz_to_mel(float(f_max)),
         n_mels + 2,
         device=device,
     )
     hz_edges = _mel_to_hz(mel_edges)
-    lower = hz_edges[:-2, None]
-    center = hz_edges[1:-1, None]
-    upper = hz_edges[2:, None]
-    left = (frequencies - lower) / (center - lower).clamp_min(1e-12)
-    right = (upper - frequencies) / (upper - center).clamp_min(1e-12)
-    filters = torch.minimum(left, right).clamp_min(0)
+    edge_differences = hz_edges[1:] - hz_edges[:-1]
+    slopes = hz_edges.unsqueeze(0) - frequencies.unsqueeze(1)
+    down = (-1.0 * slopes[:, :-2]) / edge_differences[:-1]
+    up = slopes[:, 2:] / edge_differences[1:]
+    filters = torch.max(torch.zeros(1, device=device), torch.min(down, up))
     if slaney_norm:
-        enorm = 2.0 / (upper[:, 0] - lower[:, 0]).clamp_min(1e-12)
-        filters = filters * enorm[:, None]
-    return filters
+        enorm = 2.0 / (hz_edges[2:n_mels + 2] - hz_edges[:n_mels])
+        filters = filters * enorm.unsqueeze(0)
+    return filters.transpose(0, 1)
 
 
 class MelSpectrogram(nn.Module):
@@ -113,9 +126,9 @@ class MelSpectrogram(nn.Module):
             return_complex=True,
         ).abs().pow(self.power)
         return torch.matmul(
-            self.mel_scale.fb.to(device=waveform.device, dtype=waveform.dtype).transpose(0, 1),
-            spectrum,
-        )
+            spectrum.transpose(-1, -2),
+            self.mel_scale.fb.to(device=waveform.device, dtype=waveform.dtype),
+        ).transpose(-1, -2)
 
 
 class _SpectrogramBuffers(nn.Module):
@@ -141,6 +154,8 @@ def cloning_mel(
     hop_length: int = 256,
     win_length: int = 1_024,
 ) -> Tensor:
+    """Source ``wav_to_mel_cloning``; like the source it always runs on the
+    CPU in float32 and returns the mel on the waveform's device/dtype."""
     transform = MelSpectrogram(
         sample_rate=sample_rate,
         n_fft=n_fft,
@@ -149,10 +164,11 @@ def cloning_mel(
         n_mels=80,
         f_min=0,
         f_max=8_000,
-    ).to(device=waveform.device)
-    mel = transform(waveform)
-    mel = torch.log(mel.clamp_min(1e-5))
-    return mel / mel_norms.to(device=mel.device, dtype=mel.dtype)[None, :, None]
+    )
+    mel = transform(waveform.detach().to(device="cpu", dtype=torch.float32))
+    mel = torch.log(torch.clamp(mel, min=1e-5))
+    mel = mel / mel_norms.detach().to(device="cpu", dtype=torch.float32).unsqueeze(0).unsqueeze(-1)
+    return mel.to(device=waveform.device, dtype=waveform.dtype)
 
 
 __all__ = [

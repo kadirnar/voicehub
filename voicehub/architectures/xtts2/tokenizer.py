@@ -9,10 +9,145 @@ from pathlib import Path
 
 from voicehub.tokenization.assets import read_bounded_asset
 
-_PRETOKEN_PATTERN = re.compile(r"\w+|[^\w\s]+", flags=re.UNICODE)
 _WHITESPACE_PATTERN = re.compile(r"\s+")
+# Oniguruma's Unicode ``\w`` (used by the Hugging Face ``Whitespace``
+# pre-tokenizer) also matches combining marks, letter numbers and joiners,
+# unlike Python's ``\w``; Devanagari vowel signs and Arabic harakat must stay
+# inside their word.
+_JOIN_CONTROLS = frozenset({"\u200c", "\u200d"})
 _LANGUAGE_ALIASES = {"zh": "zh-cn"}
 _TRANSCRIPTION_REQUIRED = frozenset({"ja", "ko", "zh", "zh-cn"})
+_ABBREVIATIONS = {
+    "en": (
+        ("mrs", "misess"),
+        ("mr", "mister"),
+        ("dr", "doctor"),
+        ("st", "saint"),
+        ("co", "company"),
+        ("jr", "junior"),
+        ("maj", "major"),
+        ("gen", "general"),
+        ("drs", "doctors"),
+        ("rev", "reverend"),
+        ("lt", "lieutenant"),
+        ("hon", "honorable"),
+        ("sgt", "sergeant"),
+        ("capt", "captain"),
+        ("esq", "esquire"),
+        ("ltd", "limited"),
+        ("col", "colonel"),
+        ("ft", "fort"),
+    ),
+    "es": (
+        ("sra", "señora"),
+        ("sr", "señor"),
+        ("dr", "doctor"),
+        ("dra", "doctora"),
+        ("st", "santo"),
+        ("co", "compañía"),
+        ("jr", "junior"),
+        ("ltd", "limitada"),
+    ),
+    "fr": (
+        ("mme", "madame"),
+        ("mr", "monsieur"),
+        ("dr", "docteur"),
+        ("st", "saint"),
+        ("co", "compagnie"),
+        ("jr", "junior"),
+        ("ltd", "limitée"),
+    ),
+    "de": (
+        ("fr", "frau"),
+        ("dr", "doktor"),
+        ("st", "sankt"),
+        ("co", "firma"),
+        ("jr", "junior"),
+    ),
+    "pt": (
+        ("sra", "senhora"),
+        ("sr", "senhor"),
+        ("dr", "doutor"),
+        ("dra", "doutora"),
+        ("st", "santo"),
+        ("co", "companhia"),
+        ("jr", "júnior"),
+        ("ltd", "limitada"),
+    ),
+    "it": (
+        ("sig", "signore"),
+        ("dr", "dottore"),
+        ("st", "santo"),
+        ("co", "compagnia"),
+        ("jr", "junior"),
+        ("ltd", "limitata"),
+    ),
+    "pl": (
+        ("p", "pani"),
+        ("m", "pan"),
+        ("dr", "doktor"),
+        ("sw", "święty"),
+        ("jr", "junior"),
+    ),
+    "cs": (
+        ("dr", "doktor"),
+        ("ing", "inženýr"),
+        ("p", "pan"),
+    ),
+    "nl": (
+        ("dhr", "de heer"),
+        ("mevr", "mevrouw"),
+        ("dr", "dokter"),
+        ("jhr", "jonkheer"),
+    ),
+    "tr": (
+        ("b", "bay"),
+        ("byk", "büyük"),
+        ("dr", "doktor"),
+    ),
+    "hu": (
+        ("dr", "doktor"),
+        ("b", "bácsi"),
+        ("nőv", "nővér"),
+    ),
+}
+# Russian abbreviations carry no trailing dot in the source tables.
+_WORD_ABBREVIATIONS = {
+    "ru": (
+        ("г-жа", "госпожа"),
+        ("г-н", "господин"),
+        ("д-р", "доктор"),
+    ),
+}
+_SYMBOLS = {
+    "en": (" and ", " at ", " percent ", " hash ", " dollar ", " pound ", " degree "),
+    "es": (" y ", " arroba ", " por ciento ", " numeral ", " dolar ", " libra ", " grados "),
+    "fr": (" et ", " arobase ", " pour cent ", " dièse ", " dollar ", " livre ", " degrés "),
+    "de": (" und ", " at ", " prozent ", " raute ", " dollar ", " pfund ", " grad "),
+    "pt": (" e ", " arroba ", " por cento ", " cardinal ", " dólar ", " libra ", " graus "),
+    "it": (" e ", " chiocciola ", " per cento ", " cancelletto ", " dollaro ", " sterlina ", " gradi "),
+    "pl": (" i ", " małpa ", " procent ", " krzyżyk ", " dolar ", " funt ", " stopnie "),
+    "ar": (" و ", " على ", " في المئة ", " رقم ", " دولار ", " جنيه ", " درجة "),
+    "zh": (" 和 ", " 在 ", " 百分之 ", " 号 ", " 美元 ", " 英镑 ", " 度 "),
+    "cs": (" a ", " na ", " procento ", " křížek ", " dolar ", " libra ", " stupně "),
+    "ru": (" и ", " собака ", " процентов ", " номер ", " доллар ", " фунт ", " градус "),
+    "nl": (" en ", " bij ", " procent ", " hekje ", " dollar ", " pond ", " graden "),
+    "tr": (" ve ", " at ", " yüzde ", " diyez ", " dolar ", " sterlin ", " derece "),
+    "hu": (" és ", " kukac ", " százalék ", " kettőskereszt ", " dollár ", " font ", " fok "),
+    "ko": (" 그리고 ", " 에 ", " 퍼센트 ", " 번호 ", " 달러 ", " 파운드 ", " 도 "),
+}
+_SYMBOL_CHARACTERS = ("&", "@", "%", "#", "$", "£", "°")
+_ABBREVIATION_PATTERNS = {
+    language: tuple((re.compile(r"\b%s\." % source, re.IGNORECASE), target) for source, target in table)
+    for language, table in _ABBREVIATIONS.items()
+}
+for _language, _table in _WORD_ABBREVIATIONS.items():
+    _ABBREVIATION_PATTERNS[_language] = tuple(
+        (re.compile(r"\b%s\b" % source, re.IGNORECASE), target) for source, target in _table)
+# The source cleaners only run for these codes; Hindi only lowercases and
+# collapses whitespace.
+_MULTILINGUAL_CLEANER_LANGUAGES = frozenset(
+    {"ar", "cs", "de", "en", "es", "fr", "hu", "it", "nl", "pl", "pt", "ru", "tr", "zh", "ko"})
 _SOURCE_SPECIALS = {
     "[STOP]",
     "[UNK]",
@@ -88,8 +223,8 @@ class XTTS2Tokenizer:
         language: str,
         preprocessed: bool,
     ) -> str:
-        normalized = unicodedata.normalize("NFKC", text).strip()
         if preprocessed:
+            normalized = unicodedata.normalize("NFKC", text).strip()
             return _WHITESPACE_PATTERN.sub(" ", normalized)
         base_language = language.split("-", 1)[0]
         if base_language in _TRANSCRIPTION_REQUIRED:
@@ -97,16 +232,26 @@ class XTTS2Tokenizer:
                 f"XTTS {language!r} requires author-compatible "
                 "transliteration. Pass source-normalized romanized text with "
                 "`text_is_normalized=True`.")
+        # The source inference loop strips and lowercases every sentence
+        # before the language cleaners run (so its Turkish capital-letter
+        # replacements never see a capital).
+        normalized = text.strip().lower()
         if any(character.isdigit() for character in normalized):
             raise ValueError(
                 "XTTS numeric text requires language-specific verbalization. "
                 "Spell numbers out or pass source-normalized text with "
                 "`text_is_normalized=True`.")
+        if base_language not in _MULTILINGUAL_CLEANER_LANGUAGES:
+            return _WHITESPACE_PATTERN.sub(" ", normalized)
         normalized = normalized.replace('"', "")
         if base_language == "tr":
             normalized = (normalized.replace("İ", "i").replace("Ö", "ö").replace("Ü", "ü"))
         normalized = normalized.lower()
-        return _WHITESPACE_PATTERN.sub(" ", normalized)
+        for pattern, replacement in _ABBREVIATION_PATTERNS.get(base_language, ()):
+            normalized = pattern.sub(replacement, normalized)
+        for symbol, replacement in zip(_SYMBOL_CHARACTERS, _SYMBOLS[base_language]):
+            normalized = normalized.replace(symbol, replacement).replace("  ", " ")
+        return _WHITESPACE_PATTERN.sub(" ", normalized.strip())
 
     def encode(
         self,
@@ -134,7 +279,7 @@ class XTTS2Tokenizer:
         for index, word in enumerate(words):
             if index:
                 result.append(self.space_id)
-            for token in _PRETOKEN_PATTERN.findall(word):
+            for token in _pretokenize(word):
                 result.extend(self.vocabulary.get(piece, self.unknown_id) for piece in self._bpe(token))
         return result
 
@@ -167,6 +312,28 @@ class XTTS2Tokenizer:
 
     def __len__(self) -> int:
         return len(self.vocabulary)
+
+
+def _is_word_character(character: str) -> bool:
+    category = unicodedata.category(character)
+    return (category[0] in "LM" or category in {"Nd", "Nl", "Pc"} or character in _JOIN_CONTROLS)
+
+
+def _pretokenize(text: str) -> list[str]:
+    """Split like the ``Whitespace`` pre-tokenizer: ``\\w+|[^\\w\\s]+``."""
+    pieces = []
+    start = None
+    kind = None
+    for index, character in enumerate(text):
+        current = (None if character.isspace() else _is_word_character(character))
+        if current != kind:
+            if kind is not None:
+                pieces.append(text[start:index])
+            start = index
+            kind = current
+    if kind is not None:
+        pieces.append(text[start:])
+    return pieces
 
 
 __all__ = ["XTTS2Tokenizer"]

@@ -114,7 +114,9 @@ class PerceiverAttention(nn.Module):
         context = torch.cat((latents, context), dim=-2)
         query = self._heads(self.to_q(latents))
         key, value = (self._heads(item) for item in self.to_kv(context).chunk(2, dim=-1))
-        output = F.scaled_dot_product_attention(query, key, value)
+        # The source Perceiver uses explicit einsum attention (no SDPA kernel).
+        weight = torch.einsum("bhid,bhjd->bhij", query, key) * query.shape[-1]**-0.5
+        output = torch.einsum("bhij,bhjd->bhid", weight.softmax(dim=-1), value)
         output = output.transpose(1, 2).contiguous().flatten(2)
         return self.to_out(output)
 

@@ -126,13 +126,15 @@ class XTTS2Model(nn.Module):
                     audio = audio / peak * 0.75
             speaker_audio = audio
             if self.config.audio.sample_rate != 16_000:
-                from voicehub.processing.waveform import resample_waveform
+                from voicehub.processing.waveform import resample_waveform_hann
 
-                speaker_audio = resample_waveform(
-                    audio.squeeze(0),
+                # Source: torchaudio.functional.resample on the model device.
+                speaker_audio = resample_waveform_hann(
+                    audio,
                     self.config.audio.sample_rate,
                     16_000,
-                ).unsqueeze(0)
+                    match_functional=True,
+                )
             speakers.append(
                 self.hifigan_decoder.speaker_encoder(
                     speaker_audio,
@@ -146,7 +148,7 @@ class XTTS2Model(nn.Module):
         chunk_samples = self.config.audio.sample_rate * chunk_length
         for start in range(0, audio.shape[-1], chunk_samples):
             chunk = audio[:, start:start + chunk_samples]
-            if chunk.shape[-1] < self.config.audio.sample_rate // 3:
+            if chunk.shape[-1] < self.config.audio.sample_rate * 0.33:
                 continue
             mel = cloning_mel(
                 chunk,
@@ -180,9 +182,12 @@ class XTTS2Model(nn.Module):
             device=text_tokens.device,
             dtype=torch.long,
         )
+        # The source passes the full generated length (stop token included);
+        # the GPT forward appends three stop codes and drops five trailing
+        # latents, so one latent is decoded per generated code.
         wav_lengths = torch.full(
             (codes.shape[0], ),
-            max(1, codes.shape[1] - 3) * self.gpt.code_stride_len,
+            codes.shape[1] * self.gpt.code_stride_len,
             device=codes.device,
             dtype=torch.long,
         )
