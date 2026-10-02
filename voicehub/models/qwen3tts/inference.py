@@ -123,7 +123,7 @@ class Qwen3TTSForTextToSpeech(PreTrainedTTSModel):
         self._hub_token = token
         self.runtime = None
         self.native_model = None
-        self.processor = None
+        self.text_processor = None
         config = self._coerce_config(
             config,
             model_path=model_path,
@@ -341,7 +341,10 @@ class Qwen3TTSForTextToSpeech(PreTrainedTTSModel):
         )
         self.runtime = runtime
         self.native_model = runtime.model
-        self.processor = runtime.processor
+        # Keep ``self.processor`` as the generic VoiceHub request processor:
+        # ``generate()`` routes every call through it, while the native text
+        # tokenizer facade has a keyword-only training/tokenization contract.
+        self.text_processor = runtime.processor
         self.model = runtime
 
     def _prepare_for_inference(self) -> None:

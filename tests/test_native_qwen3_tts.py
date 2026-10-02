@@ -9,6 +9,7 @@ import tempfile
 import unittest
 import wave
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 import torch
@@ -794,6 +795,42 @@ class NativeQwen3TTSTests(unittest.TestCase):
                 reloaded.model.state_dict()[name],
                 expected,
             )
+
+    def test_public_generate_after_load_keeps_request_processor(self):
+        # Regression: loading replaced ``self.processor`` with the native
+        # keyword-only text processor, so every ``generate()`` after ``load()``
+        # failed with "takes 1 positional argument but 2 were given".
+        from voicehub.architectures.qwen3_tts.runtime import Qwen3TTSProcessor
+        from voicehub.models.qwen3tts.inference import Qwen3TTSForTextToSpeech
+
+        text_processor = Qwen3TTSProcessor(mock.Mock())
+        backend = mock.Mock(return_value=([torch.tensor([0.1, -0.1])], 24_000))
+        runtime = SimpleNamespace(
+            model=SimpleNamespace(tts_model_type="custom_voice"),
+            processor=text_processor,
+            generate_custom_voice=backend,
+        )
+        with mock.patch(
+                "voicehub.architectures.qwen3_tts.runtime.load_qwen3_tts_runtime",
+                return_value=runtime,
+        ):
+            model = Qwen3TTSForTextToSpeech(device="cpu")
+            model.load()
+            output = model.generate(
+                "hello",
+                mode="custom_voice",
+                speaker="Ryan",
+                language="English",
+                seed=3,
+                max_new_tokens=5,
+            )
+
+        self.assertIs(model.text_processor, text_processor)
+        self.assertIsNot(model.processor, text_processor)
+        self.assertEqual(backend.call_args.kwargs["text"], "hello")
+        self.assertEqual(backend.call_args.kwargs["speaker"], "Ryan")
+        self.assertEqual(backend.call_args.kwargs["max_new_tokens"], 5)
+        self.assertEqual(output.sample_rate, 24_000)
 
     def test_architecture_spec_is_honest_about_native_scope(self):
         spec = create_qwen3_tts_architecture_spec()
