@@ -310,6 +310,49 @@ class CausalLMGraphTests(unittest.TestCase):
                     rtol=1e-5,
                 )
 
+    def test_masked_chunk_prefill_never_requests_grouped_sdpa(self):
+        # SDPA has no fused kernel for grouped K/V plus an explicit mask, so
+        # a cached multi-token chunk must expand heads (Transformers'
+        # repeat_kv) instead of silently falling back to the math kernel.
+        torch.manual_seed(19)
+        model = Qwen2ForCausalLM(_tiny_config(Qwen2Config)).eval()
+        token_ids = torch.tensor([[1, 5, 6, 7, 8, 2]], dtype=torch.long)
+        calls = []
+        original = torch.nn.functional.scaled_dot_product_attention
+
+        def record(query, key, value, **kwargs):
+            calls.append((
+                query.shape[1],
+                key.shape[1],
+                kwargs.get("attn_mask") is not None,
+                kwargs.get("enable_gqa", False),
+            ))
+            return original(query, key, value, **kwargs)
+
+        with torch.no_grad():
+            full = model(token_ids, use_cache=False).logits
+            prefix = model(token_ids[:, :2], use_cache=True)
+            with mock.patch.object(
+                    torch.nn.functional,
+                    "scaled_dot_product_attention",
+                    side_effect=record,
+            ):
+                chunk = model(
+                    token_ids[:, 2:],
+                    past_key_values=prefix.past_key_values,
+                    use_cache=True,
+                )
+                step = model(
+                    token_ids[:, -1:],
+                    past_key_values=chunk.past_key_values,
+                    use_cache=True,
+                )
+        self.assertEqual(calls[:2], [(4, 4, True, False)] * 2)
+        self.assertEqual(calls[2:], [(4, 2, False, True)] * 2)
+        self.assertEqual(prefix.past_key_values.get(0).key.shape[1], 2)
+        torch.testing.assert_close(chunk.logits, full[:, 2:], atol=1e-6, rtol=1e-5)
+        self.assertTrue(torch.isfinite(step.logits).all())
+
     def test_output_attentions_preserves_explicit_attention_path(self):
         torch.manual_seed(17)
         model = Qwen3ForCausalLM(_tiny_config(Qwen3Config)).eval()

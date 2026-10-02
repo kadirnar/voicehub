@@ -345,6 +345,15 @@ class CausalSelfAttention(nn.Module):
                 )
                 chunk_mask = (
                     key_positions.view(1, 1, 1, key_length) <= query_positions.view(1, 1, query_length, 1))
+            enable_gqa = self.num_key_value_groups != 1
+            if chunk_mask is not None and enable_gqa:
+                # No fused SDPA kernel accepts grouped K/V together with an
+                # explicit mask, so PyTorch would fall back to the unfused math
+                # kernel. Repeating heads (as Transformers' `repeat_kv` does)
+                # keeps the memory-efficient kernel and upstream numerics.
+                key = _expand_key_values(key, self.num_key_value_groups)
+                value = _expand_key_values(value, self.num_key_value_groups)
+                enable_gqa = False
             attended = functional.scaled_dot_product_attention(
                 query,
                 key,
@@ -353,7 +362,7 @@ class CausalSelfAttention(nn.Module):
                 dropout_p=self.attention_dropout if self.training else 0.0,
                 is_causal=is_causal,
                 scale=self.scaling,
-                enable_gqa=self.num_key_value_groups != 1,
+                enable_gqa=enable_gqa,
             )
             probabilities = None
         else:
