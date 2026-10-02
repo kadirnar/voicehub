@@ -25,6 +25,7 @@ from voicehub.architectures.mosstts.runtime import (  # noqa: E402
     loudness_normalize,
     uses_source_text_normalizer,
 )
+from voicehub.architectures.mosstts.sampling import sample_delay_token  # noqa: E402
 from voicehub.architectures.mosstts.text_normalization import normalize_tts_text  # noqa: E402
 from voicehub.processing.waveform import resample_waveform_hann  # noqa: E402
 
@@ -215,6 +216,35 @@ class ReferenceAudioTests(unittest.TestCase):
         runtime.decode_codes(torch.zeros(3, runtime.config.n_vq, dtype=torch.long))
         self.assertEqual(runtime.codec.decode_kwargs[-1], {"chunk_duration": SOURCE_DECODE_CHUNK_SECONDS})
         self.assertEqual(SOURCE_DECODE_CHUNK_SECONDS, 8.0)
+
+
+def _vendored_source_sampling():
+    path = (Path(__file__).resolve().parents[1] / "voicehub/models/mosstts/source/moss_tts_delay/inference_utils.py")
+    spec = importlib.util.spec_from_file_location("_moss_source_inference_utils", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class DelaySamplingTests(unittest.TestCase):
+
+    def test_seeded_draws_match_source_sample_token(self):
+        source = _vendored_source_sampling()
+        generator = torch.Generator().manual_seed(3)
+        for rows, top_k, top_p, temperature in ((1, 50, 1.0, 1.5), (31, 25, 0.8, 1.7), (0, 25, 0.8, 1.7)):
+            with self.subTest(rows=rows, top_k=top_k, top_p=top_p):
+                logits = (torch.randn(rows, 1025, generator=generator) * 4).to(torch.bfloat16)
+                scaled = logits / temperature
+                torch.manual_seed(11)
+                expected = source.sample_token(scaled.clone(), top_p=top_p, top_k=top_k, do_sample=True)
+                torch.manual_seed(11)
+                actual = sample_delay_token(scaled.clone(), do_sample=True, top_k=top_k, top_p=top_p)
+                self.assertTrue(torch.equal(actual, expected))
+                self.assertTrue(
+                    torch.equal(
+                        sample_delay_token(scaled, do_sample=False, top_k=top_k, top_p=top_p),
+                        source.sample_token(scaled.clone(), top_p=top_p, top_k=top_k, do_sample=False),
+                    ))
 
 
 @unittest.skipUnless(TORCHAUDIO_AVAILABLE, "torchaudio is used only as an audit reference")

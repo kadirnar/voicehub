@@ -113,8 +113,54 @@ def sample_token(
     return torch.multinomial(probabilities, num_samples=1).squeeze(-1)
 
 
+def sample_delay_token(
+    scaled_logits: Tensor,
+    *,
+    do_sample: bool,
+    top_k: int,
+    top_p: float,
+) -> Tensor:
+    """Sample like the official MOSS-TTS delay ``inference_utils``.
+
+    ``scaled_logits`` are already divided by the temperature and keep the
+    model's logits dtype.  Filtering keeps exactly ``top_k`` entries
+    (``torch.topk`` + scatter), nucleus filtering and the final softmax run
+    in that dtype, and every row is drawn with one ``torch.multinomial``
+    call, so a seeded run consumes the CUDA generator exactly like the
+    source implementation.
+    """
+    if scaled_logits.ndim != 2:
+        raise ValueError("Delay sampling expects logits with shape [rows, vocabulary].")
+    if not do_sample:
+        return torch.argmax(scaled_logits, dim=-1)
+    _validate_sampling(
+        temperature=1.0,
+        top_k=top_k,
+        top_p=top_p,
+        repetition_penalty=1.0,
+    )
+    logits = scaled_logits
+    if top_k > 0:
+        values, indices = torch.topk(logits, min(top_k, logits.shape[-1]), dim=-1)
+        logits = torch.full_like(logits, -torch.inf).scatter(-1, indices, values)
+    if top_p < 1.0:
+        sorted_probabilities, sorted_indices = torch.sort(
+            torch.softmax(logits, dim=-1),
+            descending=True,
+            dim=-1,
+        )
+        remove = torch.cumsum(sorted_probabilities, dim=-1) > top_p
+        remove[..., 1:] = remove[..., :-1].clone()
+        remove[..., 0] = False
+        mask = torch.zeros_like(logits, dtype=torch.bool).scatter_(-1, sorted_indices, remove)
+        logits = logits.masked_fill(mask, -torch.inf)
+    probabilities = torch.softmax(logits, dim=-1)
+    return torch.multinomial(probabilities, num_samples=1).view(logits.shape[:-1])
+
+
 __all__ = [
     "apply_repetition_penalty",
     "filter_logits",
+    "sample_delay_token",
     "sample_token",
 ]
