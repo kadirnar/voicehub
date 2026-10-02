@@ -193,6 +193,50 @@ class HubTransportTests(unittest.TestCase):
 
         self.assertEqual(resolved, cached)
 
+    def test_hugging_face_cache_with_shared_blob_symlinks_is_read(self):
+        # huggingface_hub 1.x links snapshot files to blobs shared by all
+        # repositories (``<cache>/blobs/<xx>/<sha256>``), outside the
+        # repository folder but still inside the cache root.
+        commit = "c" * 40
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blob = root / "blobs" / "ab" / ("ab" + "0" * 62)
+            blob.parent.mkdir(parents=True)
+            blob.write_bytes(b"shared")
+            snapshot = root / "models--owner--model" / "snapshots" / commit
+            snapshot.mkdir(parents=True)
+            cached = snapshot / "model.pth"
+            cached.symlink_to(Path("..", "..", "..", "blobs", "ab", blob.name))
+
+            resolved = download_hugging_face_file(
+                "owner/model",
+                "model.pth",
+                cache_dir=root,
+                revision=commit,
+                local_files_only=True,
+            )
+            self.assertEqual(resolved, cached)
+            self.assertEqual(resolved.read_bytes(), b"shared")
+
+    def test_hugging_face_cache_symlink_outside_cache_root_is_rejected(self):
+        commit = "c" * 40
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory)
+            target = Path(outside) / "model.pth"
+            target.write_bytes(b"outside")
+            snapshot = root / "models--owner--model" / "snapshots" / commit
+            snapshot.mkdir(parents=True)
+            (snapshot / "model.pth").symlink_to(target)
+
+            with self.assertRaisesRegex(ValueError, "escapes its root"):
+                download_hugging_face_file(
+                    "owner/model",
+                    "model.pth",
+                    cache_dir=root,
+                    revision=commit,
+                    local_files_only=True,
+                )
+
     def test_cached_etag_uses_conditional_request_and_handles_not_modified(self):
         content = b"unchanged"
         etag = '"cache-etag"'
