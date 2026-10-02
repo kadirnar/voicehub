@@ -48,7 +48,9 @@ def _required(root: Path, filename: str) -> Path:
     path = root / filename
     if not path.is_file():
         raise FileNotFoundError(f"Native OmniVoice requires {filename!r} in {root}.")
-    return path.resolve()
+    # Keep the logical file name: Hugging Face cache snapshots are symlinks
+    # to content-addressed blobs without a file extension or sibling files.
+    return path.absolute()
 
 
 def _sha256(path: Path) -> str:
@@ -84,7 +86,7 @@ def _resolve_hub(
         cache_dir=cache_dir,
         token=token,
         local_files_only=local_files_only,
-    ).resolve()
+    ).absolute()
 
 
 def resolve_omnivoice_artifacts(
@@ -103,7 +105,7 @@ def resolve_omnivoice_artifacts(
         raise ValueError("OmniVoice source must be a non-empty path or Hub ID.")
     local = Path(source).expanduser()
     if local.exists():
-        checkpoint = (local.resolve() if local.is_file() else _required(local, MODEL_FILE))
+        checkpoint = (local.absolute() if local.is_file() else _required(local, MODEL_FILE))
         if checkpoint.suffix.lower() != ".safetensors":
             raise ValueError("Native OmniVoice requires Safetensors.")
         root = checkpoint.parent
@@ -173,7 +175,7 @@ def resolve_omnivoice_artifacts(
         if codec_local.exists():
             codec_root = (codec_local.parent if codec_local.is_file() else codec_local)
             codec_checkpoint = (
-                codec_local.resolve() if codec_local.is_file() else _required(codec_root, MODEL_FILE))
+                codec_local.absolute() if codec_local.is_file() else _required(codec_root, MODEL_FILE))
             codec_config = _required(codec_root, CONFIG_FILE)
             official_codec = False
         else:
@@ -236,11 +238,11 @@ def resolve_omnivoice_artifacts(
     return OmniVoiceArtifacts(
         source=source_name,
         revision=resolved_revision,
-        model_checkpoint=checkpoint.resolve(),
-        model_config=model_config.resolve(),
-        text_tokenizer=tokenizer.resolve(),
-        codec_checkpoint=codec_checkpoint.resolve(),
-        codec_config=codec_config.resolve(),
+        model_checkpoint=checkpoint,
+        model_config=model_config,
+        text_tokenizer=tokenizer,
+        codec_checkpoint=codec_checkpoint,
+        codec_config=codec_config,
         official_model=official_model,
         official_codec=official_codec,
     )

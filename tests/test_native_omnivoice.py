@@ -6,20 +6,29 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 from types import SimpleNamespace
 
 import torch
 from torch.nn import functional
 
+from voicehub.architectures.omnivoice.artifacts import resolve_omnivoice_artifacts
 from voicehub.architectures.omnivoice.checkpoint import (
     export_omnivoice_checkpoint,
+    inspect_omnivoice_checkpoint,
     load_omnivoice_checkpoint,
     tensor_inventory_fingerprint,
 )
 from voicehub.architectures.omnivoice.codec import HiggsAudioV2Tokenizer
 from voicehub.architectures.omnivoice.configuration import HiggsAudioV2Config, OmniVoiceArchitectureConfig
-from voicehub.architectures.omnivoice.generation import OmniVoiceGenerationConfig, OmniVoiceGenerator, OmniVoicePrompt
+from voicehub.architectures.omnivoice.generation import (
+    OmniVoiceGenerationConfig,
+    OmniVoiceGenerator,
+    OmniVoicePrompt,
+    _chunk_text,
+)
+from voicehub.architectures.omnivoice.languages import resolve_language
 from voicehub.architectures.omnivoice.metadata import (
     HIGGS_AUDIO_V2_HEADER_FINGERPRINT,
     HIGGS_AUDIO_V2_PARAMETER_COUNT,
@@ -46,9 +55,12 @@ from voicehub.architectures.omnivoice.processing import (
     OmniVoiceTokenizer,
 )
 from voicehub.architectures.omnivoice.runtime import OmniVoiceRuntime
+from voicehub.architectures.omnivoice.silence import remove_silence
+from voicehub.architectures.omnivoice.voice_design import resolve_instruction
 from voicehub.models.omnivoice_native.configuration_omnivoice import OmniVoiceConfig
 from voicehub.models.omnivoice_native.modeling_omnivoice import OmniVoiceForTextToSpeech
 from voicehub.models.omnivoice_native.training_omnivoice import OmniVoiceTrainingAdapter
+from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.tokenization import ByteBPETokenizer
 from voicehub.training.contracts import TrainingPhaseSpec, TrainingSupport
 from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
@@ -413,6 +425,274 @@ class NativeOmniVoiceProviderConfigurationTests(unittest.TestCase):
         self.assertIsNotNone(output.loss)
         output.loss.backward()
         self.assertIsNotNone(native_model.audio_heads.weight.grad)
+
+
+def _tone(milliseconds: int, amplitude: float, *, sample_rate: int = 24_000) -> torch.Tensor:
+    count = sample_rate * milliseconds // 1000
+    phase = torch.arange(count, dtype=torch.float64) * (2 * torch.pi * 220 / sample_rate)
+    return (amplitude * phase.sin()).float()
+
+
+def _silence_fixture() -> torch.Tensor:
+    return torch.cat([
+        torch.zeros(7_200),
+        _tone(400, 0.3),
+        torch.zeros(16_800),
+        _tone(300, 0.2),
+        torch.zeros(6_000 + 13),
+    ])
+
+
+class _RecordingCodec(torch.nn.Module):
+    """Minimal codec stand-in that records what the prompt encoder sends."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.config = SimpleNamespace(frame_rate=25, hop_length=960, num_quantizers=2, sample_rate=24_000)
+        self.sample_rate = 24_000
+        self.frame_rate = 25
+        self.register_buffer("_device_anchor", torch.zeros(()))
+        self.inputs = []
+
+    @property
+    def device(self):
+        return self._device_anchor.device
+
+    def encode(self, values):
+        self.inputs.append(values.detach().clone())
+        frames = values.shape[-1] // self.config.hop_length
+        return SimpleNamespace(audio_codes=torch.zeros((1, 2, frames), dtype=torch.long))
+
+
+def _recording_generator() -> tuple[OmniVoiceGenerator, _RecordingCodec]:
+    generator = object.__new__(OmniVoiceGenerator)
+    codec = _RecordingCodec()
+    generator.model = OmniVoiceModel(OmniVoiceArchitectureConfig.tiny(vocab_size=320))
+    generator.text_tokenizer = _tiny_tokenizer()
+    generator.audio_tokenizer = codec
+    return generator, codec
+
+
+class NativeOmniVoiceUpstreamParityTests(unittest.TestCase):
+    """Regressions found by the k2-fsa/OmniVoice 468e927 parity audit."""
+
+    def test_meta_loaded_checkpoint_materializes_rotary_buffers(self):
+        torch.manual_seed(5)
+        config = OmniVoiceArchitectureConfig.tiny(vocab_size=320)
+        source = OmniVoiceModel(config).eval()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "model.safetensors"
+            export_omnivoice_checkpoint(source, path)
+            with torch.device("meta"):
+                target = OmniVoiceModel(config, initialize=False)
+            load_omnivoice_checkpoint(target, path, device="cpu")
+        self.assertFalse(any(buffer.is_meta for buffer in target.buffers()))
+        input_ids = torch.randint(0, 16, (1, 2, 5))
+        audio_mask = torch.ones(1, 5, dtype=torch.bool)
+        with torch.no_grad():
+            torch.testing.assert_close(
+                target.eval()(input_ids, audio_mask).logits,
+                source(input_ids, audio_mask).logits,
+                rtol=0.0,
+                atol=0.0,
+            )
+
+    def test_hugging_face_snapshot_symlinks_resolve_to_named_files(self):
+        torch.manual_seed(6)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blobs = root / "blobs"
+            snapshot = root / "snapshots" / "abc"
+            (snapshot / "audio_tokenizer").mkdir(parents=True)
+            blobs.mkdir()
+            files = {
+                "model.safetensors": None,
+                "config.json": b"{}",
+                "tokenizer.json": b"{}",
+                "audio_tokenizer/model.safetensors": b"x",
+                "audio_tokenizer/config.json": b"{}",
+            }
+            for index, (name, payload) in enumerate(files.items()):
+                blob = blobs / f"{index:064x}"
+                if payload is None:
+                    export_omnivoice_checkpoint(
+                        OmniVoiceModel(OmniVoiceArchitectureConfig.tiny(vocab_size=320)),
+                        blob.with_suffix(".safetensors"),
+                    ).rename(blob)
+                else:
+                    blob.write_bytes(payload)
+                (snapshot / name).symlink_to(blob)
+            artifacts = resolve_omnivoice_artifacts(snapshot, verify_integrity=False)
+            self.assertEqual(artifacts.model_checkpoint, (snapshot / "model.safetensors").absolute())
+            self.assertEqual(
+                artifacts.codec_checkpoint,
+                (snapshot / "audio_tokenizer" / "model.safetensors").absolute(),
+            )
+            report = inspect_omnivoice_checkpoint(artifacts.model_checkpoint)
+            self.assertGreater(report.tensor_count, 0)
+
+    def test_silence_removal_matches_upstream_pydub_reference(self):
+        # Expected values were produced by omnivoice.utils.audio.remove_silence
+        # (pydub 0.25.1) at upstream revision 468e927 on the same signal.
+        waveform = _silence_fixture()
+        self.assertEqual(waveform.numel(), 46_813)
+        for (middle, leading, trailing), length in (
+            ((200, 100, 200), 33_600),
+            ((500, 100, 100), 38_424),
+            ((0, 100, 300), 42_024),
+        ):
+            result = remove_silence(
+                waveform,
+                24_000,
+                middle_ms=middle,
+                leading_ms=leading,
+                trailing_ms=trailing,
+            )
+            self.assertEqual(result.numel(), length)
+            nonzero = result.nonzero().flatten()
+            self.assertEqual(int(nonzero[0]), 2_401)
+            self.assertEqual(float(result[2_401]), 0.017242431640625)
+            self.assertEqual(float(result.abs().max()), 9_830 / 32_768)
+            self.assertTrue(torch.equal(result * 32_768, (result * 32_768).round()))
+
+    def test_prompt_is_resampled_trimmed_and_punctuated_like_upstream(self):
+        generator, codec = _recording_generator()
+        quiet = _silence_fixture() * 0.1
+        prompt = generator.create_prompt(
+            quiet,
+            sampling_rate=24_000,
+            reference_text=" Hello there, ",
+            preprocess_prompt=True,
+        )
+        rms = float(quiet.square().mean().sqrt())
+        expected = remove_silence(
+            quiet * 0.1 / rms,
+            24_000,
+            middle_ms=200,
+            leading_ms=100,
+            trailing_ms=200,
+        )
+        expected = expected[:expected.numel() - expected.numel() % 960]
+        self.assertTrue(torch.equal(codec.inputs[-1][0, 0], expected))
+        # "," is upstream end punctuation, so no period is appended.
+        self.assertEqual(prompt.reference_text, "Hello there,")
+        self.assertEqual(prompt.reference_rms, rms)
+
+        raw = generator.create_prompt(
+            quiet,
+            sampling_rate=24_000,
+            reference_text=" Hello there ",
+            preprocess_prompt=False,
+        )
+        self.assertEqual(raw.reference_text, " Hello there ")
+        self.assertEqual(codec.inputs[-1].shape[-1], quiet.numel() - quiet.numel() % 960)
+
+    def test_output_postprocessing_follows_upstream_order(self):
+        generator, _ = _recording_generator()
+        raw = _silence_fixture()
+        config = OmniVoiceGenerationConfig(postprocess_output=False)
+        # Prompt-free output is peak-normalized even without silence removal.
+        output = generator._postprocess(raw.clone(), prompt=None, config=config)
+        self.assertEqual(output.numel(), raw.numel() + 2 * 2_400)
+        self.assertAlmostEqual(float(output.abs().max()), 0.5, places=6)
+        prompt = OmniVoicePrompt(torch.zeros((2, 1), dtype=torch.long), "a.", 0.05)
+        trimmed = generator._postprocess(raw.clone(), prompt=prompt, config=OmniVoiceGenerationConfig())
+        expected = remove_silence(raw, 24_000, middle_ms=500, leading_ms=100, trailing_ms=100) * 0.05 / 0.1
+        self.assertEqual(trimmed.numel(), expected.numel() + 2 * 2_400)
+        self.assertTrue(torch.equal(trimmed[2_400 + 2_400:-2_400 - 2_400], expected[2_400:-2_400]))
+
+    def test_prompt_resamples_with_the_torchaudio_default_kernel(self):
+        generator, codec = _recording_generator()
+        waveform = _silence_fixture()[::3][:15_000] * 0.5
+        generator.create_prompt(
+            waveform,
+            sampling_rate=16_000,
+            reference_text="a.",
+            preprocess_prompt=False,
+        )
+        expected = resample_waveform_hann(waveform, 16_000, 24_000)
+        rms = float(expected.square().mean().sqrt())
+        self.assertLess(rms, 0.1)
+        expected = expected * 0.1 / rms
+        expected = expected[:expected.numel() - expected.numel() % 960]
+        self.assertTrue(torch.equal(codec.inputs[-1][0, 0], expected))
+
+    def test_sdpa_attention_matches_the_explicit_float32_path(self):
+        torch.manual_seed(9)
+        model = OmniVoiceModel(OmniVoiceArchitectureConfig.tiny(vocab_size=320)).eval()
+        input_ids = torch.randint(0, 16, (2, 2, 6))
+        audio_mask = torch.ones(2, 6, dtype=torch.bool)
+        attention_mask = torch.zeros(2, 1, 6, 6, dtype=torch.bool)
+        attention_mask[0, :, :, :] = True
+        attention_mask[1, :, :4, :4] = True
+        attention_mask[1, :, 4:, 4:] = torch.eye(2, dtype=torch.bool)
+        with torch.no_grad():
+            fused = model(input_ids, audio_mask, attention_mask=attention_mask).logits
+            explicit = model(
+                input_ids,
+                audio_mask,
+                attention_mask=attention_mask,
+                output_attentions=True,
+            ).logits
+        torch.testing.assert_close(fused, explicit, rtol=1e-5, atol=1e-5)
+
+    def test_language_names_resolve_like_upstream(self):
+        self.assertEqual(resolve_language("English"), "en")
+        self.assertEqual(resolve_language("chinese"), "zh")
+        self.assertEqual(resolve_language("en"), "en")
+        self.assertIsNone(resolve_language("None"))
+        # ``assertWarns`` walks ``sys.modules``; record warnings directly.
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            self.assertIsNone(resolve_language("Klingon"))
+        self.assertTrue(any("Klingon" in str(item.message) for item in caught))
+
+    def test_voice_design_instructions_are_normalized_like_upstream(self):
+        # Expected strings come from upstream ``_resolve_instruct``.
+        self.assertEqual(resolve_instruction("Female, British Accent"), "female, british accent")
+        self.assertEqual(resolve_instruction("male, low pitch", use_chinese=True), "男，低音调")
+        self.assertEqual(resolve_instruction("男，河南话"), "男，河南话")
+        self.assertEqual(resolve_instruction("female，elderly"), "female, elderly")
+        with self.assertRaisesRegex(ValueError, "did you mean 'female'"):
+            resolve_instruction("femal")
+        with self.assertRaisesRegex(ValueError, "Conflicting"):
+            resolve_instruction("male, female")
+
+    def test_style_prompt_receives_resolved_language_and_instruction(self):
+        generator, _ = _recording_generator()
+        captured = {}
+
+        def prepare(text, **options):
+            captured.update(options)
+            raise RuntimeError("stop")
+
+        generator._prepare_inputs = prepare
+        with self.assertRaisesRegex(RuntimeError, "stop"):
+            generator.generate(
+                "你好。",
+                language="Chinese",
+                instruction="Male, Low Pitch",
+                duration=0.08,
+            )
+        self.assertEqual(captured["language"], "zh")
+        self.assertEqual(captured["instruction"], "男，低音调")
+
+    def test_long_text_chunking_matches_upstream_punctuation_splitter(self):
+        # Expected chunks come from upstream ``chunk_text_punctuation``: long
+        # sentences are never split mid-sentence and "Fr."/"Rd." are
+        # abbreviations.
+        text = (
+            "Mr. Smith went to Fr. Brown's house on Main Rd. today. It was a very long and "
+            "winding sentence without any stops at all whatsoever. Ok. Hi")
+        self.assertEqual(
+            _chunk_text(text, maximum_characters=20),
+            [
+                "Mr. Smith went to Fr. Brown's house on Main Rd. today.",
+                "It was a very long and winding sentence without any stops at all whatsoever.",
+                "Ok. Hi",
+            ],
+        )
+        self.assertEqual(_chunk_text("A. B. This is it.", maximum_characters=5), ["A. B.", "This is it."])
 
 
 if __name__ == "__main__":

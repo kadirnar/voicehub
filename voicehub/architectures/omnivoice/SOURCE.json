@@ -63,7 +63,7 @@
   "limits": [
     "No numerical waveform-parity or quality claim is made without a reference-output audit.",
     "Voice cloning requires an explicit reference transcript; native OmniVoice does not invoke an external ASR model.",
-    "External text normalization and silence-removal packages are outside the architecture boundary.",
+    "External text normalization is outside the architecture boundary; prompt/output silence removal is a native port of the upstream pydub recipe.",
     "The native generator currently executes one utterance per call; checkpoint and training batches remain supported."
   ]
 }

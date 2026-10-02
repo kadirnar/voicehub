@@ -33,6 +33,30 @@ def _bidirectional_attention_bias(
     sequence_length: int,
     device: torch.device,
 ) -> Tensor:
+    allowed, additive = _bidirectional_attention_mask(
+        attention_mask,
+        batch_size=batch_size,
+        sequence_length=sequence_length,
+        device=device,
+    )
+    bias = torch.zeros(
+        allowed.shape,
+        dtype=torch.float32,
+        device=device,
+    )
+    bias.masked_fill_(~allowed, torch.finfo(torch.float32).min)
+    if additive is not None:
+        bias = (bias + additive).clamp_min(torch.finfo(torch.float32).min)
+    return bias
+
+
+def _bidirectional_attention_mask(
+    attention_mask: Tensor | None,
+    *,
+    batch_size: int,
+    sequence_length: int,
+    device: torch.device,
+) -> tuple[Tensor, Tensor | None]:
     allowed = torch.ones(
         (batch_size, 1, sequence_length, sequence_length),
         dtype=torch.bool,
@@ -77,16 +101,7 @@ def _bidirectional_attention_bias(
             device=device,
         ).reshape(1, 1, sequence_length, sequence_length)
         allowed = torch.where(has_visible_key, allowed, fallback)
-
-    bias = torch.zeros(
-        allowed.shape,
-        dtype=torch.float32,
-        device=device,
-    )
-    bias.masked_fill_(~allowed, torch.finfo(torch.float32).min)
-    if additive is not None:
-        bias = (bias + additive).clamp_min(torch.finfo(torch.float32).min)
-    return bias
+    return allowed, additive
 
 
 class OmniVoiceSelfAttention(CausalSelfAttention):
@@ -133,6 +148,30 @@ class OmniVoiceSelfAttention(CausalSelfAttention):
         )
         key = _expand_key_values(key, self.num_key_value_groups)
         value = _expand_key_values(value, self.num_key_value_groups)
+        if not output_attentions and (attention_mask is None or attention_mask.dtype == torch.bool):
+            # Same kernel call as the reference "sdpa" attention: repeated
+            # K/V heads and a boolean [batch, 1, query, key] mask.
+            allowed, _ = _bidirectional_attention_mask(
+                attention_mask,
+                batch_size=batch_size,
+                sequence_length=sequence_length,
+                device=hidden_states.device,
+            )
+            attended = functional.scaled_dot_product_attention(
+                query,
+                key,
+                value,
+                attn_mask=None if attention_mask is None else allowed,
+                dropout_p=self.attention_dropout if self.training else 0.0,
+                scale=self.scaling,
+            )
+            attended = attended.transpose(1, 2).contiguous().view(
+                batch_size,
+                sequence_length,
+                self.num_attention_heads * self.head_dim,
+            )
+            return self.o_proj(attended), None, None
+        # Explicit float32 path for additive masks and attention weights.
         bias = _bidirectional_attention_bias(
             attention_mask,
             batch_size=batch_size,
