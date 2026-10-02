@@ -156,6 +156,21 @@ class CosyVoiceSpeechTokenizerGraphTests(unittest.TestCase):
         self.assertTrue(torch.equal(actual[1], expected[1]))
         self.assertFalse(any(value.device.type == "meta" for value in restored.buffers()))
 
+    def test_converter_accepts_hub_cache_symlink_name_before_hashing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            blob = root / "content-addressed-blob"
+            blob.write_bytes(b"not the immutable graph")
+            source = root / "speech_tokenizer_v3.onnx"
+            source.symlink_to(blob.name)
+            # The symlink's audited name is accepted; the bytes are then
+            # rejected by the size/hash audit rather than the filename check.
+            with self.assertRaisesRegex(CheckpointIntegrityError, "size differs"):
+                convert_audited_cosyvoice_speech_tokenizer(
+                    source,
+                    root / "speech_tokenizer.safetensors",
+                )
+
     def test_converter_rejects_every_unaudited_onnx_before_parsing(self):
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "speech_tokenizer_v3.onnx"

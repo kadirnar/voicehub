@@ -38,11 +38,14 @@ def convert_audited_cosyvoice_speech_tokenizer(
     inventory, mapped keys, and shapes must match the published audit.
     """
     expected = COSYVOICE3_SPEECH_TOKENIZER_FILE
-    source = Path(source).expanduser().resolve()
-    if source.name != expected["filename"]:
+    requested = Path(source).expanduser()
+    if requested.name != expected["filename"]:
         raise CheckpointIntegrityError(
             f"Expected audited file {expected['filename']!r}, "
-            f"found {source.name!r}.")
+            f"found {requested.name!r}.")
+    # Hub caches expose content-addressed blobs through named symlinks; the
+    # bytes are still verified below by size and SHA-256.
+    source = requested.resolve()
     if not source.is_file():
         raise FileNotFoundError(f"Speech-tokenizer ONNX was not found: {source}.")
     if source.stat().st_size != expected["size"]:
