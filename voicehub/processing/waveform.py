@@ -460,6 +460,138 @@ def resample_waveform_kaiser(
     return resampled.to(dtype=waveform.dtype)
 
 
+_HANN_MATCH_MODES = ("functional", "transform")
+
+
+def resample_waveform_hann(
+    waveform: Tensor,
+    source_rate: int,
+    target_rate: int,
+    *,
+    lowpass_filter_width: int = 6,
+    rolloff: float = 0.99,
+    match: str = "functional",
+) -> Tensor:
+    """Resample ``[..., time]`` audio with a Hann-windowed sinc kernel.
+
+    This is torchaudio's ``sinc_interp_hann`` polyphase resampler,
+    reproduced bit for bit (same kernel arithmetic, dtypes, padding and
+    output-length rounding) without importing torchaudio. Use it where a
+    model's reference frontend resampled with torchaudio, since
+    codec tokens and speaker embeddings are sensitive to the filter's
+    transition band; :func:`resample_waveform` is not a substitute there.
+
+    ``match`` selects which torchaudio entry point is reproduced:
+
+    * ``"functional"`` (default): ``torchaudio.functional.resample``. The
+      kernel is evaluated in the waveform's own dtype and on its device.
+    * ``"transform"``: ``torchaudio.transforms.Resample(source_rate,
+      target_rate)`` moved to the waveform's device and dtype. The kernel
+      is evaluated on the CPU in float64 (output phases in the default
+      dtype), rounded to float32 and then cast to the waveform's dtype.
+
+    All leading dimensions are independent waveforms and the operation is
+    differentiable with respect to ``waveform``.
+    """
+    source_rate = _positive_rate(source_rate, name="source_rate")
+    target_rate = _positive_rate(target_rate, name="target_rate")
+    if not isinstance(waveform, Tensor) or waveform.ndim < 1:
+        raise ValueError("`waveform` must be a PyTorch tensor with a time axis.")
+    if not waveform.is_floating_point():
+        raise TypeError("`waveform` must use a floating-point dtype.")
+    if waveform.shape[-1] == 0:
+        raise ValueError("`waveform` cannot be empty.")
+    if (isinstance(lowpass_filter_width, bool) or not isinstance(lowpass_filter_width, int) or
+            lowpass_filter_width <= 0):
+        raise ValueError("`lowpass_filter_width` must be a positive integer.")
+    if (isinstance(rolloff, bool) or not isinstance(rolloff, Real) or not isfinite(float(rolloff)) or
+            not 0.0 < float(rolloff) <= 1.0):
+        raise ValueError("`rolloff` must be finite and in the interval (0, 1].")
+    if match not in _HANN_MATCH_MODES:
+        raise ValueError("`match` must be 'functional' or 'transform'.")
+    if source_rate == target_rate:
+        return waveform
+
+    divisor = gcd(source_rate, target_rate)
+    original_frequency = source_rate // divisor
+    target_frequency = target_rate // divisor
+    if match == "functional":
+        kernel, width = _hann_sinc_kernel(
+            original_frequency,
+            target_frequency,
+            lowpass_filter_width,
+            float(rolloff),
+            dtype=waveform.dtype,
+            device=waveform.device,
+        )
+    else:
+        kernel, width = _hann_sinc_kernel(
+            original_frequency,
+            target_frequency,
+            lowpass_filter_width,
+            float(rolloff),
+            dtype=None,
+            device=torch.device("cpu"),
+        )
+        kernel = kernel.to(device=waveform.device, dtype=waveform.dtype)
+
+    shape = waveform.shape
+    flattened = waveform.reshape(-1, shape[-1])
+    length = flattened.shape[-1]
+    padded = torch.nn.functional.pad(flattened, (width, width + original_frequency))
+    resampled = torch.nn.functional.conv1d(padded[:, None], kernel, stride=original_frequency)
+    resampled = resampled.transpose(1, 2).reshape(flattened.shape[0], -1)
+    # torchaudio rounds the output length through a default-dtype (float32)
+    # tensor, which drops a final partial sample for some long inputs (for
+    # example 47,561 samples at 16 kHz -> 22.05 kHz); keep its length.
+    output_length = int(torch.ceil(torch.as_tensor(target_frequency * length / original_frequency)))
+    return resampled[..., :output_length].reshape(*shape[:-1], -1)
+
+
+def _hann_sinc_kernel(
+    original_frequency: int,
+    target_frequency: int,
+    lowpass_filter_width: int,
+    rolloff: float,
+    *,
+    dtype: torch.dtype | None,
+    device: torch.device,
+) -> tuple[Tensor, int]:
+    """Return torchaudio's ``sinc_interp_hann`` kernel and its half width.
+
+    Mirrors ``torchaudio.functional._get_sinc_resample_kernel`` operation
+    for operation: ``dtype=None`` is the ``transforms.Resample`` kernel
+    (float64 taps, default-dtype phases, float32 result), otherwise the
+    ``functional.resample`` kernel evaluated in ``dtype`` on ``device``.
+    """
+    base_frequency = min(original_frequency, target_frequency) * rolloff
+    width = ceil(lowpass_filter_width * original_frequency / base_frequency)
+    index_dtype = torch.float64 if dtype is None else dtype
+    indices = torch.arange(
+        -width,
+        width + original_frequency,
+        dtype=index_dtype,
+        device=device,
+    )[None, None] / original_frequency
+    positions = torch.arange(
+        0,
+        -target_frequency,
+        -1,
+        dtype=dtype,
+        device=device,
+    )[:, None, None] / target_frequency + indices
+    positions *= base_frequency
+    positions = positions.clamp_(-lowpass_filter_width, lowpass_filter_width)
+    window = torch.cos(positions * torch.pi / lowpass_filter_width / 2)**2
+    positions *= torch.pi
+    scale = base_frequency / original_frequency
+    kernel = torch.where(positions == 0, torch.tensor(1.0).to(positions), positions.sin() / positions)
+    kernel *= window * scale
+    if dtype is None:
+        kernel = kernel.to(dtype=torch.float32)
+    return kernel, width
+
+
 @dataclass(frozen=True, slots=True)
 class NativeAudio:
     """A normalized mono waveform with an explicit sampling rate."""
@@ -611,5 +743,7 @@ __all__ = [
     "load_native_audio",
     "normalize_waveform",
     "resample_waveform",
+    "resample_waveform_hann",
+    "resample_waveform_kaiser",
     "save_pcm_wave",
 ]

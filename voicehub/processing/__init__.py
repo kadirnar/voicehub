@@ -29,6 +29,7 @@ _MODULES = {
     "mel_filter_bank": "voicehub.processing.audio",
     "normalize_waveform": "voicehub.processing.waveform",
     "resample_waveform": "voicehub.processing.waveform",
+    "resample_waveform_hann": "voicehub.processing.waveform",
     "resample_waveform_kaiser": "voicehub.processing.waveform",
     "save_pcm_wave": "voicehub.processing.waveform",
 }
