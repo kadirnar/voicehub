@@ -11,8 +11,13 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
+from voicehub.processing.waveform import resample_waveform_hann
+
 from .codec_graph import DACVAE
+from .loudness import normalize_loudness
 from .metadata import IRODORI_CODEC_CHECKPOINT
+
+_CODEC_DEFAULT = object()
 
 
 def sha256_file(path: str | Path) -> str:
@@ -123,35 +128,23 @@ class IrodoriDACVAECodec:
     def dtype(self) -> torch.dtype:
         return next(self.model.parameters()).dtype
 
-    @staticmethod
-    def _normalize_peak_and_rms(
-        waveform: torch.Tensor,
-        target_db: float | None,
-    ) -> torch.Tensor:
-        """Deterministic PyTorch-only loudness boundary.
-
-        The official recipe targets -16 dB before encoding.  VoiceHub
-        uses a bounded RMS equivalent here; no accuracy-parity claim is
-        made for an unavailable external perceptual loudness
-        implementation.
-        """
-        waveform = waveform.float()
-        peak = waveform.abs().amax(dim=-1, keepdim=True).clamp_min(1e-8)
-        waveform = waveform / peak.clamp_min(1.0)
-        if target_db is None:
-            return waveform
-        target_rms = 10.0**(float(target_db) / 20.0)
-        rms = waveform.square().mean(dim=-1, keepdim=True).sqrt().clamp_min(1e-8)
-        gain = (target_rms / rms).clamp(max=1.0 / peak.clamp_min(1e-8))
-        return (waveform * gain).clamp(-1.0, 1.0)
-
     def encode_waveform(
         self,
         waveform: torch.Tensor,
         *,
-        normalize_db: float | None = None,
+        sample_rate: int | None = None,
+        normalize_db: float | None | object = _CODEC_DEFAULT,
+        ensure_max: bool | None = None,
         deterministic: bool = True,
     ) -> torch.Tensor:
+        """Encode ``(B, C, T)`` audio like the released ``DACVAECodec``.
+
+        Channels are averaged, audio at another ``sample_rate`` is resampled
+        as ``torchaudio.functional.resample`` does, and each item is
+        loudness-normalized to ``normalize_db`` LUFS (the codec default when
+        omitted; ``None`` disables it). ``ensure_max`` peak-limits to 1.0
+        only when normalization is disabled, as in the original runtime.
+        """
         if not isinstance(waveform, torch.Tensor):
             raise TypeError("Irodori codec waveform must be a torch.Tensor.")
         if waveform.ndim == 1:
@@ -168,14 +161,40 @@ class IrodoriDACVAECodec:
             raise ValueError("Irodori codec waveform must contain only finite values.")
         if not isinstance(deterministic, bool):
             raise TypeError("`deterministic` must be a boolean.")
+        if ensure_max is not None and not isinstance(ensure_max, bool):
+            raise TypeError("`ensure_max` must be a boolean or None.")
         if waveform.shape[1] != 1:
             waveform = waveform.mean(dim=1, keepdim=True)
-        target_db = self.normalize_db if normalize_db is None else normalize_db
+        if sample_rate is not None:
+            if isinstance(sample_rate, bool) or not isinstance(sample_rate, int) or sample_rate <= 0:
+                raise ValueError("Irodori codec `sample_rate` must be a positive integer.")
+            if sample_rate != self.sample_rate:
+                waveform = resample_waveform_hann(
+                    waveform,
+                    sample_rate,
+                    self.sample_rate,
+                    match_functional=True,
+                )
+        target_db = self.normalize_db if normalize_db is _CODEC_DEFAULT else normalize_db
         if target_db is not None and (isinstance(target_db, bool) or not isinstance(target_db,
                                                                                     (int, float)) or
                                       not math.isfinite(float(target_db))):
             raise ValueError("Irodori normalization dB must be finite or None.")
-        waveform = self._normalize_peak_and_rms(waveform, target_db)
+        # Loudness normalization already peak-limits, so the separate
+        # peak guard only applies when normalization is disabled.
+        peak_limit = target_db is None and bool(ensure_max)
+        waveform = waveform.float()
+        if target_db is not None or peak_limit:
+            items = []
+            for item in waveform[:, 0]:
+                if target_db is not None:
+                    item = normalize_loudness(item, self.sample_rate, float(target_db))
+                if peak_limit:
+                    peak = item.abs().max()
+                    if torch.isfinite(peak) and peak > 1.0:
+                        item = item * (1.0 / float(peak))
+                items.append(item)
+            waveform = torch.stack(items)[:, None]
         waveform = waveform.to(device=self.device, dtype=self.dtype)
         length = waveform.shape[-1]
         remainder = length % self.hop_length

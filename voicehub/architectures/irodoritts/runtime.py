@@ -13,7 +13,7 @@ import torch
 
 from voicehub.checkpointing import SafeTensorReader
 from voicehub.optimization.protocols import OptimizationCompileTarget, OptimizationModuleRoot
-from voicehub.processing.waveform import load_pcm_wave, resample_waveform
+from voicehub.processing.waveform import load_pcm_wave
 
 from .checkpoint import load_irodori_safetensors
 from .codec import IrodoriDACVAECodec
@@ -384,24 +384,28 @@ class InferenceRuntime:
                 device=self.model_device,
             )
             return latent, mask, None, None
+        limit_reference = (request.max_ref_seconds is not None and request.max_ref_seconds > 0)
         if request.ref_latent is not None:
             latent = self._load_preencoded_latent(request.ref_latent)
         elif request.ref_wav is not None:
             waveform, sample_rate = load_pcm_wave(request.ref_wav)
-            if request.max_ref_seconds is not None:
-                waveform = waveform[:max(1, int(float(request.max_ref_seconds) * sample_rate))]
-            if sample_rate != self.codec.sample_rate:
-                waveform = resample_waveform(
-                    waveform,
-                    sample_rate,
-                    self.codec.sample_rate,
-                )
+            if limit_reference:
+                waveform = waveform[:max(1, int(float(request.max_ref_seconds) * float(sample_rate)))]
+            # The codec resamples and loudness-normalizes like the released
+            # runtime; `ref_normalize_db=None` disables normalization.
             latent = self.codec.encode_waveform(
                 waveform,
+                sample_rate=sample_rate,
                 normalize_db=request.ref_normalize_db,
+                ensure_max=request.ref_ensure_max,
             ).cpu()
         else:
             raise ValueError("Supply a reference or set `no_reference=True`.")
+        if limit_reference:
+            latent = latent[:, :max(
+                1,
+                math.ceil(float(request.max_ref_seconds) * self.codec.sample_rate / self.codec.hop_length),
+            )]
         patched = patchify_latent(latent, self.model_cfg.latent_patch_size).to(
             device=self.model_device,
             dtype=self.model.dtype,
