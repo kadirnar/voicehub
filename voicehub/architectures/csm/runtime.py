@@ -18,6 +18,7 @@ from voicehub.architectures.csm.modeling import CSMModel
 from voicehub.architectures.csm.processing import CSMCodeSegment, CSMProcessor, CSMTextTokenizer
 from voicehub.audio import load_audio
 from voicehub.hub import read_json_file, write_json_file
+from voicehub.processing.waveform import resample_waveform_hann
 
 
 @runtime_checkable
@@ -135,12 +136,20 @@ class CSMRuntime:
         loaded = load_audio(
             audio,
             sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
         )
-        waveform = loaded.waveform.to(
-            device=self.codec_device,
-            dtype=torch.float32,
-        )
+        waveform = loaded.waveform.to(dtype=torch.float32)
+        if loaded.sampling_rate != self.sample_rate:
+            # Sesame's README prepares context audio with
+            # ``torchaudio.functional.resample`` (Hann sinc, width 6,
+            # rolloff 0.99). Mimi codes are sensitive to the filter, so use
+            # the bit-compatible native kernel rather than the generic one.
+            waveform = resample_waveform_hann(
+                waveform,
+                loaded.sampling_rate,
+                self.sample_rate,
+                match="functional",
+            )
+        waveform = waveform.to(device=self.codec_device)
         codes = codec.encode(waveform.unsqueeze(0).unsqueeze(0))
         if (codes.ndim != 3 or codes.shape[0] != 1 or
                 codes.shape[1] != self.model.config.num_audio_codebooks):

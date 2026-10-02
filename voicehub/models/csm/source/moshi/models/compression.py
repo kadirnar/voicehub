@@ -374,7 +374,10 @@ class MimiModel(CompressionModel[_MimiState]):
             # The underlying convolutions no longer accept partial inputs,
             # `x` needs to be exactly a multiple of the frame size,
             # reproducing the previous padding behavior here.
-            x = pad_for_conv1d(x, frame_size, frame_size)
+            # VoiceHub: with legacy per-convolution padding enabled (see
+            # StreamingConv1d.legacy_right_padding) the encoder pads itself.
+            if not getattr(self, "legacy_encoder_padding", False):
+                x = pad_for_conv1d(x, frame_size, frame_size)
             emb = self.encoder(x)
         else:
             if x.shape[-1] % frame_size != 0 or x.shape[-1] == 0:

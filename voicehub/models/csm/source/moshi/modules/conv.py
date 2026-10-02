@@ -242,7 +242,18 @@ class StreamingConv1d(StreamingModule[_StreamingConv1dState]):
         first = torch.ones(batch_size, device=device, dtype=torch.bool)
         return _StreamingConv1dState(batch_size, device, previous, first)
 
+    # VoiceHub: moshi<=0.2.2 (the version pinned by Sesame CSM) right-padded
+    # every non-streaming causal convolution so its last window was full.
+    # Later releases pad the raw waveform once instead, which changes the
+    # final partial Mimi frame. Opt-in, so other users keep current behavior.
+    legacy_right_padding: bool = False
+
     def forward(self, x):
+        if self.legacy_right_padding and self._streaming_state is None:
+            extra_padding = get_extra_padding_for_conv1d(
+                x, self._effective_kernel_size, self._stride, self._padding_total)
+            if extra_padding:
+                x = pad1d(x, (0, extra_padding), mode=self.pad_mode)
         B, C, T = x.shape
         S = self._stride
         assert T > 0 and T % S == 0, "Steps must be multiple of stride"

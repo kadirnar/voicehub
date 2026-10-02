@@ -44,39 +44,47 @@ class CSMRMSNorm(nn.Module):
 
 
 class CSMLlama3ScaledRoPE(nn.Module):
-    """The Llama-3 scaling rule used by torchtune 0.4.0."""
+    """The Llama-3 scaling rule used by torchtune 0.4.0.
+
+    The tables are evaluated exactly like torchtune: in float32 on the CPU,
+    with the scaling rule applied to float32 scalars.  ``dtype`` then casts
+    them like the source runtime's ``Model.to(dtype=...)`` casts these
+    floating buffers, so a bfloat16 model rotates with bfloat16 cos/sin
+    values just as upstream ``load_csm_1b`` does.
+    """
 
     def __init__(
         self,
         config: CSMTransformerConfig,
         *,
         device=None,
+        dtype=None,
     ) -> None:
         super().__init__()
         self.dimension = config.head_dim
         self.max_sequence_length = config.max_sequence_length
         resolved_device = torch.device("cpu" if device is None else device)
+        buffer_dtype = (dtype if dtype is not None and dtype.is_floating_point else torch.float32)
         if resolved_device.type == "meta":
             theta = torch.empty(
                 self.dimension // 2,
                 device=resolved_device,
+                dtype=buffer_dtype,
             )
             cache = torch.empty(
                 self.max_sequence_length,
                 self.dimension // 2,
                 2,
                 device=resolved_device,
+                dtype=buffer_dtype,
             )
         else:
             frequencies = 1.0 / (
-                config.rope_theta**(
-                    torch.arange(
-                        0,
-                        self.dimension,
-                        2,
-                        device=resolved_device,
-                        dtype=torch.float32,
-                    ) / self.dimension))
+                config.rope_theta**(torch.arange(
+                    0,
+                    self.dimension,
+                    2,
+                )[:self.dimension // 2].float() / self.dimension))
             theta = self._scale_frequencies(
                 frequencies,
                 scale_factor=config.rope_scale_factor,
@@ -86,7 +94,6 @@ class CSMLlama3ScaledRoPE(nn.Module):
             )
             positions = torch.arange(
                 self.max_sequence_length,
-                device=resolved_device,
                 dtype=theta.dtype,
             )
             angles = torch.einsum("i,j->ij", positions, theta).float()
@@ -94,6 +101,8 @@ class CSMLlama3ScaledRoPE(nn.Module):
                 (angles.cos(), angles.sin()),
                 dim=-1,
             )
+            theta = theta.to(device=resolved_device, dtype=buffer_dtype)
+            cache = cache.to(device=resolved_device, dtype=buffer_dtype)
         self.register_buffer("theta", theta, persistent=False)
         self.register_buffer("cache", cache, persistent=False)
 
@@ -110,7 +119,8 @@ class CSMLlama3ScaledRoPE(nn.Module):
         high_wavelength = original_context_length / high_frequency_factor
         values = []
         for frequency in frequencies:
-            wavelength = 2.0 * math.pi / float(frequency)
+            # ``frequency`` stays a float32 scalar tensor, as in torchtune.
+            wavelength = 2 * math.pi / frequency
             if wavelength < high_wavelength:
                 value = frequency
             elif wavelength > low_wavelength:
@@ -118,7 +128,7 @@ class CSMLlama3ScaledRoPE(nn.Module):
             else:
                 smooth = (original_context_length / wavelength -
                           low_frequency_factor) / (high_frequency_factor - low_frequency_factor)
-                value = ((1.0 - smooth) * frequency / scale_factor + smooth * frequency)
+                value = (1 - smooth) * frequency / scale_factor + smooth * frequency
             values.append(value)
         return torch.stack(values).to(
             device=frequencies.device,
@@ -483,6 +493,7 @@ class CSMTransformerDecoder(nn.Module):
         rope = CSMLlama3ScaledRoPE(
             config,
             device=device,
+            dtype=dtype,
         )
         self.layers = nn.ModuleList([
             CSMTransformerLayer(
@@ -600,7 +611,13 @@ def sample_top_k(
     scaled = logits / temperature
     threshold = torch.topk(scaled, top_k, dim=-1).values[..., -1, None]
     scaled = scaled.masked_fill(scaled < threshold, -torch.inf)
-    probabilities = functional.softmax(scaled, dim=-1)
+    # Sesame normalizes with log-softmax before softmax.  The two are equal
+    # in exact arithmetic but not in bfloat16, where the extra rounding of
+    # the log-probabilities changes which candidate wins the exponential race.
+    probabilities = functional.softmax(
+        functional.log_softmax(scaled, dim=-1),
+        dim=-1,
+    )
     noise = torch.empty_like(probabilities).exponential_(1)
     return (probabilities / noise).argmax(
         dim=-1,
@@ -691,11 +708,13 @@ class CSMModel(nn.Module):
     def materialize_runtime_buffers(self, device=None) -> None:
         """Rebuild non-persistent RoPE buffers after meta-device loading."""
         target_device = (next(self.parameters()).device if device is None else torch.device(device))
+        parameter_dtype = next(self.parameters()).dtype
         for decoder in (self.backbone, self.decoder):
             config = decoder.config
             replacement = CSMLlama3ScaledRoPE(
                 config,
                 device=target_device,
+                dtype=parameter_dtype,
             )
             for layer in decoder.layers:
                 layer.attn.rope = replacement
