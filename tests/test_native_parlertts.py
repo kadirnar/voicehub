@@ -622,5 +622,39 @@ class ParlerTokenizerTests(unittest.TestCase):
         self.assertEqual(batch.attention_mask.tolist(), [[1, 1, 0], [1, 1, 1]])
 
 
+class ParlerTTSWrapperLoadTests(unittest.TestCase):
+
+    def test_default_config_loads_fp32_weights_like_upstream(self):
+        config = _tiny_config()
+        generation = {"max_length": 32, "min_new_tokens": 1, "do_sample": True}
+        artifacts = SimpleNamespace(
+            config="config.json",
+            generation_config="generation_config.json",
+            tokenizer_model="spiece.model",
+            checkpoint="model.safetensors",
+            official_snapshot=False,
+        )
+        module = "voicehub.models.parlertts.inference"
+        with (
+                patch(f"{module}.resolve_parlertts_artifacts", return_value=artifacts),
+                patch(
+                    f"{module}.read_json_file",
+                    side_effect=lambda path: config.to_dict() if path == "config.json" else generation,
+                ),
+                patch(f"{module}.load_parlertts_checkpoint") as load_checkpoint,
+                patch(f"{module}.ParlerTextTokenizer.from_model_file", return_value=object()),
+        ):
+            model = ParlerTTSForTextToSpeech(model_path="local-fixture", device="cpu")
+            self.assertIsNone(model.config.torch_dtype)
+            model.load()
+        load_checkpoint.assert_called_once()
+        self.assertEqual(
+            {parameter.dtype
+             for parameter in model.model.parameters()},
+            {torch.float32},
+        )
+        self.assertEqual(model.generation_defaults["max_length"], 32)
+
+
 if __name__ == "__main__":
     unittest.main()
