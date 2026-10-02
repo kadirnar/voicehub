@@ -24,6 +24,7 @@ from .metadata import (
     OUTETTS_SOURCE_REVISION,
     OUTETTS_TRAINING_SOURCE_REVISION,
 )
+from .postprocessing import chunk_text, decode_audio_codes, has_cjk
 from .prompting import OuteTTSPromptProcessor, SpeakerProfile, load_default_speaker
 from .tokenization import OuteTTSTokenizer
 
@@ -142,6 +143,12 @@ class OuteTTSRuntime(nn.Module):
         first: list[int],
         second: list[int],
     ) -> Tensor:
+        """Decode like the author ``DacInterface.decode``.
+
+        Codes are decoded in 2048-frame windows, each window is faded,
+        and the waveform is loudness-normalized to -18 LUFS with a -1 dBFS
+        peak limit.
+        """
         if not first or len(first) != len(second):
             raise RuntimeError("OuteTTS returned no complete two-codebook DAC frames.")
         if max((*first, *second)) >= 1_024:
@@ -154,29 +161,16 @@ class OuteTTSRuntime(nn.Module):
             dtype=torch.long,
             device=device,
         )
-        audio = self.codec.decode_codes(codes)
-        if audio.ndim != 3 or audio.shape[0] != 1 or audio.shape[1] != 1:
-            raise RuntimeError(
-                "Native OuteTTS DAC returned an invalid waveform shape "
-                f"{tuple(audio.shape)}.")
-        fade_length = min(int(self.sample_rate * 0.015), audio.shape[-1] // 2)
-        if fade_length:
-            audio = audio.clone()
-            audio[..., :fade_length] *= torch.linspace(
-                0,
-                1,
-                fade_length,
-                device=audio.device,
-                dtype=audio.dtype,
-            )
-            audio[..., -fade_length:] *= torch.linspace(
-                1,
-                0,
-                fade_length,
-                device=audio.device,
-                dtype=audio.dtype,
-            )
-        return audio
+
+        def decode(window: Tensor) -> Tensor:
+            audio = self.codec.decode_codes(window)
+            if audio.ndim != 3 or audio.shape[0] != 1 or audio.shape[1] != 1:
+                raise RuntimeError(
+                    "Native OuteTTS DAC returned an invalid waveform shape "
+                    f"{tuple(audio.shape)}.")
+            return audio
+
+        return decode_audio_codes(decode, codes, self.sample_rate)
 
     def _generate_one(
         self,
@@ -186,7 +180,7 @@ class OuteTTSRuntime(nn.Module):
         max_length: int,
         sampler: Mapping[str, Any],
         seed: int | None,
-    ) -> Tensor:
+    ) -> tuple[list[int], list[int]]:
         prompt = self.prompt_processor.completion_prompt(text, speaker)
         prompt_ids = self.prompt_processor.encode(prompt)
         if len(prompt_ids) >= max_length:
@@ -225,8 +219,7 @@ class OuteTTSRuntime(nn.Module):
             repetition_window=int(sampler.get("repetition_range", 64)),
         )
         completion = generated.sequences[0, input_ids.shape[1]:]
-        first, second = self.prompt_processor.extract_audio_codes(completion)
-        return self._decode_codes(first, second)
+        return self.prompt_processor.extract_audio_codes(completion)
 
     def generate(
         self,
@@ -241,19 +234,29 @@ class OuteTTSRuntime(nn.Module):
         if generation_type == "REGULAR":
             chunks = (text, )
         elif generation_type == "CHUNKED":
-            chunks = _sentences(text)
+            # Upstream counts Chinese/Japanese words with MeCab, which is not
+            # a runtime dependency; such text keeps sentence-bounded chunks.
+            chunks = _sentences(text) if has_cjk(text) else tuple(chunk_text(text))
+            if not chunks:
+                raise ValueError("OuteTTS text must be non-empty.")
         else:
             raise ValueError("Native OuteTTS supports regular and chunked generation only.")
-        audio = [
-            self._generate_one(
+        # Like the author interface, codes from every chunk are concatenated
+        # and decoded once, so chunk boundaries are not faded or normalized
+        # independently.
+        first: list[int] = []
+        second: list[int] = []
+        for index, chunk in enumerate(chunks):
+            chunk_first, chunk_second = self._generate_one(
                 chunk,
                 speaker=speaker,
                 max_length=max_length,
                 sampler=sampler,
                 seed=(None if seed is None else seed + index),
-            ) for index, chunk in enumerate(chunks)
-        ]
-        return torch.cat(audio, dim=-1)
+            )
+            first.extend(chunk_first)
+            second.extend(chunk_second)
+        return self._decode_codes(first, second)
 
     def save_pretrained(self, directory: str | Path) -> Path:
         """Write one self-contained, integrity-manifested native artifact."""
