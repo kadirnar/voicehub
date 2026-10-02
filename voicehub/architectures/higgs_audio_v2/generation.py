@@ -140,7 +140,17 @@ class HiggsAudioV2Generator:
                 "audio EOS delay pattern.")
         end = int(eos_rows[0, 0])
         delayed_content = after_start[1:end]
-        aligned = self.processor.revert_delay_pattern(delayed_content).clamp(
+        aligned = self.processor.revert_delay_pattern(delayed_content)
+        # The aligned frame holding the first stream EOS (codebook 0 in the
+        # usual case) is not audio. The source serving path drops it
+        # (``revert_delay_pattern(...)[:, 1:-1]``) instead of decoding the
+        # clamped EOS id as a real code.
+        eos_columns = (aligned == eos).any(dim=-1).nonzero()
+        if len(eos_columns):
+            aligned = aligned[:int(eos_columns[0, 0])]
+        if not len(aligned):
+            raise RuntimeError("Higgs generation produced no complete audio frame.")
+        aligned = aligned.clamp(
             0,
             self.processor.audio_tokenizer.config.codebook_size - 1,
         )
@@ -264,10 +274,20 @@ class HiggsAudioV2Generator:
                     next_codes = next_codes.clone()
                     next_codes[replacement_mask] = replacements
 
-            delayed_frames.append(next_codes)
             has_eos = (next_codes == config.audio_stream_eos_id).any(dim=-1)
             newly_started = (eos_age < 0) & has_eos
-            eos_age[newly_started] = 0
+            if newly_started.any():
+                # Source delay semantics: when codebook k first emits the
+                # stream EOS, codebooks below k end in the same frame and the
+                # EOS diagonal continues from k + 1 on the next frame.
+                first_eos = (next_codes == config.audio_stream_eos_id).int().argmax(dim=-1)
+                next_codes = torch.where(
+                    newly_started.unsqueeze(-1) & (codebook_indices < first_eos.unsqueeze(-1)),
+                    config.audio_stream_eos_id,
+                    next_codes,
+                )
+                eos_age = torch.where(newly_started, first_eos, eos_age)
+            delayed_frames.append(next_codes)
             all_eos = (next_codes == config.audio_stream_eos_id).all(dim=-1)
             finished |= all_eos
 

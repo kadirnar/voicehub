@@ -485,6 +485,57 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
             actual = codec._extract_semantic_features(waveform)
         torch.testing.assert_close(actual, expected, rtol=0.0, atol=0.0)
 
+    @staticmethod
+    def _scripted_generation(runtime, frames):
+        """Greedy-generate with logits whose argmax follows ``frames``."""
+        config = runtime.model.config
+        steps = iter(frames)
+
+        def forward(*args, **kwargs):
+            codes = next(steps)
+            logits = torch.zeros(1, 1, config.num_codebooks, config.codebook_size)
+            for codebook, code in enumerate(codes):
+                logits[0, 0, codebook, code] = 10.0
+            return SimpleNamespace(
+                logits=logits.reshape(1, 1, -1),
+                past_key_values=object(),
+            )
+
+        runtime.model.forward = forward
+        batch = runtime.processor.generation_batch("hi")
+        return HiggsAudioV2Generator(runtime.model, runtime.processor).generate(
+            batch,
+            max_new_tokens=16,
+            temperature=0.0,
+            ras_window=None,
+        )
+
+    def test_generation_drops_the_aligned_stream_eos_frame(self):
+        # Codebook 0 ends at frame 3; the model does not follow the EOS
+        # diagonal, so the delay constraints finish the pattern. The source
+        # keeps only aligned frames before the EOS column.
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            result = self._scripted_generation(
+                runtime,
+                [(16, 16), (3, 9), (4, 5), (17, 6), (1, 7), (1, 1)],
+            )
+        self.assertEqual(
+            result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 6], [17, 7], [17, 17]])
+        self.assertEqual(result.audio_codes[0].tolist(), [[3, 4], [5, 6]])
+
+    def test_generation_ends_lower_codebooks_with_first_stream_eos(self):
+        # Codebook 1 emits EOS before codebook 0: the source forces the lower
+        # codebooks to EOS in the same frame instead of decoding EOS as audio.
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            result = self._scripted_generation(
+                runtime,
+                [(16, 16), (3, 9), (4, 5), (6, 17), (1, 7), (1, 1)],
+            )
+        self.assertEqual(result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 17]])
+        self.assertEqual(result.audio_codes[0].tolist(), [[3], [5]])
+
     def test_public_wrapper_routes_native_generation_options(self):
         response = HiggsAudioV2GenerationOutput(
             waveform=torch.tensor([[[0.25, -0.25]]]),
