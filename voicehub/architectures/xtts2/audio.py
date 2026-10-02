@@ -25,7 +25,7 @@ def load_reference_audio(
             waveform,
             source_rate,
             sample_rate,
-            match_functional=True,
+            match="functional",
         )
     return waveform.clamp(-1, 1).unsqueeze(0).to(device=device)
 

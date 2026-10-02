@@ -133,7 +133,7 @@ class XTTS2Model(nn.Module):
                     audio,
                     self.config.audio.sample_rate,
                     16_000,
-                    match_functional=True,
+                    match="functional",
                 )
             speakers.append(
                 self.hifigan_decoder.speaker_encoder(
