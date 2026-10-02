@@ -21,6 +21,7 @@ from voicehub.architectures.dac.modeling import DacModel
 from voicehub.checkpointing import SafeTensorReader, save_safetensors
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
 from voicehub.hub import read_json_file, write_json_file
+from voicehub.neural.rotary import RotaryEmbedding
 
 from .artifacts import OuteTTSArtifacts, OuteTTSDacArtifacts
 from .metadata import NATIVE_OUTETTS_FORMAT, OUTETTS_CHECKPOINTS, OUTETTS_DAC
@@ -84,6 +85,32 @@ def _reader_inventory(reader) -> tuple[int, int, str | None]:
         value_count,
         tensor_inventory_fingerprint(inventory),
     )
+
+
+def _materialize_rotary_buffers(
+    model: nn.Module,
+    config: CausalLMConfig,
+    *,
+    device: str | torch.device,
+) -> None:
+    """Rebuild non-persistent rotary frequencies left on the meta device.
+
+    The graph is assembled on ``meta`` and ``state_dict()`` excludes
+    non-persistent buffers, so the inverse frequencies are recomputed on
+    CPU (as Transformers does before moving the model) and then moved.
+    """
+    for module in model.modules():
+        if type(module) is not RotaryEmbedding:
+            continue
+        if module.inverse_frequency.device.type != "meta":
+            continue
+        fresh = RotaryEmbedding(
+            module.dimension,
+            base=module.base,
+            scaling=config.rope_scaling,
+            device="cpu",
+        )
+        module.inverse_frequency = fresh.inverse_frequency.to(device=device)
 
 
 def load_outetts_language_model(
@@ -161,7 +188,10 @@ def load_outetts_language_model(
             )
     if config.tie_word_embeddings:
         model.tie_weights()
-    remaining = [name for name, value in model.state_dict().items() if value.device.type == "meta"]
+    _materialize_rotary_buffers(model, config, device=device)
+    remaining = [
+        name for name, value in (*model.state_dict().items(), *model.named_buffers()) if value.device.type == "meta"
+    ]
     if remaining:
         raise CheckpointCompatibilityError(
             "OuteTTS LM loading left meta tensors: " + ", ".join(remaining[:12]))

@@ -79,14 +79,17 @@ def verify_file(
 
 
 def _required(root: Path, filename: str, *, owner: str) -> Path:
-    path = (root / filename).resolve()
+    # Keep the logical file name: Hugging Face snapshot directories expose
+    # files as symlinks to extensionless blobs, and loaders dispatch on the
+    # name (for example ``.safetensors``).
+    path = root.resolve() / filename
     if not path.is_file():
         raise FileNotFoundError(f"Native {owner} requires {filename!r} in {root}.")
     return path
 
 
 def _optional(root: Path, filename: str) -> Path | None:
-    path = (root / filename).resolve()
+    path = root.resolve() / filename
     return path if path.is_file() else None
 
 
