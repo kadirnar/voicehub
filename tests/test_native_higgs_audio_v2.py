@@ -442,6 +442,49 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         self.assertTrue(torch.isneginf(forced[0, 0, 17:]).all())
         self.assertTrue(torch.equal(forced[0, 1], logits[0, 1]))
 
+    def test_codec_encoder_pads_and_resamples_like_the_source_encoder(self):
+        with torch.device("meta"):
+            released = HiggsAudioV2TokenizerModel(HiggsAudioV2TokenizerConfig(), initialize=False)
+        # xcodec pads by 160 * semantic_downsample_factor, not hop_length // 2.
+        self.assertEqual(released.pad, 320)
+
+        tiny = HiggsAudioV2TokenizerConfig.tiny()
+        acoustic = replace(
+            tiny.acoustic_model_config,
+            downsampling_ratios=(3, 4),
+            upsampling_ratios=(3, 4),
+            sampling_rate=24_000,
+        )
+        config = replace(tiny, sample_rate=24_000, acoustic_model_config=acoustic, target_bandwidths=(16.0, ))
+        torch.manual_seed(0)
+        codec = HiggsAudioV2TokenizerModel(config)
+        self.assertEqual(config.semantic_downsample_factor, 2)
+        self.assertEqual(codec.pad, 4)
+        waveform = torch.randn(1, 1, 250)
+        seen = []
+        handle = codec.acoustic_encoder.register_forward_pre_hook(
+            lambda module, args: seen.append(args[0].shape[-1]))
+        try:
+            codes = codec.encode(waveform).audio_codes
+        finally:
+            handle.remove()
+        self.assertEqual(seen, [250 + 2 * 4])
+        self.assertEqual(codes.shape[-1], 21)
+
+        try:
+            import torchaudio
+        except ImportError:  # pragma: no cover - torchaudio is a test extra.
+            return
+        semantic_input = torch.nn.functional.pad(
+            torchaudio.functional.resample(waveform[:, 0], 24_000, 16_000),
+            (2, 2),
+        )
+        with torch.no_grad():
+            hidden = codec.semantic_model(semantic_input, output_hidden_states=True).hidden_states
+            expected = torch.stack(hidden, dim=1).mean(dim=1)[:, ::2]
+            actual = codec._extract_semantic_features(waveform)
+        torch.testing.assert_close(actual, expected, rtol=0.0, atol=0.0)
+
     def test_public_wrapper_routes_native_generation_options(self):
         response = HiggsAudioV2GenerationOutput(
             waveform=torch.tensor([[[0.25, -0.25]]]),
