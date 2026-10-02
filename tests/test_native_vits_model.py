@@ -228,7 +228,38 @@ class VitsFrontendTests(unittest.TestCase):
         self.assertEqual(tokenizer.pad_token_id, 0)
         self.assertIsNone(tokenizer.unk_token_id)
         self.assertEqual(tokenizer.encode("").input_ids, ())
-        self.assertEqual(tokenizer.encode("ka").input_ids, (0, 0, 1, 0))
+        # Original VITS/MMS intersperses blanks over the whole sequence, so
+        # the real-character pad token "k" keeps its surrounding blanks.
+        self.assertEqual(tokenizer.encode("ka").input_ids, (0, 0, 0, 1, 0))
+
+    def test_mms_blank_interspersion_matches_original_recipe_around_pad_character(self):
+        # facebook/mms-tts-eng uses the real vocabulary character "k" (id 0)
+        # as pad token. Upstream fairseq examples/mms/tts/infer.py encodes
+        # text with commons.intersperse(ids, 0) over the full sequence.
+        vocabulary = {"k": 0, "b": 1, "o": 2, " ": 3, "a": 4}
+        tokenizer = VitsTokenizer(
+            vocabulary,
+            config=VitsFrontendConfig(
+                language="eng",
+                add_blank=True,
+                normalize=True,
+                phonemize=False,
+                pad_token="k",
+            ),
+        )
+
+        def original_mms(text):
+            ids = [vocabulary[c] for c in text.lower() if c in vocabulary]
+            blanked = [0] * (len(ids) * 2 + 1)
+            blanked[1::2] = ids
+            return tuple(blanked)
+
+        for text in ("book", "Kk", "kab ok", "a book k", "Book."):
+            with self.subTest(text=text):
+                encoded = tokenizer.encode(text)
+                self.assertEqual(encoded.input_ids, original_mms(text))
+                self.assertEqual(len(encoded.input_ids), 2 * len(text.rstrip(".")) + 1)
+                self.assertEqual(tokenizer.decode(encoded), text.lower().rstrip("."))
 
     def test_required_language_provider_is_never_imported_implicitly(self):
         tokenizer = VitsTokenizer(
