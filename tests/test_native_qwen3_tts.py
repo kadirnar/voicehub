@@ -560,12 +560,12 @@ class NativeQwen3TTSTests(unittest.TestCase):
 
             def forward(self, hidden_states):
                 logits = torch.zeros(
-                    hidden_states.shape[0],
+                    *hidden_states.shape[:-1],
                     self.vocabulary_size,
                     device=hidden_states.device,
                     dtype=hidden_states.dtype,
                 )
-                logits[:, self.eos_token_id] = 10
+                logits[..., self.eos_token_id] = 10
                 return logits
 
         torch.manual_seed(8)

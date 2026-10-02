@@ -511,6 +511,19 @@ class NativeQwen3TTSRuntime:
         )
         return text_embeddings + codec_embeddings, tts_pad
 
+    def _control_embeddings(self) -> tuple[Tensor, Tensor, Tensor]:
+        """Project TTS bos/eos/pad together, exactly as upstream batches them."""
+        talker = self.model.talker
+        controls = torch.tensor(
+            [[
+                self.config.tts_bos_token_id,
+                self.config.tts_eos_token_id,
+                self.config.tts_pad_token_id,
+            ]],
+            device=self.device,
+        )
+        return talker.text_projection(talker.get_text_embeddings()(controls)).chunk(3, dim=1)
+
     def _prompt(
         self,
         text: str,
@@ -522,7 +535,7 @@ class NativeQwen3TTSRuntime:
         non_streaming_mode: bool,
         reference_text: str | None = None,
         reference_codes: Tensor | None = None,
-    ) -> tuple[Tensor, Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         if not isinstance(text, str) or not text.strip():
             raise ValueError("Qwen3-TTS text must be non-empty.")
         talker = self.model.talker
@@ -564,16 +577,7 @@ class NativeQwen3TTSRuntime:
             if (language_name in {"auto", "chinese"} and isinstance(dialect, str) and dialect):
                 language_id = talker_config.codec_language_id[dialect]
 
-        controls = torch.tensor(
-            [[
-                config.tts_bos_token_id,
-                config.tts_eos_token_id,
-                config.tts_pad_token_id,
-            ]],
-            device=self.device,
-        )
-        tts_bos, tts_eos, tts_pad = talker.text_projection(talker.get_text_embeddings()(controls)).chunk(
-            3, dim=1)
+        tts_bos, tts_eos, tts_pad = self._control_embeddings()
         codec_prefix = [
             talker_config.codec_nothink_id,
             talker_config.codec_think_bos_id,
@@ -633,7 +637,7 @@ class NativeQwen3TTSRuntime:
                 device=self.device,
                 dtype=torch.long,
             )
-            return prompt, attention_mask, trailing
+            return prompt, attention_mask, trailing, tts_pad
         first_text = (
             talker.text_projection(talker.get_text_embeddings()(input_ids[:, 3:4])) +
             codec_embeddings[:, -1:])
@@ -683,7 +687,7 @@ class NativeQwen3TTSRuntime:
             device=self.device,
             dtype=torch.long,
         )
-        return prompt, attention_mask, trailing
+        return prompt, attention_mask, trailing, tts_pad
 
     def _generation_values(self, options: dict[str, Any]) -> dict[str, Any]:
         defaults = {
@@ -720,7 +724,7 @@ class NativeQwen3TTSRuntime:
         values = self._generation_values(options)
         if options:
             raise ValueError("Unsupported native Qwen3-TTS generation options: " + ", ".join(sorted(options)))
-        prompt, mask, trailing = self._prompt(
+        prompt, mask, trailing, tts_pad = self._prompt(
             text,
             language=language,
             speaker=speaker,
@@ -735,6 +739,7 @@ class NativeQwen3TTSRuntime:
             attention_mask=mask,
             trailing_text_hidden=trailing,
             seed=seed,
+            tts_pad_embed=tts_pad,
             **values,
         )
         if codes.shape[0] == 0:

@@ -15,6 +15,7 @@ from torch import Tensor, nn
 from torch.nn import functional
 
 from voicehub.architectures.qwen3_tts.configuration import Qwen3TTSDecoderConfig
+from voicehub.architectures.qwen3_tts.modeling import qwen3_tts_rope_inverse_frequency
 from voicehub.kernels.codecs import CodecSnakeBetaKernelOptimizable
 from voicehub.neural.normalization import RMSNorm
 from voicehub.neural.rotary import RotaryEmbedding, apply_rotary_embedding
@@ -154,25 +155,22 @@ def _expand_kv(hidden_states: Tensor, groups: int) -> Tensor:
                                          dimension).reshape(batch, heads * groups, time, dimension))
 
 
-def _sliding_causal_bias(
+def _sliding_causal_mask(
     *,
-    batch: int,
     time: int,
     window: int,
     device: torch.device,
 ) -> Tensor:
+    """Boolean sliding-window causal mask (``True`` = attend).
+
+    Upstream's Transformers SDPA path always materializes this boolean mask
+    for the decoder's sliding-window layers; SDPA's ``is_causal`` shortcut
+    selects a kernel with different bf16 rounding.
+    """
     positions = torch.arange(time, device=device)
     allowed = ((positions[None, :] <= positions[:, None])
                & (positions[None, :] > positions[:, None] - window))
-    bias = torch.zeros(
-        (batch, 1, time, time),
-        device=device,
-        dtype=torch.float32,
-    )
-    return bias.masked_fill(
-        ~allowed.view(1, 1, time, time),
-        torch.finfo(torch.float32).min,
-    )
+    return allowed.view(1, 1, time, time)
 
 
 class DecoderAttention(nn.Module):
@@ -221,7 +219,7 @@ class DecoderAttention(nn.Module):
         *,
         cosine: Tensor,
         sine: Tensor,
-        attention_bias: Tensor,
+        attention_mask: Tensor,
     ) -> Tensor:
         batch, time, _ = hidden_states.shape
         query = self.q_proj(hidden_states).view(
@@ -245,16 +243,15 @@ class DecoderAttention(nn.Module):
         query, key = apply_rotary_embedding(query, key, cosine, sine)
         key = _expand_kv(key, self.groups)
         value = _expand_kv(value, self.groups)
-        weights = torch.softmax(
-            torch.matmul(query, key.transpose(-1, -2)).float() * self.scaling + attention_bias,
-            dim=-1,
-        ).to(dtype=query.dtype)
-        weights = functional.dropout(
-            weights,
-            p=self.attention_dropout,
-            training=self.training,
+        # Same SDPA call as upstream's default Transformers attention path.
+        output = functional.scaled_dot_product_attention(
+            query,
+            key,
+            value,
+            attn_mask=attention_mask,
+            dropout_p=self.attention_dropout if self.training else 0.0,
+            scale=self.scaling,
         )
-        output = torch.matmul(weights, value)
         return self.o_proj(output.transpose(1, 2).reshape(
             batch,
             time,
@@ -356,14 +353,14 @@ class DecoderTransformerLayer(nn.Module):
         *,
         cosine: Tensor,
         sine: Tensor,
-        attention_bias: Tensor,
+        attention_mask: Tensor,
     ) -> Tensor:
         hidden_states = hidden_states + self.self_attn_layer_scale(
             self.self_attn(
                 self.input_layernorm(hidden_states),
                 cosine=cosine,
                 sine=sine,
-                attention_bias=attention_bias,
+                attention_mask=attention_mask,
             ))
         return hidden_states + self.mlp_layer_scale(self.mlp(self.post_attention_layernorm(hidden_states)))
 
@@ -416,8 +413,7 @@ class DecoderTransformer(nn.Module):
             positions,
             dtype=hidden_states.dtype,
         )
-        bias = _sliding_causal_bias(
-            batch=batch,
+        mask = _sliding_causal_mask(
             time=time,
             window=self.config.sliding_window,
             device=hidden_states.device,
@@ -427,7 +423,7 @@ class DecoderTransformer(nn.Module):
                 hidden_states,
                 cosine=cosine,
                 sine=sine,
-                attention_bias=bias,
+                attention_mask=mask,
             )
         return self.output_proj(self.norm(hidden_states))
 
@@ -815,15 +811,11 @@ def materialize_qwen3_tts_decoder_buffers(
 ) -> None:
     for module in decoder.modules():
         if isinstance(module, RotaryEmbedding):
-            module.inverse_frequency = 1.0 / (
-                module.base**(
-                    torch.arange(
-                        0,
-                        module.dimension,
-                        2,
-                        dtype=torch.float32,
-                        device=device,
-                    ) / module.dimension))
+            module.inverse_frequency = qwen3_tts_rope_inverse_frequency(
+                module.base,
+                module.dimension,
+                device=device,
+            )
 
 
 __all__ = [
