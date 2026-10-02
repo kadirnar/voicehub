@@ -462,7 +462,7 @@ class VibeVoiceDPMSolver:
 
     @staticmethod
     def _alpha_sigma(sigma: Tensor) -> tuple[Tensor, Tensor]:
-        alpha = 1 / torch.sqrt(sigma.square() + 1)
+        alpha = 1 / ((sigma**2 + 1)**0.5)
         return alpha, sigma * alpha
 
     def add_noise(
@@ -521,7 +521,7 @@ class VibeVoiceDPMSolver:
         lambda_target = torch.log(alpha_target) - torch.log(sigma_target)
         lambda_source = torch.log(alpha_source) - torch.log(sigma_source)
         step = lambda_target - lambda_source
-        return (sigma_target / sigma_source * sample - alpha_target * (torch.exp(-step) - 1.0) * model_output)
+        return ((sigma_target / sigma_source) * sample - (alpha_target * (torch.exp(-step) - 1.0)) * model_output)
 
     def _second_order(self, sample: Tensor) -> Tensor:
         assert self._step_index is not None
@@ -541,10 +541,9 @@ class VibeVoiceDPMSolver:
         step = lambda_target - lambda_source
         previous_step = lambda_source - lambda_previous
         ratio = previous_step / step
-        derivative = (current - previous) / ratio
-        return (
-            sigma_target / sigma_source * sample - alpha_target * (torch.exp(-step) - 1.0) * current -
-            0.5 * alpha_target * (torch.exp(-step) - 1.0) * derivative)
+        derivative = (1.0 / ratio) * (current - previous)
+        return ((sigma_target / sigma_source) * sample - (alpha_target * (torch.exp(-step) - 1.0)) * current -
+                0.5 * (alpha_target * (torch.exp(-step) - 1.0)) * derivative)
 
     def step(
         self,
@@ -557,27 +556,28 @@ class VibeVoiceDPMSolver:
         if self._step_index is None:
             self._step_index = self._index(timestep)
         self._model_outputs[0] = self._model_outputs[1]
-        sigma = self.sigmas[self._step_index].to(
-            device=sample.device,
-            dtype=sample.dtype,
-        )
+        # Keep the solver coefficients as float32 host scalars, exactly as the
+        # upstream diffusers-derived solver does: casting sigma to a reduced
+        # sample dtype first rounds alpha/sigma and changes every bf16 step.
+        sigma = self.sigmas[self._step_index]
         alpha, sigma_time = self._alpha_sigma(sigma)
-        # DPM-Solver++ integrates the predicted clean sample.
+        # DPM-Solver++ integrates the predicted clean sample (kept in the
+        # model dtype); only the running sample is upcast for the update.
         clean_prediction = alpha * sample - sigma_time * model_output
         self._model_outputs[1] = clean_prediction
         final = self._step_index == len(self.timesteps) - 1
         use_first_order = self._lower_order_steps < 1 or final
-        float_sample = sample.float()
+        float_sample = sample.to(torch.float32)
         if use_first_order:
             previous = self._first_order(
-                clean_prediction.float(),
+                clean_prediction,
                 float_sample,
             )
         else:
             previous = self._second_order(float_sample)
         self._lower_order_steps = min(2, self._lower_order_steps + 1)
         self._step_index += 1
-        return VibeVoiceDPMStepOutput(previous.to(model_output.dtype))
+        return VibeVoiceDPMStepOutput(previous.to(clean_prediction.dtype))
 
 
 __all__ = [

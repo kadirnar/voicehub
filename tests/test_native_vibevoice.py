@@ -533,6 +533,38 @@ class NativeVibeVoiceTests(unittest.TestCase):
             rtol=1e-6,
         )
 
+    def test_native_dpm_solver_matches_upstream_bfloat16_arithmetic(self):
+        # Reference: microsoft/VibeVoice@94da20d DPMSolverMultistepScheduler
+        # (cosine, v_prediction, 1,000 train steps, 5 inference steps) fed
+        # the same bfloat16 tensors on CPU. Upstream keeps alpha/sigma as
+        # float32 scalars; rounding them to bfloat16 changes the samples.
+        solver = VibeVoiceDPMSolver(
+            VibeVoiceDiffusionConfig(
+                hidden_size=8,
+                head_layers=1,
+                head_ffn_ratio=2.0,
+                latent_size=4,
+                ddpm_num_steps=1_000,
+                ddpm_num_inference_steps=5,
+                ddpm_batch_mul=1,
+            ))
+        solver.set_timesteps(5)
+        self.assertEqual(solver.timesteps.tolist(), [999, 799, 599, 400, 200])
+        generator = torch.Generator().manual_seed(3)
+        sample = torch.randn(2, 4, generator=generator).to(torch.bfloat16)
+        predictions = [torch.randn(2, 4, generator=generator).to(torch.bfloat16) for _ in range(5)]
+        for timestep, prediction in zip(solver.timesteps, predictions):
+            sample = solver.step(prediction, timestep, sample).prev_sample
+        self.assertEqual(sample.dtype, torch.bfloat16)
+        expected = torch.tensor(
+            [
+                [1.1171875, -0.181640625, -0.154296875, -1.921875],
+                [0.6953125, -1.6796875, 1.3125, 1.15625],
+            ],
+            dtype=torch.bfloat16,
+        )
+        self.assertTrue(torch.equal(sample, expected), sample.float().tolist())
+
     def test_realtime_diffusion_sampling_rebuilds_dpm_history_and_narrows_cfg(self, ):
         model = VibeVoiceRealtimeForConditionalGeneration(_realtime_config()).eval()
         head = model.model.prediction_head
