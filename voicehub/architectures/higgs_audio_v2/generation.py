@@ -100,21 +100,49 @@ class HiggsAudioV2Generator:
         ).squeeze(-1)
         return selected.reshape(logits.shape[:-1])
 
-    @staticmethod
-    def _force_token(
+    def _sample_frame(
+        self,
         logits: Tensor,
-        row_mask: Tensor,
-        token_id: int,
+        history: Tensor | None,
+        *,
+        temperature: float,
+        top_k: int | None,
+        top_p: float,
+        ras_window: int | None,
+        ras_max_repeats: int,
+        generator: torch.Generator,
     ) -> Tensor:
-        if not row_mask.any():
-            return logits
-        result = logits.clone()
-        rows = result.reshape(-1, result.shape[-1])
-        flattened_mask = row_mask.reshape(-1)
-        selected = rows[flattened_mask, token_id].clone()
-        rows[flattened_mask] = -float("inf")
-        rows[flattened_mask, token_id] = selected
-        return result
+        """Sample one delayed frame before delay-pattern constraints.
+
+        Like the source, every codebook is sampled from the processed logits
+        and repetition-aware sampling compares it with the most recent
+        ``ras_window`` frames of the whole audio stream (reference context,
+        BOS/EOS frames included). Repeated codes are redrawn from the raw
+        distribution. The caller then imposes the BOS/EOS delay pattern, so
+        seeded draws follow the reference sampler.
+        """
+        next_codes = self._sample(
+            logits,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            generator=generator,
+        )
+        if ras_window is None or history is None:
+            return next_codes
+        window = history[:, -ras_window:]
+        replacement_mask = ((window == next_codes.unsqueeze(1)).sum(dim=1) >= ras_max_repeats)
+        if not replacement_mask.any():
+            return next_codes
+        replacements = torch.multinomial(
+            torch.softmax(logits[replacement_mask].float(), dim=-1),
+            num_samples=1,
+            replacement=True,
+            generator=generator,
+        ).squeeze(-1)
+        next_codes = next_codes.clone()
+        next_codes[replacement_mask] = replacements
+        return next_codes
 
     def _decode_completed(
         self,
@@ -224,6 +252,14 @@ class HiggsAudioV2Generator:
         )
         finished = torch.zeros(1, dtype=torch.bool, device=device)
         delayed_frames = []
+        # Repetition-aware sampling looks back over the whole audio stream,
+        # including the delayed reference context, as in the source.
+        history_prefix = []
+        if reference_codes is not None:
+            valid_reference = (
+                torch.ones(reference_codes.shape[:2], dtype=torch.bool, device=device)
+                if reference_mask is None else reference_mask.to(dtype=torch.bool))
+            history_prefix.append(reference_codes[valid_reference].unsqueeze(0))
         next_logits = output.logits[:, -1].reshape(
             1,
             config.num_codebooks,
@@ -235,45 +271,43 @@ class HiggsAudioV2Generator:
             eos_age[active_eos] += 1
             bos_mask = codebook_indices >= step
             eos_mask = (active_eos.unsqueeze(-1) & (codebook_indices < eos_age.unsqueeze(-1)))
-            constrained = self._force_token(
-                next_logits,
-                bos_mask,
-                config.audio_stream_bos_id,
-            )
-            constrained = self._force_token(
-                constrained,
-                eos_mask | finished.unsqueeze(-1),
-                config.audio_stream_eos_id,
-            )
-            next_codes = self._sample(
-                constrained,
-                temperature=temperature,
-                top_k=top_k,
-                top_p=top_p,
-                generator=request_generator,
-            )
-
-            if ras_window is not None and delayed_frames:
-                history = torch.stack(delayed_frames, dim=1)
-                window = history[:, -ras_window:]
-                repeated = window == next_codes.unsqueeze(1)
-                repeated &= ((window != config.audio_stream_bos_id) & (window != config.audio_stream_eos_id))
-                replacement_mask = (repeated.sum(dim=1) >= ras_max_repeats)
-                replacement_mask &= ~(bos_mask | eos_mask)
-                if replacement_mask.any():
-                    raw_probabilities = torch.softmax(
-                        next_logits[replacement_mask].float(),
-                        dim=-1,
+            if step == 0:
+                # The source opens each audio segment with a fixed all-BOS
+                # frame and draws no random numbers for it.
+                next_codes = torch.full_like(
+                    codebook_indices,
+                    config.audio_stream_bos_id,
+                )
+            else:
+                history = None
+                if ras_window is not None:
+                    history = torch.cat(
+                        [
+                            *(prefix[:, -ras_window:] for prefix in history_prefix),
+                            torch.stack(delayed_frames[-ras_window:], dim=1),
+                        ],
+                        dim=1,
                     )
-                    replacements = torch.multinomial(
-                        raw_probabilities,
-                        num_samples=1,
-                        replacement=True,
-                        generator=request_generator,
-                    ).squeeze(-1)
-                    next_codes = next_codes.clone()
-                    next_codes[replacement_mask] = replacements
-
+                next_codes = self._sample_frame(
+                    next_logits,
+                    history,
+                    temperature=temperature,
+                    top_k=top_k,
+                    top_p=top_p,
+                    ras_window=ras_window,
+                    ras_max_repeats=ras_max_repeats,
+                    generator=request_generator,
+                )
+                next_codes = torch.where(
+                    bos_mask,
+                    config.audio_stream_bos_id,
+                    next_codes,
+                )
+                next_codes = torch.where(
+                    eos_mask | finished.unsqueeze(-1),
+                    config.audio_stream_eos_id,
+                    next_codes,
+                )
             has_eos = (next_codes == config.audio_stream_eos_id).any(dim=-1)
             newly_started = (eos_age < 0) & has_eos
             if newly_started.any():

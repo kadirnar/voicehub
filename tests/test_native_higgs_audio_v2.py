@@ -423,24 +423,47 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         self.assertTrue(
             all(not parameter.requires_grad for parameter in restored.audio_tokenizer.parameters()))
 
-    def test_generation_constraints_force_only_selected_codebooks(self):
+    def test_repetition_aware_sampling_follows_the_source_window(self):
         with tempfile.TemporaryDirectory() as directory:
             runtime = _small_runtime(Path(directory))
-            generator = HiggsAudioV2Generator(
-                runtime.model,
-                runtime.processor,
-            )
-            logits = torch.zeros(1, 2, 18)
-            forced = generator._force_token(
+            generator = HiggsAudioV2Generator(runtime.model, runtime.processor)
+            logits = torch.full((1, 2, 18), -30.0)
+            logits[0, 0, 3] = 0.0
+            logits[0, 1, 16] = 1.0
+            logits[0, 1, 5] = 0.5
+            # The window covers stream BOS/EOS tokens and reference context:
+            # codebook 1's argmax (BOS) repeats twice and is redrawn from the
+            # raw distribution even though the caller will force it later.
+            history = torch.tensor([[[3, 16], [9, 16], [4, 9]]])
+            draws = torch.Generator().manual_seed(0)
+            frame = generator._sample_frame(
                 logits,
-                torch.tensor([[True, False]]),
-                16,
+                history,
+                temperature=0.0,
+                top_k=None,
+                top_p=1.0,
+                ras_window=3,
+                ras_max_repeats=2,
+                generator=draws,
             )
+            self.assertEqual(frame[0, 0].item(), 3)
+            self.assertIn(frame[0, 1].item(), (5, 16))
+            self.assertFalse(torch.equal(draws.get_state(), torch.Generator().manual_seed(0).get_state()))
 
-        self.assertEqual(forced[0, 0].argmax().item(), 16)
-        self.assertTrue(torch.isneginf(forced[0, 0, :16]).all())
-        self.assertTrue(torch.isneginf(forced[0, 0, 17:]).all())
-        self.assertTrue(torch.equal(forced[0, 1], logits[0, 1]))
+            draws = torch.Generator().manual_seed(0)
+            frame = generator._sample_frame(
+                logits,
+                history[:, -1:],
+                temperature=0.0,
+                top_k=None,
+                top_p=1.0,
+                ras_window=3,
+                ras_max_repeats=2,
+                generator=draws,
+            )
+            self.assertEqual(frame[0].tolist(), [3, 16])
+            # No repetition: greedy decoding draws no random numbers.
+            self.assertTrue(torch.equal(draws.get_state(), torch.Generator().manual_seed(0).get_state()))
 
     def test_codec_encoder_pads_and_resamples_like_the_source_encoder(self):
         with torch.device("meta"):
@@ -523,6 +546,22 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         self.assertEqual(
             result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 6], [17, 7], [17, 17]])
         self.assertEqual(result.audio_codes[0].tolist(), [[3, 4], [5, 6]])
+
+    def test_generation_draws_nothing_for_the_opening_bos_frame(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            original = HiggsAudioV2Generator._sample
+            with patch.object(HiggsAudioV2Generator, "_sample", autospec=True,
+                              side_effect=original) as sample:
+                result = self._scripted_generation(
+                    runtime,
+                    [(16, 16), (3, 9), (4, 5), (17, 6), (17, 17)],
+                )
+        # The source's AUDIO_INIT step emits the all-BOS frame without
+        # sampling, so seeded draws start with the first real frame.
+        self.assertEqual(
+            result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 6], [17, 17]])
+        self.assertEqual(sample.call_count, 4)
 
     def test_generation_ends_lower_codebooks_with_first_stream_eos(self):
         # Codebook 1 emits EOS before codebook 0: the source forces the lower
