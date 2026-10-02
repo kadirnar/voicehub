@@ -621,6 +621,37 @@ class ParlerTokenizerTests(unittest.TestCase):
         self.assertEqual(batch.input_ids.tolist(), [[1, 1, 0], [4, 3, 1]])
         self.assertEqual(batch.attention_mask.tolist(), [[1, 1, 0], [1, 1, 1]])
 
+    def test_frontend_keeps_trailing_whitespace_like_upstream_fast_tokenizer(self):
+        # Upstream README inference and training use T5TokenizerFast, e.g.
+        # "Hello world. " -> [8774, 296, 5, 3, 1] where SentencePiece alone
+        # yields [8774, 296, 5, 1]. The trailing "\u2581" (id 3) changes audio.
+
+        class FakeSentencePiece:
+            vocabulary_size = 16
+
+            @staticmethod
+            def encode_as_ids(text):
+                return [7] * len(text.split())
+
+            @staticmethod
+            def piece_to_id(piece):
+                if piece != "\u2581":
+                    raise AssertionError(piece)
+                return 3
+
+        tokenizer = object.__new__(ParlerTextTokenizer)
+        tokenizer.sentencepiece = FakeSentencePiece()
+        tokenizer.eos_token_id = 1
+        tokenizer.pad_token_id = 0
+        tokenizer.model_vocabulary_size = 16
+        self.assertEqual(tokenizer.encode("a b"), (7, 7, 1))
+        self.assertEqual(tokenizer.encode(" a b"), (7, 7, 1))
+        self.assertEqual(tokenizer.encode(""), (1, ))
+        for text in ("a b ", "a b  ", "a b\n", "a b\t", "a b\u00a0", "a b\u3000"):
+            with self.subTest(text=text):
+                self.assertEqual(tokenizer.encode(text), (7, 7, 3, 1))
+        self.assertEqual(tokenizer.encode(" "), (3, 1))
+
 
 class ParlerTTSWrapperLoadTests(unittest.TestCase):
 

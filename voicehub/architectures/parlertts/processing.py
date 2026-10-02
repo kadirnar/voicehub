@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,8 @@ import torch
 from torch import Tensor
 
 from voicehub.tokenization import SentencePieceUnigramTokenizer
+
+_WHITESPACE_PIECE = "\u2581"
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +70,11 @@ class ParlerTextTokenizer:
         if not isinstance(text, str):
             raise TypeError("Parler-TTS text inputs must be strings.")
         ids = tuple(self.sentencepiece.encode_as_ids(text))
+        # Upstream inference and training tokenize with T5TokenizerFast. Its
+        # Metaspace pre-tokenizer keeps trailing whitespace as one standalone
+        # "\u2581" piece, which SentencePiece itself strips.
+        if unicodedata.normalize("NFKC", text)[-1:].isspace():
+            ids += (self.sentencepiece.piece_to_id(_WHITESPACE_PIECE), )
         return ids + (self.eos_token_id, )
 
     def __call__(
