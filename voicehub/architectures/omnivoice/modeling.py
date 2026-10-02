@@ -116,6 +116,8 @@ class OmniVoiceSelfAttention(CausalSelfAttention):
         cache=None,
         use_cache: bool = False,
         output_attentions: bool = False,
+        prepared_mask: Tensor | None = None,
+        rotary_embeddings: tuple[Tensor, Tensor] | None = None,
     ):
         if cache is not None or use_cache:
             raise ValueError("OmniVoice is bidirectional and does not support a KV cache.")
@@ -139,7 +141,9 @@ class OmniVoiceSelfAttention(CausalSelfAttention):
         query = query.transpose(1, 2)
         key = key.transpose(1, 2)
         value = value.transpose(1, 2)
-        cosine, sine = self.rotary(position_ids, dtype=query.dtype)
+        if rotary_embeddings is None:
+            rotary_embeddings = self.rotary(position_ids, dtype=query.dtype)
+        cosine, sine = rotary_embeddings
         query, key = apply_rotary_embedding(
             query,
             key,
@@ -151,17 +155,19 @@ class OmniVoiceSelfAttention(CausalSelfAttention):
         if not output_attentions and (attention_mask is None or attention_mask.dtype == torch.bool):
             # Same kernel call as the reference "sdpa" attention: repeated
             # K/V heads and a boolean [batch, 1, query, key] mask.
-            allowed, _ = _bidirectional_attention_mask(
-                attention_mask,
-                batch_size=batch_size,
-                sequence_length=sequence_length,
-                device=hidden_states.device,
-            )
+            allowed = prepared_mask
+            if allowed is None and attention_mask is not None:
+                allowed, _ = _bidirectional_attention_mask(
+                    attention_mask,
+                    batch_size=batch_size,
+                    sequence_length=sequence_length,
+                    device=hidden_states.device,
+                )
             attended = functional.scaled_dot_product_attention(
                 query,
                 key,
                 value,
-                attn_mask=None if attention_mask is None else allowed,
+                attn_mask=allowed,
                 dropout_p=self.attention_dropout if self.training else 0.0,
                 scale=self.scaling,
             )
@@ -239,6 +245,8 @@ class OmniVoiceDecoderLayer(nn.Module):
         attention_mask: Tensor | None,
         position_ids: Tensor,
         output_attentions: bool,
+        prepared_mask: Tensor | None = None,
+        rotary_embeddings: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, Tensor | None]:
         residual = hidden_states
         attention_output, attention, _ = self.self_attn(
@@ -246,6 +254,8 @@ class OmniVoiceDecoderLayer(nn.Module):
             attention_mask=attention_mask,
             position_ids=position_ids,
             output_attentions=output_attentions,
+            prepared_mask=prepared_mask,
+            rotary_embeddings=rotary_embeddings,
         )
         hidden_states = residual + attention_output
         residual = hidden_states
@@ -348,6 +358,26 @@ class OmniVoiceQwen3Backbone(nn.Module):
             device=hidden_states.device,
         )
 
+        # Validate and normalize a boolean mask once per forward instead of
+        # once per layer (each check synchronizes with the device).
+        prepared_mask = None
+        if (not output_attentions and attention_mask is not None and attention_mask.dtype == torch.bool):
+            prepared_mask, _ = _bidirectional_attention_mask(
+                attention_mask,
+                batch_size=batch_size,
+                sequence_length=sequence_length,
+                device=hidden_states.device,
+            )
+
+        # Every layer shares one RoPE table; compute it once per forward like
+        # the reference model does.
+        rotary_embeddings = None
+        if self.layers:
+            rotary_embeddings = self.layers[0].self_attn.rotary(
+                position_ids,
+                dtype=hidden_states.dtype,
+            )
+
         hidden_history = [] if output_hidden_states else None
         attention_history = [] if output_attentions else None
         for layer in self.layers:
@@ -364,6 +394,8 @@ class OmniVoiceQwen3Backbone(nn.Module):
                         attention_mask=attention_mask,
                         position_ids=position_ids,
                         output_attentions=False,
+                        prepared_mask=prepared_mask,
+                        rotary_embeddings=rotary_embeddings,
                     )
                     return output
 
@@ -379,6 +411,8 @@ class OmniVoiceQwen3Backbone(nn.Module):
                     attention_mask=attention_mask,
                     position_ids=position_ids,
                     output_attentions=output_attentions,
+                    prepared_mask=prepared_mask,
+                    rotary_embeddings=rotary_embeddings,
                 )
             if attention_history is not None:
                 if attention is None:
