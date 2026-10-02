@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import ceil, gcd, pi
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,71 @@ from voicehub.checkpointing import SafeTensorReader
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
 from voicehub.hub import read_json_file
 from voicehub.processing import load_native_audio, mel_filter_bank
+
+ZONOS2_SPEAKER_SAMPLE_RATE = 24_000
+
+
+def resample_zonos2_speaker_audio(
+    waveform: Tensor,
+    source_rate: int,
+    target_rate: int = ZONOS2_SPEAKER_SAMPLE_RATE,
+    *,
+    lowpass_filter_width: int = 6,
+    rolloff: float = 0.99,
+) -> Tensor:
+    """Resample like upstream's ``torchaudio.transforms.Resample`` default.
+
+    Upstream ZONOS2 resamples reference audio with a Hann-windowed sinc
+    polyphase filter (``sinc_interp_hann``) whose kernel is built in
+    float64 and applied in float32. The speaker embedding is sensitive to
+    the interpolation filter, so this mirrors that kernel exactly.
+    """
+    if not isinstance(waveform, Tensor) or waveform.ndim != 1:
+        raise ValueError("ZONOS2 speaker waveform must be a rank-one tensor.")
+    source_rate = int(source_rate)
+    target_rate = int(target_rate)
+    if source_rate <= 0 or target_rate <= 0:
+        raise ValueError("ZONOS2 speaker sampling rates must be positive.")
+    waveform = waveform.float()
+    if source_rate == target_rate:
+        return waveform
+    divisor = gcd(source_rate, target_rate)
+    original = source_rate // divisor
+    target = target_rate // divisor
+    base = min(original, target) * rolloff
+    width = ceil(lowpass_filter_width * original / base)
+    indices = torch.arange(
+        -width,
+        width + original,
+        dtype=torch.float64,
+        device=waveform.device,
+    )[None, None] / original
+    times = torch.arange(
+        0,
+        -target,
+        -1,
+        dtype=torch.float64,
+        device=waveform.device,
+    )[:, None, None] / target + indices
+    times = (times * base).clamp(-lowpass_filter_width, lowpass_filter_width)
+    window = torch.cos(times * pi / lowpass_filter_width / 2)**2
+    times = times * pi
+    kernel = torch.where(
+        times == 0,
+        torch.ones_like(times),
+        times.sin() / times,
+    ) * window * (base / original)
+    length = waveform.shape[-1]
+    padded = torch.nn.functional.pad(
+        waveform.view(1, 1, length),
+        (width, width + original),
+    )
+    resampled = torch.nn.functional.conv1d(
+        padded,
+        kernel.to(torch.float32),
+        stride=original,
+    ).transpose(1, 2).reshape(-1)
+    return resampled[:ceil(target * length / original)].contiguous()
 
 
 def zonos2_speaker_mel(waveform: Tensor) -> Tensor:
@@ -152,13 +218,21 @@ def extract_zonos2_speaker_embedding(
     model_device = next(model.parameters()).device
     target_device = model_device if device is None else torch.device(device)
     target_dtype = next(model.parameters()).dtype if dtype is None else dtype
-    loaded = load_native_audio(audio, target_sampling_rate=24_000)
-    features = zonos2_speaker_mel(loaded.waveform.to(device=target_device)).to(dtype=target_dtype)
+    # Decode at the native rate, then resample with upstream's filter: the
+    # generic VoiceHub resampler uses a different windowed-sinc kernel.
+    loaded = load_native_audio(audio)
+    waveform = resample_zonos2_speaker_audio(
+        loaded.waveform.to(device=target_device),
+        loaded.sampling_rate,
+    )
+    features = zonos2_speaker_mel(waveform).to(dtype=target_dtype)
     return model(features)
 
 
 __all__ = [
+    "ZONOS2_SPEAKER_SAMPLE_RATE",
     "extract_zonos2_speaker_embedding",
     "load_zonos2_speaker_encoder",
+    "resample_zonos2_speaker_audio",
     "zonos2_speaker_mel",
 ]

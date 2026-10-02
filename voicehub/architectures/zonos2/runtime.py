@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,9 @@ from voicehub.architectures.zonos2.speaker import extract_zonos2_speaker_embeddi
 from voicehub.components.audio.codecs.dac.utils import load_model as load_dac
 from voicehub.hub import read_json_file
 from voicehub.processing import load_native_audio
+
+# Upstream TTSLLM and server default: trailing silence 0.25-0.5 s.
+ZONOS2_DEFAULT_QUALITY_BUCKETS = {"trailing_silence_s": 3}
 
 _RATE_RANGE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$")
 _RATE_OPEN = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*\+\s*$")
@@ -68,6 +72,39 @@ def speaking_rate_bucket_from_speed(
         if high is None or requested < high:
             return index
     return len(ranges) - 1
+
+
+def resolve_zonos2_quality_buckets(
+    config: Zonos2ArchitectureConfig,
+    quality_buckets: Mapping[str, int | None] | Sequence[int | None] | None,
+) -> list[int | None] | None:
+    """Map quality conditioning onto the checkpoint's feature order.
+
+    ``None`` applies upstream's default conditioning
+    (:data:`ZONOS2_DEFAULT_QUALITY_BUCKETS`), exactly like the published
+    offline ``TTSLLM`` and HTTP server. An empty mapping or sequence
+    disables quality tokens. Mappings are keyed by feature name.
+    """
+    features = config.quality_features
+    if not features or sum(config.quality_bucket_counts) == 0:
+        return None
+    if quality_buckets is None:
+        quality_buckets = {
+            name: bucket
+            for name, bucket in ZONOS2_DEFAULT_QUALITY_BUCKETS.items() if name in features
+        }
+    if isinstance(quality_buckets, Mapping):
+        unknown = sorted(set(quality_buckets) - set(features))
+        if unknown:
+            raise ValueError(
+                f"Unknown ZONOS2 quality features {unknown!r}; "
+                f"expected names from {list(features)!r}.")
+        resolved = [quality_buckets.get(name) for name in features]
+    else:
+        resolved = list(quality_buckets)
+    if all(bucket is None for bucket in resolved):
+        return None
+    return resolved
 
 
 def resolve_zonos2_dtype(
@@ -306,7 +343,7 @@ class NativeZonos2Runtime:
             self.config,
             normalized_text,
             speaking_rate_bucket=rate_bucket,
-            quality_buckets=quality_buckets,
+            quality_buckets=resolve_zonos2_quality_buckets(self.config, quality_buckets),
             include_speaker_slot=speaker_embedding is not None,
             clean_speaker_background=clean_speaker_background,
             accurate_mode=accurate_mode,
@@ -344,9 +381,11 @@ class NativeZonos2Runtime:
 
 
 __all__ = [
+    "ZONOS2_DEFAULT_QUALITY_BUCKETS",
     "NativeZonos2Runtime",
     "Zonos2Generation",
     "normalize_zonos2_text",
     "resolve_zonos2_dtype",
+    "resolve_zonos2_quality_buckets",
     "speaking_rate_bucket_from_speed",
 ]
