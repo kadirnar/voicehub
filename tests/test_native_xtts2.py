@@ -286,6 +286,15 @@ class NativeXTTS2Tests(unittest.TestCase):
             torch.randn(1, 8, 1),
         )
         self.assertEqual(latents.shape[1], codes.shape[1])
+        # Speeds are clamped at 0.05 like the source (no division by zero).
+        slow = XTTS2Model.synthesize_tokens(
+            runtime,
+            torch.tensor([[2, 3]]),
+            torch.randn(1, 3, 32),
+            torch.randn(1, 8, 1),
+            speed=0.0,
+        )
+        self.assertEqual(slow.shape[1], codes.shape[1] * 20)
 
     def test_tokenizer_matches_source_multilingual_cleaners(self):
         cases = (

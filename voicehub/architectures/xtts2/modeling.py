@@ -199,10 +199,12 @@ class XTTS2Model(nn.Module):
             cond_latents=conditioning,
             return_latent=True,
         )
-        if speed != 1.0:
+        # Source: ``length_scale = 1.0 / max(speed, 0.05)``.
+        length_scale = 1.0 / max(speed, 0.05)
+        if length_scale != 1.0:
             latents = F.interpolate(
                 latents.transpose(1, 2),
-                scale_factor=1.0 / speed,
+                scale_factor=length_scale,
                 mode="linear",
             ).transpose(1, 2)
         return self.hifigan_decoder(latents, g=speaker_embedding)
