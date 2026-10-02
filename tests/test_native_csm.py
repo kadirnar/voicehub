@@ -884,6 +884,36 @@ class NativeCSMCheckpointTests(unittest.TestCase):
         torch.testing.assert_close(wrapper_logits, expected, rtol=0, atol=0)
 
 
+    def test_hub_snapshot_symlinks_load_as_local_runtime(self):
+        # ``huggingface-cli download`` snapshots link file names to
+        # suffix-less blobs elsewhere; resolving them lost ``.safetensors``
+        # and the folder that holds the tokenizer.
+        torch.manual_seed(31)
+        config = _portable_test_config()
+        model = CSMModel(config).eval()
+        tokens = torch.zeros(1, 3, config.num_audio_codebooks + 1, dtype=torch.long)
+        tokens[..., -1] = torch.tensor([[2, 3, 4]])
+        mask = torch.zeros_like(tokens, dtype=torch.bool)
+        mask[..., -1] = True
+        expected = model(tokens, mask).logits
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_test_tokenizer(root / "source-tokenizer.json")
+            processor = CSMProcessor(CSMTextTokenizer.from_file(root / "source-tokenizer.json"), config)
+            export = CSMRuntime(model, processor, codec=None).save_pretrained(root / "export", include_codec=False)
+            blobs = root / "blobs"
+            snapshot = root / "snapshots" / "abc"
+            blobs.mkdir()
+            snapshot.mkdir(parents=True)
+            for index, name in enumerate(("model.safetensors", "tokenizer.json", "config.json")):
+                blob = blobs / f"{index:064x}"
+                (export / name).rename(blob)
+                (snapshot / name).symlink_to(blob)
+            restored = load_csm_runtime(snapshot, dtype="float32", include_codec=False)
+            restored_logits = restored.model(tokens, mask).logits
+        torch.testing.assert_close(restored_logits, expected, rtol=0, atol=0)
+
+
 class NativeCSMRuntimeBoundaryTests(unittest.TestCase):
 
     @staticmethod

@@ -214,9 +214,10 @@ def load_mimi_checkpoint(
     require_official_inventory: bool = True,
 ) -> MimiCheckpointReport:
     """Validate the complete Mimi header, then stream-copy its tensors."""
-    source = Path(path).expanduser().resolve()
-    if source.suffix.lower() != ".safetensors":
+    # Check the given name: Hub snapshot symlinks point at suffix-less blobs.
+    if Path(path).suffix.lower() != ".safetensors":
         raise ValueError("Native Mimi checkpoints must use Safetensors.")
+    source = Path(path).expanduser().resolve()
     with SafeTensorReader(source) as reader:
         tensor_map = _validate_mimi_layout(codec, reader)
         parameter_count = sum(reader.record(name).number_of_elements for name in reader.keys())
