@@ -316,8 +316,9 @@ class NativeWaveformTests(unittest.TestCase):
             else:
                 fmt += struct.pack("<H", 0)
             fact = b"fact" + struct.pack("<II", 4, len(samples) // channels)
-            body = (b"WAVE" + b"fmt " + struct.pack("<I", len(fmt)) + fmt + fact + b"data" +
-                    struct.pack("<I", len(data)) + data)
+            body = (
+                b"WAVE" + b"fmt " + struct.pack("<I", len(fmt)) + fmt + fact + b"data" +
+                struct.pack("<I", len(data)) + data)
             return b"RIFF" + struct.pack("<I", len(body)) + body
 
         stereo = [0.5, -0.25, 1.5, 0.5, -1.0, 0.0]
@@ -330,7 +331,8 @@ class NativeWaveformTests(unittest.TestCase):
             audio = load_native_audio(path)
         self.assertEqual(rate, 16_000)
         torch.testing.assert_close(waveform, torch.tensor([0.125, 1.0, -0.5]), rtol=0, atol=0)
-        torch.testing.assert_close(channels, torch.tensor([[0.5, 1.5, -1.0], [-0.25, 0.5, 0.0]]), rtol=0, atol=0)
+        torch.testing.assert_close(
+            channels, torch.tensor([[0.5, 1.5, -1.0], [-0.25, 0.5, 0.0]]), rtol=0, atol=0)
         torch.testing.assert_close(audio.waveform, waveform, rtol=0, atol=0)
 
         restored, rate = decode_pcm_wave(float_wave(mono, channels=1, rate=24_000, extensible=True))

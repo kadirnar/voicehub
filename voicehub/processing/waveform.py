@@ -112,7 +112,8 @@ def _read_float_wave(source) -> tuple[Tensor, int, int, int] | None:
                     return None
                 channels, sample_rate, bits = layout
                 if bits not in (32, 64):
-                    raise ValueError(f"IEEE-float WAVE input must use 32- or 64-bit samples; received {bits}-bit.")
+                    raise ValueError(
+                        f"IEEE-float WAVE input must use 32- or 64-bit samples; received {bits}-bit.")
                 if not 1 <= channels <= 8:
                     raise ValueError("WAVE input must contain between one and eight channels.")
                 payload = stream.read(size)
