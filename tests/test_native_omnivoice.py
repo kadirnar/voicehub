@@ -714,6 +714,17 @@ class NativeOmniVoiceUpstreamParityTests(unittest.TestCase):
         expected = expected / (expected.abs().max() + 1e-7) * 0.9
         self.assertTrue(torch.equal(captured[-1][0, 0], expected))
 
+    @unittest.skipUnless(torch.cuda.is_available(), "CUDA-specific scalar division")
+    def test_postprocessing_runs_on_cpu_like_upstream_numpy(self):
+        generator, _ = _recording_generator()
+        raw = _silence_fixture() * 0.7
+        prompt = OmniVoicePrompt(torch.zeros((2, 1), dtype=torch.long), "a.", 0.08000553399324417)
+        config = OmniVoiceGenerationConfig(postprocess_output=False)
+        on_cpu = generator._postprocess(raw.clone(), prompt=prompt, config=config)
+        from_cuda = generator._postprocess(raw.cuda(), prompt=prompt, config=config)
+        self.assertEqual(from_cuda.device.type, "cpu")
+        self.assertTrue(torch.equal(on_cpu, from_cuda))
+
 
 if __name__ == "__main__":
     unittest.main()

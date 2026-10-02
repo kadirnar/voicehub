@@ -678,8 +678,10 @@ class OmniVoiceGenerator:
         self,
         audio_tokens: Tensor,
     ) -> Tensor:
+        # Post-processing runs on CPU like upstream's NumPy path: CUDA divides
+        # by a Python scalar via its reciprocal, which differs by one ULP.
         return self.audio_tokenizer.decode(audio_tokens.to(
-            self.audio_tokenizer.device).unsqueeze(0)).audio_values[0, 0].float()
+            self.audio_tokenizer.device).unsqueeze(0)).audio_values[0, 0].float().cpu()
 
     def _postprocess(
         self,
@@ -689,6 +691,7 @@ class OmniVoiceGenerator:
         config: OmniVoiceGenerationConfig | None = None,
     ) -> Tensor:
         generation = config or OmniVoiceGenerationConfig()
+        waveform = waveform.cpu()
         if generation.postprocess_output:
             waveform = remove_silence(
                 waveform,
