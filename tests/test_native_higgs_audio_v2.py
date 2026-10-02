@@ -9,7 +9,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import torch
 
@@ -566,6 +566,40 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         self.assertEqual(output.audio.tolist(), [0.25, -0.25])
         self.assertEqual(output.metadata["backend"], "voicehub-native")
         self.assertEqual(output.metadata["seed"], 41)
+
+    def test_public_generate_can_disable_top_k_and_repetition_aware_sampling(self):
+        response = HiggsAudioV2GenerationOutput(
+            waveform=torch.tensor([[[0.25, -0.25]]]),
+            audio_codes=torch.ones(1, 2, 1, dtype=torch.long),
+            delayed_audio_codes=torch.ones(1, 2, 2, dtype=torch.long),
+            text_sequence=torch.ones(1, 2, dtype=torch.long),
+            sample_rate=24_000,
+            generated_steps=2,
+        )
+        runtime = SimpleNamespace(generate=Mock(return_value=response))
+        wrapper = HiggsTTSForTextToSpeech(device="cpu")
+        wrapper._runtime = runtime
+
+        def load(model):
+            model.model = torch.nn.Linear(1, 1)
+
+        with patch.object(HiggsTTSForTextToSpeech, "_load_pretrained_model", load), patch.object(
+                HiggsTTSForTextToSpeech,
+                "_prepare_for_inference",
+                lambda model: None,
+        ):
+            # ``None`` overrides are dropped by the shared generation config,
+            # so the public path must accept ``0`` to switch these off.
+            wrapper.generate("hello", seed=3, temperature=0.0, top_k=0, ras_win_len=0)
+            options = runtime.generate.call_args.kwargs
+            self.assertIsNone(options["top_k"])
+            self.assertIsNone(options["ras_window"])
+            wrapper.generate("hello", seed=3)
+            options = runtime.generate.call_args.kwargs
+            self.assertEqual(options["top_k"], 50)
+            self.assertEqual(options["ras_window"], 7)
+            with self.assertRaises(ValueError):
+                wrapper.generate("hello", ras_win_len=-1)
 
     def test_public_config_rejects_remote_code_and_pickle_checkpoints(self):
         self.assertEqual(
