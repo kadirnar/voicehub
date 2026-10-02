@@ -55,8 +55,8 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
         checkpoint_path = self.config.checkpoint_path
         if config_path is not None and checkpoint_path is not None:
             return (
-                str(Path(config_path).expanduser().resolve()),
-                str(Path(checkpoint_path).expanduser().resolve()),
+                str(Path(config_path).expanduser().absolute()),
+                str(Path(checkpoint_path).expanduser().absolute()),
             )
         if not self._looks_like_checkpoint_source(self.config.name_or_path):
             return (
@@ -68,9 +68,9 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
         if source.is_file():
             model_directory = source.parent.resolve()
             if source.suffix.lower() == ".json":
-                config_path = config_path or str(source.resolve())
+                config_path = config_path or str(source.absolute())
             else:
-                checkpoint_path = checkpoint_path or str(source.resolve())
+                checkpoint_path = checkpoint_path or str(source.absolute())
         else:
             model_directory = resolve_model_directory(
                 self.config.name_or_path,
@@ -80,7 +80,7 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
             candidate = model_directory / "config.json"
             if not candidate.is_file():
                 raise FileNotFoundError(f"MeloTTS configuration was not found: {candidate}.")
-            config_path = str(candidate.resolve())
+            config_path = str(candidate.absolute())
         if checkpoint_path is None:
             if self.config.checkpoint_filename is not None:
                 candidate = (model_directory / self.config.checkpoint_filename)
@@ -89,7 +89,7 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
                 candidate = (safe if safe.is_file() else model_directory / "checkpoint.pth")
             if not candidate.is_file():
                 raise FileNotFoundError(f"MeloTTS checkpoint was not found: {candidate}.")
-            checkpoint_path = str(candidate.resolve())
+            checkpoint_path = str(candidate.absolute())
         return str(config_path), str(checkpoint_path)
 
     def _load_pretrained_model(self) -> None:

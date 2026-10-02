@@ -421,7 +421,8 @@ class MeloTTSArchitectureConfig:
 
 
 def load_melotts_config(path: str | Path, ) -> MeloTTSArchitectureConfig:
-    source = Path(path).expanduser().resolve()
+    # Validate the suffix on the given name, not a resolved cache blob.
+    source = Path(path).expanduser().absolute()
     if not source.is_file():
         raise FileNotFoundError(f"MeloTTS configuration was not found: {source}.")
     if source.suffix.lower() != ".json":

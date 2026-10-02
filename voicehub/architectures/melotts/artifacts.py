@@ -32,16 +32,16 @@ def _local_checkpoint(
         candidate = directory / checkpoint_filename
         if not candidate.is_file():
             raise FileNotFoundError(f"MeloTTS checkpoint was not found: {candidate}.")
-        return candidate.resolve()
+        return candidate.absolute()
     safe_checkpoint = directory / "model.safetensors"
     if safe_checkpoint.is_file():
-        return safe_checkpoint.resolve()
+        return safe_checkpoint.absolute()
     legacy_checkpoint = directory / "checkpoint.pth"
     if not legacy_checkpoint.is_file():
         raise FileNotFoundError(
             "MeloTTS artifact directory must contain `model.safetensors` "
             "or `checkpoint.pth`.")
-    return legacy_checkpoint.resolve()
+    return legacy_checkpoint.absolute()
 
 
 def resolve_melotts_artifacts(
@@ -135,8 +135,10 @@ def resolve_melotts_artifacts(
                     revision=resolved_revision,
                 )
 
-    resolved_config = Path(config_path).expanduser().resolve()
-    resolved_checkpoint = Path(checkpoint_path).expanduser().resolve()
+    # Keep link names: Hugging Face caches expose snapshot symlinks to
+    # suffix-less content-addressed blobs, and formats are chosen by suffix.
+    resolved_config = Path(config_path).expanduser().absolute()
+    resolved_checkpoint = Path(checkpoint_path).expanduser().absolute()
     if not resolved_config.is_file():
         raise FileNotFoundError(f"MeloTTS configuration was not found: {resolved_config}.")
     if not resolved_checkpoint.is_file():
