@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import torch
@@ -613,6 +614,39 @@ class NativeVibeVoiceTests(unittest.TestCase):
         torch.testing.assert_close(first, second)
         self.assertEqual(batch_sizes, [2, 1])
         self.assertEqual(model.model.noise_scheduler._step_index, 2)
+
+    def test_realtime_sampling_noise_matches_upstream_host_rng(self):
+        # Upstream: torch.randn(rows, vae_dim).to(condition) - float32 draws
+        # from the default host RNG, then cast. Drawing in the condition dtype
+        # or on its device changes the waveform produced by a given seed.
+        model = VibeVoiceRealtimeForConditionalGeneration(_realtime_config()).eval().to(torch.bfloat16)
+        inputs: list[torch.Tensor] = []
+        hook = model.model.prediction_head.register_forward_hook(
+            lambda _module, arguments, _output: inputs.append(arguments[0].detach().clone()))
+        condition = torch.randn(1, 8).to(torch.bfloat16)
+        negative_condition = torch.randn(1, 8).to(torch.bfloat16)
+        draws = []
+        original_randn = torch.randn
+
+        def record_randn(*size, **kwargs):
+            draws.append((kwargs.get("device"), kwargs.get("dtype")))
+            return original_randn(*size, **kwargs)
+
+        try:
+            torch.manual_seed(31)
+            with mock.patch.object(torch, "randn", side_effect=record_randn):
+                model.sample_speech_latents(
+                    condition,
+                    negative_condition,
+                    guidance_scale=1.5,
+                    inference_steps=2,
+                )
+        finally:
+            hook.remove()
+        # Host float32 draws, even when the condition lives on an accelerator.
+        self.assertEqual(draws, [("cpu", torch.float32)])
+        expected = torch.randn(2, 2, generator=torch.Generator().manual_seed(31)).to(torch.bfloat16)
+        self.assertTrue(torch.equal(inputs[0], torch.cat((expected[:1], expected[:1]))))
 
     def test_realtime_prediction_cache_preserves_every_dpm_step(self):
         model = VibeVoiceRealtimeForConditionalGeneration(_realtime_config()).eval()

@@ -1026,12 +1026,19 @@ class VibeVoiceRealtimeForConditionalGeneration(nn.Module):
                 prediction_head.diffusion_cache_session(),
                 prediction_head.diffusion_sampling_session(),
         ):
+            # Upstream draws float32 noise from the host RNG and then casts it
+            # to the condition device/dtype (`torch.randn(...).to(condition)`),
+            # so a seed reproduces the official waveform. A caller-supplied
+            # generator is drawn from on its own device in the same way.
             speech = torch.randn(
                 (
                     combined_condition.shape[0],
                     self.config.acoustic_vae_dim,
                 ),
                 generator=generator,
+                device="cpu" if generator is None else generator.device,
+                dtype=torch.float32,
+            ).to(
                 device=combined_condition.device,
                 dtype=combined_condition.dtype,
             )
