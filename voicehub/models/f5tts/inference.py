@@ -100,7 +100,11 @@ class F5TTSForTextToSpeech(PreTrainedTTSModel):
                 ode_method=self.config.ode_method,
             )
         if dtype != torch.float32:
-            flow_model.to(dtype=dtype)
+            # Cast only the DiT. The released recipe extracts the
+            # conditioning mel with a float32 frontend outside the cast
+            # graph; casting and re-widening its buffers would keep their
+            # half-precision rounding.
+            flow_model.transformer.to(dtype=dtype)
         load_f5tts_checkpoint(
             flow_model,
             artifacts.checkpoint,
@@ -110,10 +114,10 @@ class F5TTSForTextToSpeech(PreTrainedTTSModel):
         )
         if artifacts.vocoder is None:
             raise RuntimeError("Native F5-TTS did not resolve a Vocos checkpoint.")
+        # The released recipe always decodes with a float32 Vocos, also when
+        # the DiT runs in half precision.
         with torch.device(self.device):
             vocoder = NativeVocos()
-        if dtype != torch.float32:
-            vocoder.to(dtype=dtype)
         load_vocos_checkpoint(
             vocoder,
             artifacts.vocoder,

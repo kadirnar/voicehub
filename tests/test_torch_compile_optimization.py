@@ -703,7 +703,7 @@ class TorchCompileOptimizationTests(unittest.TestCase):
                 patch.object(
                     NativeF5TTSRuntime,
                     "_prepare_reference",
-                    return_value=(torch.ones(8), 0.1),
+                    return_value=(torch.ones(8), 0.1, 8 / 24_000),
                 ),
         ):
             inference_kwargs = {

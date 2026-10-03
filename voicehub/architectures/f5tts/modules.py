@@ -102,9 +102,12 @@ def precompute_freqs_cis(
     theta: float = 10_000.0,
     theta_rescale_factor: float = 1.0,
 ) -> torch.Tensor:
+    # Build on the CPU, like the released model, even inside a CUDA device
+    # context: GPU sin/cos differ by a few ULPs, and the large angles
+    # amplify that into a visible text-embedding difference.
     theta *= theta_rescale_factor**(dim / (dim - 2))
-    frequencies = 1.0 / (theta**(torch.arange(0, dim, 2, dtype=torch.float32)[:dim // 2] / dim))
-    positions = torch.arange(end, dtype=torch.float32)
+    frequencies = 1.0 / (theta**(torch.arange(0, dim, 2, dtype=torch.float32, device="cpu")[:dim // 2] / dim))
+    positions = torch.arange(end, dtype=torch.float32, device="cpu")
     angles = torch.outer(positions, frequencies)
     return torch.cat((angles.cos(), angles.sin()), dim=-1)
 
@@ -243,6 +246,10 @@ class FeedForward(nn.Module):
         self.kernel_backend = KernelBackend.coerce(backend)
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        if self.kernel_backend is KernelBackend.TORCH:
+            # The released graph: biased Linear (bias fused into the GEMM),
+            # then tanh GELU. Adding the bias separately changes rounding.
+            return self.ff(hidden_states)
         projection = self.ff[0][0]
         if not isinstance(projection, nn.Linear) or projection.bias is None:
             raise RuntimeError("F5 feed-forward input projection must be a biased Linear.")
