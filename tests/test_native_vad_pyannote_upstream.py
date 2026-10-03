@@ -35,8 +35,8 @@ ONSET = PIPELINE_PARAMETERS["onset"]
 # onset, a 5-frame gap (filled by min_duration_off), 6-frame gaps (kept), a
 # 3-frame region (removed by min_duration_on), a 4-frame region (kept), and
 # a region still active on the last frame.
-SCORES = ([0.1] * 3 + [ONSET] + [0.9] * 6 + [0.6] * 3 + [0.1] * 5 + [0.95] * 8 + [0.1] * 6 + [0.9] * 3 + [0.1] * 7 +
-          [0.9] * 4 + [0.2] * 6 + [0.9] * 8)
+SCORES = ([0.1] * 3 + [ONSET] + [0.9] * 6 + [0.6] * 3 + [0.1] * 5 + [0.95] * 8 + [0.1] * 6 + [0.9] * 3 +
+          [0.1] * 7 + [0.9] * 4 + [0.2] * 6 + [0.9] * 8)
 # pyannote.audio 3.0.0 ``Binarize`` on SCORES (float32) with the pipeline
 # parameters, then ``get_timeline().support()`` as in the model card.
 UPSTREAM_PIPELINE_REGIONS = (
