@@ -21,7 +21,12 @@ from voicehub.architectures.parakeet_tdt.configuration import ParakeetEncoderCon
 from voicehub.architectures.parakeet_tdt.decoding import decode_tdt_sequence
 from voicehub.architectures.parakeet_tdt.loss import tdt_loss
 from voicehub.architectures.parakeet_tdt.metadata import PARAKEET_TDT_CHECKPOINTS, PARAKEET_TRANSFORMERS_REVISION
-from voicehub.architectures.parakeet_tdt.modeling import ParakeetEncoderOutput, ParakeetForTDT
+from voicehub.architectures.parakeet_tdt.modeling import (
+    ParakeetEncoderOutput,
+    ParakeetForTDT,
+    RelativePositionalEncoding,
+    RelativeSelfAttention,
+)
 from voicehub.architectures.parakeet_tdt.processing import ParakeetFeatureExtractor, ParakeetProcessor
 from voicehub.architectures.parakeet_tdt.runtime import (
     ParakeetTDTRuntime,
@@ -854,18 +859,47 @@ class NativeParakeetTDTTests(unittest.TestCase):
                 attention_mask=mask,
                 decoder_input_ids=decoder_ids,
             )
+        # Only valid (unpadded) encoder frames carry defined semantics.
+        # Transformers >= 5.18 fills fully padded query rows with
+        # finfo.min (uniform attention) where NeMo and VoiceHub return
+        # zeros, so padded frames are compared by the NeMo test below.
+        valid = actual.attention_mask.bool()
+        self.assertEqual(valid.sum(-1).tolist(), [16, 13])
         torch.testing.assert_close(
-            actual.last_hidden_state,
-            expected.last_hidden_state,
+            actual.last_hidden_state[valid],
+            expected.last_hidden_state[valid],
             atol=1e-6,
             rtol=1e-6,
         )
         torch.testing.assert_close(
-            actual.logits,
-            expected.logits,
+            actual.logits[valid],
+            expected.logits[valid],
             atol=1e-6,
             rtol=1e-6,
         )
+
+    def test_padded_attention_follows_nemo_masking(self):
+        # NeMo RelPositionMultiHeadAttention (use_pytorch_sdpa=False, as the
+        # published checkpoint is configured) fills masked scores with
+        # -10000, applies softmax, then zeroes every masked weight: valid
+        # queries never see padded keys and fully padded queries attend to
+        # nothing. Valid frames must also not depend on the padding length.
+        config = _tiny_config()
+        torch.manual_seed(5)
+        attention = RelativeSelfAttention(config.encoder_config, 0).eval()
+        positions = RelativePositionalEncoding(config.encoder_config)
+        hidden = torch.randn(1, 9, 8)
+        padded = torch.cat((hidden, torch.randn(1, 4, 8)), dim=1)
+        valid = torch.arange(13)[None, :] < 9
+        square = valid[:, None, None, :] & valid[:, None, :, None]
+        with torch.no_grad():
+            output, weights = attention(padded, positions(padded), square)
+            reference, _ = attention(hidden, positions(hidden), None)
+        self.assertTrue(torch.all(weights[:, :, 9:] == 0))
+        self.assertTrue(torch.all(weights[:, :, :9, 9:] == 0))
+        torch.testing.assert_close(weights[:, :, :9].sum(-1), torch.ones(1, 2, 9))
+        self.assertTrue(torch.all(output[:, 9:] == 0))
+        torch.testing.assert_close(output[:, :9], reference, atol=1e-6, rtol=1e-6)
 
 
 def _meta_state(config):
