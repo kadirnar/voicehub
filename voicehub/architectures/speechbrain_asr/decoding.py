@@ -37,8 +37,8 @@ class SpeechBrainRNNLMBeamSearch:
     """Pinned SpeechBrain attention beam search with RNNLM shallow fusion.
 
     Scoring follows the released ``hyperparams.yaml``: SpeechBrain's
-    ``S2SRNNBeamSearcher`` with ``RNNLMScorer`` and ``CoverageScorer`` as
-    full scorers, so the coverage penalty enters every search step.
+    ``S2SRNNBeamSearcher`` with ``RNNLMScorer`` and ``CoverageScorer``
+    as full scorers, so the coverage penalty enters every search step.
     """
 
     def __init__(
@@ -183,10 +183,11 @@ class SpeechBrainRNNLMBeamSearch:
                 # length-normalized penalty of the cumulative attention from
                 # each beam before top-k, so it shapes the search itself.
                 coverage = attention if coverage is None else coverage + attention
-                penalty = (torch.maximum(
-                    coverage,
-                    coverage.new_full((), 0.5),
-                ).sum(dim=-1) - coverage.shape[-1] * 0.5)
+                penalty = (
+                    torch.maximum(
+                        coverage,
+                        coverage.new_full((), 0.5),
+                    ).sum(dim=-1) - coverage.shape[-1] * 0.5)
                 combined = combined + (-penalty / (step + 1)).unsqueeze(1) * config.coverage_penalty
             vocabulary_size = combined.shape[-1]
             candidate_scores = (sequence_scores.unsqueeze(1) + combined)
