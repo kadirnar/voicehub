@@ -16,13 +16,12 @@ from voicehub.architectures.f5tts.audio import (
     preprocess_reference_audio,
     pydub_sample_width,
     remove_generated_silence,
-    resample_hann_sinc,
 )
 from voicehub.architectures.f5tts.frontend import NativeF5TextFrontend, TokenSequence
 from voicehub.architectures.f5tts.modeling import F5ConditionalFlowMatcher
 from voicehub.architectures.f5tts.vocoder import NativeVocos
 from voicehub.optimization.protocols import OptimizationCompileTarget, OptimizationModuleRoot
-from voicehub.processing.waveform import load_pcm_wave
+from voicehub.processing.waveform import load_pcm_wave, resample_waveform_hann
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[;:,.!?])\s+|(?<=[；：，。！？])")
 
@@ -204,10 +203,13 @@ class NativeF5TTSRuntime(nn.Module):
             raise ValueError("F5-TTS reference audio contains no audible speech.")
         source_seconds = prepared.numel() / sampling_rate
         normalized, original_rms = normalize_reference_rms(prepared)
-        resampled = resample_hann_sinc(
+        # The released recipe calls torchaudio.transforms.Resample on the CPU
+        # `[1, samples]` float32 prompt.
+        resampled = resample_waveform_hann(
             normalized.float().unsqueeze(0),
             sampling_rate,
             self.target_sample_rate,
+            match="transform",
         ).squeeze(0)
         return resampled, original_rms, source_seconds
 

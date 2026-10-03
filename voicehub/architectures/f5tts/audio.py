@@ -370,50 +370,6 @@ def preprocess_reference_audio(
     return prepared.squeeze(0) if mono else prepared
 
 
-def resample_hann_sinc(
-    waveform: torch.Tensor,
-    source_rate: int,
-    target_rate: int,
-    *,
-    lowpass_filter_width: int = 6,
-    rolloff: float = 0.99,
-) -> torch.Tensor:
-    """Resample ``[..., time]`` like ``torchaudio.transforms.Resample``.
-
-    This is torchaudio's default ``sinc_interp_hann`` kernel, built in float64
-    and applied in the waveform dtype, which the released recipe uses to bring
-    the reference to 24 kHz.
-    """
-    source_rate = int(source_rate)
-    target_rate = int(target_rate)
-    if source_rate == target_rate:
-        return waveform
-    divisor = math.gcd(source_rate, target_rate)
-    original = source_rate // divisor
-    new = target_rate // divisor
-    base = min(original, new) * rolloff
-    width = math.ceil(lowpass_filter_width * original / base)
-    positions = torch.arange(-width, width + original, dtype=torch.float64)[None, None] / original
-    times = torch.arange(0, -new, -1, dtype=torch.float32)[:, None, None] / new + positions
-    times *= base
-    times = times.clamp_(-lowpass_filter_width, lowpass_filter_width)
-    window = torch.cos(times * math.pi / lowpass_filter_width / 2)**2
-    times *= math.pi
-    kernels = torch.where(times == 0, torch.tensor(1.0).to(times), times.sin() / times)
-    kernels *= window * (base / original)
-    kernels = kernels.to(device=waveform.device, dtype=waveform.dtype)
-    shape = waveform.shape
-    flattened = waveform.reshape(-1, shape[-1])
-    length = flattened.shape[-1]
-    padded = F.pad(flattened, (width, width + original))
-    resampled = F.conv1d(padded[:, None], kernels, stride=original)
-    resampled = resampled.transpose(1, 2).reshape(flattened.shape[0], -1)
-    # torchaudio rounds the target length through a float32 tensor.
-    target_length = int(torch.ceil(torch.as_tensor(new * length / original)).item())
-    resampled = resampled[..., :target_length]
-    return resampled.reshape(*shape[:-1], resampled.shape[-1])
-
-
 def normalize_reference_rms(
     waveform: torch.Tensor,
     *,
@@ -510,6 +466,5 @@ __all__ = [
     "preprocess_reference_audio",
     "pydub_sample_width",
     "remove_generated_silence",
-    "resample_hann_sinc",
     "trim_silence",
 ]

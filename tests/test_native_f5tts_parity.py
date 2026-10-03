@@ -23,7 +23,6 @@ from voicehub.architectures.f5tts.audio import (
     preprocess_reference_audio,
     pydub_sample_width,
     remove_generated_silence,
-    resample_hann_sinc,
 )
 from voicehub.architectures.f5tts.configuration import F5TTSArchitectureConfig
 from voicehub.architectures.f5tts.frontend import F5Vocabulary, NativeF5TextFrontend, character_tokens
@@ -36,6 +35,7 @@ from voicehub.architectures.f5tts.runtime import (
     prompt_reference_text,
 )
 from voicehub.models.f5tts.inference import F5TTSConfig, F5TTSForTextToSpeech
+from voicehub.processing.waveform import resample_waveform_hann
 
 try:
     import torchaudio
@@ -207,7 +207,8 @@ class ReleasedReferenceAudioTests(unittest.TestCase):
         for source, target in ((16_000, 24_000), (44_100, 24_000), (22_050, 24_000), (48_000, 24_000)):
             with self.subTest(source=source):
                 expected = torchaudio.transforms.Resample(source, target)(waveform)
-                self.assertTrue(torch.equal(resample_hann_sinc(waveform, source, target), expected))
+                resampled = resample_waveform_hann(waveform, source, target, match="transform")
+                self.assertTrue(torch.equal(resampled, expected))
 
 
 class ReleasedSamplingTests(unittest.TestCase):
