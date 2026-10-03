@@ -34,7 +34,8 @@ class FishConversationTurn:
             raise ValueError("Fish message role is unsupported.")
         if self.text is None and self.codes is None:
             raise ValueError("A Fish turn requires text, codes, or both.")
-        if isinstance(self.text, tuple) and (not self.text or not all(isinstance(part, str) for part in self.text)):
+        if isinstance(self.text, tuple) and (not self.text or not all(isinstance(part, str)
+                                                                      for part in self.text)):
             raise TypeError("Fish turn text parts must be a non-empty tuple of strings.")
         if self.modality not in {None, "voice"}:
             raise ValueError("Fish turn modality must be None or 'voice'.")

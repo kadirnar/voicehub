@@ -53,7 +53,8 @@ def _rotary_table(
     """Return the source's ``[length, dimension // 2, 2]`` RoPE table.
 
     The source precomputes ``torch.polar`` on the CPU and stores it in
-    bfloat16 for every model dtype, so the rounded table is reproduced here.
+    bfloat16 for every model dtype, so the rounded table is reproduced
+    here.
     """
     inverse = 1.0 / (base**(torch.arange(0, dimension, 2)[:dimension // 2].float() / dimension))
     angles = torch.outer(torch.arange(length), inverse)

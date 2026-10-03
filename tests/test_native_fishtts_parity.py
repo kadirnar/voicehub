@@ -1,7 +1,8 @@
 """Regression tests for Fish S2 behaviour that must match the source recipe.
 
 Each test pins one difference found by comparing VoiceHub with the
-original ``fish_speech`` inference path on the published S2-Pro checkpoint.
+original ``fish_speech`` inference path on the published S2-Pro
+checkpoint.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from unittest.mock import patch
 import torch
 from torch import nn
 
+from tests.test_native_fishtts import _tiny_codec_config, _tokenizer_test_config, _write_test_tokenizer
 from voicehub.architectures.fishtts import sampling
 from voicehub.architectures.fishtts.checkpoint import convert_legacy_fish_codec
 from voicehub.architectures.fishtts.codec import FishModifiedDAC, _codec_rotary
@@ -33,8 +35,6 @@ from voicehub.architectures.fishtts.tokenization import FishTokenizer
 from voicehub.checkpointing import SafeTensorReader
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
 from voicehub.processing.waveform import resample_waveform_hann
-
-from tests.test_native_fishtts import _tiny_codec_config, _tokenizer_test_config, _write_test_tokenizer
 
 
 def _source_rotary_table(length: int, dimension: int, base: float) -> torch.Tensor:
@@ -190,7 +190,8 @@ class FishSourceParityTests(unittest.TestCase):
         with patch.object(sampling.torch, "rand_like", side_effect=torch.zeros_like):
             self.assertEqual(int(sampling.sample_exponential_race(probabilities)), 3)
         uniform = torch.rand(8, generator=torch.Generator().manual_seed(2)).to(torch.bfloat16) + 0.01
-        mixed = torch.softmax(torch.randn(8, generator=torch.Generator().manual_seed(6)), -1).to(torch.bfloat16)
+        mixed = torch.softmax(torch.randn(8, generator=torch.Generator().manual_seed(6)),
+                              -1).to(torch.bfloat16)
         with patch.object(sampling.torch, "rand_like", return_value=uniform):
             self.assertEqual(
                 int(sampling.sample_exponential_race(mixed)),
@@ -219,9 +220,9 @@ class FishSourceParityTests(unittest.TestCase):
 
     def test_repetition_window_never_contains_the_prefill_token(self):
         model, prompt, steps, windows, main_token, codebooks = self._tiny_generation(3)
-        with patch.object(sampling, "_sample_main_token", side_effect=main_token), \
-                patch.object(sampling, "_sample_codebooks", side_effect=codebooks):
-            generate_fish_codes(model, prompt, max_new_tokens=steps)
+        with patch.object(sampling, "_sample_main_token", side_effect=main_token):
+            with patch.object(sampling, "_sample_codebooks", side_effect=codebooks):
+                generate_fish_codes(model, prompt, max_new_tokens=steps)
         first = model.config.semantic_begin_id
         self.assertTrue(windows[0].eq(0).all())
         self.assertTrue(windows[1].eq(0).all())
@@ -240,10 +241,10 @@ class FishSourceParityTests(unittest.TestCase):
             ))
             return original(*args, **kwargs)
 
-        with patch.object(model, "forward_generate", side_effect=forward_generate), \
-                patch.object(sampling, "_sample_main_token", side_effect=main_token), \
-                patch.object(sampling, "_sample_codebooks", side_effect=codebooks):
-            generate_fish_codes(model, prompt, max_new_tokens=steps)
+        with patch.object(model, "forward_generate", side_effect=forward_generate):
+            with patch.object(sampling, "_sample_main_token", side_effect=main_token):
+                with patch.object(sampling, "_sample_codebooks", side_effect=codebooks):
+                    generate_fish_codes(model, prompt, max_new_tokens=steps)
         self.assertEqual(backends[0], (True, True, True))
         self.assertEqual(backends[1:], [(False, False, True)] * (steps - 1))
 
@@ -266,7 +267,8 @@ class FishSourceParityTests(unittest.TestCase):
         norm = FishQKRMSNorm(16, epsilon=1e-6).to(torch.bfloat16)
         reference = nn.RMSNorm(16, eps=1e-6).to(torch.bfloat16)
         with torch.no_grad():
-            weight = (1 + 0.1 * torch.randn(16, generator=torch.Generator().manual_seed(8))).to(torch.bfloat16)
+            weight = (1 + 0.1 * torch.randn(16, generator=torch.Generator().manual_seed(8))).to(
+                torch.bfloat16)
             norm.weight.copy_(weight)
             reference.weight.copy_(weight)
             torch.testing.assert_close(norm(values), reference(values), rtol=0, atol=0)
@@ -275,7 +277,8 @@ class FishSourceParityTests(unittest.TestCase):
         config = FishS2Config.tiny().audio_decoder
         attention = FishAttention(config, manual_attention=True)
         generator = torch.Generator().manual_seed(9)
-        query, key, value = (torch.randn(1, 4, 3, 8, generator=generator).to(torch.bfloat16) for _ in range(3))
+        query, key, value = (
+            torch.randn(1, 4, 3, 8, generator=generator).to(torch.bfloat16) for _ in range(3))
         mask = torch.tril(torch.ones(3, 3, dtype=torch.bool))[None, None]
         bias = torch.zeros(1, 1, 3, 3, dtype=query.dtype)
         bias = torch.where(mask.logical_not(), float("-inf"), bias)
