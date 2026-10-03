@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+import itertools
 import tempfile
 import unittest
 import wave
@@ -15,10 +17,14 @@ from voicehub.processing import (
     load_pcm_wave,
     normalize_waveform,
     resample_waveform,
+    resample_waveform_hann,
     resample_waveform_kaiser,
     save_pcm_wave,
 )
 from voicehub.training.data import load_audio_tensor
+
+TORCHAUDIO_AVAILABLE = importlib.util.find_spec("torchaudio") is not None
+HANN_RATES = (8_000, 16_000, 22_050, 24_000, 32_000, 44_100, 48_000)
 
 
 class NativeWaveformTests(unittest.TestCase):
@@ -76,6 +82,115 @@ class NativeWaveformTests(unittest.TestCase):
         result.square().mean().backward()
         self.assertIsNotNone(waveform.grad)
         self.assertTrue(torch.isfinite(waveform.grad).all())
+
+    def test_hann_resampling_reproduces_torchaudio_reference_values(self):
+        # Reference values: torchaudio 2.8 functional.resample and
+        # transforms.Resample(24_000, 16_000) on the same input.
+        waveform = torch.sin(torch.arange(40, dtype=torch.float32) * 0.7).reshape(2, 20)
+        waveform = waveform * torch.tensor([[1.0], [0.5]])
+        expected_down = torch.tensor([
+            [
+                0.0717478022, 0.8524141908, 0.8707162142, -0.0125372773, -0.8699551821, -0.8599711657,
+                0.0168276150, 0.8764830232, 0.8563733697, -0.0327278748, -0.8594605923, -0.8959908485,
+                0.1374603957, 0.3783452809
+            ],
+            [
+                0.4162121117, 0.3320973814, -0.2035598010, -0.4904620647, -0.3044177592, 0.1952179372,
+                0.4967935085, 0.2993372679, -0.1987964362, -0.4983800352, -0.2914739549, 0.1921815574,
+                0.5212510228, 0.2016496360
+            ],
+        ])
+        expected_up = torch.tensor([
+            0.0018438583, 0.4023151994, 0.8291160464, 0.9869054556, 0.9461240172, 0.7283859849, 0.3354935646,
+            -0.1252679676, -0.5574275851, -0.8716647625, -0.9972223043, -0.9190559387, -0.6293591857,
+            -0.1907602698, 0.2034675181, 0.6615770459, 1.0498452187, 0.7015190125
+        ])
+        up_source = torch.sin(torch.arange(12, dtype=torch.float32) * 0.7)
+        for match in ("functional", "transform"):
+            with self.subTest(match=match):
+                down = resample_waveform_hann(waveform, 24_000, 16_000, match=match)
+                torch.testing.assert_close(down, expected_down, rtol=0, atol=1e-6)
+                up = resample_waveform_hann(up_source, 16_000, 24_000, match=match)
+                torch.testing.assert_close(up, expected_up, rtol=0, atol=1e-6)
+        self.assertIs(resample_waveform_hann(waveform, 16_000, 16_000), waveform)
+
+    def test_hann_resampling_keeps_torchaudio_output_length_rounding(self):
+        # torchaudio computes ceil(new * length / orig) through a float32
+        # tensor: 441 * 47561 / 320 = 65545.003125 becomes 65545, not 65546.
+        # One extra reference sample changed XTTS greedy output entirely.
+        for match in ("functional", "transform"):
+            with self.subTest(match=match):
+                self.assertEqual(
+                    resample_waveform_hann(torch.zeros(47_561), 16_000, 22_050, match=match).shape[-1],
+                    65_545,
+                )
+                self.assertEqual(
+                    resample_waveform_hann(torch.zeros(1, 90_569), 22_050, 16_000, match=match).shape[-1],
+                    65_719,
+                )
+        self.assertEqual(resample_waveform_hann(torch.zeros(77_040), 16_000, 22_050).shape[-1], 106_171)
+
+    def test_hann_resampling_keeps_leading_dimensions_and_gradients(self):
+        waveform = torch.randn(2, 3, 37, dtype=torch.float64, requires_grad=True)
+        result = resample_waveform_hann(waveform, 44_100, 16_000)
+        self.assertEqual(tuple(result.shape), (2, 3, 14))
+        self.assertEqual(result.dtype, torch.float64)
+        torch.testing.assert_close(
+            result[1, 2],
+            resample_waveform_hann(waveform[1:2, 2:3], 44_100, 16_000)[0, 0])
+        result.square().sum().backward()
+        self.assertTrue(torch.isfinite(waveform.grad).all())
+
+    def test_hann_resampling_rejects_invalid_arguments(self):
+        waveform = torch.zeros(8)
+        with self.assertRaisesRegex(ValueError, "match"):
+            resample_waveform_hann(waveform, 16_000, 24_000, match="kaiser")
+        with self.assertRaisesRegex(ValueError, "lowpass_filter_width"):
+            resample_waveform_hann(waveform, 16_000, 24_000, lowpass_filter_width=0)
+        with self.assertRaisesRegex(ValueError, "rolloff"):
+            resample_waveform_hann(waveform, 16_000, 24_000, rolloff=1.5)
+        with self.assertRaisesRegex(ValueError, "source_rate"):
+            resample_waveform_hann(waveform, 16_000.0, 24_000)
+        with self.assertRaisesRegex(TypeError, "floating-point"):
+            resample_waveform_hann(torch.zeros(8, dtype=torch.int16), 16_000, 24_000)
+        with self.assertRaisesRegex(ValueError, "empty"):
+            resample_waveform_hann(torch.zeros(0), 16_000, 24_000)
+
+    def _assert_hann_matches_torchaudio(self, device, dtypes):
+        from torchaudio.functional import resample
+        from torchaudio.transforms import Resample
+
+        generator = torch.Generator().manual_seed(0)
+        lengths = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 17, 160, 1_001)
+        shapes = ((), (2, ), (2, 3))
+        settings = ((6, 0.99), (16, 0.85), (64, 0.9475937167399596))
+        rate_pairs = tuple(itertools.permutations(HANN_RATES, 2))
+        for dtype, (source_rate, target_rate) in itertools.product(dtypes, rate_pairs):
+            for index, length in enumerate(lengths):
+                lowpass_filter_width, rolloff = settings[index % len(settings)]
+                waveform = torch.randn(
+                    *shapes[index % len(shapes)], length, generator=generator, dtype=torch.float64)
+                waveform = waveform.to(device=device, dtype=dtype)
+                options = {"lowpass_filter_width": lowpass_filter_width, "rolloff": rolloff}
+                transform = Resample(source_rate, target_rate, **options).to(device=device, dtype=dtype)
+                for match, expected in (
+                    ("functional", resample(waveform, source_rate, target_rate, **options)),
+                    ("transform", transform(waveform)),
+                ):
+                    actual = resample_waveform_hann(
+                        waveform, source_rate, target_rate, match=match, **options)
+                    if actual.shape != expected.shape or not torch.equal(actual, expected):
+                        self.fail(
+                            f"{match} {dtype} {source_rate}->{target_rate} shape={tuple(waveform.shape)} "
+                            f"options={options}: {tuple(actual.shape)} vs {tuple(expected.shape)}")
+
+    @unittest.skipUnless(TORCHAUDIO_AVAILABLE, "torchaudio is a test-only reference")
+    def test_hann_resampling_is_bit_exact_to_torchaudio_on_cpu(self):
+        self._assert_hann_matches_torchaudio("cpu", (torch.float32, torch.float64))
+
+    @unittest.skipUnless(TORCHAUDIO_AVAILABLE and torch.cuda.is_available(), "needs torchaudio and CUDA")
+    def test_hann_resampling_is_bit_exact_to_torchaudio_on_cuda(self):
+        self._assert_hann_matches_torchaudio("cuda", (torch.float32, torch.float64))
 
     def test_pcm_wave_loading_handles_24_bit_and_downmixes(self):
         frames = (

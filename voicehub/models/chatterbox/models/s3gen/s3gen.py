@@ -15,7 +15,7 @@ from voicehub.models.chatterbox.models.s3gen.utils.mel import mel_spectrogram
 from voicehub.models.chatterbox.models.s3gen.xvector import CAMPPlus
 from voicehub.models.chatterbox.models.s3tokenizer import S3_SR, SPEECH_VOCAB_SIZE, S3Tokenizer
 from voicehub.optimization.protocols import OptimizationCompileTarget
-from voicehub.processing.waveform import resample_waveform
+from voicehub.processing.waveform import resample_waveform_hann
 
 
 def drop_invalid_tokens(x):
@@ -25,11 +25,16 @@ def drop_invalid_tokens(x):
 
 
 def _resample_batch(waveforms: torch.Tensor, source_rate: int, target_rate: int) -> torch.Tensor:
-    """Resample a ``[batch, samples]`` tensor with VoiceHub's native
-    frontend."""
+    """Resample a ``[batch, samples]`` tensor like the released frontend.
+
+    Upstream S3Gen uses ``torchaudio.transforms.Resample(src, dst)``;
+    its CAMPPlus x-vector and S3 prompt tokens are sensitive to the 6-8
+    kHz transition band, so the generic VoiceHub resampler is not a
+    substitute.
+    """
     if source_rate == target_rate:
         return waveforms
-    return torch.stack([resample_waveform(waveform, source_rate, target_rate) for waveform in waveforms])
+    return resample_waveform_hann(waveforms, source_rate, target_rate, match="transform")
 
 
 class S3Token2Mel(torch.nn.Module):
