@@ -342,6 +342,9 @@ class Zonos2DenseFeedForward(nn.Module):
 class Zonos2SonicExperts(nn.Module):
     """Packed Sonic MoE weights with differentiable grouped dispatch."""
 
+    # Routes up to this many token/expert pairs through gathered weights.
+    gather_max_routes = 4
+
     def __init__(self, config: Zonos2ArchitectureConfig) -> None:
         super().__init__()
         self.num_experts = config.moe_n_experts
@@ -367,6 +370,30 @@ class Zonos2SonicExperts(nn.Module):
         up = projected[..., 1::2]
         return F.linear(F.silu(gate) * up, self.w2[expert_index])
 
+    def _gathered_experts(self, hidden_states: Tensor, experts: Tensor) -> Tensor:
+        """Apply one gathered expert per row without a host synchronization."""
+        projected = torch.bmm(
+            hidden_states.unsqueeze(1),
+            self.w13.index_select(0, experts).transpose(1, 2),
+        ).squeeze(1)
+        gate = projected[..., 0::2]
+        up = projected[..., 1::2]
+        return torch.bmm(
+            (F.silu(gate) * up).unsqueeze(1),
+            self.w2.index_select(0, experts).transpose(1, 2),
+        ).squeeze(1)
+
+    def _grouped_experts(self, hidden_states: Tensor, experts: Tensor) -> Tensor:
+        """Apply experts to expert-sorted rows with one host synchronization."""
+        order = torch.argsort(experts, stable=True)
+        counts = torch.bincount(experts, minlength=self.num_experts).tolist()
+        sorted_outputs = torch.cat([
+            self._expert(selected, expert_index)
+            for expert_index, selected in enumerate(hidden_states.index_select(0, order).split(counts))
+            if selected.shape[0] > 0
+        ])
+        return torch.empty_like(sorted_outputs).index_copy(0, order, sorted_outputs)
+
     def forward(
         self,
         hidden_states: Tensor,
@@ -375,31 +402,21 @@ class Zonos2SonicExperts(nn.Module):
     ) -> Tensor:
         if hidden_states.ndim != 2:
             raise ValueError("Sonic expert input must have shape [tokens, hidden].")
-        top_k = expert_indices.shape[-1]
-        flattened_experts = expert_indices.reshape(-1)
-        flattened_weights = route_probabilities.reshape(-1)
-        output = torch.zeros_like(hidden_states)
-        for expert_index in range(self.num_experts):
-            assignments = torch.nonzero(
-                flattened_experts == expert_index,
-                as_tuple=False,
-            ).flatten()
-            if assignments.numel() == 0:
-                continue
-            token_indices = torch.div(
-                assignments,
-                top_k,
-                rounding_mode="floor",
+        # Decode routes a handful of tokens per step: gathering their expert
+        # weights avoids a device-to-host sync per expert. Larger prompts are
+        # grouped by expert so each expert runs one dense projection.
+        if expert_indices.numel() <= self.gather_max_routes:
+            expert_output = torch.stack(
+                [self._gathered_experts(hidden_states, experts) for experts in expert_indices.unbind(-1)],
+                dim=1,
             )
-            selected = hidden_states.index_select(0, token_indices)
-            expert_output = self._expert(selected, expert_index)
-            weights = flattened_weights.index_select(0, assignments).to(dtype=expert_output.dtype)
-            output = output.index_add(
-                0,
-                token_indices,
-                expert_output * weights.unsqueeze(-1),
-            )
-        return output
+        else:
+            expert_output = self._grouped_experts(
+                hidden_states.repeat_interleave(expert_indices.shape[-1], dim=0),
+                expert_indices.reshape(-1),
+            ).view(*expert_indices.shape, hidden_states.shape[-1])
+        weights = route_probabilities.unsqueeze(-1).to(dtype=expert_output.dtype)
+        return (expert_output * weights).sum(dim=1)
 
 
 class Zonos2Router(nn.Module):
