@@ -58,13 +58,24 @@ class RelativePositionalEncoding(nn.Module):
     def __init__(self, config: ParakeetEncoderConfig) -> None:
         super().__init__()
         self.config = config
-        inverse_frequency = 1.0 / (
-            10_000.0**(torch.arange(0, config.hidden_size, 2, dtype=torch.float32) / config.hidden_size))
         self.register_buffer(
             "inv_freq",
-            inverse_frequency,
+            self.inverse_frequency(config.hidden_size),
             persistent=False,
         )
+
+    @staticmethod
+    def inverse_frequency(
+        hidden_size: int,
+        device: torch.device | str | None = None,
+    ) -> torch.Tensor:
+        """Return the deterministic, non-checkpointed frequency buffer."""
+        exponents = torch.arange(0, hidden_size, 2, dtype=torch.float32, device=device) / hidden_size
+        return 1.0 / (10_000.0**exponents)
+
+    def reset_buffers(self, device: torch.device | str) -> None:
+        """Rebuild ``inv_freq`` after meta-device construction."""
+        self.inv_freq = self.inverse_frequency(self.config.hidden_size, device)
 
     @torch.no_grad()
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:

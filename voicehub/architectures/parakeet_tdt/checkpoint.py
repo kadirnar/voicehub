@@ -11,7 +11,7 @@ import torch
 
 from voicehub.architectures.parakeet_tdt.configuration import ParakeetTDTConfig
 from voicehub.architectures.parakeet_tdt.metadata import PARAKEET_TDT_CHECKPOINTS
-from voicehub.architectures.parakeet_tdt.modeling import ParakeetForTDT
+from voicehub.architectures.parakeet_tdt.modeling import ParakeetForTDT, RelativePositionalEncoding
 from voicehub.checkpointing import SafeTensorReader, ShardedSafeTensorReader
 from voicehub.checkpointing.adapters import CheckpointAdapter, CheckpointCompatibilityReport, TensorShapeMismatch
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
@@ -225,7 +225,13 @@ class ParakeetTDTCheckpointAdapter(CheckpointAdapter):
                     strict=False,
                     assign=True,
                 )
+        # Non-persistent buffers are absent from Safetensors; a graph built on
+        # the meta device must rebuild them on the target device.
+        for module in model.modules():
+            if isinstance(module, RelativePositionalEncoding):
+                module.reset_buffers(device)
         remaining = tuple(name for name, value in model.state_dict().items() if value.device.type == "meta")
+        remaining += tuple(name for name, value in model.named_buffers() if value.device.type == "meta")
         if remaining:
             raise CheckpointCompatibilityError(
                 "Parakeet TDT checkpoint assignment left meta tensors: " + ", ".join(remaining[:5]))

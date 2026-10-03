@@ -657,6 +657,26 @@ class NativeParakeetTDTTests(unittest.TestCase):
                     restored.model.state_dict()[name],
                     value,
                 )
+            # The reload builds the graph on the meta device; buffers that
+            # Safetensors does not carry (relative-position frequencies)
+            # must be rebuilt so the restored graph actually runs.
+            self.assertFalse(any(value.is_meta for value in restored.model.buffers()))
+            features = torch.randn(1, 12, 8)
+            mask = torch.ones(1, 12, dtype=torch.long)
+            decoder_ids = torch.tensor([[8, 4]])
+            runtime.model.eval()
+            with torch.no_grad():
+                expected = runtime.model(
+                    features,
+                    attention_mask=mask,
+                    decoder_input_ids=decoder_ids,
+                )
+                actual = restored.model(
+                    features,
+                    attention_mask=mask,
+                    decoder_input_ids=decoder_ids,
+                )
+            torch.testing.assert_close(actual.logits, expected.logits)
 
     def test_training_adapter_does_not_create_directory_before_export(self):
         with tempfile.TemporaryDirectory() as temporary:
