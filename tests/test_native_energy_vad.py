@@ -172,6 +172,19 @@ class AuditokParityRegressionTests(unittest.TestCase):
 
         self.assertEqual([(s.start, s.end) for s in output.segments], [(0.1, 0.4), (0.4, 0.5)])
 
+    def test_wrapper_measures_energy_at_the_input_rate(self):
+        from voicehub.models.vad_auditok import AuditokVADConfig, AuditokVADForVoiceActivityDetection
+
+        # 48 kHz white noise at ~52 dB: auditok.split detects (0.0, 1.0);
+        # resampling to 16 kHz first would drop it below 50 dB.
+        generator = torch.Generator().manual_seed(0)
+        waveform = torch.randn(48_000, generator=generator) * 400 / 32_768
+        model = AuditokVADForVoiceActivityDetection(AuditokVADConfig(), device="cpu")
+        output = model.detect(waveform, sampling_rate=48_000, speech_pad_ms=0)
+
+        self.assertEqual([(s.start, s.end) for s in output.segments], [(0.0, 1.0)])
+        self.assertEqual(output.sample_rate, 48_000)
+
     def test_durations_convert_to_windows_with_auditok_float_rules(self):
         waveform = torch.zeros(16_000)
         waveform[1_600:2_720] = 0.2  # seven 10 ms windows

@@ -80,10 +80,12 @@ class AuditokVADForVoiceActivityDetection(PreTrainedVADModel):
 
         from voicehub.processing.waveform import load_native_audio
 
+        # Auditok measures energy on the input samples at their own rate;
+        # resampling would drop energy above the target Nyquist frequency
+        # and move every decision.
         materialized = load_native_audio(
             audio,
             sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
         )
         analysis_window_s = self.config.analysis_window_s
         if window_size_samples is not None:
