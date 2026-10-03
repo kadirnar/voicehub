@@ -12,7 +12,7 @@ hide:
 
 # FasterWhisper {.vh-model-title}
 
-<p class="vh-model-detail__summary">Uses the faster-whisper backend with language selection, word timestamps, and a bounded beam.</p>
+<p class="vh-model-detail__summary">Follows faster-whisper&#x27;s transcription framing and timestamp seeking on the native Whisper graph with greedy decoding.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Automatic speech recognition</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">whisper</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-asr_faster_whisper">Parameters: 241.7M</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: en, zh +97</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-asr_faster_whisper"><strong>Parameter metadata:</strong> Exact Safetensors total reported by the Hugging Face model API for the registered default checkpoint, retrieved 2026-08-13.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -47,9 +47,9 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Uses the faster-whisper backend with language selection, word timestamps, and a bounded beam.
+**Model-specific path:** Follows faster-whisper's transcription framing and timestamp seeking on the native Whisper graph with greedy decoding.
 
-**Inputs and controls:** Benchmark the converted runtime on the deployment device; results depend on compute type and batching.
+**Inputs and controls:** CTranslate2 quantized compute types, beam search, and word timestamps are not provided; request segment timestamps instead.
 
 ```python
 from pathlib import Path
@@ -69,8 +69,7 @@ model = AutoModelForSpeechRecognition.from_pretrained(
 output = model.transcribe(
     AUDIO_FILE,
     language="en",
-    return_timestamps="word",
-    num_beams=5,
+    return_timestamps=True,
 )
 print(output.text)
 for segment in output.segments:

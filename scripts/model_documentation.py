@@ -794,9 +794,11 @@ INFERENCE_PROFILES = {
     ),
     "asr_faster_whisper":
     _asr(
-        "Uses the faster-whisper backend with language selection, word timestamps, and a bounded beam.",
-        "Benchmark the converted runtime on the deployment device; results depend on compute type and batching.",
-        arguments=('language="en"', 'return_timestamps="word"', "num_beams=5"),
+        "Follows faster-whisper's transcription framing and timestamp seeking on the native Whisper graph with "
+        "greedy decoding.",
+        "CTranslate2 quantized compute types, beam search, and word timestamps are not provided; request segment "
+        "timestamps instead.",
+        arguments=('language="en"', "return_timestamps=True"),
     ),
     "asr_whisperx":
     _asr(
