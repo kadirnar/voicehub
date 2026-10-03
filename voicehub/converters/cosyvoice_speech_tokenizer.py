@@ -58,7 +58,8 @@ def convert_audited_cosyvoice_speech_tokenizer(
     except ModuleNotFoundError as error:
         raise RuntimeError(
             "The explicit conversion tool requires the optional `onnx` "
-            "parser. ONNX Runtime is neither required nor used.") from error
+            "parser; install `voicehub[conversion]`. ONNX Runtime is "
+            "neither required nor used.") from error
     state = _audited_speech_tokenizer_state(
         source,
         onnx=onnx,

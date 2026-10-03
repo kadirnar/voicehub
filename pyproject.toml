@@ -45,6 +45,10 @@ Issues = "https://github.com/kadirnar/voicehub/issues"
 Documentation = "https://kadirnar.github.io/voicehub/"
 
 [project.optional-dependencies]
+# One-time conversion of published ONNX weights (never used at runtime).
+conversion = [
+  "onnx",
+]
 docs = [
   "axe-playwright-python==0.1.8",
   "mkdocs-material==9.7.7",

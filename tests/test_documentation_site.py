@@ -3963,7 +3963,7 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
                 re.MULTILINE,
             ))
 
-        self.assertEqual(declared_extras, {"docs", "test", "training"})
+        self.assertEqual(declared_extras, {"conversion", "docs", "test", "training"})
         for model_spec in list_model_specs(task=None):
             with self.subTest(model_type=model_spec.model_type):
                 self.assertIsNone(model_spec.install_extra)
