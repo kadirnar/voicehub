@@ -359,6 +359,17 @@ class OpenVoiceArchitectureTests(unittest.TestCase):
         self.assertTrue(torch.equal(model.runtime.sources[0], expected_base))
         self.assertTrue(torch.equal(model.runtime.references[0], expected_reference))
 
+    def test_documented_usage_opts_into_the_official_pickle_checkpoint(self):
+        # The default checkpoint is a legacy pickle that only loads with
+        # ``trust_pickle_checkpoint=True``; the published example must run.
+        root = Path(__file__).resolve().parents[1]
+        page = (root / "docs/models/providers/openvoice.md").read_text(encoding="utf-8")
+        usage = page.split("```python", 1)[1].split("```", 1)[0]
+        self.assertIn("from_pretrained(\n    'myshell-ai/OpenVoiceV2'", usage)
+        self.assertIn('AutoConfig.for_model("openvoice", trust_pickle_checkpoint=True)', usage)
+        notebook = (root / "notebooks/models/openvoice.ipynb").read_text(encoding="utf-8")
+        self.assertIn("trust_pickle_checkpoint=True", notebook)
+
     def test_architecture_registration_is_lazy_and_truthful(self):
         spec = get_architecture_spec("openvoice")
         self.assertEqual(spec.architecture_id, "openvoice-v2-converter")
