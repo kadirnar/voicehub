@@ -176,6 +176,8 @@ class FasterWhisperForSpeechRecognition(WhisperForSpeechRecognition):
         max_new_tokens: int | None = None,
         hotwords: str | tuple[str, ...] | list[str] | None = None,
     ) -> ASROutput:
+        import torch
+
         from voicehub.architectures.whisper.decoding import WhisperDecodingConfig
         from voicehub.generation import GenerationConfig
         from voicehub.processing.waveform import load_native_audio
@@ -221,11 +223,12 @@ class FasterWhisperForSpeechRecognition(WhisperForSpeechRecognition):
         if resolved_language is None and multilingual:
             # Like faster-whisper, detect the language once, on the first
             # window of the recording, and reuse it for every window.
-            encoded = self.model.encode(self._window_features(features, 0, window_frames))
-            language_id = self.generation_adapter._detect_languages(
-                encoded,
-                encoder_attention_mask=None,
-            )[0]
+            with torch.inference_mode():
+                encoded = self.model.encode(self._window_features(features, 0, window_frames))
+                language_id = self.generation_adapter._detect_languages(
+                    encoded,
+                    encoder_attention_mask=None,
+                )[0]
             resolved_language = next(
                 code for code, token_id in self.generation_adapter.token_set.language_tokens.items()
                 if token_id == language_id)
