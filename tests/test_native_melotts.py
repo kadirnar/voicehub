@@ -468,7 +468,8 @@ class NativeMeloTTSTests(unittest.TestCase):
 
     @staticmethod
     def _hub_cache_snapshot(root: Path, files: dict[str, Path]) -> Path:
-        """Mirror the Hugging Face cache: named symlinks to suffix-less blobs."""
+        """Mirror the Hugging Face cache: named symlinks to suffix-less
+        blobs."""
         blobs = root / "blobs"
         snapshot = root / "snapshots" / "0123456789abcdef"
         blobs.mkdir(parents=True)
