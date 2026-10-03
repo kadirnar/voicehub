@@ -138,6 +138,27 @@ class BrouhahaFrameGridTests(unittest.TestCase):
                 self.assertEqual(output.scores[frame, 0].item(), value, (num_samples, frame))
 
 
+    def test_last_chunk_runs_as_its_own_batch_like_pyannote(self):
+        # BrouhahaInference.slide: complete chunks in batch_size batches, then
+        # infer(last_chunk[None]); GPU kernels are batch-size dependent.
+        model = PyanNet(_tiny_brouhaha_config()).eval()
+        for num_samples, expected in (
+            (376_320, [30, 1]),
+            (96_000 + 40 * 9_600 + 1, [32, 9, 1]),
+            (470_400, [32, 8]),
+            (50_000, [1]),
+        ):
+            sizes = []
+
+            def fake_forward(batch):
+                sizes.append(batch.shape[0])
+                return torch.zeros(batch.shape[0], model.frame_count(batch.shape[-1]), 3)
+
+            model.forward = fake_forward
+            PyanNetFrameInference(model, batch_size=32)(torch.zeros(num_samples))
+            self.assertEqual(sizes, expected, num_samples)
+
+
 class BrouhahaProviderPostprocessingTests(unittest.TestCase):
 
     def _provider(self, directory):

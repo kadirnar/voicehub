@@ -140,9 +140,18 @@ class PyanNetFrameInference:
 
         parameter = next(self.model.parameters())
         chunks, starts, has_last = self._chunks(waveform.to(device=parameter.device, dtype=parameter.dtype))
+        # pyannote.audio's Inference.slide (and BrouhahaInference.slide)
+        # runs complete chunks in ``batch_size`` batches and the padded last
+        # chunk on its own.  GPU kernels are batch-size dependent, so keep
+        # the same batch composition.
+        complete = chunks.shape[0] - int(has_last)
+        batches = [(offset, min(offset + self.batch_size, complete))
+                   for offset in range(0, complete, self.batch_size)]
+        if has_last:
+            batches.append((complete, complete + 1))
         chunk_outputs = []
-        for offset in range(0, chunks.shape[0], self.batch_size):
-            probabilities = self.model(chunks[offset:offset + self.batch_size])
+        for start, stop in batches:
+            probabilities = self.model(chunks[start:stop])
             if self.model.config.is_brouhaha:
                 chunk_outputs.append(probabilities)
             else:
