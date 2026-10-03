@@ -305,6 +305,22 @@ class WhisperProviderInferenceTests(unittest.TestCase):
             ("voicehub.architectures.whisper.WhisperModel", ),
         )
 
+    def test_openai_whisper_large_aliases_match_upstream_releases(self):
+        # openai-whisper ``_MODELS`` (and faster-whisper) resolve ``large``
+        # to large-v3; large-v1 is published on the Hub as whisper-large.
+        for alias, expected in (
+            ("large", "openai/whisper-large-v3"),
+            ("large-v1", "openai/whisper-large"),
+            ("large-v2", "openai/whisper-large-v2"),
+            ("turbo", "openai/whisper-large-v3-turbo"),
+        ):
+            with self.subTest(alias=alias):
+                model = OpenAIWhisperForSpeechRecognition(
+                    OpenAIWhisperConfig(name_or_path=alias),
+                    device="cpu",
+                )
+                self.assertEqual(model.config.name_or_path, expected)
+
     def test_whisperx_alias_uses_the_native_trainable_graph(self):
         model = WhisperXForSpeechRecognition(
             WhisperXConfig(

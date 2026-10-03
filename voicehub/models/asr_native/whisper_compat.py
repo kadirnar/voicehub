@@ -13,8 +13,10 @@ WHISPER_MODEL_ALIASES = {
     "small.en": "openai/whisper-small.en",
     "medium": "openai/whisper-medium",
     "medium.en": "openai/whisper-medium.en",
-    "large": "openai/whisper-large",
-    "large-v1": "openai/whisper-large-v1",
+    # openai-whisper and faster-whisper map ``large`` to large-v3; the
+    # original large-v1 release is published as ``openai/whisper-large``.
+    "large": "openai/whisper-large-v3",
+    "large-v1": "openai/whisper-large",
     "large-v2": "openai/whisper-large-v2",
     "large-v3": "openai/whisper-large-v3",
     "large-v3-turbo": "openai/whisper-large-v3-turbo",
