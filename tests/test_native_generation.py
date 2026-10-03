@@ -26,8 +26,12 @@ from voicehub.generation import (
 _HOST_READS = ("__bool__", "__float__", "__index__", "__int__", "item", "tolist")
 
 
-def _count_host_reads(function):
-    """Run ``function`` and count tensor-to-host reads it performs."""
+def _count_host_transfers(function):
+    """Run ``function`` and count tensor-to-host reads plus host-built tensors.
+
+    ``torch.tensor`` copies Python data from pageable host memory, which
+    also synchronizes when the target is a CUDA device.
+    """
     counts = collections.Counter()
 
     def counting(name):
@@ -39,8 +43,15 @@ def _count_host_reads(function):
 
         return wrapper
 
+    original_tensor = torch.tensor
+
+    def counting_tensor(*args, **kwargs):
+        counts["tensor"] += 1
+        return original_tensor(*args, **kwargs)
+
     with mock.patch.multiple(torch.Tensor, **{name: counting(name) for name in _HOST_READS}):
-        result = function()
+        with mock.patch("torch.tensor", counting_tensor):
+            result = function()
     return result, sum(counts.values())
 
 
@@ -332,14 +343,11 @@ class HostSynchronizationTests(unittest.TestCase):
             pad_token_id=0,
             **_SAMPLING_CONFIG,
         )
-        output, reads = _count_host_reads(
-            lambda: AutoregressiveGenerator().generate(
-                decoder_step,
-                torch.tensor([[1, 5, 6]]),
-                config,
-            ))
+        prompt = torch.tensor([[1, 5, 6]])
+        output, reads = _count_host_transfers(
+            lambda: AutoregressiveGenerator().generate(decoder_step, prompt, config))
 
-        steps = output.sequences.shape[1] - 3
+        steps = output.sequences.shape[1] - prompt.shape[1]
         self.assertGreater(steps, 0)
         self.assertLessEqual(reads, steps)
 
@@ -371,7 +379,7 @@ class HostSynchronizationTests(unittest.TestCase):
         )
         prompt = torch.tensor([[1, 5, 6, 7]])
         with torch.no_grad():
-            output, reads = _count_host_reads(lambda: model.generate(prompt, generation_config=generation))
+            output, reads = _count_host_transfers(lambda: model.generate(prompt, generation_config=generation))
 
         steps = output.sequences.shape[1] - prompt.shape[1]
         self.assertGreater(steps, 0)
