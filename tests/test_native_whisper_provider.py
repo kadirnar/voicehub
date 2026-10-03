@@ -450,7 +450,8 @@ print(json.dumps({name: name in sys.modules for name in names}))
                 center=True,
                 return_complex=True,
             )[..., :-1].abs()**2
-            filters = mel_filter_bank(sample_rate=16_000, n_fft=400, n_mels=4)
+            # Native Whisper uses OpenAI's librosa float32 Slaney bank.
+            filters = mel_filter_bank(sample_rate=16_000, n_fft=400, n_mels=4, match_librosa=True)
             expected = torch.clamp(filters @ power, min=1e-10).log10()
             expected = (torch.maximum(expected, expected.max() - 8.0) + 4.0) / 4.0
             self.assertEqual(tuple(expected.shape), (4, 20))
