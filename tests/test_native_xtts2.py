@@ -247,7 +247,8 @@ class NativeXTTS2Tests(unittest.TestCase):
         )
         padded = F.pad(text, (1, 1), value=model.stop_text_token)
         padded[:, 0] = model.start_text_token
-        prefix = torch.cat((conditioning, model.text_embedding(padded) + model.text_pos_embedding(padded)), dim=1)
+        prefix = torch.cat((conditioning, model.text_embedding(padded) + model.text_pos_embedding(padded)),
+                           dim=1)
         expected = torch.full((1, 1), model.start_audio_token)
         with torch.no_grad():
             for _ in range(generated.shape[1]):
@@ -298,7 +299,9 @@ class NativeXTTS2Tests(unittest.TestCase):
 
     def test_tokenizer_matches_source_multilingual_cleaners(self):
         cases = (
-            ("en", 'Mr. Smith & Dr. "Jones" met at St. Paul\'s.', "mister smith and doctor jones met at saint paul's."),
+            (
+                "en", 'Mr. Smith & Dr. "Jones" met at St. Paul\'s.',
+                "mister smith and doctor jones met at saint paul's."),
             # The source lowercases before its Turkish capital replacements.
             ("tr", "İstanbul'da Dr. Öz", "i\u0307stanbul'da doktor öz"),
             ("hi", 'नमस्ते "दोस्त"  & आप', 'नमस्ते "दोस्त" & आप'),
@@ -383,13 +386,18 @@ class NativeXTTS2Tests(unittest.TestCase):
         source = nn.Sequential(nn.Conv2d(1, 2, 1), nn.BatchNorm2d(2))
         payload = {
             "config": fake_config(),
-            "model": {"xtts." + name: value
-                      for name, value in source.state_dict().items()},
+            "model": {
+                "xtts." + name: value
+                for name, value in source.state_dict().items()
+            },
         }
         payload["config"].temperature = 0.75
         with tempfile.TemporaryDirectory() as directory:
             legacy = Path(directory) / "model.pth"
-            previous = {name: sys.modules.get(name) for name in ("TTS", "TTS.tts", "TTS.tts.configs", module_name)}
+            previous = {
+                name: sys.modules.get(name)
+                for name in ("TTS", "TTS.tts", "TTS.tts.configs", module_name)
+            }
             try:
                 for name in previous:
                     sys.modules[name] = fake_module if name == module_name else types.ModuleType(name)

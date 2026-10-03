@@ -154,8 +154,8 @@ def cloning_mel(
     hop_length: int = 256,
     win_length: int = 1_024,
 ) -> Tensor:
-    """Source ``wav_to_mel_cloning``; like the source it always runs on the
-    CPU in float32 and returns the mel on the waveform's device/dtype."""
+    """Source ``wav_to_mel_cloning``; like the source it always runs on the CPU
+    in float32 and returns the mel on the waveform's device/dtype."""
     transform = MelSpectrogram(
         sample_rate=sample_rate,
         n_fft=n_fft,
