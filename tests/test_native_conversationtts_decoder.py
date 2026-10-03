@@ -209,6 +209,39 @@ class ConversationPromptAudioTests(unittest.TestCase):
                 torch.testing.assert_close(actual, expected, rtol=0, atol=0)
             self.assertFalse(torch.equal(expected, resample_waveform(decoded, 16_000, 24_000)))
 
+    def test_mimi_tokenize_resamples_each_row_without_a_channel_downmix(self):
+        # Upstream MimiTokenizer.tokenize applies torchaudio.transforms.Resample
+        # to a [batch, time] tensor and encodes every row as its own example.
+        from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.MimiCodec import mimi_tokenizer
+        from voicehub.processing.waveform import resample_waveform_hann
+
+        class RecordingCodec:
+
+            def __init__(self):
+                self.inputs = []
+
+            def encode(self, wav):
+                self.inputs.append(wav)
+                return torch.zeros(wav.shape[0], 32, 2, dtype=torch.long)
+
+        tokenizer = mimi_tokenizer.MimiTokenizer.__new__(mimi_tokenizer.MimiTokenizer)
+        torch.nn.Module.__init__(tokenizer)
+        tokenizer.sr = 24_000
+        tokenizer.device = torch.device("cpu")
+        tokenizer.model = RecordingCodec()
+        rows = torch.stack((
+            torch.sin(torch.arange(1_600, dtype=torch.float32) * 0.37),
+            torch.cos(torch.arange(1_600, dtype=torch.float32) * 0.11),
+        )) * 0.5
+
+        codes = tokenizer.tokenize(rows, sample_rate=16_000)
+
+        (encoded, ) = tokenizer.model.inputs
+        self.assertEqual(tuple(encoded.shape), (2, 1, 2_400))
+        expected = resample_waveform_hann(rows, 16_000, 24_000, match="transform")
+        torch.testing.assert_close(encoded[:, 0], expected, rtol=0, atol=0)
+        self.assertEqual(tuple(codes.shape), (2, 32, 2))
+
 
 if __name__ == "__main__":
     unittest.main()

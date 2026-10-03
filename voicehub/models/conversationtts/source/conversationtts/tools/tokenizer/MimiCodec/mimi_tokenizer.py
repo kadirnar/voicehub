@@ -139,12 +139,14 @@ class MimiTokenizer(AbsTokenizer):
                     return None
                 if sample_rate != self.sr:
                     # Upstream: torchaudio.transforms.Resample(sample_rate, 24000).
+                    # Rows are independent waveforms (they become the batch
+                    # axis below), so resample them without a channel downmix.
                     wav = resample_waveform_hann(
-                        load_audio(wav, sampling_rate=sample_rate).waveform,
+                        wav,
                         sample_rate,
                         self.sr,
                         match="transform",
-                    ).unsqueeze(0)
+                    )
                 wav = wav.unsqueeze(1).to(self.device) # (1,1,len)
             wav = wav.to(self.device)
             with torch.no_grad():
