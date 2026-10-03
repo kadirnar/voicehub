@@ -318,6 +318,16 @@ class NativeCosyVoiceObjectiveTests(unittest.TestCase):
 
 class NativeCosyVoiceRuntimeTests(unittest.TestCase):
 
+    def test_text_tokenizer_applies_qwen2_nfc_normalization(self):
+        # CosyVoice loads its Qwen2 tokenizer with AutoTokenizer, which
+        # normalizes text to NFC before byte-level BPE.
+        with tempfile.TemporaryDirectory() as directory:
+            tokenizer = _write_tiny_tokenizer(Path(directory))
+        composed = tokenizer.encode("Caf\u00e9").input_ids
+        decomposed = tokenizer.encode("Cafe\u0301").input_ids
+        self.assertEqual(decomposed, composed)
+        self.assertEqual(list(composed[-2:]), [0xC3, 0xA9])
+
     def test_strict_safetensors_roundtrip_reload_and_public_inference(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
