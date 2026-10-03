@@ -110,21 +110,22 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
 
         if (runtime.model is None or runtime.native_config is None or runtime.ctc_processor is None):
             raise RuntimeError("Native Wav2Vec2 alignment runtime is not loaded.")
-        prepared = runtime.ctc_processor.prepare_audio_batch((waveform, ))
-        input_values = prepared["input_values"]
-        attention_mask = prepared["attention_mask"]
+        if (not isinstance(waveform, torch.Tensor) or waveform.ndim != 1 or waveform.numel() == 0 or
+                not waveform.is_floating_point()):
+            raise ValueError("Alignment audio must be a non-empty floating-point mono tensor.")
+        # WhisperX feeds the alignment model the raw segment samples: neither
+        # its torchaudio bundles nor its Transformers path apply the
+        # processor's zero-mean/unit-variance normalization.
+        input_values = waveform.float().reshape(1, -1)
         minimum = runtime.native_config.minimum_input_samples
         if input_values.shape[-1] < minimum:
-            padding = minimum - input_values.shape[-1]
+            # Like WhisperX, zero-pad segments shorter than the convolutional
+            # receptive field and align against every emitted frame.
             input_values = torch.nn.functional.pad(
                 input_values,
-                (0, padding),
+                (0, minimum - input_values.shape[-1]),
             )
-            attention_mask = torch.nn.functional.pad(
-                attention_mask,
-                (0, padding),
-                value=0,
-            )
+        attention_mask = torch.ones_like(input_values, dtype=torch.bool)
         parameter = next(runtime.model.parameters())
         with torch.inference_mode():
             result = runtime.model(
@@ -134,10 +135,7 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
                 ),
                 attention_mask=attention_mask.to(parameter.device),
             )
-        frames = int(result.input_lengths[0].item())
-        if frames <= 0:
-            raise RuntimeError("Native Wav2Vec2 produced no valid alignment frames.")
-        return result.logits[0, :frames].float().log_softmax(dim=-1)
+        return result.logits[0].float().log_softmax(dim=-1)
 
     def _align_segments(
         self,

@@ -199,6 +199,68 @@ class NativeWhisperXProviderTests(unittest.TestCase):
             True,
         )
 
+    def test_alignment_emission_uses_raw_samples_like_whisperx(self):
+        # WhisperX feeds its alignment models raw audio; the Transformers
+        # processor's zero-mean/unit-variance normalization must not apply.
+        class RecordingCTC(torch.nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.scale = torch.nn.Parameter(torch.ones(()))
+                self.inputs = []
+
+            def forward(self, input_values, attention_mask=None):
+                self.inputs.append((input_values.clone(), attention_mask))
+                frames = 2 + input_values.shape[-1] // 400
+                logits = torch.arange(frames * 3, dtype=torch.float32).reshape(1, frames, 3)
+                return SimpleNamespace(logits=logits, input_lengths=torch.tensor([0]))
+
+        model = RecordingCTC()
+        processor = SimpleNamespace(prepare_audio_batch=lambda waveforms: self.fail("processor normalization used"))
+        runtime = SimpleNamespace(
+            model=model,
+            native_config=SimpleNamespace(minimum_input_samples=400),
+            ctc_processor=processor,
+        )
+        waveform = torch.linspace(0.1, 0.3, 800)
+
+        emission = WhisperXForSpeechRecognition._ctc_emission(runtime, waveform)
+
+        torch.testing.assert_close(model.inputs[0][0], waveform[None])
+        self.assertEqual(emission.shape, (4, 3))
+        torch.testing.assert_close(emission.exp().sum(dim=-1), torch.ones(4))
+
+    def test_short_alignment_segments_are_zero_padded_without_failing(self):
+        # Like WhisperX, a segment shorter than the receptive field is
+        # zero-padded and aligned against every emitted frame.
+        class OneFrameCTC(torch.nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.scale = torch.nn.Parameter(torch.ones(()))
+                self.inputs = []
+
+            def forward(self, input_values, attention_mask=None):
+                self.inputs.append(input_values.clone())
+                return SimpleNamespace(
+                    logits=torch.zeros(1, 1, 3),
+                    input_lengths=torch.tensor([0]),
+                )
+
+        model = OneFrameCTC()
+        runtime = SimpleNamespace(
+            model=model,
+            native_config=SimpleNamespace(minimum_input_samples=400),
+            ctc_processor=SimpleNamespace(),
+        )
+
+        emission = WhisperXForSpeechRecognition._ctc_emission(runtime, torch.full((320, ), 0.5))
+
+        self.assertEqual(emission.shape, (1, 3))
+        self.assertEqual(model.inputs[0].shape, (1, 400))
+        torch.testing.assert_close(model.inputs[0][0, :320], torch.full((320, ), 0.5))
+        torch.testing.assert_close(model.inputs[0][0, 320:], torch.zeros(80))
+
     def test_alignment_is_not_loaded_for_plain_transcription(self):
         model = WhisperXForSpeechRecognition(
             WhisperXConfig(name_or_path="small"),
