@@ -124,7 +124,7 @@ def test_worker_metadata_is_json_safe():
     assert safe["durations"] == {"shape": [2, 3], "dtype": "torch.float32"}
     assert safe["steps"] == 4 and safe["scale"] == 0.5
     assert safe["nested"] == [{"shape": [2], "dtype": "float32"}, [1, "a"]]
-    assert safe["path"] == "/tmp/x.wav" and safe["missing"] is None
+    assert safe["path"] == str(Path("/tmp/x.wav")) and safe["missing"] is None
     json.dumps(safe, allow_nan=False)
 
 
