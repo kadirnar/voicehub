@@ -32,7 +32,8 @@ def suppress_long_silences(
     silent_tokens: frozenset[int] = SILENT_SPEECH_TOKENS,
     max_consecutive: int = MAX_CONSECUTIVE_SILENT_TOKENS,
 ) -> Tensor:
-    """Drop silent tokens beyond ``max_consecutive`` in a run, as the source does."""
+    """Drop silent tokens beyond ``max_consecutive`` in a run, as the source
+    does."""
     if speech_tokens.ndim != 2 or speech_tokens.shape[0] != 1:
         raise ValueError("`speech_tokens` must have shape [1, sequence].")
     kept: list[int] = []

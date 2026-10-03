@@ -320,7 +320,8 @@ class CosyVoiceSourceNoise:
         self._device_cache: dict[torch.device, Tensor] = {}
 
     def noise(self, samples: int, *, device: torch.device) -> Tensor:
-        """Leading ``samples`` rows of the uniform ``[1, T, harmonics + 1]`` table."""
+        """Leading ``samples`` rows of the uniform ``[1, T, harmonics + 1]``
+        table."""
         if samples > SOURCE_NOISE_MAX_SAMPLES:
             raise ValueError("CosyVoice HiFT supports at most 300 seconds per call.")
         if self._table.shape[1] < samples:

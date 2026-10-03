@@ -73,10 +73,10 @@ def _validate_token_batch(
 def nucleus_keep_count(ordered_probabilities: Tensor, *, top_p: float, top_k: int) -> int:
     """Length of the source nucleus prefix for descending probabilities.
 
-    The source keeps the next candidate while the float32 running sum of the
-    already-kept full-vocabulary probabilities is below ``top_p`` and fewer
-    than ``top_k`` are kept. It is not top-p over a top-k-renormalized
-    distribution.
+    The source keeps the next candidate while the float32 running sum of
+    the already-kept full-vocabulary probabilities is below ``top_p``
+    and fewer than ``top_k`` are kept. It is not top-p over a top-k-
+    renormalized distribution.
     """
     head = ordered_probabilities.detach().to(device="cpu", dtype=torch.float32).flatten()
     cumulative = 0.0
@@ -291,9 +291,9 @@ class CosyVoiceLanguageModel(nn.Module):
 
         The kept prefix is chosen on the *full-vocabulary* distribution
         (not after top-k renormalization) with the source's sequential
-        float32 accumulation, and the draw uses ``multinomial`` on the kept
-        probabilities in descending stable order so a generator seeded like
-        the source consumes randomness identically.
+        float32 accumulation, and the draw uses ``multinomial`` on the
+        kept probabilities in descending stable order so a generator
+        seeded like the source consumes randomness identically.
         """
         probabilities = scores.softmax(dim=0)
         ordered, order = probabilities.sort(descending=True, stable=True)
@@ -354,15 +354,14 @@ class CosyVoiceLanguageModel(nn.Module):
         max_token_text_ratio: float = 20.0,
         generator: torch.Generator | None = None,
     ) -> Tensor:
-        """Autoregressively generate speech IDs through VoiceHub's Qwen
-        graph.
+        """Autoregressively generate speech IDs through VoiceHub's Qwen graph.
 
         Decoding follows the source ``CosyVoice3LM.inference`` recipe:
-        ``SOS, instruction/prompt text, text, TASK, prompt speech`` is the
-        prefix, every step samples from the full speech/control vocabulary
-        with repetition-aware nucleus sampling (top-p 0.8, top-k 25, window
-        10, tau 0.1), and the default length cap is ``20 x`` the number of
-        synthesis text tokens.
+        ``SOS, instruction/prompt text, text, TASK, prompt speech`` is
+        the prefix, every step samples from the full speech/control
+        vocabulary with repetition-aware nucleus sampling (top-p 0.8,
+        top-k 25, window 10, tau 0.1), and the default length cap is
+        ``20 x`` the number of synthesis text tokens.
         """
         if not isinstance(text_tokens, Tensor) or text_tokens.ndim != 2:
             raise ValueError("`text_tokens` must have shape [batch, sequence].")

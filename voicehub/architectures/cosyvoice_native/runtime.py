@@ -146,9 +146,9 @@ class CosyVoiceNativeRuntime:
     ) -> tuple[Tensor, Tensor]:
         """Return source-aligned ``(prompt_speech_tokens, prompt_features)``.
 
-        Mirrors the source ``frontend_zero_shot``: speech tokens from 16 kHz
-        audio, the flow's prompt mel from 24 kHz audio, then both truncated
-        so that ``mel frames == 2 x tokens``.
+        Mirrors the source ``frontend_zero_shot``: speech tokens from 16
+        kHz audio, the flow's prompt mel from 24 kHz audio, then both
+        truncated so that ``mel frames == 2 x tokens``.
         """
         if self.speech_tokenizer is None:
             raise RuntimeError(

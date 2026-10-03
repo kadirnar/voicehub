@@ -1,9 +1,9 @@
 """Regression tests for CosyVoice 3 source parity (no network, CPU only).
 
-Each test pins one behavior that the upstream-parity audit found to differ
-from the source ``FunAudioLLM/CosyVoice`` inference path. Constants marked
-"source" were captured from the source repository at revision
-074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc.
+Each test pins one behavior that the upstream-parity audit found to
+differ from the source ``FunAudioLLM/CosyVoice`` inference path.
+Constants marked "source" were captured from the source repository at
+revision 074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc.
 """
 
 from __future__ import annotations
@@ -41,7 +41,8 @@ from voicehub.tokenization import encode_gpt2_token
 
 
 def _source_nucleus(weighted_scores, top_p=0.8, top_k=25):
-    """Transcription of the source ``cosyvoice.utils.common.nucleus_sampling``."""
+    """Transcription of the source
+    ``cosyvoice.utils.common.nucleus_sampling``."""
     prob, indices = [], []
     cum_prob = 0.0
     sorted_value, sorted_idx = weighted_scores.softmax(dim=0).sort(descending=True, stable=True)

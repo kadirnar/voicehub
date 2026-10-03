@@ -1,13 +1,13 @@
 """Source-exact CosyVoice 3 prompt-audio frontend (PyTorch only).
 
-The source frontend loads prompt audio with ``torchaudio.load``, resamples
-with ``torchaudio.transforms.Resample`` (reproduced by
+The source frontend loads prompt audio with ``torchaudio.load``,
+resamples with ``torchaudio.transforms.Resample`` (reproduced by
 :func:`voicehub.processing.resample_waveform_hann` with
 ``match="transform"``), extracts speech tokens at 16 kHz and the flow's
-prompt mel at 24 kHz with Matcha-TTS ``mel_spectrogram`` (n_fft
-1920, hop 480, 80 Slaney mels, ``center=False`` with reflect padding,
-natural-log compression). Both steps run on CPU in float32 like the
-source; only the results move to the model device.
+prompt mel at 24 kHz with Matcha-TTS ``mel_spectrogram`` (n_fft 1920,
+hop 480, 80 Slaney mels, ``center=False`` with reflect padding, natural-
+log compression). Both steps run on CPU in float32 like the source; only
+the results move to the model device.
 """
 
 from __future__ import annotations

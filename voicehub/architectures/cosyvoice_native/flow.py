@@ -175,9 +175,10 @@ def _apply_leading_rotary(values: Tensor, rotary: tuple[Tensor, Tensor]) -> Tens
     """Rotate only the leading ``2 * frequencies`` channels.
 
     The source DiT uses ``x_transformers.apply_rotary_pos_emb`` on the
-    projected ``[batch, sequence, heads * head_dim]`` tensor *before* the
-    head split. Its frequency table spans one head, so only the first head's
-    channels are rotated and every other head stays position-agnostic.
+    projected ``[batch, sequence, heads * head_dim]`` tensor *before*
+    the head split. Its frequency table spans one head, so only the
+    first head's channels are rotated and every other head stays
+    position-agnostic.
     """
     width = rotary[0].shape[-1] * 2
     return torch.cat(
@@ -835,10 +836,10 @@ class CosyVoiceFlowMatchingModel(nn.Module):
     ) -> Tensor:
         """Generate mel frames for ``speech_tokens`` only.
 
-        Like the source ``CausalMaskedDiffWithDiT.inference``, prompt speech
-        tokens are prepended to the generated tokens, the prompt mel
-        occupies the matching leading conditioning frames, and the prompt
-        region is removed from the returned features.
+        Like the source ``CausalMaskedDiffWithDiT.inference``, prompt
+        speech tokens are prepended to the generated tokens, the prompt
+        mel occupies the matching leading conditioning frames, and the
+        prompt region is removed from the returned features.
         """
         if speech_tokens.shape[0] != 1:
             raise ValueError("CosyVoice flow inference supports one utterance.")
