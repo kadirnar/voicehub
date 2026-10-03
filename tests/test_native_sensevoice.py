@@ -507,6 +507,50 @@ class NativeSenseVoiceTests(unittest.TestCase):
         )
         self.assertEqual([(word.text, word.start, word.end) for word in words], [("hi", 0.0, 0.03)])
 
+    def test_rich_postprocess_removes_garbage_tag_like_funasr(self):
+        self.assertEqual(
+            rich_transcription_postprocess("<|en|><|NEUTRAL|><|Speech|><|woitn|>hello<|GBG|> world"),
+            "hello world",
+        )
+
+    def test_raw_decode_drops_control_pieces_like_sentencepiece(self):
+        from voicehub.tokenization.sentencepiece_unigram import (
+            SentencePieceUnigramAssets,
+            SentencePieceUnigramPiece,
+            SentencePieceUnigramTokenizer,
+        )
+
+        pieces = (
+            SentencePieceUnigramPiece("<unk>", 0.0, 2),
+            SentencePieceUnigramPiece("<s>", 0.0, 3),
+            SentencePieceUnigramPiece("</s>", 0.0, 3),
+            SentencePieceUnigramPiece("▁hi", -1.0),
+            SentencePieceUnigramPiece("<|en|>", 0.0, 4),
+        )
+        tokenizer = SenseVoiceTokenizer(
+            SentencePieceUnigramTokenizer(
+                SentencePieceUnigramAssets(
+                    pieces=pieces,
+                    unk_token_id=0,
+                    bos_token_id=1,
+                    eos_token_id=2,
+                    pad_token_id=-1,
+                    unk_surface=" ⁇ ",
+                    byte_fallback=False,
+                    normalizer_name="identity",
+                    add_dummy_prefix=False,
+                    remove_extra_whitespaces=True,
+                    escape_whitespaces=True,
+                    has_precompiled_normalizer=False,
+                    original_model=b"",
+                )),
+            strict_release=False,
+        )
+        # sentencepiece DecodeIds: control pieces decode to nothing,
+        # user-defined rich tags are kept.
+        self.assertEqual(tokenizer.decode_raw([4, 1, 3, 2]), "<|en|> hi")
+        self.assertEqual(tokenizer.decode_raw([1, 3]), "hi")
+
     def test_rich_postprocess_and_composed_model_boundary(self):
         self.assertEqual(
             rich_transcription_postprocess("<|en|><|HAPPY|><|Laughter|><|woitn|>hello"),

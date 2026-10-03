@@ -67,13 +67,17 @@ _EVENT_EMOJI = {
 _EMOTION_EMOJIS = frozenset(value for value in _EMOTION_EMOJI.values() if value)
 _EVENT_EMOJIS = frozenset(value for value in _EVENT_EMOJI.values() if value)
 _LANGUAGE_MARKERS = frozenset(spelling for spelling, _ in LANGUAGE_TOKENS.values())
-_ALL_CONTROL_SPELLINGS = frozenset(
-    spelling for values in (
+# FunASR's rich post-processing also deletes the <|GBG|> (25,018) tag.
+GARBAGE_TOKEN = ("<|GBG|>", 25_018)
+_ALL_CONTROL_SPELLINGS = frozenset((
+    GARBAGE_TOKEN[0],
+    *(spelling for values in (
         LANGUAGE_TOKENS,
         EMOTION_TOKENS,
         EVENT_TOKENS,
         TEXT_NORMALIZATION_TOKENS,
-    ) for spelling, _ in values.values())
+    ) for spelling, _ in values.values()),
+))
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,6 +192,7 @@ class SenseVoiceTokenizer:
             )
             for spelling, token_id in values.values()
         }
+        expected[GARBAGE_TOKEN[0]] = GARBAGE_TOKEN[1]
         mismatches = {
             token_id: (
                 self.sentencepiece.id_to_piece(token_id),
@@ -246,9 +251,11 @@ class SenseVoiceTokenizer:
         )
 
     def decode_raw(self, token_ids: Iterable[int]) -> str:
+        # Like SentencePiece DecodeIds, drop <s>/</s> control pieces; the
+        # rich tags are user-defined pieces and stay in the raw text.
         return self.sentencepiece.decode(
             token_ids,
-            skip_special_tokens=False,
+            skip_special_tokens=True,
         )
 
     def decode_text(self, token_ids: Iterable[int]) -> str:
@@ -300,6 +307,7 @@ class SenseVoiceTokenizer:
 __all__ = [
     "EMOTION_TOKENS",
     "EVENT_TOKENS",
+    "GARBAGE_TOKEN",
     "LANGUAGE_TOKENS",
     "TEXT_NORMALIZATION_TOKENS",
     "SenseVoiceSemantics",
