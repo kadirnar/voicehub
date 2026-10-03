@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import torch
 
@@ -27,6 +28,7 @@ from voicehub.hub import write_json_file
 from voicehub.modeling_outputs import SpeechSegment
 from voicehub.models.vad_funasr import FSMNVADTrainingDataset, FunASRVADConfig, FunASRVADForVoiceActivityDetection
 from voicehub.models.vad_funasr.modeling_vad_funasr import _postprocess_segments
+from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.registry import get_model_spec
 from voicehub.training import get_training_spec
 
@@ -325,6 +327,36 @@ class NativeFSMNVADProviderTests(unittest.TestCase):
         for segment, (start, end) in zip(padded, ((0.16, 10.24), (11.21, 18.81))):
             self.assertAlmostEqual(segment.start, start, places=9)
             self.assertAlmostEqual(segment.end, end, places=9)
+
+    def test_other_sampling_rates_are_resampled_like_torchaudio_transform(self):
+        # FunASR resamples with torchaudio.transforms.Resample(audio_fs, 16000).
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _native_artifact(root / "artifact")
+            wrapper = FunASRVADForVoiceActivityDetection(
+                FunASRVADConfig(name_or_path=root / "artifact"),
+                device="cpu",
+            ).load()
+            audio = 0.1 * torch.randn(8_000, generator=torch.Generator().manual_seed(0))
+            captured = []
+            original = wrapper._native_inference
+
+            def capture(waveform, **kwargs):
+                captured.append(waveform)
+                return original(waveform, **kwargs)
+
+            with mock.patch.object(wrapper, "_native_inference", side_effect=capture):
+                output = wrapper.detect(
+                    audio,
+                    sampling_rate=8_000,
+                    min_speech_duration_ms=0,
+                    speech_pad_ms=0,
+                )
+            expected = resample_waveform_hann(audio, 8_000, 16_000, match="transform")
+            self.assertEqual(len(captured), 1)
+            self.assertTrue(torch.equal(captured[0], expected))
+            self.assertEqual(output.sample_rate, 16_000)
+            self.assertAlmostEqual(output.duration, 1.0)
 
     def test_load_detect_train_export_and_reload(self):
         with tempfile.TemporaryDirectory() as directory:

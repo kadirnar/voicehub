@@ -207,7 +207,7 @@ class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
         window_size_samples: int | None = None,
         return_frames: bool = False,
     ) -> VADOutput:
-        from voicehub.processing.waveform import load_native_audio
+        from voicehub.processing.waveform import NativeAudio, load_native_audio, resample_waveform_hann
 
         if window_size_samples is not None:
             expected = (None if self.native_config is None else self.native_config.frame_length_samples)
@@ -225,11 +225,20 @@ class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
             raise ValueError(
                 "FSMN VAD exposes one speech/noise threshold and cannot "
                 "apply independent `onset` and `offset` values.")
-        materialized = load_native_audio(
-            audio,
-            sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
-        )
+        materialized = load_native_audio(audio, sampling_rate=sampling_rate)
+        if materialized.sampling_rate != self.sample_rate:
+            # FunASR load_audio_text_image_video converts other rates with
+            # torchaudio.transforms.Resample(audio_fs, 16000).
+            materialized = NativeAudio(
+                waveform=resample_waveform_hann(
+                    materialized.waveform,
+                    materialized.sampling_rate,
+                    self.sample_rate,
+                    match="transform",
+                ),
+                sampling_rate=self.sample_rate,
+                path=materialized.path,
+            )
         if materialized.waveform.numel() < 400:
             raise ValueError("Native FSMN VAD requires at least 25 ms (400 samples) of audio.")
         speech, boundaries = self._native_inference(
