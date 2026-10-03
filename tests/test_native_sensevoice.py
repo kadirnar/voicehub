@@ -21,7 +21,7 @@ from voicehub.architectures.sensevoice.checkpoint import (
     tensor_inventory_fingerprint,
 )
 from voicehub.architectures.sensevoice.configuration import SenseVoiceSmallConfig
-from voicehub.architectures.sensevoice.decoding import ctc_forced_align, ctc_greedy_tokens
+from voicehub.architectures.sensevoice.decoding import ctc_forced_align, ctc_greedy_tokens, sensevoice_word_timestamps
 from voicehub.architectures.sensevoice.frontend import load_sensevoice_cmvn, low_frame_rate_stack
 from voicehub.architectures.sensevoice.metadata import (
     FUNASR_SOURCE_REVISION,
@@ -463,6 +463,49 @@ class NativeSenseVoiceTests(unittest.TestCase):
             tuple(token for token in torch.unique_consecutive(alignment).tolist() if token),
             (1, 2),
         )
+
+    def test_word_timestamps_merge_subword_pieces_like_funasr(self):
+        pieces = ("▁mis", "ter", "▁quil", "ter", "'", "s", "▁", "ab", "c", "▁5", "0")
+        frames = []
+        for index in range(len(pieces)):
+            token_frame = torch.full((len(pieces) + 1, ), 1e-3)
+            token_frame[index + 1] = 1.0
+            blank_frame = torch.full((len(pieces) + 1, ), 1e-3)
+            blank_frame[0] = 1.0
+            frames.extend((token_frame, blank_frame))
+        log_probabilities = torch.stack(frames).log_softmax(dim=-1)
+        words = sensevoice_word_timestamps(
+            log_probabilities,
+            tuple(range(1, len(pieces) + 1)),
+            pieces,
+            duration=10.0,
+        )
+        # FunASR SenseVoiceSmall.post(): ASCII-alphabetic continuation
+        # pieces extend the word built so far; a bare "▁" ends the word.
+        self.assertEqual(
+            [word.text for word in words],
+            ["mister", "quilter", "'", "s", "abc", "5", "0"],
+        )
+        self.assertEqual((words[0].start, words[0].end), (0.0, 0.15))
+        self.assertAlmostEqual(words[1].start, 0.21)
+        self.assertAlmostEqual(words[1].end, 0.39)
+
+    def test_word_timestamps_force_blank_on_greedy_blank_frames(self):
+        # Frame 1 is a greedy blank frame. FunASR sets its blank
+        # log-probability to zero before forced alignment, so the token
+        # no longer spans it; plain Viterbi would extend "hi" to 0.15 s.
+        log_probabilities = torch.tensor([
+            [0.10, 0.89, 0.01],
+            [0.50, 0.45, 0.05],
+            [0.44, 0.55, 0.01],
+        ]).log()
+        words = sensevoice_word_timestamps(
+            log_probabilities,
+            (1, ),
+            ("▁hi", ),
+            duration=1.0,
+        )
+        self.assertEqual([(word.text, word.start, word.end) for word in words], [("hi", 0.0, 0.03)])
 
     def test_rich_postprocess_and_composed_model_boundary(self):
         self.assertEqual(

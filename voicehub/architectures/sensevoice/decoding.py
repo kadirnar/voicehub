@@ -174,6 +174,11 @@ def sensevoice_word_timestamps(
         dtype=torch.long,
         device=log_probabilities.device,
     )
+    # The published aligner first gives blank probability one on every
+    # frame where greedy decoding already chose blank.
+    log_probabilities = log_probabilities.float().clone()
+    greedy_blank = log_probabilities.argmax(dim=-1) == blank_token_id
+    log_probabilities[greedy_blank, blank_token_id] = 0.0
     alignment = ctc_forced_align(
         log_probabilities,
         targets,
@@ -188,26 +193,26 @@ def sensevoice_word_timestamps(
         duration=duration,
     )
     words: list[ASRWord] = []
-    previous_piece: str | None = None
+    previous_word: str | None = None
     for piece, start, end in intervals:
         if piece == "\u2581":
-            previous_piece = piece
+            previous_word = None
             continue
         if piece.startswith("\u2581"):
-            text = piece[1:]
-            if text:
-                words.append(ASRWord(text=text, start=start, end=end))
-        elif (words and previous_piece is not None and previous_piece.isascii() and
-              previous_piece.isalpha() and piece.isascii() and piece.isalpha()):
-            previous = words[-1]
+            piece = piece[1:]
+            words.append(ASRWord(text=piece, start=start, end=end))
+        elif (previous_word is not None and previous_word.isascii() and previous_word.isalpha() and
+              piece.isascii() and piece.isalpha()):
+            # Continue the word built so far, as FunASR's `post()` does.
+            piece = previous_word + piece
             words[-1] = ASRWord(
-                text=previous.text + piece,
-                start=previous.start,
+                text=piece,
+                start=words[-1].start,
                 end=end,
             )
-        elif piece:
+        else:
             words.append(ASRWord(text=piece, start=start, end=end))
-        previous_piece = piece
+        previous_word = piece
     return tuple(words)
 
 
