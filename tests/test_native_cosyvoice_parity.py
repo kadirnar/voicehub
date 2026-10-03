@@ -11,6 +11,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import math
+import platform
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,7 +25,7 @@ from voicehub.architectures.cosyvoice_native import flow as flow_module
 from voicehub.architectures.cosyvoice_native import vocoder as vocoder_module
 from voicehub.architectures.cosyvoice_native.audio import _prompt_mel_filters, prompt_mel_features
 from voicehub.architectures.cosyvoice_native.configuration import CosyVoiceArchitectureConfig
-from voicehub.architectures.cosyvoice_native.flow import _apply_leading_rotary, fixed_flow_noise
+from voicehub.architectures.cosyvoice_native.flow import FIXED_NOISE_FRAMES, _apply_leading_rotary, fixed_flow_noise
 from voicehub.architectures.cosyvoice_native.language_model import CosyVoiceLanguageModel, nucleus_keep_count
 from voicehub.architectures.cosyvoice_native.modeling import CosyVoiceNativeModel, suppress_long_silences
 from voicehub.architectures.cosyvoice_native.tokenization import (
@@ -206,12 +208,20 @@ class CosyVoiceFlowParityTests(unittest.TestCase):
 
     def test_fixed_noise_is_the_source_seed_zero_table(self):
         noise = fixed_flow_noise(80, 3)
-        # source CausalConditionalCFM.rand_noise[0, :2, :3]
-        expected = torch.tensor([
-            [-1.1258398294448853, -1.152360200881958, -0.2505785822868347],
-            [0.869179368019104, 0.5761968493461609, -0.41195306181907654],
-        ])
-        self.assertTrue(torch.equal(noise[0, :2], expected))
+        # source CausalConditionalCFM: torch.manual_seed(0) then
+        # rand_noise = torch.randn([1, 80, 50 * 300]).
+        with torch.random.fork_rng():
+            torch.manual_seed(0)
+            source = torch.randn([1, 80, FIXED_NOISE_FRAMES])
+        self.assertTrue(torch.equal(noise, source[:, :, :3]))
+        if sys.platform == "linux" and platform.machine() == "x86_64":
+            # Values recorded from the source on Linux x86-64; vectorized
+            # CPU normal sampling differs on other platforms.
+            expected = torch.tensor([
+                [-1.1258398294448853, -1.152360200881958, -0.2505785822868347],
+                [0.869179368019104, 0.5761968493461609, -0.41195306181907654],
+            ])
+            self.assertTrue(torch.equal(noise[0, :2], expected))
 
     def test_only_the_first_head_is_rotated(self):
         torch.manual_seed(0)
