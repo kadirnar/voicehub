@@ -9,7 +9,7 @@ from voicehub.hub import resolve_pretrained_file
 from voicehub.models.echo.autoencoder import DAC, build_ae
 from voicehub.models.echo.model import EchoDiT
 from voicehub.optimization.diffusion_sampling import DiffusionStepContext
-from voicehub.processing.waveform import load_native_audio, save_pcm_wave
+from voicehub.processing.waveform import load_pcm_wave, resample_waveform_hann, save_pcm_wave
 
 
 def _resolve_checkpoint_file(
@@ -205,10 +205,12 @@ def load_fish_ae_from_hf(
         "pytorch_model.safetensors",
         token=token,
     )
+    # Upstream casts only for a non-float32 dtype. The default keeps every
+    # tensor as stored, including the bf16 RoPE tables and boolean causal masks.
     state = _load_safetensors(
         w_path,
         device=device,
-        dtype=dtype,
+        dtype=None if dtype in (None, torch.float32) else dtype,
     )
     _assign_validated_state(fish_ae, state)
 
@@ -261,11 +263,11 @@ def load_audio(path: str, max_duration: int = 300) -> torch.Tensor:
         raise TypeError("`max_duration` must be an integer number of seconds.")
     if max_duration <= 0:
         raise ValueError("`max_duration` must be positive.")
-    materialized = load_native_audio(
-        path,
-        target_sampling_rate=44_100,
-    )
-    audio = materialized.waveform[:max_duration * 44_100].unsqueeze(0)
+    # Upstream decodes at most ``max_duration`` seconds, averages channels,
+    # then applies ``torchaudio.functional.resample`` (float32 Hann kernel).
+    waveform, sampling_rate = load_pcm_wave(path)
+    waveform = waveform[:max_duration * sampling_rate]
+    audio = resample_waveform_hann(waveform, sampling_rate, 44_100).unsqueeze(0)
     denominator = audio.abs().max().clamp_min(1.0)
     return audio / denominator
 
