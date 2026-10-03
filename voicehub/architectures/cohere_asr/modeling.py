@@ -58,13 +58,13 @@ class CohereGenerateOutput:
     sequences: torch.Tensor
 
 
-def frontend_window_and_filters(config: CohereAsrConfig, ) -> tuple[torch.Tensor, torch.Tensor]:
+def frontend_window_and_filters(config: CohereAsrConfig) -> tuple[torch.Tensor, torch.Tensor]:
     """Return the float32 analysis window and ``[mel, bin]`` Slaney bank.
 
     Built on CPU like the reference feature extractor
     (``torch.hann_window(periodic=False)`` and librosa's float32 Slaney
-    filters). The checkpoint stores the same tensors rounded to bfloat16;
-    those copies must not drive feature extraction.
+    filters). The checkpoint stores the same tensors rounded to
+    bfloat16; those copies must not drive feature extraction.
     """
     with torch.device("cpu"):
         window = torch.hann_window(
