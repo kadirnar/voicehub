@@ -547,6 +547,52 @@ class NativeParakeetTDTTests(unittest.TestCase):
         self.assertEqual(generated.sequences.tolist(), [[8, 4, 8, 5]])
         self.assertEqual(generated.durations.tolist(), [[0, 0, 1, 2]])
 
+    def test_greedy_decoding_forces_advance_after_max_symbols_like_nemo(self):
+        model = ParakeetForTDT(_tiny_config())
+
+        def audio_features(input_features, attention_mask=None):
+            del input_features, attention_mask
+            return ParakeetEncoderOutput(
+                last_hidden_state=torch.zeros(1, 2, 8),
+                pooler_output=torch.zeros(1, 2, 4),
+                attention_mask=torch.ones(1, 2, dtype=torch.int),
+            )
+
+        class Decoder(nn.Module):
+
+            def forward(self, input_ids, cache=None):
+                del cache
+                return torch.zeros(input_ids.shape[0], 1, 4)
+
+        class Joint(nn.Module):
+
+            def forward(self, **kwargs):
+                # Always the label "h" with duration 0: NeMo's label-looping
+                # decoder emits max_symbols labels, then advances one frame.
+                batch = kwargs["encoder_hidden_states"].shape[0]
+                output = torch.full((batch, 1, 12), -100.0)
+                output[:, :, 4] = 100.0
+                output[:, :, 9] = 100.0
+                return output
+
+        model.get_audio_features = audio_features
+        model.decoder = Decoder()
+        model.joint = Joint()
+        generated = model.generate(
+            torch.zeros(1, 2, 8),
+            torch.ones(1, 2, dtype=torch.long),
+        )
+        self.assertEqual(generated.sequences.tolist(), [[8, 4, 4, 4, 4, 8, 4, 4, 4, 4, 8]])
+        self.assertEqual(generated.durations.tolist(), [[0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]])
+        decoded = decode_tdt_sequence(
+            _tiny_tokenizer(),
+            generated.sequences[0],
+            generated.durations[0],
+            frame_seconds=0.08,
+        )
+        self.assertEqual(decoded.text, "hhhhhhhh")
+        self.assertEqual([value.start for value in decoded.tokens], [0.0] * 4 + [0.08] * 4)
+
     def test_timestamp_decoder_preserves_repeats_and_zeroes_punctuation(self):
         decoded = decode_tdt_sequence(
             _tiny_tokenizer(),
