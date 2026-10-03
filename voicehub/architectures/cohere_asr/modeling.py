@@ -369,30 +369,29 @@ class RelPositionMultiHeadAttention(nn.Module):
                 -1,
             )
         position = self._reshape(self.linear_pos(position_embeddings))
-        content_scores = torch.matmul(
-            query + self.pos_bias_u[None, :, None, :],
-            key.transpose(-1, -2),
-        )
+        # Same evaluation order as the reference: the relative-position term
+        # becomes an additive bias of one fused attention call, so the
+        # content scores and the softmax stay in float32 inside the kernel
+        # instead of being rounded to a half-precision dtype.
         position_scores = torch.matmul(
             query + self.pos_bias_v[None, :, None, :],
             position.transpose(-1, -2),
         )
         position_scores = self._relative_shift(position_scores)
-        position_scores = position_scores[..., :content_scores.shape[-1]]
-        scores = (content_scores + position_scores) * self.scaling
-        expanded_mask = None
+        position_scores = position_scores[..., :key.shape[2]] * self.scaling
         if invalid_attention_mask is not None:
-            expanded_mask = invalid_attention_mask[:, None, :, :]
-            scores = scores.masked_fill(expanded_mask, -1e9)
-        weights = torch.softmax(scores, dim=-1)
-        if expanded_mask is not None:
-            weights = weights.masked_fill(expanded_mask, 0.0)
-        weights = F.dropout(
-            weights,
-            p=self.dropout,
-            training=self.training,
+            position_scores = position_scores.masked_fill(
+                invalid_attention_mask[:, None, :, :],
+                float("-inf"),
+            )
+        output = F.scaled_dot_product_attention(
+            query + self.pos_bias_u[None, :, None, :],
+            key,
+            value,
+            attn_mask=position_scores,
+            dropout_p=self.dropout if self.training else 0.0,
+            scale=self.scaling,
         )
-        output = torch.matmul(weights, value)
         output = output.transpose(1, 2).contiguous().view(
             hidden_states.shape[0],
             hidden_states.shape[1],
@@ -486,7 +485,10 @@ class ConformerEncoder(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         valid = (torch.arange(maximum, device=lengths.device)[None, :] < lengths[:, None])
         invalid_padding = ~valid
-        invalid_attention = ~(valid[:, :, None] & valid[:, None, :])
+        # Mask padded keys only: valid query rows see exactly the reference
+        # mask, and padded query rows (never read by valid frames) stay
+        # finite instead of softmaxing over no key at all.
+        invalid_attention = invalid_padding[:, None, :].expand(-1, maximum, -1)
         return invalid_padding, invalid_attention
 
     def forward(

@@ -820,6 +820,91 @@ class CohereAsrModelTests(unittest.TestCase):
                 labels=torch.tensor([[-100]]),
             )
 
+    def test_relative_attention_matches_reference_evaluation_order(self):
+        # Reference (Transformers Parakeet encoder) order: the shifted
+        # relative-position term, scaled and masked with -inf, is the
+        # additive mask of one SDPA call on (query + bias_u, key, value).
+        # Explicit bf16 score/softmax tensors lost precision and flipped
+        # near-tied bfloat16 decoding steps on the real checkpoint.
+        from torch.nn import functional as F
+
+        from voicehub.architectures.cohere_asr.modeling import (
+            ConformerEncoder,
+            RelPositionalEncoding,
+            RelPositionMultiHeadAttention,
+        )
+
+        torch.manual_seed(0)
+        attention = RelPositionMultiHeadAttention(16, 2, 0.0).eval()
+        with torch.no_grad():
+            for parameter in attention.parameters():
+                parameter.normal_(0.0, 0.3)
+        hidden = torch.randn(2, 9, 16)
+        positions = RelPositionalEncoding(16)(hidden)
+        padding, invalid = ConformerEncoder._masks(torch.tensor([9, 6]), 9)
+
+        def reference(module, values, position_values):
+            query = module._reshape(module.linear_q(values))
+            key = module._reshape(module.linear_k(values))
+            value = module._reshape(module.linear_v(values))
+            relative = module._reshape(module.linear_pos(position_values.expand(2, -1, -1)))
+            bias = module._relative_shift(
+                (query + module.pos_bias_v[None, :, None, :]) @ relative.transpose(-1, -2))[..., :9]
+            bias = (bias * module.scaling).masked_fill(padding[:, None, None, :], float("-inf"))
+            output = F.scaled_dot_product_attention(
+                query + module.pos_bias_u[None, :, None, :],
+                key,
+                value,
+                attn_mask=bias,
+                scale=module.scaling,
+            )
+            return module.linear_out(output.transpose(1, 2).reshape(2, 9, 16))
+
+        with torch.no_grad():
+            for dtype in (torch.float32, torch.bfloat16):
+                module = attention.to(dtype)
+                actual = module(hidden.to(dtype), positions.to(dtype), invalid)
+                expected = reference(module, hidden.to(dtype), positions.to(dtype))
+                self.assertTrue(torch.isfinite(actual).all())
+                valid = ~padding
+                torch.testing.assert_close(actual[valid], expected[valid], rtol=0, atol=0)
+            module = attention.to(torch.float64)
+            actual = module(hidden.double(), positions.double(), invalid)
+            # Transformer-XL scores computed explicitly in float64.
+            query = module._reshape(module.linear_q(hidden.double()))
+            key = module._reshape(module.linear_k(hidden.double()))
+            value = module._reshape(module.linear_v(hidden.double()))
+            relative = module._reshape(module.linear_pos(positions.double().expand(2, -1, -1)))
+            content = (query + module.pos_bias_u[None, :, None, :]) @ key.transpose(-1, -2)
+            shifted = module._relative_shift(
+                (query + module.pos_bias_v[None, :, None, :]) @ relative.transpose(-1, -2))[..., :9]
+            scores = ((content + shifted) * module.scaling).masked_fill(
+                padding[:, None, None, :], float("-inf"))
+            explicit = module.linear_out((scores.softmax(-1) @ value).transpose(1, 2).reshape(2, 9, 16))
+            torch.testing.assert_close(actual[~padding], explicit[~padding], rtol=1e-12, atol=1e-12)
+
+    def test_encoder_valid_frames_ignore_batch_padding(self):
+        config = _tiny_config()
+        model = CohereAsrForConditionalGeneration(config).eval()
+        features = torch.randn(1, 40, 8, generator=torch.Generator().manual_seed(3))
+        alone = model.encode(features, torch.ones(1, 40, dtype=torch.bool))
+        padded_features = torch.cat((features, torch.zeros(1, 24, 8)), dim=1)
+        batch = model.encode(
+            torch.cat((padded_features, torch.randn(1, 64, 8)), dim=0),
+            torch.cat((
+                torch.cat((torch.ones(1, 40), torch.zeros(1, 24)), dim=1),
+                torch.ones(1, 64),
+            )).bool(),
+        )
+        valid = int(alone.attention_mask[0].sum())
+        self.assertTrue(torch.isfinite(batch.last_hidden_state).all())
+        torch.testing.assert_close(
+            batch.last_hidden_state[0, :valid],
+            alone.last_hidden_state[0, :valid],
+            rtol=1e-5,
+            atol=1e-5,
+        )
+
     def test_checkpoint_loader_validates_before_assignment(self):
         config = _tiny_config()
         source_model = CohereAsrForConditionalGeneration(config)
