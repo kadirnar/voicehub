@@ -363,7 +363,8 @@ class HubSnapshotLayoutTests(unittest.TestCase):
         from voicehub.checkpointing.safetensors import save_safetensors
 
         with tempfile.TemporaryDirectory() as directory:
-            repository = Path(directory) / "models--org--model"
+            # Resolved: macOS /var is a symlink and Windows may use 8.3 names.
+            repository = Path(directory).resolve() / "models--org--model"
             blobs = repository / "blobs"
             snapshot = repository / "snapshots" / ("a" * 40)
             blobs.mkdir(parents=True)
