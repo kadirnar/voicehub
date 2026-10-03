@@ -7,11 +7,16 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import torch
 
 from voicehub.architectures.causal_lm import Qwen2Config
-from voicehub.architectures.vibevoice.checkpoint import VibeVoiceCheckpointAdapter, build_vibevoice_model
+from voicehub.architectures.vibevoice.checkpoint import (
+    VibeVoiceCheckpointAdapter,
+    _materialize_runtime_buffers,
+    build_vibevoice_model,
+)
 from voicehub.architectures.vibevoice.configuration import (
     VibeVoiceASRConfig,
     VibeVoiceASRTokenizerConfig,
@@ -37,12 +42,18 @@ from voicehub.architectures.vibevoice.registration import (
 )
 from voicehub.architectures.vibevoice.runtime import load_vibevoice_runtime, save_vibevoice_runtime
 from voicehub.architectures.vibevoice.tokenization import VIBEVOICE_TOKEN_IDS
-from voicehub.checkpointing import CheckpointCompatibilityError, ShardedSafeTensorReader, save_safetensors
+from voicehub.checkpointing import (
+    CheckpointCompatibilityError,
+    SafeTensorReader,
+    ShardedSafeTensorReader,
+    save_safetensors,
+)
 from voicehub.hub import write_json_file
 from voicehub.models.asr_vibevoice import VibeVoiceASRConfig as ProviderConfig
 from voicehub.models.asr_vibevoice import VibeVoiceForSpeechRecognition
 from voicehub.models.asr_vibevoice.training_asr_vibevoice import NativeVibeVoiceASRTrainingAdapter
 from voicehub.models.vibevoice import VibeVoiceForTextToSpeech
+from voicehub.neural.rotary import RotaryEmbedding
 from voicehub.optimization.diffusion_sampling import DiffusionSamplingConfig, DiffusionSamplingMixin
 from voicehub.tokenization.assets import encode_gpt2_token
 from voicehub.training import AutoTrainingAdapter, get_training_spec
@@ -528,6 +539,38 @@ class NativeVibeVoiceTests(unittest.TestCase):
             rtol=1e-6,
         )
 
+    def test_native_dpm_solver_matches_upstream_bfloat16_arithmetic(self):
+        # Reference: microsoft/VibeVoice@94da20d DPMSolverMultistepScheduler
+        # (cosine, v_prediction, 1,000 train steps, 5 inference steps) fed
+        # the same bfloat16 tensors on CPU. Upstream keeps alpha/sigma as
+        # float32 scalars; rounding them to bfloat16 changes the samples.
+        solver = VibeVoiceDPMSolver(
+            VibeVoiceDiffusionConfig(
+                hidden_size=8,
+                head_layers=1,
+                head_ffn_ratio=2.0,
+                latent_size=4,
+                ddpm_num_steps=1_000,
+                ddpm_num_inference_steps=5,
+                ddpm_batch_mul=1,
+            ))
+        solver.set_timesteps(5)
+        self.assertEqual(solver.timesteps.tolist(), [999, 799, 599, 400, 200])
+        generator = torch.Generator().manual_seed(3)
+        sample = torch.randn(2, 4, generator=generator).to(torch.bfloat16)
+        predictions = [torch.randn(2, 4, generator=generator).to(torch.bfloat16) for _ in range(5)]
+        for timestep, prediction in zip(solver.timesteps, predictions):
+            sample = solver.step(prediction, timestep, sample).prev_sample
+        self.assertEqual(sample.dtype, torch.bfloat16)
+        expected = torch.tensor(
+            [
+                [1.1171875, -0.181640625, -0.154296875, -1.921875],
+                [0.6953125, -1.6796875, 1.3125, 1.15625],
+            ],
+            dtype=torch.bfloat16,
+        )
+        self.assertTrue(torch.equal(sample, expected), sample.float().tolist())
+
     def test_realtime_diffusion_sampling_rebuilds_dpm_history_and_narrows_cfg(self, ):
         model = VibeVoiceRealtimeForConditionalGeneration(_realtime_config()).eval()
         head = model.model.prediction_head
@@ -576,6 +619,39 @@ class NativeVibeVoiceTests(unittest.TestCase):
         torch.testing.assert_close(first, second)
         self.assertEqual(batch_sizes, [2, 1])
         self.assertEqual(model.model.noise_scheduler._step_index, 2)
+
+    def test_realtime_sampling_noise_matches_upstream_host_rng(self):
+        # Upstream: torch.randn(rows, vae_dim).to(condition) - float32 draws
+        # from the default host RNG, then cast. Drawing in the condition dtype
+        # or on its device changes the waveform produced by a given seed.
+        model = VibeVoiceRealtimeForConditionalGeneration(_realtime_config()).eval().to(torch.bfloat16)
+        inputs: list[torch.Tensor] = []
+        hook = model.model.prediction_head.register_forward_hook(
+            lambda _module, arguments, _output: inputs.append(arguments[0].detach().clone()))
+        condition = torch.randn(1, 8).to(torch.bfloat16)
+        negative_condition = torch.randn(1, 8).to(torch.bfloat16)
+        draws = []
+        original_randn = torch.randn
+
+        def record_randn(*size, **kwargs):
+            draws.append((kwargs.get("device"), kwargs.get("dtype")))
+            return original_randn(*size, **kwargs)
+
+        try:
+            torch.manual_seed(31)
+            with mock.patch.object(torch, "randn", side_effect=record_randn):
+                model.sample_speech_latents(
+                    condition,
+                    negative_condition,
+                    guidance_scale=1.5,
+                    inference_steps=2,
+                )
+        finally:
+            hook.remove()
+        # Host float32 draws, even when the condition lives on an accelerator.
+        self.assertEqual(draws, [("cpu", torch.float32)])
+        expected = torch.randn(2, 2, generator=torch.Generator().manual_seed(31)).to(torch.bfloat16)
+        self.assertTrue(torch.equal(inputs[0], torch.cat((expected[:1], expected[:1]))))
 
     def test_realtime_prediction_cache_preserves_every_dpm_step(self):
         model = VibeVoiceRealtimeForConditionalGeneration(_realtime_config()).eval()
@@ -627,6 +703,66 @@ class NativeVibeVoiceTests(unittest.TestCase):
             solver.training_sigmas[torch.tensor([9, 6])],
         )
         self.assertEqual(solver._step_index, 2)
+
+    def test_meta_built_realtime_graph_samples_after_streaming_load(self):
+        # `load_vibevoice_runtime` builds the graph under torch.device("meta");
+        # the host-side DPM schedule is not checkpoint state and must stay real.
+        config = _realtime_config()
+        source = VibeVoiceRealtimeForConditionalGeneration(config).eval()
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "model.safetensors"
+            save_safetensors(dict(source.state_dict()), path)
+            with torch.device("meta"):
+                restored = build_vibevoice_model(
+                    config,
+                    initialize=False,
+                )
+            with SafeTensorReader(path) as reader:
+                VibeVoiceCheckpointAdapter().load_assign_streaming(
+                    restored,
+                    reader,
+                    config,
+                    device="cpu",
+                    dtype=torch.float32,
+                )
+        restored.eval()
+        solver = restored.model.noise_scheduler
+        for tensor in (
+                solver.betas,
+                solver.alphas_cumprod,
+                solver.training_sigmas,
+                solver.timesteps,
+                solver.sigmas,
+        ):
+            self.assertEqual(tensor.device.type, "cpu")
+        condition = torch.randn(1, 8)
+        negative_condition = torch.randn(1, 8)
+        expected = source.sample_speech_latents(
+            condition,
+            negative_condition,
+            inference_steps=2,
+            generator=torch.Generator().manual_seed(5),
+        )
+        actual = restored.sample_speech_latents(
+            condition,
+            negative_condition,
+            inference_steps=2,
+            generator=torch.Generator().manual_seed(5),
+        )
+        torch.testing.assert_close(actual, expected)
+
+    def test_materialized_rope_frequencies_match_host_reference(self):
+        # Transformers computes Qwen2 inv_freq on the host; CUDA `pow` differs
+        # by ULPs (Qwen2.5-0.5B: 1.9e-9), which flips bf16 cos/sin at long
+        # positions and changed realtime long-form audio after ~360 latents.
+        reference = 1.0 / (1_000_000.0**(torch.arange(0, 64, 2, dtype=torch.int64).float() / 64))
+        devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
+        for device in devices:
+            with self.subTest(device=device):
+                rotary = RotaryEmbedding(64, base=1_000_000.0)
+                _materialize_runtime_buffers(torch.nn.ModuleList([rotary]), device=device)
+                self.assertEqual(rotary.inverse_frequency.device.type, device)
+                self.assertTrue(torch.equal(rotary.inverse_frequency.cpu(), reference))
 
     def test_vibevoice_rejects_direct_velocity_stork_solver(self):
         head = VibeVoiceDiffusionHead(_diffusion_config())
