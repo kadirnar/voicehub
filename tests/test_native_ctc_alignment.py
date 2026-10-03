@@ -261,6 +261,39 @@ class NativeWhisperXProviderTests(unittest.TestCase):
         torch.testing.assert_close(model.inputs[0][0, :320], torch.full((320, ), 0.5))
         torch.testing.assert_close(model.inputs[0][0, 320:], torch.zeros(80))
 
+    def test_alignment_segments_truncate_times_to_samples_like_whisperx(self):
+        # WhisperX slices audio[int(start * 16000):int(end * 16000)].
+        model = WhisperXForSpeechRecognition(
+            WhisperXConfig(name_or_path="small", alignment_model_path="local/alignment"),
+            device="cpu",
+        )
+        tokenizer = SimpleNamespace(
+            vocabulary={"<pad>": 0, "h": 1, "i": 2, "|": 3},
+            pad_token_id=0,
+            word_delimiter_token="|",
+        )
+        runtime = SimpleNamespace(ctc_processor=SimpleNamespace(tokenizer=tokenizer))
+        output = ASROutput(
+            text="hi",
+            segments=(ASRSegment(text="hi", start=0.10004, end=0.90004, language="en"), ),
+            language="en",
+            duration=1.0,
+        )
+        slices = []
+
+        def emission(_runtime, waveform):
+            slices.append(waveform.clone())
+            return _emission((0, 1, 1, 2, 2, 0), vocabulary_size=4)
+
+        with (
+                patch.object(model, "_load_alignment_model", return_value=runtime),
+                patch.object(model, "_ctc_emission", side_effect=emission),
+        ):
+            model._align_segments(output, waveform=torch.arange(16_000, dtype=torch.float32), language="en")
+
+        self.assertEqual(slices[0][0].item(), 1600.0)
+        self.assertEqual(slices[0][-1].item(), 14399.0)
+
     def test_alignment_is_not_loaded_for_plain_transcription(self):
         model = WhisperXForSpeechRecognition(
             WhisperXConfig(name_or_path="small"),

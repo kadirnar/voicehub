@@ -154,10 +154,11 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
                     segment.end <= segment.start):
                 segments.append(segment)
                 continue
-            start_sample = max(0, round(segment.start * 16_000))
+            # WhisperX truncates segment times to sample indices.
+            start_sample = max(0, int(segment.start * 16_000))
             end_sample = min(
                 waveform.numel(),
-                round(segment.end * 16_000),
+                int(segment.end * 16_000),
             )
             if end_sample <= start_sample:
                 segments.append(segment)
