@@ -267,6 +267,66 @@ class NativeVoxCPMInventoryTests(unittest.TestCase):
         )
 
 
+def _non_unit_rope_config() -> VoxCPM2ArchitectureConfig:
+    config = _tiny_config()
+    factors = (0.9977997200264581, 1.5, 4.0, 31.0)
+    rope = replace(config.lm_config.rope_scaling, long_factor=factors, short_factor=factors)
+    return replace(config, lm_config=replace(config.lm_config, rope_scaling=rope))
+
+
+def _source_rope_tables(config, dtype: torch.dtype) -> tuple[torch.Tensor, torch.Tensor]:
+    """Upstream MiniCPMLongRoPE tables after the source's `model.to(dtype)`."""
+    dimension = config.lm_config.head_dim
+    inverse = 1.0 / (config.lm_config.rope_theta**(torch.arange(0, dimension, 2).float() / dimension))
+    positions = torch.arange(config.lm_config.max_position_embeddings, dtype=torch.float32)
+    factors = torch.tensor(config.lm_config.rope_scaling.short_factor, dtype=torch.float32)
+    embedding = torch.outer(positions, 1.0 / factors) * inverse
+    embedding = torch.cat((embedding, embedding), dim=-1)
+    return embedding.cos().to(dtype), embedding.sin().to(dtype)
+
+
+class NativeVoxCPMSourceNumericsTests(unittest.TestCase):
+
+    def test_local_transformers_inherit_backbone_longrope_factors(self):
+        # Upstream builds the local encoder and DiT from
+        # `lm_config.model_copy()`, so they keep the backbone LongRoPE factors.
+        config = _non_unit_rope_config()
+        model = VoxCPM2Model(config)
+        cosine, sine = _source_rope_tables(config, torch.float32)
+        for decoder in (
+                model.base_lm,
+                model.feat_encoder.encoder,
+                model.feat_decoder.estimator.decoder,
+        ):
+            self.assertEqual(
+                tuple(decoder.rope_emb.short_factor),
+                config.lm_config.rope_scaling.short_factor,
+            )
+            torch.testing.assert_close(decoder.rope_emb.cos_cached, cosine, rtol=0, atol=0)
+            torch.testing.assert_close(decoder.rope_emb.sin_cached, sine, rtol=0, atol=0)
+        self.assertIsNone(model.residual_lm.rope_emb)
+
+    def test_rope_tables_follow_low_precision_parameter_dtype(self):
+        # Upstream casts the whole model (including the non-persistent RoPE
+        # tables) with `model.to(bfloat16)` before inference.
+        config = _non_unit_rope_config()
+        cosine, sine = _source_rope_tables(config, torch.bfloat16)
+        direct = VoxCPM2Model(config, dtype=torch.bfloat16)
+        with torch.device("meta"):
+            streamed = VoxCPM2Model(config, dtype=torch.bfloat16)
+        streamed.to_empty(device="cpu")
+        streamed.materialize_runtime_buffers("cpu")
+        for model in (direct, streamed):
+            for decoder in (
+                    model.base_lm,
+                    model.feat_encoder.encoder,
+                    model.feat_decoder.estimator.decoder,
+            ):
+                self.assertEqual(decoder.rope_emb.cos_cached.dtype, torch.bfloat16)
+                torch.testing.assert_close(decoder.rope_emb.cos_cached, cosine, rtol=0, atol=0)
+                torch.testing.assert_close(decoder.rope_emb.sin_cached, sine, rtol=0, atol=0)
+
+
 class NativeVoxCPMTrainingTests(unittest.TestCase):
 
     def test_full_sft_runs_published_losses_and_keeps_codec_frozen(self):
