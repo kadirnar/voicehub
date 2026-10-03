@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import torch
@@ -343,6 +344,33 @@ class NativeStyleTTS2Tests(unittest.TestCase):
             config = load_styletts2_config(snapshot / "config.yml")
         self.assertEqual(set(state), set(model.state_dict()))
         self.assertTrue(config.multispeaker)
+
+    def test_public_wrapper_passes_hub_cache_symlink_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "blobs").mkdir()
+            (root / "blobs" / "0123abcd").write_bytes(b"pickle")
+            snapshot = root / "snapshots" / "rev" / "Models" / "LibriTTS"
+            snapshot.mkdir(parents=True)
+            checkpoint = snapshot / "epochs_2nd_00020.pth"
+            checkpoint.symlink_to(root / "blobs" / "0123abcd")
+            captured = {}
+
+            class _Runtime:
+
+                def __init__(self, **kwargs):
+                    captured.update(kwargs)
+                    self.config = None
+                    self.sample_rate = 24_000
+
+            with unittest.mock.patch("voicehub.architectures.styletts2.runtime.StyleTTS2Runtime", _Runtime):
+                model = StyleTTS2ForTextToSpeech(
+                    model_path=str(checkpoint),
+                    device="cpu",
+                    trust_pickle_checkpoint=True,
+                )
+                model.load()
+        self.assertEqual(Path(captured["checkpoint_path"]).name, "epochs_2nd_00020.pth")
 
     def test_preprocessed_objective_backpropagates(self):
         graph = _fake_training_graph()
