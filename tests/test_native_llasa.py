@@ -275,7 +275,10 @@ class LlasaDependencyAndProvenanceTests(unittest.TestCase):
 
     def test_snapshot_symlinks_preserve_artifact_names_and_shard_directory(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            # Resolve the temporary directory: macOS links /var to
+            # /private/var and Windows may report 8.3 short names, while the
+            # artifact resolvers return resolved snapshot paths.
+            root = Path(directory).resolve()
             snapshot = root / "snapshot"
             snapshot.mkdir()
             names = {
