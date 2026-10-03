@@ -341,12 +341,13 @@ class HiggsAudioV2Generator:
             if finished.all():
                 break
 
-            frame = next_codes[:, None]
-            frame_mask = (~all_eos)[:, None]
+            # Every decode step feeds one audio frame: the step's text slot is
+            # an audio placeholder whose embedding is replaced by the frame
+            # (a finished stream has already left the loop). Feeding the frame
+            # alone selects the audio norms/MLPs without per-layer
+            # device-to-host syncs on a text/audio token mask.
             output = self.model(
-                next_text[:, None],
-                audio_input_ids=frame,
-                audio_input_ids_mask=frame_mask,
+                audio_input_ids=next_codes[:, None],
                 past_key_values=cache,
                 use_cache=True,
             )
