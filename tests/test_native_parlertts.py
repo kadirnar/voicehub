@@ -31,6 +31,7 @@ from voicehub.architectures.parlertts.metadata import (
     PARLER_TTS_TENSOR_COUNT,
 )
 from voicehub.architectures.parlertts.modeling import (
+    ParlerDecoderCache,
     ParlerTTSForCausalLM,
     ParlerTTSForConditionalGeneration,
     apply_delay_pattern_mask,
@@ -358,6 +359,117 @@ class NativeParlerTTSGraphTests(unittest.TestCase):
 
         self.assertEqual(decoder_calls, 4)
         self.assertEqual(tuple(output.audio_values.shape), (1, 4))
+
+    def test_cached_decoder_steps_match_full_prefix_recompute(self):
+        config = _tiny_decoder_config().to_dict()
+        config.pop("model_type")
+        config["num_key_value_heads"] = 2
+        config["num_cross_attention_key_value_heads"] = 1
+        torch.manual_seed(0)
+        eager = ParlerTTSForCausalLM(ParlerDecoderConfig(**config)).eval()
+        decoder_ids = torch.tensor([[9, 1, 2, 3], [9, 9, 4, 5]])
+        encoder_hidden = torch.randn(1, 4, 16)
+        encoder_mask = torch.tensor([[1, 1, 1, 0]])
+        prompt_hidden = torch.randn(1, 3, 16)
+        prompt_mask = torch.tensor([[0, 1, 1]])
+        for implementation in ("eager", "sdpa"):
+            with self.subTest(attention_implementation=implementation):
+                model = ParlerTTSForCausalLM(
+                    ParlerDecoderConfig(**config),
+                    attention_implementation=implementation,
+                ).eval()
+                model.load_state_dict(eager.state_dict())
+                cache = ParlerDecoderCache()
+                cross_key = model.model.decoder.layers[0].encoder_attn.k_proj
+                with torch.no_grad():
+                    expected = model(
+                        decoder_ids,
+                        encoder_hidden_states=encoder_hidden,
+                        encoder_attention_mask=encoder_mask,
+                        prompt_hidden_states=prompt_hidden,
+                        prompt_attention_mask=prompt_mask,
+                    ).logits
+                    steps = [
+                        model(
+                            decoder_ids[:, :1],
+                            encoder_hidden_states=encoder_hidden,
+                            encoder_attention_mask=encoder_mask,
+                            prompt_hidden_states=prompt_hidden,
+                            prompt_attention_mask=prompt_mask,
+                            cache=cache,
+                        ).logits
+                    ]
+                    with patch.object(cross_key, "forward", wraps=cross_key.forward) as projection:
+                        for position in range(1, decoder_ids.shape[1]):
+                            steps.append(
+                                model(
+                                    decoder_ids[:, position:position + 1],
+                                    attention_mask=torch.cat(
+                                        (prompt_mask, torch.ones(1, position + 1, dtype=torch.long)),
+                                        dim=1,
+                                    ),
+                                    encoder_hidden_states=encoder_hidden,
+                                    encoder_attention_mask=encoder_mask,
+                                    cache=cache,
+                                ).logits)
+
+                self.assertEqual(cache.sequence_length, 3 + decoder_ids.shape[1])
+                self.assertEqual(projection.call_count, 0)
+                # Position 0 is a padded prompt slot whose attention row is
+                # fully masked, so its output depends on the key count.
+                torch.testing.assert_close(
+                    torch.cat(steps, dim=1)[:, 1:],
+                    expected[:, 1:],
+                    rtol=1e-5,
+                    atol=1e-6,
+                )
+
+    def test_generation_decodes_one_cached_position_per_step(self):
+        torch.manual_seed(0)
+        model = ParlerTTSForConditionalGeneration(_tiny_config()).eval()
+        decoder_forward = model.decoder.forward
+        input_lengths: list[int] = []
+        history: list[torch.Tensor] = []
+        first_call: dict[str, object] = {}
+
+        def recording_forward(input_ids, **kwargs):
+            input_lengths.append(input_ids.shape[-1])
+            history.append(input_ids)
+            if not first_call:
+                first_call.update(kwargs)
+            else:
+                self.assertIsNone(kwargs.get("prompt_hidden_states"))
+            output = decoder_forward(input_ids, **kwargs)
+            reference = decoder_forward(
+                torch.cat(history, dim=-1),
+                encoder_hidden_states=kwargs["encoder_hidden_states"],
+                encoder_attention_mask=kwargs["encoder_attention_mask"],
+                prompt_hidden_states=first_call["prompt_hidden_states"],
+                prompt_attention_mask=first_call["prompt_attention_mask"],
+            )
+            torch.testing.assert_close(
+                output.logits[:, -1],
+                reference.logits[:, -1],
+                rtol=1e-5,
+                atol=1e-6,
+            )
+            return output
+
+        model.decoder.forward = recording_forward
+        model.audio_encoder.decode = lambda codes: torch.zeros(codes.shape[0], 1, 4)
+        output = model.generate(
+            torch.tensor([[3, 5, 1]]),
+            attention_mask=torch.tensor([[1, 1, 1]]),
+            prompt_input_ids=torch.tensor([[4, 6, 1]]),
+            prompt_attention_mask=torch.tensor([[1, 1, 1]]),
+            max_new_tokens=6,
+            min_new_tokens=6,
+            do_sample=False,
+            top_k=None,
+        )
+
+        self.assertEqual(input_lengths, [1] * 6)
+        self.assertEqual(tuple(output.audio_codes.shape[:2]), (1, 2))
 
     def test_training_adapter_freezes_dac_and_uses_native_loss(self):
         runtime = ParlerTTSForConditionalGeneration(_tiny_config())

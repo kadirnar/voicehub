@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import torch
@@ -15,6 +15,7 @@ from voicehub.architectures.dac.modeling import DacModel
 from voicehub.architectures.parlertts.configuration import ParlerDecoderConfig, ParlerTTSArchitectureConfig
 from voicehub.architectures.parlertts.t5 import NativeT5EncoderModel
 from voicehub.generation import GenerationConfig, create_generator, sample_next_token
+from voicehub.neural.cache import DynamicKVCache
 from voicehub.optimization.protocols import OptimizationCompileTarget
 
 
@@ -222,6 +223,22 @@ def _repeat_key_values(hidden_states: Tensor, repeats: int) -> Tensor:
     return expanded.reshape(batch, heads * repeats, sequence, dimension)
 
 
+@dataclass(frozen=True, slots=True)
+class ParlerDecoderCache:
+    """Per-layer decoder keys/values for incremental generation.
+
+    Self-attention entries grow by one position per decoded step. Cross-
+    attention entries are projected once from the constant encoder states.
+    """
+
+    self_attention: DynamicKVCache = field(default_factory=DynamicKVCache)
+    cross_attention: DynamicKVCache = field(default_factory=DynamicKVCache)
+
+    @property
+    def sequence_length(self) -> int:
+        return self.self_attention.sequence_length()
+
+
 class ParlerAttention(nn.Module):
     """Parler MHA/GQA with eager and native PyTorch SDPA execution."""
 
@@ -285,17 +302,27 @@ class ParlerAttention(nn.Module):
         key_value_states: Tensor | None = None,
         attention_mask: Tensor | None = None,
         output_attentions: bool = False,
+        cache: DynamicKVCache | None = None,
+        layer_index: int = 0,
     ) -> tuple[Tensor, Tensor | None]:
         query = self._shape_query(self.q_proj(hidden_states))
-        source = hidden_states if key_value_states is None else key_value_states
-        key = _repeat_key_values(
-            self._shape_key_value(self.k_proj(source)),
-            self.num_key_value_groups,
-        )
-        value = _repeat_key_values(
-            self._shape_key_value(self.v_proj(source)),
-            self.num_key_value_groups,
-        )
+        cached = (None if cache is None or key_value_states is None else cache.get(layer_index))
+        if cached is not None:
+            key, value = cached.key, cached.value
+        else:
+            source = hidden_states if key_value_states is None else key_value_states
+            key = self._shape_key_value(self.k_proj(source))
+            value = self._shape_key_value(self.v_proj(source))
+            if cache is not None:
+                entry = cache.update(
+                    layer_index,
+                    key,
+                    value,
+                    append=key_value_states is None,
+                )
+                key, value = entry.key, entry.value
+        key = _repeat_key_values(key, self.num_key_value_groups)
+        value = _repeat_key_values(value, self.num_key_value_groups)
         if (self.attention_implementation == "sdpa" and not output_attentions):
             attended = F.scaled_dot_product_attention(
                 query,
@@ -389,12 +416,16 @@ class ParlerDecoderLayer(nn.Module):
         encoder_hidden_states: Tensor | None,
         encoder_attention_mask: Tensor | None,
         output_attentions: bool = False,
+        cache: ParlerDecoderCache | None = None,
+        layer_index: int = 0,
     ) -> tuple[Tensor, Tensor | None, Tensor | None]:
         residual = hidden_states
         attended, self_weights = self.self_attn(
             self.self_attn_layer_norm(hidden_states),
             attention_mask=attention_mask,
             output_attentions=output_attentions,
+            cache=None if cache is None else cache.self_attention,
+            layer_index=layer_index,
         )
         hidden_states = residual + F.dropout(
             attended,
@@ -409,6 +440,8 @@ class ParlerDecoderLayer(nn.Module):
                 key_value_states=encoder_hidden_states,
                 attention_mask=encoder_attention_mask,
                 output_attentions=output_attentions,
+                cache=None if cache is None else cache.cross_attention,
+                layer_index=layer_index,
             )
             hidden_states = residual + F.dropout(
                 attended,
@@ -481,16 +514,16 @@ class ParlerDecoder(nn.Module):
         self.layer_norm = nn.LayerNorm(config.hidden_size)
 
     @staticmethod
-    def _causal_mask(hidden_states: Tensor) -> Tensor:
+    def _causal_mask(hidden_states: Tensor, past_length: int = 0) -> Tensor:
         sequence = hidden_states.shape[1]
         minimum = torch.finfo(hidden_states.dtype).min
         mask = torch.full(
-            (sequence, sequence),
+            (sequence, past_length + sequence),
             minimum,
             dtype=hidden_states.dtype,
             device=hidden_states.device,
         )
-        return torch.triu(mask, diagonal=1)[None, None]
+        return torch.triu(mask, diagonal=past_length + 1)[None, None]
 
     @staticmethod
     def _encoder_mask(
@@ -516,7 +549,14 @@ class ParlerDecoder(nn.Module):
         prompt_attention_mask: Tensor | None = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
+        cache: ParlerDecoderCache | None = None,
     ) -> ParlerDecoderOutput:
+        """Decode new positions, appending their keys/values to ``cache``.
+
+        With a non-empty cache, ``input_ids`` holds only the new
+        positions and ``attention_mask`` covers cached plus new
+        positions.
+        """
         if not isinstance(input_ids, Tensor) or input_ids.ndim not in {2, 3}:
             raise ValueError(
                 "Decoder IDs must have shape [batch * codebooks, time] or "
@@ -531,6 +571,9 @@ class ParlerDecoder(nn.Module):
             raise ValueError("Decoder IDs have the wrong codebook count.")
         embeddings = [self.embed_tokens[index](shaped[:, index]) for index in range(self.num_codebooks)]
         hidden_states = sum(embeddings) * self.embed_scale
+        past_length = 0 if cache is None else cache.sequence_length
+        if prompt_hidden_states is not None and past_length:
+            raise ValueError("Prompt hidden states belong to the first cached decoder step.")
         if prompt_hidden_states is not None:
             if prompt_hidden_states.shape[0] != hidden_states.shape[0]:
                 raise ValueError("Prompt and decoder batches must match.")
@@ -547,16 +590,19 @@ class ParlerDecoder(nn.Module):
                     (prompt_attention_mask, generated_mask),
                     dim=1,
                 )
-        hidden_states = hidden_states + self.embed_positions(hidden_states).to(
+        hidden_states = hidden_states + self.embed_positions(hidden_states, past_length).to(
             device=hidden_states.device, dtype=hidden_states.dtype)
         hidden_states = F.dropout(
             hidden_states,
             p=self.config.dropout,
             training=self.training,
         )
-        causal_mask = self._causal_mask(hidden_states)
+        causal_mask = self._causal_mask(hidden_states, past_length)
         if attention_mask is not None:
-            if attention_mask.shape != hidden_states.shape[:2]:
+            if attention_mask.shape != (
+                    hidden_states.shape[0],
+                    past_length + hidden_states.shape[1],
+            ):
                 raise ValueError("Decoder attention mask has an invalid shape.")
             minimum = torch.finfo(hidden_states.dtype).min
             causal_mask = causal_mask + (~attention_mask.to(torch.bool))[:, None, None].to(
@@ -570,7 +616,7 @@ class ParlerDecoder(nn.Module):
         all_hidden: list[Tensor] = []
         all_self: list[Tensor] = []
         all_cross: list[Tensor] = []
-        for layer in self.layers:
+        for layer_index, layer in enumerate(self.layers):
             if output_hidden_states:
                 all_hidden.append(hidden_states)
             hidden_states, self_attention, cross_attention = layer(
@@ -579,6 +625,8 @@ class ParlerDecoder(nn.Module):
                 encoder_hidden_states=encoder_hidden_states,
                 encoder_attention_mask=cross_mask,
                 output_attentions=output_attentions,
+                cache=cache,
+                layer_index=layer_index,
             )
             if self_attention is not None:
                 all_self.append(self_attention)
@@ -667,6 +715,7 @@ class ParlerTTSForCausalLM(nn.Module):
         loss_reduction: str = "mean",
         output_attentions: bool = False,
         output_hidden_states: bool = False,
+        cache: ParlerDecoderCache | None = None,
     ) -> ParlerCausalLMOutput:
         decoded = self.model(
             input_ids,
@@ -677,6 +726,7 @@ class ParlerTTSForCausalLM(nn.Module):
             prompt_attention_mask=prompt_attention_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            cache=cache,
         )
         hidden_states = decoded.last_hidden_state
         logits = torch.stack(
@@ -966,11 +1016,8 @@ class ParlerTTSForConditionalGeneration(nn.Module):
     ) -> ParlerTTSOutput:
         """Generate delayed DAC tokens and decode them to 44.1 kHz audio.
 
-        This implementation deliberately recomputes the prefix instead
-        of depending on a third-party KV-cache abstraction. The math and
-        sampled token distribution are unchanged; optimization backends
-        can add a cache through VoiceHub's execution-strategy boundary
-        later.
+        Like upstream, the decoder runs the prompt and BOS step once and
+        then feeds one new position per step against a key/value cache.
         """
         if prompt_input_ids is None:
             raise ValueError("Parler-TTS generation requires prompt text IDs.")
@@ -1039,7 +1086,7 @@ class ParlerTTSForConditionalGeneration(nn.Module):
             eos_token_id=self.config.decoder.eos_token_id,
             pad_token_id=self.config.decoder.pad_token_id,
             seed=seed,
-            use_cache=False,
+            use_cache=True,
         )
         generator = create_generator(input_ids.device, seed)
         first_unfinished = (torch.arange(batch_size, device=input_ids.device) * self.decoder.num_codebooks)
@@ -1048,15 +1095,35 @@ class ParlerTTSForConditionalGeneration(nn.Module):
             batch_size * self.decoder.num_codebooks,
             device=input_ids.device,
         )
+        cache = ParlerDecoderCache()
+        decoded_length = 0
         for step in range(max_new_tokens):
             constrained = apply_delay_pattern_mask(generated, pattern)
-            output = self.decoder(
-                constrained,
-                encoder_hidden_states=encoder_hidden_states,
-                encoder_attention_mask=attention_mask,
-                prompt_hidden_states=prompt_hidden_states,
-                prompt_attention_mask=prompt_attention_mask,
-            )
+            if decoded_length == 0:
+                output = self.decoder(
+                    constrained,
+                    encoder_hidden_states=encoder_hidden_states,
+                    encoder_attention_mask=attention_mask,
+                    prompt_hidden_states=prompt_hidden_states,
+                    prompt_attention_mask=prompt_attention_mask,
+                    cache=cache,
+                )
+            else:
+                decoder_attention_mask = (None if prompt_attention_mask is None else torch.cat(
+                    (
+                        prompt_attention_mask,
+                        prompt_attention_mask.new_ones(batch_size, constrained.shape[1]),
+                    ),
+                    dim=1,
+                ))
+                output = self.decoder(
+                    constrained[:, decoded_length:],
+                    attention_mask=decoder_attention_mask,
+                    encoder_hidden_states=encoder_hidden_states,
+                    encoder_attention_mask=attention_mask,
+                    cache=cache,
+                )
+            decoded_length = constrained.shape[1]
             next_logits = output.logits[:, -1].clone()
             eos_seen = (constrained == self.config.decoder.eos_token_id).any(dim=1)
             first_unfinished = torch.where(
@@ -1133,6 +1200,7 @@ class ParlerTTSForConditionalGeneration(nn.Module):
 __all__ = [
     "ParlerCausalLMOutput",
     "ParlerDecoder",
+    "ParlerDecoderCache",
     "ParlerDecoderLayer",
     "ParlerDacAudioEncoder",
     "ParlerSinusoidalPositionalEmbedding",
