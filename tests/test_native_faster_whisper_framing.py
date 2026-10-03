@@ -183,5 +183,27 @@ class FasterWhisperFramingTests(unittest.TestCase):
         self.assertEqual(rounded(no_timestamps), ([(1.0, 1.08, [HELLO])], 108))
 
 
+    def test_faster_whisper_model_names_resolve_to_safetensors_sources(self):
+        expected = {
+            "small": "openai/whisper-small",
+            "large": "openai/whisper-large-v3",
+            "Systran/faster-whisper-small": "openai/whisper-small",
+            "Systran/faster-whisper-large-v1": "openai/whisper-large",
+            "mobiuslabsgmbh/faster-whisper-large-v3-turbo": "openai/whisper-large-v3-turbo",
+            "openai/whisper-small": "openai/whisper-small",
+        }
+        for name, source in expected.items():
+            with self.subTest(name=name):
+                model = FasterWhisperForSpeechRecognition(
+                    FasterWhisperConfig(name_or_path=name, compute_type="float32"),
+                    device="cpu",
+                )
+                self.assertEqual(model.config.name_or_path, source)
+                self.assertEqual(
+                    FasterWhisperForSpeechRecognition(model_path=name, device="cpu").config.name_or_path,
+                    source,
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,34 @@ from voicehub.models.asr_native.configuration import FasterWhisperConfig
 from voicehub.models.asr_native.whisper_compat import normalize_whisper_source
 from voicehub.models.asr_whisper_native.modeling_asr_whisper_native import WhisperForSpeechRecognition
 
+# The CTranslate2 repositories faster-whisper (``faster_whisper/utils.py``
+# ``_MODELS``) downloads for its size names, mapped to the Safetensors
+# checkpoints they were converted from. Distil-Whisper releases are omitted:
+# the native tokenizer rejects their whitespace-stripping added tokens.
+FASTER_WHISPER_MODEL_ALIASES = {
+    "systran/faster-whisper-tiny.en": "openai/whisper-tiny.en",
+    "systran/faster-whisper-tiny": "openai/whisper-tiny",
+    "systran/faster-whisper-base.en": "openai/whisper-base.en",
+    "systran/faster-whisper-base": "openai/whisper-base",
+    "systran/faster-whisper-small.en": "openai/whisper-small.en",
+    "systran/faster-whisper-small": "openai/whisper-small",
+    "systran/faster-whisper-medium.en": "openai/whisper-medium.en",
+    "systran/faster-whisper-medium": "openai/whisper-medium",
+    "systran/faster-whisper-large-v1": "openai/whisper-large",
+    "systran/faster-whisper-large-v2": "openai/whisper-large-v2",
+    "systran/faster-whisper-large-v3": "openai/whisper-large-v3",
+    "mobiuslabsgmbh/faster-whisper-large-v3-turbo": "openai/whisper-large-v3-turbo",
+}
+
+
+def normalize_faster_whisper_source(value: str | Path) -> str | Path:
+    """Resolve faster-whisper size names and CTranslate2 repository IDs."""
+    value = normalize_whisper_source(value)
+    if isinstance(value, str) and not Path(value.strip()).expanduser().exists():
+        return FASTER_WHISPER_MODEL_ALIASES.get(value.strip().lower(), value)
+    return value
+
+
 # Whisper's encoder consumes two mel frames per output position and emits
 # timestamps at 20 ms resolution; one mel frame is 10 ms at 16 kHz.
 _INPUT_STRIDE = 2
@@ -47,12 +75,12 @@ class FasterWhisperForSpeechRecognition(WhisperForSpeechRecognition):
     ) -> None:
         if isinstance(config, FasterWhisperConfig):
             values = config.to_dict()
-            values["name_or_path"] = normalize_whisper_source(values.get("name_or_path", ""))
+            values["name_or_path"] = normalize_faster_whisper_source(values.get("name_or_path", ""))
             config = FasterWhisperConfig.from_dict(values)
         elif isinstance(config, (str, Path)):
-            config = normalize_whisper_source(config)
+            config = normalize_faster_whisper_source(config)
         if model_path is not None:
-            model_path = normalize_whisper_source(model_path)
+            model_path = normalize_faster_whisper_source(model_path)
         super().__init__(
             config,
             model_path=model_path,
@@ -254,4 +282,8 @@ class FasterWhisperForSpeechRecognition(WhisperForSpeechRecognition):
         )
 
 
-__all__ = ["FasterWhisperForSpeechRecognition"]
+__all__ = [
+    "FASTER_WHISPER_MODEL_ALIASES",
+    "FasterWhisperForSpeechRecognition",
+    "normalize_faster_whisper_source",
+]
