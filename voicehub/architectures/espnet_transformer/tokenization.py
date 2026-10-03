@@ -9,7 +9,6 @@ from voicehub.tokenization import SentencePieceUnigramTokenizer
 from voicehub.tokenization.assets import read_bounded_asset
 
 
-
 def load_espnet_token_list(
     path: str | Path,
     *,
@@ -123,13 +122,14 @@ class ESPnetLibriSpeechTokenizer:
     def decode_ids(self, token_ids: Iterable[int]) -> str:
         """Detokenize like ESPnet's ``SentencepiecesTokenizer.tokens2text``.
 
-        ESPnet passes the recipe's pieces to SentencePiece ``DecodePieces``.
-        Blank and SOS/EOS IDs are skipped; every other recipe piece is a
-        SentencePiece piece, so the native SentencePiece decoder reproduces
-        ``DecodePieces``: the UNKNOWN piece becomes the model's unk surface
-        (``" \u2047 "`` for the release), which keeps it a separate word, and
-        leading word-boundary markers are dropped as SentencePiece does.
-        Surrounding whitespace is stripped from the transcript.
+        ESPnet passes the recipe's pieces to SentencePiece
+        ``DecodePieces``. Blank and SOS/EOS IDs are skipped; every other
+        recipe piece is a SentencePiece piece, so the native
+        SentencePiece decoder reproduces ``DecodePieces``: the UNKNOWN
+        piece becomes the model's unk surface (``" \u2047 "`` for the
+        release), which keeps it a separate word, and leading whitespace
+        markers are dropped as SentencePiece does. Surrounding
+        whitespace is stripped from the transcript.
         """
         sentencepiece_ids = []
         for raw_id in token_ids:
