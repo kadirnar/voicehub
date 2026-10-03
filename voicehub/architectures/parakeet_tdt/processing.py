@@ -142,55 +142,58 @@ class ParakeetFeatureExtractor:
                 f"Parakeet expects {self.sampling_rate} Hz audio; received "
                 f"{sampling_rate} Hz.")
         waveforms = self._waveforms(audio, device=device)
+        minimum_samples = self.n_fft // 2 + 1
+        if any(value.numel() < minimum_samples for value in waveforms):
+            raise ValueError(
+                f"Parakeet audio must contain at least {minimum_samples} samples "
+                "for the reflect-padded STFT.")
+        # NeMo's FilterbankFeatures marks every centered STFT frame as valid:
+        # floor((samples + 2 * (n_fft // 2) - n_fft) / hop) + 1.
         lengths = torch.tensor(
             [value.numel() for value in waveforms],
             device=waveforms[0].device,
             dtype=torch.long,
         )
         feature_lengths = torch.div(
-            lengths,
+            lengths + self.n_fft // 2 * 2 - self.n_fft,
             self.hop_length,
             rounding_mode="floor",
-        )
+        ) + 1
         if torch.any(feature_lengths < 2):
             raise ValueError("Parakeet audio must produce at least two valid feature frames.")
-        maximum = int(lengths.max())
-        padded = torch.full(
-            (len(waveforms), maximum),
-            self.padding_value,
-            device=waveforms[0].device,
-            dtype=torch.float32,
-        )
-        for index, waveform in enumerate(waveforms):
-            padded[index, :waveform.numel()] = waveform
-        sample_mask = (torch.arange(maximum, device=padded.device)[None, :] < lengths[:, None])
-        emphasized = torch.cat(
-            (
-                padded[:, :1],
-                padded[:, 1:] - self.preemphasis * padded[:, :-1],
-            ),
-            dim=1,
-        )
-        emphasized = emphasized.masked_fill(~sample_mask, 0.0)
         window = torch.hann_window(
             self.win_length,
             periodic=False,
-            device=padded.device,
+            device=waveforms[0].device,
             dtype=torch.float32,
         )
-        spectrum = torch.stft(
-            emphasized,
-            n_fft=self.n_fft,
-            hop_length=self.hop_length,
-            win_length=self.win_length,
-            window=window,
-            center=True,
-            pad_mode="constant",
-            normalized=False,
-            onesided=True,
-            return_complex=True,
+        # Each waveform is transformed on its own so the centered STFT uses
+        # torch.stft's default reflect padding at the true signal edges, as
+        # NeMo does for one utterance, and batching never changes features.
+        powers = []
+        for waveform in waveforms:
+            emphasized = torch.cat((waveform[:1], waveform[1:] - self.preemphasis * waveform[:-1]))
+            spectrum = torch.stft(
+                emphasized,
+                n_fft=self.n_fft,
+                hop_length=self.hop_length,
+                win_length=self.win_length,
+                window=window,
+                center=True,
+                pad_mode="reflect",
+                normalized=False,
+                onesided=True,
+                return_complex=True,
+            )
+            powers.append(spectrum.abs().square())
+        maximum = int(feature_lengths.max())
+        power = torch.zeros(
+            (len(waveforms), self.n_fft // 2 + 1, maximum),
+            device=waveforms[0].device,
+            dtype=torch.float32,
         )
-        power = spectrum.abs().square()
+        for index, value in enumerate(powers):
+            power[index, :, :value.shape[-1]] = value
         filters = mel_filter_bank(
             sample_rate=self.sampling_rate,
             n_fft=self.n_fft,
@@ -199,7 +202,7 @@ class ParakeetFeatureExtractor:
             # precision and stores float32. Mirroring that order avoids
             # accumulating frontend drift without depending on NumPy/librosa.
             dtype=torch.float64,
-            device=padded.device,
+            device=power.device,
         ).to(torch.float32)
         features = torch.matmul(filters, power)
         features = torch.log(features + LOG_ZERO_GUARD).transpose(1, 2)
@@ -212,7 +215,7 @@ class ParakeetFeatureExtractor:
                                                                                          1).unsqueeze(-1)
         standard_deviation = torch.sqrt(variance)
         features = (features - mean.unsqueeze(1)) / (standard_deviation.unsqueeze(1) + NORMALIZATION_EPSILON)
-        features = features * expanded_mask
+        features = features.masked_fill(~expanded_mask, self.padding_value)
         return {
             "input_features": features,
             "attention_mask": frame_mask,

@@ -32,6 +32,7 @@ from voicehub.architectures.parakeet_tdt.tokenization import ParakeetTokenizer, 
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
 from voicehub.models.asr_parakeet_tdt import ParakeetTDTASRConfig, ParakeetTDTForSpeechRecognition
 from voicehub.models.asr_parakeet_tdt.training_asr_parakeet_tdt import NativeParakeetTDTTrainingAdapter
+from voicehub.processing.audio import mel_filter_bank
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.specs import get_training_spec
@@ -349,18 +350,52 @@ class NativeParakeetTDTTests(unittest.TestCase):
             sampling_rate=16_000,
         )
         self.assertEqual(output["input_features"].shape, (2, 28, 8))
+        # NeMo counts every centered STFT frame: samples // hop + 1.
         self.assertEqual(
             output["attention_mask"].sum(-1).tolist(),
-            [20, 27],
+            [21, 28],
         )
-        first = output["input_features"][0, :20]
+        first = output["input_features"][0, :21]
         torch.testing.assert_close(
             first.mean(dim=0),
             torch.zeros(8),
             atol=2e-6,
             rtol=0,
         )
-        self.assertTrue(torch.all(output["input_features"][0, 20:] == 0))
+        self.assertTrue(torch.all(output["input_features"][0, 21:] == 0))
+
+    def test_frontend_matches_nemo_filterbank_features(self):
+        torch.manual_seed(11)
+        extractor = ParakeetFeatureExtractor(feature_size=8)
+        waveform = torch.randn(4_377)
+        single = extractor(waveform, sampling_rate=16_000)
+        # NeMo FilterbankFeatures (v2.4.0, normalize=per_feature): torch.stft
+        # with its default reflect centre padding, |X|^2, Slaney mel, log with
+        # a 2**-24 guard, every centred frame valid, unbiased std + 1e-5.
+        emphasized = torch.cat((waveform[:1], waveform[1:] - 0.97 * waveform[:-1]))
+        spectrum = torch.stft(
+            emphasized,
+            n_fft=512,
+            hop_length=160,
+            win_length=400,
+            window=torch.hann_window(400, periodic=False),
+            center=True,
+            return_complex=True,
+        )
+        power = torch.view_as_real(spectrum).pow(2).sum(-1)
+        filters = mel_filter_bank(
+            sample_rate=16_000,
+            n_fft=512,
+            n_mels=8,
+            dtype=torch.float64,
+        ).to(torch.float32)
+        log_mel = torch.log(filters @ power + 2**-24)
+        expected = ((log_mel - log_mel.mean(-1, keepdim=True)) / (log_mel.std(-1, keepdim=True) + 1e-5)).T
+        torch.testing.assert_close(single["input_features"][0], expected, atol=1e-4, rtol=1e-4)
+        self.assertEqual(single["attention_mask"].sum().item(), 4_377 // 160 + 1)
+        # Batching (right padding) never changes the valid frames.
+        batched = extractor((torch.randn(3_200), waveform), sampling_rate=16_000)
+        torch.testing.assert_close(batched["input_features"][1], single["input_features"][0])
 
     def test_tdt_loss_matches_reference_values_and_backpropagates(self):
         torch.manual_seed(3)
