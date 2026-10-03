@@ -911,8 +911,9 @@ class DiaForConditionalGeneration(nn.Module):
         # part of it); the forced EOS below then fits inside that range.
         position_budget = decoder.max_position_embeddings - sequences.shape[1] + 1
         if position_budget <= max(self.config.delay_pattern) + 1:
-            raise ValueError("The Dia audio prompt leaves no room in the decoder's "
-                             f"{decoder.max_position_embeddings}-position range.")
+            raise ValueError(
+                "The Dia audio prompt leaves no room in the decoder's "
+                f"{decoder.max_position_embeddings}-position range.")
         maximum_steps = min(max_new_tokens, position_budget)
         # The generation budget includes the delayed channels' EOS tail,
         # just as the upstream EOS delay processor's max_length does.

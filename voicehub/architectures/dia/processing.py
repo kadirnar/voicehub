@@ -300,7 +300,8 @@ class DiaProcessor:
             # torchaudio.functional.resample before DAC encoding; the default
             # match="functional" reproduces it bit-exactly. The DAC codes are
             # sensitive to the resampler, so the generic one is not a substitute.
-            waveforms.append(resample_waveform_hann(native.waveform, native.sampling_rate, self.sampling_rate))
+            waveforms.append(
+                resample_waveform_hann(native.waveform, native.sampling_rate, self.sampling_rate))
         return tuple(waveforms)
 
     def _encode_audio(
