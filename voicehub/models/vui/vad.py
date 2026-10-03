@@ -3,13 +3,13 @@
 The upstream Vui release delegated trimming to Pyannote and WhisperX.
 This module preserves its hysteresis and chunk-merging semantics with
 small native data structures, and accepts any VoiceHub VAD provider as
-an injected detector. The default, :class:`PyannoteVADPipeline`, runs the
-same ``pyannote/voice-activity-detection`` pipeline as upstream (the pinned
-``pyannote/segmentation`` checkpoint with pyannote.audio 3.3.2 sliding-window
-aggregation and Vui's hysteresis thresholds) on VoiceHub's native PyanNet
-graph, so no second framework is imported. :class:`EnergyVADPipeline` is a
-download-free short-term-energy alternative that does not reproduce
-upstream trimming.
+an injected detector. The default, :class:`PyannoteVADPipeline`, runs
+the same ``pyannote/voice-activity-detection`` pipeline as upstream (the
+pinned ``pyannote/segmentation`` checkpoint with pyannote.audio 3.3.2
+sliding-window aggregation and Vui's hysteresis thresholds) on
+VoiceHub's native PyanNet graph, so no second framework is imported.
+:class:`EnergyVADPipeline` is a download-free short-term-energy
+alternative that does not reproduce upstream trimming.
 """
 
 from __future__ import annotations
@@ -369,7 +369,9 @@ class PyannoteVADPipeline:
         has_last_chunk = (num_samples < window_size or (num_samples - window_size) % step_size > 0)
         outputs = []
         with torch.inference_mode(), _strict_float32():
-            batches = [chunks[index:index + self.batch_size] for index in range(0, chunks.shape[0], self.batch_size)]
+            batches = [
+                chunks[index:index + self.batch_size] for index in range(0, chunks.shape[0], self.batch_size)
+            ]
             if has_last_chunk:
                 last = waveform[chunks.shape[0] * step_size:]
                 batches.append(torch.nn.functional.pad(last, (0, window_size - last.numel()))[None])

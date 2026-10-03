@@ -122,8 +122,8 @@ class VuiForTextToSpeech(PreTrainedTTSModel):
     def _load_vad_pipeline(self):
         """Create the trimming detector; upstream uses pyannote VAD.
 
-        Its (gated) segmentation checkpoint is resolved on first use,
-        as in upstream's ``render``.
+        Its (gated) segmentation checkpoint is resolved on first use, as
+        in upstream's ``render``.
         """
         from voicehub.models.vui.vad import create_vad_pipeline
 
