@@ -1009,12 +1009,13 @@ class SeamlessM4Tv2ForSpeechToText(nn.Module):
             input_features,
             attention_mask=attention_mask,
         )
-        sequences = torch.full(
-            (input_features.shape[0], 1),
-            language_token_id,
+        # The released model decodes from ``</s> __lang__`` (fairseq2's
+        # target prefix; Transformers prepends ``decoder_start_token_id``).
+        sequences = torch.tensor(
+            [[self.config.decoder_start_token_id, language_token_id]],
             dtype=torch.long,
             device=input_features.device,
-        )
+        ).expand(input_features.shape[0], -1)
         finished = torch.zeros(
             input_features.shape[0],
             dtype=torch.bool,

@@ -248,7 +248,7 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
         self.assertEqual(tokenizer.decode(target), "hello")
         self.assertEqual(
             tokenizer.generation_prompt("cmn_hant"),
-            (SEAMLESS_M4T_V2_LANGUAGE_TO_ID["cmn_Hant"], ),
+            (3, SEAMLESS_M4T_V2_LANGUAGE_TO_ID["cmn_Hant"]),
         )
         with self.assertRaisesRegex(ValueError, "Unsupported"):
             tokenizer.language_token_id("zzz")
@@ -342,6 +342,33 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
                 target(features, attention_mask=mask, decoder_input_ids=decoder_ids).logits,
                 source_model(features, attention_mask=mask, decoder_input_ids=decoder_ids).logits,
             ))
+
+    def test_generation_decodes_from_eos_and_language_prefix(self):
+        # Regression: generation started from ``__lang__`` alone, while the
+        # released model (fairseq2 target prefix) decodes from ``</s> __lang__``;
+        # real transcripts collapsed to a single word.
+        config = _custom_config(vocab_size=32)
+        model = SeamlessM4Tv2ForSpeechToText(config).eval()
+        features = torch.randn(2, 6, 8)
+        mask = torch.ones(2, 6, dtype=torch.long)
+        prompts = []
+        decode = model.decode
+
+        def recording_decode(decoder_input_ids, **kwargs):
+            prompts.append(decoder_input_ids.clone())
+            return decode(decoder_input_ids, **kwargs)
+
+        model.decode = recording_decode
+        generated = model.generate(
+            features,
+            attention_mask=mask,
+            language_token_id=7,
+            max_new_tokens=2,
+        )
+
+        self.assertEqual(prompts[0].tolist(), [[3, 7], [3, 7]])
+        self.assertEqual(generated[:, :2].tolist(), [[3, 7], [3, 7]])
+        self.assertLessEqual(generated.shape[1], 4)
 
     def test_local_artifact_resolution_rejects_unsafe_shard_paths(self):
         with tempfile.TemporaryDirectory() as directory:
