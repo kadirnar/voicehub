@@ -59,7 +59,7 @@ def _expected_state(model: nn.Module) -> Mapping[str, Tensor]:
 
 
 def inspect_melotts_checkpoint(path: str | Path, ) -> MeloTTSCheckpointReport:
-    source = Path(path).expanduser().resolve()
+    source = Path(path).expanduser().absolute()
     if source.suffix.lower() != ".safetensors":
         raise ValueError("MeloTTS checkpoint inspection accepts Safetensors only.")
     with SafeTensorReader(source) as reader:
@@ -146,7 +146,7 @@ def read_legacy_melotts_checkpoint(
             "Official MeloTTS checkpoints use a PyTorch pickle container. "
             "Review the source and pass `trust_pickle_checkpoint=True` once, "
             "then export Safetensors for steady-state use.")
-    source = Path(path).expanduser().resolve()
+    source = Path(path).expanduser().absolute()
     if not source.is_file():
         raise FileNotFoundError(f"MeloTTS checkpoint was not found: {source}.")
     if source.suffix.lower() not in {".pth", ".pt"}:

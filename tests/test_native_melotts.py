@@ -7,10 +7,13 @@ import tempfile
 import unittest
 import warnings
 from pathlib import Path
+from unittest import mock
 
 import torch
 
+from voicehub.architectures.melotts.artifacts import resolve_melotts_artifacts
 from voicehub.architectures.melotts.checkpoint import (
+    file_sha256,
     inspect_melotts_checkpoint,
     read_legacy_melotts_checkpoint,
     save_melotts_pretrained,
@@ -462,6 +465,79 @@ class NativeMeloTTSTests(unittest.TestCase):
 
         self.assertEqual(report.tensor_count, len(original.state_dict()))
         self.assertTrue(torch.equal(direct.float(), reloaded))
+
+    @staticmethod
+    def _hub_cache_snapshot(root: Path, files: dict[str, Path]) -> Path:
+        """Mirror the Hugging Face cache: named symlinks to suffix-less
+        blobs."""
+        blobs = root / "blobs"
+        snapshot = root / "snapshots" / "0123456789abcdef"
+        blobs.mkdir(parents=True)
+        snapshot.mkdir(parents=True)
+        for name, source in files.items():
+            blob = blobs / file_sha256(source)
+            source.replace(blob)
+            (snapshot / name).symlink_to(Path("..") / ".." / "blobs" / blob.name)
+        return snapshot
+
+    def test_hub_cache_symlinked_safetensors_artifacts_load(self):
+        config = _tiny_config()
+        original = build_melotts_model(config).eval()
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = save_melotts_pretrained(original, config, Path(directory) / "export")
+            snapshot = self._hub_cache_snapshot(
+                Path(directory) / "cache",
+                {
+                    "config.json": artifact / "config.json",
+                    "model.safetensors": artifact / "model.safetensors",
+                },
+            )
+            resolved = resolve_melotts_artifacts(snapshot)
+            runtime = MeloTTSRuntime(snapshot, device="cpu")
+
+        self.assertEqual(resolved.checkpoint_path.name, "model.safetensors")
+        self.assertFalse(resolved.legacy_checkpoint)
+        self.assertEqual(runtime.speakers, ("speaker-a", "speaker-b"))
+
+    def test_pinned_alias_loads_from_symlinked_hub_cache(self):
+        config = _tiny_config()
+        model = build_melotts_model(config)
+        with tempfile.TemporaryDirectory() as directory:
+            export = save_melotts_pretrained(model, config, Path(directory) / "export")
+            torch.save({"model": model.state_dict(), "iteration": 1}, export / "checkpoint.pth")
+            pinned = (
+                "example/melotts",
+                "0123456789abcdef",
+                file_sha256(export / "config.json"),
+                file_sha256(export / "checkpoint.pth"),
+            )
+            snapshot = self._hub_cache_snapshot(
+                Path(directory) / "cache",
+                {
+                    "config.json": export / "config.json",
+                    "checkpoint.pth": export / "checkpoint.pth",
+                },
+            )
+
+            def resolve_pretrained_file(repository, filename, *, revision):
+                self.assertEqual((repository, revision), pinned[:2])
+                return snapshot / filename
+
+            with (
+                    mock.patch.dict(
+                        "voicehub.architectures.melotts.artifacts.MELOTTS_RELEASES",
+                        {"EN": pinned},
+                    ),
+                    mock.patch(
+                        "voicehub.architectures.melotts.artifacts.resolve_pretrained_file",
+                        side_effect=resolve_pretrained_file,
+                    ),
+            ):
+                runtime = MeloTTSRuntime("EN", device="cpu", trust_pickle_checkpoint=True)
+
+        self.assertTrue(runtime.artifacts.legacy_checkpoint)
+        self.assertEqual(runtime.artifacts.release_alias, "EN")
+        self.assertEqual(runtime.artifacts.checkpoint_path.name, "checkpoint.pth")
 
     def test_training_collator_pads_every_sequence_axis(self):
         collator = MeloTTSTrainingCollator()
