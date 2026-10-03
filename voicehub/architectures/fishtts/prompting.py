@@ -23,7 +23,9 @@ _SPEAKER_TURN = re.compile(r"(<\|speaker:\d+\|>)")
 @dataclass(frozen=True, slots=True)
 class FishConversationTurn:
     role: str
-    text: str | None = None
+    # A tuple holds separately tokenized text parts, as the source
+    # conversation encodes each ``TextPart`` on its own.
+    text: str | tuple[str, ...] | None = None
     codes: Tensor | None = None
     modality: str | None = None
 
@@ -32,6 +34,8 @@ class FishConversationTurn:
             raise ValueError("Fish message role is unsupported.")
         if self.text is None and self.codes is None:
             raise ValueError("A Fish turn requires text, codes, or both.")
+        if isinstance(self.text, tuple) and (not self.text or not all(isinstance(part, str) for part in self.text)):
+            raise TypeError("Fish turn text parts must be a non-empty tuple of strings.")
         if self.modality not in {None, "voice"}:
             raise ValueError("Fish turn modality must be None or 'voice'.")
 
@@ -75,12 +79,12 @@ def group_speaker_turns(
             # bound fail explicitly if necessary.
             batches.append(turn)
             continue
-        if current and (len(current) >= maximum_turns or byte_count + 1 + turn_bytes > maximum_utf8_bytes):
+        # Like the source, the budget counts turn bytes but not the "\n"
+        # separators that join them.
+        if current and (len(current) >= maximum_turns or byte_count + turn_bytes > maximum_utf8_bytes):
             batches.append("\n".join(current))
             current = []
             byte_count = 0
-        if current:
-            byte_count += 1
         current.append(turn)
         byte_count += turn_bytes
     if current:
@@ -126,10 +130,10 @@ def _encode_turn(
     )
     prefix_values[0] = torch.tensor(prefix, dtype=torch.long)
     parts = [prefix_values]
-    if turn.text is not None:
-        normalized_text = normalize_fish_text(turn.text)
+    text_parts = (turn.text, ) if isinstance(turn.text, str) else (turn.text or ())
+    for text_part in text_parts:
         content = tokenizer.encode(
-            normalized_text,
+            normalize_fish_text(text_part),
             allow_protocol_tokens=True,
         )
         text_values = torch.zeros(
@@ -176,9 +180,14 @@ def build_fish_prompt(
         turns.append(
             FishConversationTurn(
                 role="system",
+                # Tokenized as three parts: merging them would change BPE
+                # tokens at the boundaries (e.g. ``.`` + ``\n\n``).
                 text=(
                     "convert the provided text to speech reference to "
-                    "the following:\n\nText:\n" + normalized_reference + "\n\nSpeech:\n"),
+                    "the following:\n\nText:\n",
+                    normalized_reference,
+                    "\n\nSpeech:\n",
+                ),
                 codes=_validate_codes(reference_codes, tokenizer),
             ))
     turns.extend(history)
