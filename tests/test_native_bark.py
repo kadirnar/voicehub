@@ -203,6 +203,74 @@ class NativeBarkTests(unittest.TestCase):
             )
         self.assertEqual(generated[0, -4:].tolist(), [8, 12, 8, 12])
 
+    def test_attention_uses_fused_sdpa_like_upstream_and_matches_eager(self):
+        from unittest import mock
+
+        import torch
+
+        from voicehub.architectures.bark import modeling
+
+        architecture, generation = self._tiny_config()
+        torch.manual_seed(0)
+        model = modeling.BarkModel(architecture, generation_config=generation).eval()
+        tokens = torch.tensor([[1, 2, 3, 4, 5, 6]])
+        fine_tokens = torch.randint(0, 12, (1, 6, 4))
+        sdpa = torch.nn.functional.scaled_dot_product_attention
+        calls = []
+
+        def record(query, key, value, **kwargs):
+            calls.append((
+                query.shape[-2],
+                key.shape[-2],
+                kwargs["attn_mask"] is not None,
+                kwargs["is_causal"],
+            ))
+            return sdpa(query, key, value, **kwargs)
+
+        with torch.no_grad():
+            # Requesting attention weights keeps the explicit softmax path.
+            eager = model.semantic(tokens, output_attentions=True).logits
+            eager_fine = model.fine_acoustics(
+                fine_tokens,
+                codebook_idx=2,
+                output_attentions=True,
+            ).logits
+            self.assertEqual(calls, [])
+            with mock.patch.object(
+                    modeling.F,
+                    "scaled_dot_product_attention",
+                    side_effect=record,
+            ):
+                full = model.semantic(tokens, use_cache=False).logits
+                prefix = model.semantic(tokens[:, :2], use_cache=True)
+                chunk = model.semantic(
+                    tokens[:, 2:5],
+                    past_key_values=prefix.past_key_values,
+                    use_cache=True,
+                )
+                step = model.semantic(
+                    tokens[:, 5:],
+                    past_key_values=chunk.past_key_values,
+                    use_cache=True,
+                )
+                fine = model.fine_acoustics(fine_tokens, codebook_idx=2).logits
+        self.assertEqual(
+            calls,
+            [
+                (6, 6, False, True),  # uncached prefill: top-left causal
+                (2, 2, False, True),
+                (3, 5, True, False),  # cached chunk: explicit causal slice
+                (1, 6, False, False),  # one-token decode: every cached key
+                (6, 6, False, False),  # fine stage is bidirectional
+            ],
+        )
+        torch.testing.assert_close(full, eager)
+        torch.testing.assert_close(
+            torch.cat((prefix.logits, chunk.logits, step.logits), dim=1),
+            eager,
+        )
+        torch.testing.assert_close(fine, eager_fine)
+
     def test_sampling_follows_upstream_filter_order_and_eos_rule(self):
         import torch
 
