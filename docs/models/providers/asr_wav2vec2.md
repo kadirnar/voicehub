@@ -68,7 +68,6 @@ model = AutoModelForSpeechRecognition.from_pretrained(
 )
 output = model.transcribe(
     AUDIO_FILE,
-    language="en",
     return_timestamps="word",
 )
 print(output.text)

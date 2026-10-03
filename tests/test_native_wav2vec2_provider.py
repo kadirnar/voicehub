@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 import json
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -299,6 +301,33 @@ print(json.dumps({name: name in sys.modules for name in names}))
         expected = ((resampled - resampled.mean()) / torch.sqrt(resampled.var(unbiased=False) + 1e-7))
         self.assertEqual(len(captured), 1)
         torch.testing.assert_close(captured[0], expected.unsqueeze(0), rtol=0, atol=0)
+
+    def test_documented_example_arguments_run_on_a_single_vocabulary_checkpoint(self):
+        # The generated model page once passed language="en", which the
+        # single-vocabulary default checkpoint rejects at runtime.
+        profiles = runpy.run_path(
+            str(Path(__file__).resolve().parents[1] / "scripts" / "model_documentation.py"))["INFERENCE_PROFILES"]
+        arguments = {}
+        for argument in profiles["asr_wav2vec2"].arguments:
+            name, _, value = argument.partition("=")
+            arguments[name] = ast.literal_eval(value)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = Wav2Vec2ForSpeechRecognition(
+                Wav2Vec2ASRConfig(name_or_path=root),
+                device="cpu",
+            )
+            wrapper.load_for_training()
+            wrapper.model = _DeterministicCTCModel((5, 4, 6), vocab_size=8)
+
+            result = wrapper.transcribe(
+                torch.linspace(-0.5, 0.5, 30),
+                sampling_rate=16_000,
+                **arguments,
+            )
+
+        self.assertEqual(result.text, "a b")
 
     def test_training_adapter_exports_reloadable_native_artifact(self):
         with tempfile.TemporaryDirectory() as directory:
