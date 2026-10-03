@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -556,12 +557,15 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         # delayed frame (6) has no codebook-1 partner yet, so it is dropped.
         with tempfile.TemporaryDirectory() as directory:
             runtime = _small_runtime(Path(directory))
-            with self.assertWarnsRegex(UserWarning, "max_new_tokens"):
+            # ``assertWarns`` walks ``sys.modules``; record warnings directly.
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
                 result = self._scripted_generation(
                     runtime,
                     [(16, 16), (3, 9), (4, 5), (6, 7)],
                     max_new_tokens=4,
                 )
+        self.assertTrue(any("max_new_tokens" in str(item.message) for item in caught))
         self.assertEqual(result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [6, 7]])
         self.assertEqual(result.audio_codes[0].tolist(), [[3, 4], [5, 7]])
         self.assertEqual(result.finish_reason, "length")
