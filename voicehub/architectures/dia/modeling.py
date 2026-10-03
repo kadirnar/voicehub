@@ -119,8 +119,9 @@ class DiaDecoderCache:
 
     Self-attention keys and values (after rotary, before grouped-query
     expansion) are written into buffers sized for ``max_length`` decoder
-    positions. Cross-attention keys and values depend only on the encoder
-    states, so they are projected on the first call and reused afterwards.
+    positions. Cross-attention keys and values depend only on the
+    encoder states, so they are projected on the first call and reused
+    afterwards.
     """
 
     def __init__(self, max_length: int) -> None:
@@ -860,9 +861,10 @@ class DiaForConditionalGeneration(nn.Module):
         """Generate delayed DAC tokens using the released Dia sampling rules.
 
         Like the released runtime, the conditional and unconditional
-        guidance rows share one batched decoder call, and with ``use_cache``
-        each step decodes only the newest frame against cached keys and
-        values. ``use_cache=False`` recomputes the whole decoder prefix.
+        guidance rows share one batched decoder call, and with
+        ``use_cache`` each step decodes only the newest frame against
+        cached keys and values. ``use_cache=False`` recomputes the whole
+        decoder prefix.
         """
         if kwargs:
             names = ", ".join(sorted(kwargs))

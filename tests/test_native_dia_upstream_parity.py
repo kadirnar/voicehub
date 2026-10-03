@@ -172,8 +172,14 @@ class NativeDiaUpstreamParityTests(unittest.TestCase):
 
         model, _, processor = self.decisive_components()
         audio = [
-            {"array": torch.linspace(-0.3, 0.3, 4 * 6), "sampling_rate": 16_000},
-            {"array": torch.linspace(0.2, -0.2, 4 * 3), "sampling_rate": 16_000},
+            {
+                "array": torch.linspace(-0.3, 0.3, 4 * 6),
+                "sampling_rate": 16_000
+            },
+            {
+                "array": torch.linspace(0.2, -0.2, 4 * 3),
+                "sampling_rate": 16_000
+            },
         ]
         batches = {
             "text": processor(text=["Hello", "A longer line."], generation=True),
@@ -227,7 +233,8 @@ class NativeDiaUpstreamParityTests(unittest.TestCase):
         decoder_ids = torch.randint(0, 8, (2, 9, 2))
         with torch.no_grad():
             encoded = model.model.encoder(input_ids, attention_mask).last_hidden_state
-            full = model(attention_mask=attention_mask, decoder_input_ids=decoder_ids, encoder_outputs=encoded)
+            full = model(
+                attention_mask=attention_mask, decoder_input_ids=decoder_ids, encoder_outputs=encoded)
             cache = DiaDecoderCache(decoder_ids.shape[1])
             steps = [
                 model(
