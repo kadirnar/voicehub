@@ -233,10 +233,11 @@ def load_style_reference(
 ) -> Tensor:
     """Load a mono reference like released ``librosa.load(path, sr=24000)``.
 
-    librosa resamples with soxr ``HQ``. The style encoder reads the mel bins
-    above the source Nyquist, so imaging left by a short sinc kernel shifts
-    the style vector noticeably. A 64-zero Kaiser kernel with torchaudio's
-    ``kaiser_best`` rolloff/beta is the closest torch-only match.
+    librosa resamples with soxr ``HQ``. The style encoder reads the mel
+    bins above the source Nyquist, so imaging left by a short sinc
+    kernel shifts the style vector noticeably. A 64-zero Kaiser kernel
+    with torchaudio's ``kaiser_best`` rolloff/beta is the closest torch-
+    only match.
     """
     loaded = load_audio(audio)
     waveform = loaded.waveform.float()
