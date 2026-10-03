@@ -371,7 +371,7 @@ class Zonos2SonicExperts(nn.Module):
         return F.linear(F.silu(gate) * up, self.w2[expert_index])
 
     def _gathered_experts(self, hidden_states: Tensor, experts: Tensor) -> Tensor:
-        """Apply one gathered expert per row without a host synchronization."""
+        """Apply one gathered expert per row without a host sync."""
         projected = torch.bmm(
             hidden_states.unsqueeze(1),
             self.w13.index_select(0, experts).transpose(1, 2),
@@ -384,7 +384,7 @@ class Zonos2SonicExperts(nn.Module):
         ).squeeze(1)
 
     def _grouped_experts(self, hidden_states: Tensor, experts: Tensor) -> Tensor:
-        """Apply experts to expert-sorted rows with one host synchronization."""
+        """Apply experts to expert-sorted rows with one host sync."""
         order = torch.argsort(experts, stable=True)
         counts = torch.bincount(experts, minlength=self.num_experts).tolist()
         sorted_outputs = torch.cat([
