@@ -181,6 +181,35 @@ class MoonshineModelTests(unittest.TestCase):
                 do_sample=True,
             )
 
+    def test_half_precision_rotary_tables_use_float32_frequencies(self):
+        # Transformers computes Moonshine RoPE in float32 and casts cos/sin to
+        # the activation dtype. The interleaved tables must equal that
+        # reference (HF's cat(freqs, freqs) halves, repeat-interleaved) and
+        # must not be derived from half-precision inverse frequencies.
+        from voicehub.architectures.moonshine.modeling import _rotary_embeddings
+
+        head_dim, factor, theta, length = 36, 0.9, 10_000.0, 50
+        dim = int(head_dim * factor)
+        inverse = 1.0 / (theta**(torch.arange(0, dim, 2, dtype=torch.int64).float() / dim))
+        frequencies = torch.arange(length).float()[:, None] * inverse[None, :]
+        embedding = torch.cat((frequencies, frequencies), dim=-1)
+        expected = tuple(
+            table[:, :dim // 2].repeat_interleave(2, dim=-1).to(torch.float16)[None]
+            for table in (embedding.cos(), embedding.sin()))
+
+        actual = _rotary_embeddings(
+            sequence_length=length,
+            head_dim=head_dim,
+            partial_rotary_factor=factor,
+            theta=theta,
+            device=torch.device("cpu"),
+            dtype=torch.float16,
+        )
+
+        for table, reference in zip(actual, expected):
+            self.assertEqual(table.dtype, torch.float16)
+            torch.testing.assert_close(table, reference, rtol=0, atol=0)
+
     def test_compile_targets_match_generation_execution_boundaries(self):
         inference_targets = self.model.optimization_compile_targets("inference", )
         training_targets = self.model.optimization_compile_targets("training", )

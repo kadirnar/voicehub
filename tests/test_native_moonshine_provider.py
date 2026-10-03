@@ -162,6 +162,44 @@ print(json.dumps({name: name in sys.modules for name in names}))
                     language="fr",
                 )
 
+    def test_default_decode_length_follows_the_model_card_limit(self):
+        # Upstream (UsefulSensors/moonshine-tiny model card) generates with
+        # max_length = int(samples * 6.5 / 16000); the native provider keeps
+        # that limit, bounded by the checkpoint's generation `max_length`.
+        class _RecordingMoonshine(_DeterministicMoonshine):
+
+            def __init__(self):
+                super().__init__()
+                self.calls = []
+
+            def generate(self, input_values, attention_mask, **kwargs):
+                self.calls.append(kwargs)
+                return super().generate(input_values, attention_mask)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            write_tiny_moonshine_artifact(root)
+            wrapper = MoonshineForSpeechRecognition(
+                MoonshineASRConfig(name_or_path=root),
+                device="cpu",
+            )
+            wrapper.load_for_training()
+            wrapper.model = _RecordingMoonshine()
+
+            for samples in (1_000, 16_000, 48_000):
+                wrapper.transcribe(torch.zeros(samples), sampling_rate=16_000)
+            wrapper.transcribe(torch.zeros(16_000), sampling_rate=16_000, max_new_tokens=3)
+
+            self.assertEqual(
+                wrapper.model.calls,
+                [
+                    {"num_beams": 1, "max_length": 2},
+                    {"num_beams": 1, "max_length": 6},
+                    {"num_beams": 1, "max_length": 12},
+                    {"num_beams": 1, "max_new_tokens": 3},
+                ],
+            )
+
     def test_training_adapter_exports_reloadable_native_artifact(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
