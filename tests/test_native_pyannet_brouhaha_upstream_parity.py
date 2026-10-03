@@ -125,8 +125,8 @@ class BrouhahaFrameGridTests(unittest.TestCase):
                 for _ in range(batch.shape[0]):
                     calls.append(None)
                     values.append(
-                        torch.full((frames_per_chunk, 3), float(len(calls))) *
-                        torch.tensor([1.0, 10.0, 100.0]))
+                        torch.full(
+                            (frames_per_chunk, 3), float(len(calls))) * torch.tensor([1.0, 10.0, 100.0]))
                 return torch.stack(values)
 
             model.forward = fake_forward
@@ -153,7 +153,8 @@ class BrouhahaProviderPostprocessingTests(unittest.TestCase):
         ).load()
         scores = torch.tensor(SCORES, dtype=torch.float32)
         provider._frame_output = lambda waveform: PyanNetFrameOutput(
-            scores=torch.stack((scores, torch.full_like(scores, 20.0), torch.full_like(scores, 30.0)), dim=-1),
+            scores=torch.stack(
+                (scores, torch.full_like(scores, 20.0), torch.full_like(scores, 30.0)), dim=-1),
             frame_hop_samples=270,
             frame_length_samples=270,
             frame_start_samples=0,
