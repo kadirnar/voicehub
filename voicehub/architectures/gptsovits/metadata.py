@@ -48,6 +48,17 @@ _S1_V2 = GPTSoVITSCheckpointMetadata(
     tensor_count=295,
     parameter_count=77_606_402,
 )
+# Upstream's default S1 for the V2Pro family (config.py pretrained_gpt_name,
+# TTS_Config.default_configs) is s1v3.ckpt: the V2 S1 topology with
+# different weights.
+_S1_V3 = GPTSoVITSCheckpointMetadata(
+    filename="s1v3.ckpt",
+    subfolder="",
+    sha256="87133414860ea14ff6620c483a3db5ed07b44be42e2c3fcdad65523a729a745a",
+    inventory_fingerprint="f2c51a99cc5008555175fceba4e4b5bb2e76d7ead7364d6d14ac524f0ee4f037",
+    tensor_count=295,
+    parameter_count=77_606_402,
+)
 _S2_D_CLASSIC_V1 = GPTSoVITSCheckpointMetadata(
     filename="s2D488k.pth",
     subfolder="",
@@ -113,7 +124,7 @@ GPT_SOVITS_VARIANTS = {
     "v2Pro":
     GPTSoVITSVariantMetadata(
         variant="v2Pro",
-        s1=_S1_V2,
+        s1=_S1_V3,
         s2_generator=GPTSoVITSCheckpointMetadata(
             filename="s2Gv2Pro.pth",
             subfolder="v2Pro",
@@ -127,7 +138,7 @@ GPT_SOVITS_VARIANTS = {
     "v2ProPlus":
     GPTSoVITSVariantMetadata(
         variant="v2ProPlus",
-        s1=_S1_V2,
+        s1=_S1_V3,
         s2_generator=GPTSoVITSCheckpointMetadata(
             filename="s2Gv2ProPlus.pth",
             subfolder="v2Pro",

@@ -132,7 +132,11 @@ class GPTSoVITSRuntime(nn.Module):
             noise_scale=noise_scale,
             speed=speed,
         )
-        return self.sample_rate, waveform[0, 0].float()
+        waveform = waveform[0, 0]
+        # Released TTS.audio_postprocess rescales a fragment whose peak exceeds
+        # 1; dividing by 1 leaves in-range audio bit-identical.
+        waveform = waveform / waveform.abs().max().clamp(min=1.0)
+        return self.sample_rate, waveform.float()
 
     def synthesize(self, text: str, **prepared: Any) -> tuple[int, Tensor]:
         if not prepared:
@@ -245,7 +249,7 @@ class TTS(GPTSoVITSRuntime):
             "prompt_lang",
             "text_lang",
         }
-        if not all(name in request for name in (
+        if not all(request.get(name) is not None for name in (
                 "s1_phoneme_ids",
                 "s1_bert_features",
                 "s2_phoneme_ids",

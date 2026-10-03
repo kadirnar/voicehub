@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 import warnings
 from pathlib import Path
 from types import SimpleNamespace
@@ -34,7 +35,7 @@ from voicehub.architectures.gptsovits.frontend import (
 from voicehub.architectures.gptsovits.metadata import GPT_SOVITS_VARIANTS
 from voicehub.architectures.gptsovits.modeling import build_s2_discriminator, build_s2_generator
 from voicehub.architectures.gptsovits.registration import create_gptsovits_architecture_spec
-from voicehub.architectures.gptsovits.runtime import GPTSoVITSRuntime, TTS_Config
+from voicehub.architectures.gptsovits.runtime import TTS, GPTSoVITSRuntime, TTS_Config
 from voicehub.architectures.gptsovits.semantic import GPTSoVITSSemanticModel
 from voicehub.architectures.gptsovits.training import GPTSoVITSS2TrainingModel, build_staged_training_model
 from voicehub.models.gptsovits.training import GPTSoVITSTrainingAdapter
@@ -215,6 +216,32 @@ class NativeGPTSoVITSTests(unittest.TestCase):
                     variant,
                 )
 
+    def test_release_defaults_match_pinned_upstream_inference_defaults(self):
+        source = (
+            PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "source" / "GPT_SoVITS" / "TTS_infer_pack" /
+            "TTS.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        defaults = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == "TTS_Config":
+                for statement in node.body:
+                    if (isinstance(statement, ast.Assign) and
+                            any(getattr(target, "id", None) == "default_configs"
+                                for target in statement.targets)):
+                        defaults = ast.literal_eval(statement.value)
+        self.assertIsNotNone(defaults)
+        prefix = "GPT_SoVITS/pretrained_models/"
+        for variant in SUPPORTED_GPT_SOVITS_VARIANTS:
+            release = GPT_SOVITS_VARIANTS[variant]
+            with self.subTest(variant=variant):
+                for key, component in (
+                    ("t2s_weights_path", release.s1),
+                    ("vits_weights_path", release.s2_generator),
+                ):
+                    expected = defaults[variant][key].removeprefix(prefix)
+                    actual = "/".join(part for part in (component.subfolder, component.filename) if part)
+                    self.assertEqual(actual, expected)
+
     def test_frontend_accepts_exact_prepared_tensors_and_rejects_raw_text(self):
         with self.assertRaisesRegex(GPTSoVITSFrontendError, "does not guess"):
             reject_raw_text("raw text")
@@ -241,6 +268,23 @@ class NativeGPTSoVITSTests(unittest.TestCase):
                 prompt_semantic_ids=None,
                 reference_spectrogram=torch.zeros(1_025, 3),
             )
+
+    def test_public_raw_text_request_fails_closed_with_frontend_error(self):
+        # The public wrapper always sends every prepared key, set to None for
+        # raw-text calls; the runtime must still reject them explicitly.
+        request = {
+            "text": "Hello.",
+            "text_lang": "en",
+            "ref_audio_path": "reference.wav",
+            "prompt_text": "Reference.",
+            "prompt_lang": "en",
+            "s1_phoneme_ids": None,
+            "s1_bert_features": None,
+            "s2_phoneme_ids": None,
+            "reference_spectrogram": None,
+        }
+        with self.assertRaisesRegex(ValueError, "requires prepared IDs/features/spectrograms"):
+            next(TTS.run(SimpleNamespace(), request))
 
     def test_pro_frontend_requires_exact_prepared_speaker_embedding(self):
         s1_config = GPTSoVITSS1Config.for_variant("v2Pro")
@@ -391,6 +435,28 @@ class NativeGPTSoVITSTests(unittest.TestCase):
         self.assertEqual(waveform.ndim, 1)
         self.assertGreater(waveform.numel(), 0)
         self.assertTrue(torch.isfinite(waveform).all())
+
+    def test_decoder_overshoot_is_peak_normalized_like_released_postprocess(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            generator = build_s2_generator().eval()
+        runtime = GPTSoVITSRuntime(GPTSoVITSSemanticModel().eval(), generator)
+        prepared = {
+            "s1_phoneme_ids": [1, 2],
+            "s1_bert_features": torch.zeros(1, 1_024, 2),
+            "s2_phoneme_ids": [3, 4, 5],
+            "prompt_semantic_ids": None,
+            "reference_spectrogram": torch.rand(1, 1_025, 4),
+            "semantic_codes": [6, 7],
+        }
+        loud = torch.tensor([[[0.5, -2.5, 1.25]]])
+        quiet = torch.tensor([[[0.3, -0.999, 1.0]]])
+        with unittest.mock.patch.object(generator, "decode", return_value=loud):
+            _, waveform = runtime.synthesize_prepared(**prepared)
+        torch.testing.assert_close(waveform, torch.tensor([0.2, -1.0, 0.5]), rtol=0, atol=0)
+        with unittest.mock.patch.object(generator, "decode", return_value=quiet):
+            _, waveform = runtime.synthesize_prepared(**prepared)
+        self.assertTrue(torch.equal(waveform, quiet[0, 0]))
 
     def test_safe_export_has_integrity_and_strict_fresh_reload(self):
         s1 = nn.Linear(2, 3)
