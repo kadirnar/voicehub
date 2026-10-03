@@ -50,6 +50,8 @@ This example is maintained against VoiceHub's public API; it is not copied from 
 
 **Inputs and controls:** Voice IDs are checkpoint-specific; `af_heart` belongs to the registered Kokoro release.
 
+**Checkpoint note:** Raw text uses VoiceHub's built-in grapheme fallback, not upstream's Misaki/espeak G2P, so pronunciation differs from upstream Kokoro. Pass `phonemes=` or a Misaki `text_frontend` callable for upstream-equivalent audio.
+
 ```python
 from pathlib import Path
 
@@ -201,7 +203,7 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 ### Limitations
 
-- No integration-specific checkpoint limitation is registered. Verify the selected checkpoint revision and its documented runtime requirements.
+- Raw text uses VoiceHub's built-in grapheme fallback, not upstream's Misaki/espeak G2P, so pronunciation differs from upstream Kokoro. Pass `phonemes=` or a Misaki `text_frontend` callable for upstream-equivalent audio.
 - Validate memory, precision, and optional dependencies on the target system.
 - Public optimizations fail closed when the runtime or hardware cannot satisfy
   their validation contract; an unavailable pass is not reported as applied.

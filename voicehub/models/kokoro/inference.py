@@ -228,7 +228,9 @@ class KokoroForTextToSpeech(PreTrainedTTSModel):
 
         configured = self.config.torch_dtype
         if configured == "auto":
-            return (torch.float16 if torch.device(self.device).type == "cuda" else torch.float32)
+            # Upstream Kokoro runs the released checkpoint in float32 on every
+            # device; half precision is opt-in and not source-equivalent.
+            return torch.float32
         dtype = {
             "bfloat16": torch.bfloat16,
             "float16": torch.float16,
