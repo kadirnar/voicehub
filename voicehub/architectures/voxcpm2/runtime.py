@@ -29,6 +29,7 @@ from voicehub.architectures.voxcpm2.modeling import VoxCPM2Model
 from voicehub.architectures.voxcpm2.processing import VoxCPM2Processor, VoxCPM2Tokenizer
 from voicehub.audio import load_audio
 from voicehub.hub import read_json_file, write_json_file
+from voicehub.path_utils import derived_artifact_path
 
 
 def _dtype(value: str | torch.dtype) -> torch.dtype:
@@ -316,6 +317,14 @@ def load_voxcpm2_runtime(
     codec_path_resolved = artifacts.codec_checkpoint
     if artifacts.legacy_codec:
         native_path = codec_path_resolved.with_name(VOXCPM2_CODEC_NATIVE_FILE)
+        if not native_path.is_file():
+            # Older releases wrote the conversion next to the source;
+            # new conversions never modify the (Hub) source directory.
+            native_path = derived_artifact_path(
+                codec_path_resolved,
+                VOXCPM2_CODEC_NATIVE_FILE,
+                namespace="voxcpm2/audiovae",
+            )
         if not native_path.is_file():
             codec_for_conversion = VoxCPMAudioVAE(
                 config.audio_vae_config,

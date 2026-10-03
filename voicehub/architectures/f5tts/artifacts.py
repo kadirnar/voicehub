@@ -24,7 +24,7 @@ from voicehub.architectures.f5tts.metadata import (
     VOCOS_REPOSITORY,
 )
 from voicehub.hub import resolve_pretrained_file
-from voicehub.path_utils import is_explicit_local_path
+from voicehub.path_utils import derived_artifact_path, is_explicit_local_path
 
 _OFFICIAL_MODEL_FILES = {
     "f5tts_v1_base": (
@@ -74,6 +74,15 @@ def _find_local_file(
     return unique[0]
 
 
+def _conversion_destination(path: Path, *, namespace: str) -> Path:
+    # Older releases wrote the conversion next to the source; new
+    # conversions never modify the (Hub) source directory.
+    sibling = path.with_suffix(".safetensors")
+    if sibling.is_file():
+        return sibling
+    return derived_artifact_path(path, sibling.name, namespace=namespace)
+
+
 def _native_checkpoint(path: Path) -> Path:
     if path.suffix.lower() == ".safetensors":
         return path
@@ -83,7 +92,7 @@ def _native_checkpoint(path: Path) -> Path:
             "PyTorch weight file.")
     return convert_legacy_f5tts_checkpoint(
         path,
-        path.with_suffix(".safetensors"),
+        _conversion_destination(path, namespace="f5tts/checkpoints"),
     )
 
 
@@ -95,7 +104,7 @@ def _native_vocoder(path: Path) -> Path:
                          "weight file.")
     return convert_legacy_vocos_checkpoint(
         path,
-        path.with_suffix(".safetensors"),
+        _conversion_destination(path, namespace="f5tts/vocos"),
     )
 
 
