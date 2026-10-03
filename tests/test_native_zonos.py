@@ -20,6 +20,7 @@ from voicehub.architectures.zonos.checkpoint import (
 from voicehub.architectures.zonos.configuration import ZonosArchitectureConfig, ZonosBackboneConfig
 from voicehub.architectures.zonos.frontend import (
     PHONEME_SYMBOLS,
+    UNK_ID,
     PrecomputedPhonemeFrontend,
     batch_phoneme_ids,
     make_condition_dict,
@@ -36,7 +37,7 @@ from voicehub.architectures.zonos.metadata import (
     ZONOS_TRANSFORMER_REVISION,
     ZONOS_TRANSFORMER_TENSOR_COUNT,
 )
-from voicehub.architectures.zonos.modeling import ZonosForCausalLM
+from voicehub.architectures.zonos.modeling import ZonosForCausalLM, ZonosFourierConditioner
 from voicehub.architectures.zonos.pattern import apply_delay_pattern
 from voicehub.architectures.zonos.registration import create_zonos_architecture_spec, register_zonos_architecture
 from voicehub.architectures.zonos.runtime import NativeZonosRuntime, ZonosGeneration
@@ -211,6 +212,17 @@ class NativeZonosFrontendTests(unittest.TestCase):
         self.assertEqual(value, "həlo")
         self.assertEqual(frontend_id, "precomputed-phonemes")
 
+    def test_out_of_vocabulary_phonemes_map_to_unk_like_upstream(self):
+        # eSpeak output for supported languages (here French "bonjour")
+        # contains symbols outside the published table; the released
+        # tokenizer maps them to UNK instead of rejecting the request.
+        ids = tokenize_phonemes("bɔ̃ʒˈuʁ")
+        self.assertEqual(ids.numel(), 9)
+        self.assertEqual(ids[3].item(), UNK_ID)
+        self.assertNotIn(UNK_ID, ids[[1, 2, 4, 5, 6, 7]].tolist())
+        with self.assertRaisesRegex(ValueError, "no symbol from the published"):
+            tokenize_phonemes("你好")
+
     def test_condition_dictionary_validates_features(self):
         ids = tokenize_phonemes("həlo").unsqueeze(0)
         condition = make_condition_dict(
@@ -273,6 +285,48 @@ class NativeZonosModelTests(unittest.TestCase):
             model.prefix_conditioner.conditioners[1].uncond_vector.grad.abs().sum().item(),
             0,
         )
+
+    def test_fourier_conditioner_normalizes_before_casting(self):
+        torch.manual_seed(0)
+        conditioner = ZonosFourierConditioner(
+            16,
+            name="speaking_rate",
+            min_val=0,
+            max_val=40,
+            uncond_type="learned",
+        ).to(torch.bfloat16)
+        value = torch.tensor([[[3.7]]])
+        # Released order: normalize in float32, then cast to the weight dtype.
+        angles = 2 * torch.pi * (value / 40).to(torch.bfloat16) @ conditioner.weight.T
+        expected = torch.cat((angles.cos(), angles.sin()), dim=-1)
+        self.assertTrue(torch.equal(conditioner(value), expected))
+        cast_first = 2 * torch.pi * (value.to(torch.bfloat16) / 40) @ conditioner.weight.T
+        self.assertFalse(torch.equal(cast_first, angles))
+
+    def test_generation_logits_keep_released_padded_layout(self):
+        config = _tiny_config()
+        self.assertEqual(config.output_vocab_size, 1_025)
+        self.assertEqual(config.generation_logits_width, 1_026)
+        model = ZonosForCausalLM(config).eval()
+        prefix = torch.cat((_tiny_prefix(model, batch_size=1), _tiny_prefix(model, batch_size=1)))
+        cache = model.setup_cache(batch_size=2, max_sequence_length=prefix.shape[1] + 4)
+        codes = torch.full((1, 9, 1), model.masked_token_id)
+        with torch.inference_mode():
+            logits = model.prefill(prefix, codes, cache, cfg_scale=2.0)
+        self.assertEqual(logits.shape, (1, 9, 1_026))
+        self.assertTrue(torch.isneginf(logits[..., 1_025:]).all())
+        self.assertTrue(torch.isfinite(logits[..., :1_025]).all())
+        # Same seed, same noise layout as the released sampler; the masked
+        # column can never be drawn.
+        generator = torch.Generator().manual_seed(7)
+        token = sample_zonos_token(logits, options=ZonosSamplingOptions(), generator=generator)
+        noise = torch.empty_like(logits).exponential_(1, generator=torch.Generator().manual_seed(7))
+        probabilities = torch.softmax(logits, dim=-1)
+        top = probabilities.max(dim=-1, keepdim=True).values
+        probabilities = probabilities.masked_fill(probabilities < 0.1 * top, 0.0)
+        probabilities = probabilities / probabilities.sum(dim=-1, keepdim=True)
+        self.assertTrue(torch.equal(token, torch.argmax(probabilities / noise, dim=-1, keepdim=True)))
+        self.assertTrue(bool((token < 1_025).all()))
 
     def test_seeded_sampling_is_request_local(self):
         logits = torch.randn(1, 9, 1_025)
@@ -488,6 +542,42 @@ class NativeZonosRuntimeTests(unittest.TestCase):
             output.metadata["architecture"],
             "voicehub-native-zonos-transformer",
         )
+
+
+class NativeZonosResamplingTests(unittest.TestCase):
+
+    def setUp(self):
+        try:
+            import torchaudio
+        except ImportError:  # pragma: no cover - optional reference
+            self.skipTest("torchaudio is not installed")
+        self.torchaudio = torchaudio
+        generator = torch.Generator().manual_seed(0)
+        self.waveform = torch.randn(2, 1, 1_001, generator=generator)
+
+    def test_codec_preprocess_matches_upstream_functional_resample(self):
+        from voicehub.architectures.zonos.codec import ZonosDACCodec
+
+        expected = self.torchaudio.functional.resample(self.waveform, 16_000, 44_100)
+        expected = torch.nn.functional.pad(expected, (0, -expected.shape[-1] % 512))
+        actual = ZonosDACCodec()._preprocess(self.waveform, sample_rate=16_000)
+        self.assertTrue(torch.equal(actual, expected))
+
+    def test_vendored_autoencoder_preprocess_matches_upstream(self):
+        from voicehub.models.zonos.source.zonos.autoencoder import DACAutoencoder
+
+        expected = self.torchaudio.functional.resample(self.waveform, 24_000, 44_100)
+        expected = torch.nn.functional.pad(expected, (0, -expected.shape[-1] % 512))
+        actual = DACAutoencoder.preprocess(DACAutoencoder.__new__(DACAutoencoder), self.waveform, 24_000)
+        self.assertTrue(torch.equal(actual, expected))
+
+    def test_speaker_input_matches_upstream_resample_transform(self):
+        from voicehub.models.zonos.source.zonos.speaker_cloning import SpeakerEmbedding
+
+        stereo = self.waveform[:, 0]
+        expected = self.torchaudio.transforms.Resample(22_050, 16_000)(stereo.mean(0, keepdim=True))
+        actual = SpeakerEmbedding.prepare_input(None, stereo, 22_050)
+        self.assertTrue(torch.equal(actual, expected))
 
 
 class NativeZonosDependencyTests(unittest.TestCase):

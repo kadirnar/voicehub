@@ -346,6 +346,20 @@ class ZonosArchitectureConfig:
         return self.eos_token_id + 1
 
     @property
+    def generation_logits_width(self) -> int:
+        """Width of the released sampler's logits, including masked padding.
+
+        The released runtime pads each head after loading with
+        ``pad_weight_``, which appends ``rows % pad_vocab_to_multiple_of``
+        rows (1,025 -> 1,026) rather than rounding up, and masks the extra
+        logits with ``-inf``. Masked columns never win, but the sampler's
+        exponential noise is drawn over the full width, so seeded sampling
+        is only reproducible with the same logit layout.
+        """
+        remainder = self.output_vocab_size % self.pad_vocab_to_multiple_of
+        return self.output_vocab_size + remainder
+
+    @property
     def sample_rate(self) -> int:
         return 44_100
 

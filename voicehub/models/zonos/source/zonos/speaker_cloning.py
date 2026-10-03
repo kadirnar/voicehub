@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from voicehub.hub import resolve_pretrained_file
 from voicehub.models.zonos.source.zonos.utils import DEFAULT_DEVICE
-from voicehub.processing.waveform import resample_waveform
+from voicehub.processing.waveform import resample_waveform_hann
 
 
 def _htk_mel_filter_bank(
@@ -450,19 +450,8 @@ class SpeakerEmbedding(nn.Module):
             wav = wav.mean(0, keepdim=True)
         if wav.ndim == 1:
             wav = wav.unsqueeze(0)
-        if sample_rate == 16_000:
-            return wav
-        return torch.stack(
-            [
-                resample_waveform(
-                    channel,
-                    sample_rate,
-                    16_000,
-                )
-                for channel in wav
-            ],
-            dim=0,
-        )
+        # Upstream: torchaudio.transforms.Resample(sample_rate, 16_000).
+        return resample_waveform_hann(wav, sample_rate, 16_000, match="transform")
 
     def forward(self, wav: torch.Tensor, sample_rate: int):
         wav = self.prepare_input(wav, sample_rate).to(self.device, self.dtype)
