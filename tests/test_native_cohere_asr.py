@@ -617,11 +617,18 @@ class CohereAsrTokenizerAndProcessorTests(unittest.TestCase):
             import librosa
         except (ImportError, ModuleNotFoundError) as error:
             self.skipTest(f"Optional librosa reference unavailable: {error}")
-        from voicehub.architectures.cohere_asr.modeling import _librosa_float32_slaney_filters
+        from voicehub.architectures.cohere_asr.modeling import frontend_window_and_filters
 
+        config = CohereAsrConfig()
         reference = librosa.filters.mel(
-            sr=16_000, n_fft=512, n_mels=128, fmin=0.0, fmax=8_000.0, norm="slaney")
-        actual = _librosa_float32_slaney_filters(sample_rate=16_000, n_fft=512, n_mels=128)
+            sr=config.sample_rate,
+            n_fft=config.n_fft,
+            n_mels=config.encoder_config.num_mel_bins,
+            fmin=0.0,
+            fmax=config.sample_rate / 2,
+            norm="slaney",
+        )
+        _, actual = frontend_window_and_filters(config)
         self.assertEqual(actual.dtype, torch.float32)
         self.assertTrue(torch.equal(actual, torch.from_numpy(reference)))
 
