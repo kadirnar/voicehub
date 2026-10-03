@@ -938,6 +938,7 @@ class TorchCompileOptimizationTests(unittest.TestCase):
                         torch.ones(1, 2, 2),
                         torch.ones(1, 2, dtype=torch.long),
                         torch.empty(1, 0, 2),
+                        torch.zeros(1, 1, 2),
                     ),
                 ),
         ):

@@ -17,6 +17,7 @@ from torch import Tensor, nn
 from torch.nn import functional
 
 from voicehub.architectures.qwen3_tts.configuration import Qwen3TTSEncoderConfig
+from voicehub.architectures.qwen3_tts.modeling import qwen3_tts_rope_inverse_frequency
 from voicehub.neural.rotary import RotaryEmbedding, apply_rotary_embedding
 
 
@@ -746,15 +747,11 @@ def materialize_qwen3_tts_encoder_buffers(
     """Materialize non-persistent RoPE buffers after meta checkpoint load."""
     for module in encoder.modules():
         if isinstance(module, RotaryEmbedding):
-            module.inverse_frequency = 1.0 / (
-                module.base**(
-                    torch.arange(
-                        0,
-                        module.dimension,
-                        2,
-                        dtype=torch.float32,
-                        device=device,
-                    ) / module.dimension))
+            module.inverse_frequency = qwen3_tts_rope_inverse_frequency(
+                module.base,
+                module.dimension,
+                device=device,
+            )
 
 
 __all__ = [

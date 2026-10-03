@@ -136,6 +136,9 @@ class Qwen3TTSTextTokenizer:
             use_regex=True,
             pretokenizer=qwen2_pretokenize,
             padding_side="left",
+            # Qwen2's tokenizer applies NFC before byte-level BPE (the slow
+            # tokenizer's prepare step and the fast tokenizer's normalizer).
+            normalization="NFC",
         )
         if tokenizer.token_id_space_size > 151_936:
             raise TokenizerAssetError("Qwen tokenizer IDs exceed the talker text vocabulary.")

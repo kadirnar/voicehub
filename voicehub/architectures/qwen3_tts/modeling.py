@@ -381,6 +381,11 @@ def _scaled_dot_product_attention(
     """
     policy = FlashAttention4Policy.coerce(flash_attention4_policy)
     mask = (None if attention_bias is None else attention_bias.to(device=query.device, dtype=query.dtype))
+    if is_causal and query.shape[-2] == 1:
+        # A single bottom-right-aligned query attends to every cached key.
+        # Use unmasked SDPA, as the upstream Transformers SDPA path does,
+        # rather than synthesizing an all-true causal mask.
+        is_causal = False
     if (policy is not FlashAttention4Policy.DISABLED or (is_causal and query.shape[-2] != key.shape[-2])):
         return flash_attention4_or_sdpa(
             query,
@@ -1178,8 +1183,10 @@ class Qwen3TTSTalker(nn.Module):
                 self.code_predictor.get_input_embeddings(),
                 self.code_predictor.lm_head,
         )):
+            # Project every position, then select the last, like upstream:
+            # the GEMM shape determines bf16 rounding of the prefill logits.
             code = _sample_token(
-                head(states[:, -1]),
+                head(states)[:, -1],
                 do_sample=do_sample,
                 top_k=top_k,
                 top_p=top_p,
@@ -1214,6 +1221,7 @@ class Qwen3TTSTalker(nn.Module):
         subtalker_top_p: float = 1.0,
         subtalker_temperature: float = 0.9,
         seed: int | None = None,
+        tts_pad_embed: Tensor | None = None,
     ) -> Tensor:
         if prompt_embeds.shape[0] != 1:
             raise ValueError("Native Qwen3-TTS generation currently accepts batch size one.")
@@ -1253,14 +1261,34 @@ class Qwen3TTSTalker(nn.Module):
             generator = torch.Generator(device=generator_device)
             generator.manual_seed(seed)
         mask = attention_mask
+        if mask is not None and bool(mask.all()):
+            # Without padding the mask is redundant. Dropping it selects the
+            # same unmasked causal SDPA kernels as upstream's Transformers
+            # path (which ignores an all-ones mask) instead of a bias-masked
+            # kernel whose bf16 rounding differs.
+            mask = None
+        if tts_pad_embed is None:
+            tts_pad_embed = self.text_projection(
+                self.get_text_embeddings()(
+                    torch.full(
+                        (1, 1),
+                        self.tts_pad_token_id,
+                        device=prompt_embeds.device,
+                        dtype=torch.long,
+                    )))
+        tts_pad_embed = tts_pad_embed.reshape(1, -1)
         generated: list[Tensor] = []
         states, past_key_values = self.model.forward_with_cache(
             prompt_embeds,
             attention_mask=mask,
         )
         hidden = states[:, -1]
+        # Match upstream's Transformers decoding numerics: project the full
+        # prefill (the GEMM shape determines bf16 rounding) and apply the
+        # logits processors to a float32 copy of the last position.
+        next_logits = self.codec_head(states)[:, -1]
         for step in range(max_new_tokens):
-            logits = self.codec_head(hidden)
+            logits = next_logits.float()
             if generated and repetition_penalty != 1:
                 previous = torch.stack(generated, dim=1)[..., 0]
                 selected = logits.gather(1, previous)
@@ -1295,24 +1323,21 @@ class Qwen3TTSTalker(nn.Module):
             if bool((first == self.config.codec_eos_token_id).all()):
                 break
             generated.append(codes)
-            codec_embedding = self.get_input_embeddings()(codes[:, 0])
-            for index, table in enumerate(
-                    self.code_predictor.get_input_embeddings(),
-                    start=1,
-            ):
-                codec_embedding = codec_embedding + table(codes[:, index])
+            # One reduction over the codebook embeddings, as upstream does;
+            # chained low-precision additions would round after every term.
+            codec_embedding = torch.stack(
+                [self.get_input_embeddings()(codes[:, 0])] + [
+                    table(codes[:, index]) for index, table in enumerate(
+                        self.code_predictor.get_input_embeddings(),
+                        start=1,
+                    )
+                ],
+                dim=1,
+            ).sum(dim=1)
             if step < trailing_text_hidden.shape[1]:
                 codec_embedding = codec_embedding + trailing_text_hidden[:, step]
             else:
-                codec_embedding = (
-                    codec_embedding + self.text_projection(
-                        self.get_text_embeddings()(
-                            torch.full(
-                                (1, ),
-                                self.tts_pad_token_id,
-                                device=prompt_embeds.device,
-                                dtype=torch.long,
-                            ))))
+                codec_embedding = codec_embedding + tts_pad_embed
             if mask is not None:
                 mask = functional.pad(mask, (0, 1), value=1)
             if step + 1 < max_new_tokens:
@@ -1322,6 +1347,7 @@ class Qwen3TTSTalker(nn.Module):
                     past_key_values=past_key_values,
                 )
                 hidden = states[:, -1]
+                next_logits = self.codec_head(hidden)
         if not generated:
             return torch.empty(
                 (0, self.config.num_code_groups),
@@ -1397,6 +1423,23 @@ class Qwen3TTSForConditionalGeneration(nn.Module):
         )
 
 
+def qwen3_tts_rope_inverse_frequency(
+    base: float,
+    dimension: int,
+    *,
+    device: str | torch.device,
+) -> Tensor:
+    """RoPE inverse frequencies computed exactly like upstream.
+
+    Transformers evaluates ``base ** (arange / dim)`` on the CPU before
+    the buffer is moved; the CUDA ``pow`` differs from it by one ulp for
+    some frequencies, which changes bf16 rotary tables and therefore
+    outputs.
+    """
+    exponent = torch.arange(0, dimension, 2, dtype=torch.int64).float() / dimension
+    return (1.0 / (base**exponent)).to(device=device)
+
+
 def materialize_qwen3_tts_buffers(
     model: nn.Module,
     *,
@@ -1405,16 +1448,11 @@ def materialize_qwen3_tts_buffers(
     """Move non-persistent RoPE buffers off ``meta`` after assign loading."""
     for module in model.modules():
         if isinstance(module, RotaryEmbedding):
-            inverse = 1.0 / (
-                module.base**(
-                    torch.arange(
-                        0,
-                        module.dimension,
-                        2,
-                        dtype=torch.float32,
-                        device=device,
-                    ) / module.dimension))
-            module.inverse_frequency = inverse
+            module.inverse_frequency = qwen3_tts_rope_inverse_frequency(
+                module.base,
+                module.dimension,
+                device=device,
+            )
 
 
 __all__ = [
@@ -1424,4 +1462,5 @@ __all__ = [
     "Qwen3TTSTalker",
     "Qwen3TTSTalkerOutput",
     "materialize_qwen3_tts_buffers",
+    "qwen3_tts_rope_inverse_frequency",
 ]

@@ -35,7 +35,8 @@ from voicehub.architectures.qwen3_tts.modeling import Qwen3TTSForConditionalGene
 from voicehub.architectures.qwen3_tts.tokenization import Qwen3TTSTextTokenizer
 from voicehub.hub import read_json_file
 from voicehub.optimization.protocols import OptimizationCompileTarget, OptimizationModuleRoot
-from voicehub.processing import NativeAudio, load_native_audio, mel_filter_bank
+from voicehub.processing import NativeAudio, load_native_audio
+from voicehub.processing.audio import _hz_to_mel, _mel_to_hz
 
 _MAX_REFERENCE_AUDIO_BYTES = 64 * 1024 * 1024
 
@@ -256,14 +257,47 @@ class _SpeechTokenizerExportFacade:
         self.feature_extractor = _SpeechFeatureExporter(runtime)
 
 
+def _qwen3_tts_speaker_mel_filters() -> Tensor:
+    """Librosa's Slaney mel bank (24 kHz, 1024-point FFT, 128 bins, 0-12 kHz).
+
+    Mirrors ``librosa.filters.mel`` rounding exactly: float64 triangles
+    stored as float32, then scaled by the float64 Slaney norm and stored
+    as float32.
+    """
+    sample_rate, n_fft, n_mels = 24_000, 1024, 128
+    frequencies = torch.arange(n_fft // 2 + 1, dtype=torch.float64) * (sample_rate / n_fft)
+    mel_edges = torch.linspace(
+        float(_hz_to_mel(torch.tensor(0.0, dtype=torch.float64))),
+        float(_hz_to_mel(torch.tensor(12_000.0, dtype=torch.float64))),
+        n_mels + 2,
+        dtype=torch.float64,
+    )
+    edges = _mel_to_hz(mel_edges)
+    widths = edges[1:] - edges[:-1]
+    ramps = edges[:, None] - frequencies[None, :]
+    triangles = torch.clamp(
+        torch.minimum(-ramps[:-2] / widths[:-1, None], ramps[2:] / widths[1:, None]),
+        min=0.0,
+    ).float()
+    slaney_norm = 2.0 / (edges[2:] - edges[:-2])
+    return (triangles.double() * slaney_norm[:, None]).float()
+
+
 def qwen3_tts_speaker_mel(waveform: Tensor) -> Tensor:
-    """Exact 24 kHz, 128-bin log-mel frontend used by the speaker encoder."""
+    """Exact 24 kHz, 128-bin log-mel frontend used by the speaker encoder.
+
+    Upstream evaluates this float32 frontend on the CPU (from a NumPy
+    waveform) before moving the features to the model, so it is computed
+    on the CPU here as well; the result is returned on the input's
+    device.
+    """
     if not isinstance(waveform, Tensor) or waveform.ndim != 1:
         raise ValueError("Speaker waveform must be a rank-one tensor.")
     padding = (1024 - 256) // 2
     if waveform.numel() <= padding:
         raise ValueError("Qwen3-TTS speaker audio must contain more than 384 samples.")
-    waveform = waveform.float().unsqueeze(0)
+    output_device = waveform.device
+    waveform = waveform.detach().float().cpu().unsqueeze(0)
     waveform = torch.nn.functional.pad(
         waveform.unsqueeze(1),
         (padding, padding),
@@ -274,28 +308,16 @@ def qwen3_tts_speaker_mel(waveform: Tensor) -> Tensor:
         n_fft=1024,
         hop_length=256,
         win_length=1024,
-        window=torch.hann_window(
-            1024,
-            device=waveform.device,
-            dtype=waveform.dtype,
-        ),
+        window=torch.hann_window(1024),
         center=False,
         pad_mode="reflect",
         normalized=False,
         onesided=True,
         return_complex=True,
     )
-    magnitude = torch.sqrt(spectrum.abs().square() + 1e-9)
-    filters = mel_filter_bank(
-        sample_rate=24_000,
-        n_fft=1024,
-        n_mels=128,
-        minimum_frequency=0,
-        maximum_frequency=12_000,
-        device=waveform.device,
-        dtype=waveform.dtype,
-    )
-    return torch.log(torch.matmul(filters, magnitude).clamp_min(1e-5)).transpose(1, 2)
+    magnitude = torch.sqrt(torch.view_as_real(spectrum).pow(2).sum(-1) + 1e-9)
+    features = torch.log(torch.clamp(torch.matmul(_qwen3_tts_speaker_mel_filters(), magnitude), min=1e-5))
+    return features.transpose(1, 2).to(output_device)
 
 
 @dataclass(slots=True)
@@ -396,7 +418,7 @@ class NativeQwen3TTSRuntime:
     ) -> Tensor:
         if self.model.speaker_encoder is None:
             raise ValueError("Only Qwen3-TTS Base checkpoints expose a speaker encoder.")
-        features = qwen3_tts_speaker_mel(audio.waveform.to(self.device)).to(dtype=self.model.dtype)
+        features = qwen3_tts_speaker_mel(audio.waveform).to(device=self.device, dtype=self.model.dtype)
         return self.model.speaker_encoder(features)[0]
 
     def _speaker_embedding(self, reference_audio: Any) -> Tensor:
@@ -511,6 +533,20 @@ class NativeQwen3TTSRuntime:
         )
         return text_embeddings + codec_embeddings, tts_pad
 
+    def _control_embeddings(self) -> tuple[Tensor, Tensor, Tensor]:
+        """Project TTS bos/eos/pad together, exactly as upstream batches
+        them."""
+        talker = self.model.talker
+        controls = torch.tensor(
+            [[
+                self.config.tts_bos_token_id,
+                self.config.tts_eos_token_id,
+                self.config.tts_pad_token_id,
+            ]],
+            device=self.device,
+        )
+        return talker.text_projection(talker.get_text_embeddings()(controls)).chunk(3, dim=1)
+
     def _prompt(
         self,
         text: str,
@@ -522,7 +558,7 @@ class NativeQwen3TTSRuntime:
         non_streaming_mode: bool,
         reference_text: str | None = None,
         reference_codes: Tensor | None = None,
-    ) -> tuple[Tensor, Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         if not isinstance(text, str) or not text.strip():
             raise ValueError("Qwen3-TTS text must be non-empty.")
         talker = self.model.talker
@@ -564,16 +600,7 @@ class NativeQwen3TTSRuntime:
             if (language_name in {"auto", "chinese"} and isinstance(dialect, str) and dialect):
                 language_id = talker_config.codec_language_id[dialect]
 
-        controls = torch.tensor(
-            [[
-                config.tts_bos_token_id,
-                config.tts_eos_token_id,
-                config.tts_pad_token_id,
-            ]],
-            device=self.device,
-        )
-        tts_bos, tts_eos, tts_pad = talker.text_projection(talker.get_text_embeddings()(controls)).chunk(
-            3, dim=1)
+        tts_bos, tts_eos, tts_pad = self._control_embeddings()
         codec_prefix = [
             talker_config.codec_nothink_id,
             talker_config.codec_think_bos_id,
@@ -633,7 +660,7 @@ class NativeQwen3TTSRuntime:
                 device=self.device,
                 dtype=torch.long,
             )
-            return prompt, attention_mask, trailing
+            return prompt, attention_mask, trailing, tts_pad
         first_text = (
             talker.text_projection(talker.get_text_embeddings()(input_ids[:, 3:4])) +
             codec_embeddings[:, -1:])
@@ -683,7 +710,7 @@ class NativeQwen3TTSRuntime:
             device=self.device,
             dtype=torch.long,
         )
-        return prompt, attention_mask, trailing
+        return prompt, attention_mask, trailing, tts_pad
 
     def _generation_values(self, options: dict[str, Any]) -> dict[str, Any]:
         defaults = {
@@ -720,7 +747,7 @@ class NativeQwen3TTSRuntime:
         values = self._generation_values(options)
         if options:
             raise ValueError("Unsupported native Qwen3-TTS generation options: " + ", ".join(sorted(options)))
-        prompt, mask, trailing = self._prompt(
+        prompt, mask, trailing, tts_pad = self._prompt(
             text,
             language=language,
             speaker=speaker,
@@ -735,6 +762,7 @@ class NativeQwen3TTSRuntime:
             attention_mask=mask,
             trailing_text_hidden=trailing,
             seed=seed,
+            tts_pad_embed=tts_pad,
             **values,
         )
         if codes.shape[0] == 0:
