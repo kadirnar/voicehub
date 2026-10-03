@@ -89,7 +89,7 @@ class ConversationTTSForTextToSpeech(PreTrainedTTSModel):
     def _checkpoint_path(self) -> Path:
         source = Path(self.config.name_or_path).expanduser()
         if source.is_file():
-            return source.resolve()
+            return source.absolute()
         if source.is_dir():
             candidates = (
                 source / "model.safetensors",
@@ -98,7 +98,7 @@ class ConversationTTSForTextToSpeech(PreTrainedTTSModel):
             )
             for checkpoint in candidates:
                 if checkpoint.is_file():
-                    return checkpoint.resolve()
+                    return checkpoint.absolute()
             searched = ", ".join(str(path) for path in candidates)
             raise FileNotFoundError("ConversationTTS checkpoint was not found. Searched: "
                                     f"{searched}.")
@@ -122,7 +122,7 @@ class ConversationTTSForTextToSpeech(PreTrainedTTSModel):
             path = Path(self.config.audio_tokenizer_path).expanduser()
             if not path.is_file():
                 raise FileNotFoundError(f"ConversationTTS audio tokenizer not found: {path}")
-            return path.resolve()
+            return path.absolute()
         return self._hub_file(
             self.config.audio_tokenizer_repo_id,
             self.config.audio_tokenizer_filename,

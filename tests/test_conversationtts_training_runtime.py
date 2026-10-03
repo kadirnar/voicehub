@@ -59,8 +59,9 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
                 )
 
         loader.assert_called_once_with(
-            checkpoint.resolve(),
+            checkpoint.absolute(),
             map_location="cpu",
+            mmap=True,
             weights_only=True,
         )
         self.assertEqual(report.format, "pytorch-weights-only")
@@ -87,12 +88,123 @@ class ConversationTTSCheckpointTests(unittest.TestCase):
                 )
 
         loader.assert_called_once_with(
-            checkpoint.resolve(),
+            checkpoint.absolute(),
             map_location="cpu",
+            mmap=True,
             weights_only=True,
         )
         self.assertEqual(report.parameter_count, 1)
         self.assertEqual(model.weight.item(), 5.0)
+
+    def test_official_archive_with_numpy_training_state_loads_weights_only(self):
+        # The published ckpt1.checkpoint stores optimizer/scheduler/reporter
+        # state beside `model`; reporter statistics contain NumPy scalars and
+        # a datetime.timedelta. torch>=2.6 weights-only loading rejected the
+        # whole archive, so the default checkpoint could not be loaded.
+        import datetime
+
+        try:
+            import numpy
+        except ImportError:  # pragma: no cover - NumPy is a test extra
+            self.skipTest("NumPy is required to author the legacy fixture.")
+        model = self._model()
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint = Path(directory) / "ckpt1.checkpoint"
+            self.torch.save(
+                {
+                    "model": {
+                        "module.weight": self.torch.tensor([[7.0]], dtype=self.torch.bfloat16),
+                    },
+                    "optimizer": {
+                        "state": {},
+                        "param_groups": [{
+                            "lr": 1e-4
+                        }],
+                    },
+                    "reporter": {
+                        "stats": {
+                            "loss": numpy.float64(1.5),
+                            "acc": numpy.float32(0.25),
+                            "time": datetime.timedelta(seconds=3),
+                        },
+                        "epoch": 1,
+                    },
+                },
+                checkpoint,
+            )
+            report = load_conversationtts_checkpoint(model, checkpoint, device="cpu")
+
+        self.assertEqual(report.format, "pytorch-weights-only")
+        self.assertEqual(model.weight.item(), 7.0)
+
+    def test_official_archive_allowlist_still_rejects_executable_globals(self):
+        import pickle
+
+        model = self._model()
+
+        class _Executable:
+
+            def __reduce__(self):
+                import os
+
+                return (os.getcwd, ())
+
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint = Path(directory) / "ckpt1.checkpoint"
+            self.torch.save(
+                {
+                    "model": {
+                        "weight": self.torch.tensor([[1.0]])
+                    },
+                    "reporter": _Executable(),
+                },
+                checkpoint,
+            )
+            with self.assertRaises(pickle.UnpicklingError):
+                load_conversationtts_checkpoint(model, checkpoint, device="cpu")
+
+    def test_hub_cached_safetensors_symlink_keeps_its_format(self):
+        # Hugging Face caches store files as suffix-less content-addressed
+        # blobs behind `snapshots/<rev>/<name>` symlinks. Resolving the link
+        # before choosing the format sent a cached `model.safetensors` export
+        # to torch.load instead of the Safetensors reader.
+        source = self._model()
+        with self.torch.no_grad():
+            source.weight.fill_(9.0)
+        target = self._model()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blob = root / "blobs" / ("a" * 64)
+            blob.parent.mkdir()
+            export_conversationtts_checkpoint(source, root / "export.safetensors").rename(blob)
+            snapshot = root / "snapshots" / "rev"
+            snapshot.mkdir(parents=True)
+            (snapshot / "model.safetensors").symlink_to(Path("..", "..", "blobs", blob.name))
+            report = load_conversationtts_checkpoint(target, snapshot / "model.safetensors", device="cpu")
+
+        self.assertEqual(report.format, "safetensors")
+        self.assertEqual(target.weight.item(), 9.0)
+
+    def test_mimi_tokenizer_accepts_hub_cached_safetensors_symlink(self):
+        from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.MimiCodec import mimi_tokenizer
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            blob = root / "blobs" / ("b" * 64)
+            blob.parent.mkdir()
+            blob.write_bytes(b"placeholder")
+            snapshot = root / "snapshots" / "rev"
+            snapshot.mkdir(parents=True)
+            link = snapshot / "tokenizer-e351c8d8-checkpoint125.safetensors"
+            link.symlink_to(Path("..", "..", "blobs", blob.name))
+            with (
+                    patch.object(mimi_tokenizer, "MimiCodec", Mock(return_value=self._model())),
+                    patch.object(mimi_tokenizer.MimiTokenizer, "_load_checkpoint") as load,
+            ):
+                mimi_tokenizer.MimiTokenizer(link)
+            load.assert_called_once()
+            with self.assertRaisesRegex(ValueError, "must use Safetensors"):
+                mimi_tokenizer.MimiTokenizer(blob)
 
     def test_checkpoint_refuses_unsafe_fallback_when_weights_only_is_unsupported(self, ):
         model = self._model()

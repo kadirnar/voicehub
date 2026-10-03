@@ -5,6 +5,7 @@ from pathlib import Path
 import torch
 
 from voicehub.audio import load_audio
+from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.checkpointing import SafeTensorReader
 from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.MimiCodec.model.models.MimiCodec import MimiCodec
 from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.abs_tokenizer import AbsTokenizer
@@ -29,7 +30,7 @@ class MimiTokenizer(AbsTokenizer):
                 "`ckpt_path` is required. Resolve Hub artifacts at the "
                 "VoiceHub wrapper boundary before constructing MimiTokenizer."
             )
-        checkpoint = Path(ckpt_path).expanduser().resolve()
+        checkpoint = Path(ckpt_path).expanduser().absolute()
         if not checkpoint.is_file():
             raise FileNotFoundError(
                 f"Mimi tokenizer checkpoint was not found: {checkpoint}."
@@ -101,10 +102,14 @@ class MimiTokenizer(AbsTokenizer):
 
     def encode(self, wav_root):
         if isinstance(wav_root, str):
-            wav = load_audio(
-                wav_root,
-                target_sampling_rate=self.sr,
-            ).waveform
+            decoded = load_audio(wav_root)
+            # Upstream: torchaudio.transforms.Resample(sr, 24000).
+            wav = resample_waveform_hann(
+                decoded.waveform,
+                decoded.sampling_rate,
+                self.sr,
+                match="transform",
+            )
             wav = wav.unsqueeze(0).unsqueeze(0).to(self.device)
         else:
             wav = wav_root
@@ -133,11 +138,15 @@ class MimiTokenizer(AbsTokenizer):
                 if wav.numel() == 0:
                     return None
                 if sample_rate != self.sr:
-                    wav = load_audio(
+                    # Upstream: torchaudio.transforms.Resample(sample_rate, 24000).
+                    # Rows are independent waveforms (they become the batch
+                    # axis below), so resample them without a channel downmix.
+                    wav = resample_waveform_hann(
                         wav,
-                        sampling_rate=sample_rate,
-                        target_sampling_rate=self.sr,
-                    ).waveform.unsqueeze(0)
+                        sample_rate,
+                        self.sr,
+                        match="transform",
+                    )
                 wav = wav.unsqueeze(1).to(self.device) # (1,1,len)
             wav = wav.to(self.device)
             with torch.no_grad():

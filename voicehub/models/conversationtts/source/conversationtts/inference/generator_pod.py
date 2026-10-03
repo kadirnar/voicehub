@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 import torch
 from voicehub.audio import load_audio
+from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.models.conversationtts.source.conversationtts.models.model_new import Model, ModelArgs
 from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.Text2ID.text_tokenizer import TextTokenizer
@@ -171,10 +172,15 @@ class Generator:
         return audio
 
 def load_prompt_audio(audio_path):
-    return load_audio(
-        audio_path,
-        target_sampling_rate=24_000,
-    ).waveform
+    # Upstream: torchaudio.load + torchaudio.functional.resample(..., 24000).
+    # Decode natively, then resample with the bit-identical Hann sinc kernel;
+    # VoiceHub's generic resampler changes the prompt's Mimi codes.
+    decoded = load_audio(audio_path)
+    return resample_waveform_hann(
+        decoded.waveform,
+        decoded.sampling_rate,
+        24_000,
+    )
 
 def prepare_prompt(text, speaker, audio_path):
     audio_tensor = load_prompt_audio(audio_path)

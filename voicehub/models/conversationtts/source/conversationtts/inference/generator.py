@@ -17,6 +17,7 @@ from typing import List, Tuple
 import torch
 
 from voicehub.audio import load_audio
+from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.models.conversationtts.source.conversationtts.models.model_new import Model, ModelArgs
 from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.Text2ID.text_tokenizer import TextTokenizer
 from voicehub.models.conversationtts.source.conversationtts.tools.tokenizer.MimiCodec.mimi_tokenizer import MimiTokenizer
@@ -44,10 +45,15 @@ def load_audio_tokenizer(model_path, device):
     return MimiTokenizer(ckpt_path=model_path, device=device)
 
 def load_prompt_audio(audio_path):
-    return load_audio(
-        audio_path,
-        target_sampling_rate=24_000,
-    ).waveform
+    # Upstream: torchaudio.load + torchaudio.functional.resample(..., 24000).
+    # Decode natively, then resample with the bit-identical Hann sinc kernel;
+    # VoiceHub's generic resampler changes the prompt's Mimi codes.
+    decoded = load_audio(audio_path)
+    return resample_waveform_hann(
+        decoded.waveform,
+        decoded.sampling_rate,
+        24_000,
+    )
 
 def prepare_prompt(text, audio_path, segment_id=1):
     audio_tensor = load_prompt_audio(audio_path)

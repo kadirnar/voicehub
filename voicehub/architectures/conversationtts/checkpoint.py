@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,6 +30,33 @@ class ConversationTTSCheckpointReport:
     format: str
     tensor_count: int
     parameter_count: int
+
+
+class _DiscardedTrainingValue:
+    """Inert stand-in for non-tensor training metadata in the official archive.
+
+    The published ``ckpt1.checkpoint`` stores optimizer, scheduler, and
+    reporter state next to ``model``. The reporter statistics contain
+    NumPy scalars (``numpy.core.multiarray.scalar`` / ``numpy.dtype``),
+    which the weights-only unpickler rejects by default. Only ``model``
+    is consumed, so these values are materialized as opaque placeholders
+    without importing NumPy or executing any third-party constructor.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        del args, kwargs
+
+    def __setstate__(self, state: Any) -> None:
+        del state
+
+
+def _legacy_safe_globals() -> list[Any]:
+    return [
+        datetime.timedelta,
+        (_DiscardedTrainingValue, "numpy.core.multiarray.scalar"),
+        (_DiscardedTrainingValue, "numpy._core.multiarray.scalar"),
+        (_DiscardedTrainingValue, "numpy.dtype"),
+    ]
 
 
 def _is_runtime_state(name: str) -> bool:
@@ -133,15 +161,20 @@ def _load_restricted_legacy(
     path: Path,
 ) -> ConversationTTSCheckpointReport:
     try:
-        payload = torch.load(
-            path,
-            # The published archive is roughly 9.3 GB. Materializing it on an
-            # accelerator before validating its inventory can needlessly
-            # exhaust device memory. Keep the one-time restricted conversion
-            # on CPU; `_copy_state` moves each validated tensor independently.
-            map_location="cpu",
-            weights_only=True,
-        )
+        with torch.serialization.safe_globals(_legacy_safe_globals()):
+            payload = torch.load(
+                path,
+                # The published archive is roughly 9.3 GB. Materializing it on
+                # an accelerator before validating its inventory can needlessly
+                # exhaust device memory. Keep the one-time restricted conversion
+                # on CPU; `_copy_state` moves each validated tensor
+                # independently.
+                map_location="cpu",
+                # Most of the archive is optimizer state that is discarded;
+                # memory-map it instead of reading all of it into RAM.
+                mmap=True,
+                weights_only=True,
+            )
     except TypeError as exc:
         if "weights_only" not in str(exc):
             raise
@@ -176,7 +209,7 @@ def load_conversationtts_checkpoint(
 ) -> ConversationTTSCheckpointReport:
     """Load a native Safetensors file or the restricted official archive."""
     torch.device(device)
-    path = Path(checkpoint).expanduser().resolve()
+    path = Path(checkpoint).expanduser().absolute()
     if not path.is_file():
         raise FileNotFoundError(f"ConversationTTS checkpoint was not found: {path}.")
     if path.suffix.lower() == ".safetensors":
