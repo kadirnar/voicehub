@@ -9,7 +9,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from voicehub.configuration_utils import VoiceHubConfig, reject_serialized_secrets
-from voicehub.models.llasa.artifacts import XCODEC2_HF_REPOSITORY, XCODEC2_HF_REVISION
+from voicehub.models.llasa.artifacts import XCODEC2_HF_REPOSITORY
 
 _DTYPE_ALIASES = {
     "auto": "auto",
@@ -69,7 +69,7 @@ class LlasaConfig(VoiceHubConfig):
         *,
         codec_name_or_path: str | Path = XCODEC2_HF_REPOSITORY,
         revision: str | None = None,
-        codec_revision: str | None = XCODEC2_HF_REVISION,
+        codec_revision: str | None = None,
         cache_dir: str | Path | None = None,
         local_files_only: bool = False,
         checkpoint_filename: str | None = None,
