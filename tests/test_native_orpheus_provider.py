@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 from voicehub.models.orpheustts.configuration_orpheustts import OrpheusTTSConfig
 from voicehub.models.orpheustts.inference import OrpheusTTSForTextToSpeech
@@ -343,6 +344,42 @@ class NativeOrpheusCheckpointTests(unittest.TestCase):
             REFERENCE_SNAC_CHECKPOINT["revision"],
             "c29a77c025506947a7ff15a678787b66b4c2ff47",
         )
+
+    def test_codec_follows_the_wrapper_device(self):
+        # The upstream orpheus_tts package decodes SNAC on the accelerator;
+        # the codec used to be pinned to the CPU whatever the model device.
+        import torch
+
+        from voicehub.models.orpheustts.source.snac import SNAC
+
+        devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
+        targets = []
+        original_to = SNAC.to
+
+        def recording_to(module, *args, **kwargs):
+            targets.append(args[0] if args else kwargs.get("device"))
+            return original_to(module, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_tiny_artifact(root)
+            for device in devices:
+                targets.clear()
+                with mock.patch.object(SNAC, "to", recording_to):
+                    wrapper = OrpheusTTSForTextToSpeech(
+                        root,
+                        device=device,
+                        lazy_load=False,
+                        torch_dtype="float32",
+                    )
+                self.assertEqual(targets, [wrapper.device])
+                codec_device = next(wrapper.codec.parameters()).device
+                self.assertEqual(codec_device.type, torch.device(device).type)
+                lm_device = next(wrapper.model.parameters()).device
+                self.assertEqual(codec_device.type, lm_device.type)
+                frame = [channel * SNAC_CODEBOOK_SIZE + channel % 4 for channel in range(7)]
+                audio = wrapper._decode_codes(frame)
+                self.assertEqual(audio.device.type, torch.device(device).type)
 
     def test_tokenizer_uses_full_official_model_id_space(self):
         with tempfile.TemporaryDirectory() as directory:
