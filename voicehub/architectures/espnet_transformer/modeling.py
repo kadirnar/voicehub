@@ -447,6 +447,27 @@ class ESPnetTransformerDecoder(nn.Module):
         )
         return logits[0, -1].log_softmax(dim=-1)
 
+    def score_batch(
+        self,
+        prefixes: Tensor,
+        memory: Tensor,
+    ) -> Tensor:
+        """Next-token log-probabilities for equal-length prefixes.
+
+        ``prefixes`` is ``[hypotheses, length]`` and ``memory`` the
+        ``[frames, hidden]`` encoder output of one utterance.
+        """
+        if prefixes.ndim != 2 or prefixes.shape[1] == 0:
+            raise ValueError("Decoder prefixes must have shape [hypotheses, length].")
+        count, length = prefixes.shape
+        logits, _ = self(
+            memory.unsqueeze(0).expand(count, -1, -1),
+            torch.full((count, ), memory.shape[0], dtype=torch.long, device=memory.device),
+            prefixes,
+            torch.full((count, ), length, dtype=torch.long, device=prefixes.device),
+        )
+        return logits[:, -1].log_softmax(dim=-1)
+
 
 class ESPnetCTC(nn.Module):
     """Built-in CTC projection and batch-averaged objective."""
@@ -539,6 +560,31 @@ class ESPnetSequentialRNNLanguageModel(nn.Module):
             last_token = last_token.view(1)
         logits, next_state = self(last_token.reshape(-1, 1), state)
         return logits[:, -1].log_softmax(dim=-1), next_state
+
+    def score_batch(
+        self,
+        last_tokens: Tensor,
+        states: list[tuple[Tensor, Tensor] | None],
+    ) -> tuple[Tensor, list[tuple[Tensor, Tensor]]]:
+        """Score one next token for several hypotheses in one LSTM call.
+
+        Each state is the ``(hidden, cell)`` pair returned for that
+        hypothesis (``[layers, 1, units]`` each) or ``None`` at SOS.
+        """
+        if last_tokens.ndim != 1 or last_tokens.shape[0] != len(states):
+            raise ValueError("One LM state is required per hypothesis.")
+        if all(state is None for state in states):
+            batched = None
+        elif any(state is None for state in states):
+            raise ValueError("LM states must be all initial or all populated.")
+        else:
+            batched = (
+                torch.cat([state[0] for state in states], dim=1),
+                torch.cat([state[1] for state in states], dim=1),
+            )
+        logits, (hidden, cell) = self(last_tokens.reshape(-1, 1), batched)
+        next_states = [(hidden[:, index:index + 1], cell[:, index:index + 1]) for index in range(len(states))]
+        return logits[:, -1].log_softmax(dim=-1), next_states
 
 
 @dataclass(slots=True)

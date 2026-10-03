@@ -165,6 +165,7 @@ class ESPnetASRForSpeechRecognition(PreTrainedASRModel):
             beam_size=self.config.beam_size,
             ctc_weight=self.config.ctc_weight,
             language_model_weight=self.config.language_model_weight,
+            maximum_decode_ratio=self.config.maximum_decode_ratio,
         )
         self.artifacts = artifacts
         self.native_config = native_config
@@ -315,6 +316,8 @@ class ESPnetASRForSpeechRecognition(PreTrainedASRModel):
                 len(token_ids),
                 "language_model_weight":
                 self.config.language_model_weight,
+                "maximum_decode_ratio":
+                self.config.maximum_decode_ratio,
             },
         )
 

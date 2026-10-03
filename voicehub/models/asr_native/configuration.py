@@ -592,6 +592,7 @@ class ESPnetASRConfig(_NativeASRConfig):
         beam_size: int = 10,
         ctc_weight: float = 0.3,
         language_model_weight: float = 0.6,
+        maximum_decode_ratio: float = 0.0,
         checkpoint_filename: str = "model.safetensors",
         language_model_filename: str = "language_model.safetensors",
         tokenizer_filename: str = "tokenizer.model",
@@ -613,6 +614,11 @@ class ESPnetASRConfig(_NativeASRConfig):
         if (isinstance(language_model_weight, bool) or not isinstance(language_model_weight, Real) or
                 not isfinite(language_model_weight) or not 0.0 <= language_model_weight <= 1.0):
             raise ValueError("`language_model_weight` must be finite and between 0 and 1.")
+        # ESPnet ``maxlenratio``: 0 decodes up to one token per encoder frame
+        # with ESPnet's end detection (the released inference default).
+        if (isinstance(maximum_decode_ratio, bool) or not isinstance(maximum_decode_ratio, Real) or
+                not isfinite(maximum_decode_ratio) or maximum_decode_ratio < 0.0):
+            raise ValueError("`maximum_decode_ratio` must be finite and non-negative.")
         for name, value, expected in (
             ("checkpoint_filename", checkpoint_filename, "model.safetensors"),
             (
@@ -662,6 +668,7 @@ class ESPnetASRConfig(_NativeASRConfig):
             beam_size=int(beam_size),
             ctc_weight=float(ctc_weight),
             language_model_weight=float(language_model_weight),
+            maximum_decode_ratio=float(maximum_decode_ratio),
             checkpoint_filename="model.safetensors",
             language_model_filename="language_model.safetensors",
             tokenizer_filename="tokenizer.model",
@@ -678,6 +685,7 @@ class ESPnetASRConfig(_NativeASRConfig):
                 "ctc_weight",
                 "device",
                 "language_model_weight",
+                "maximum_decode_ratio",
                 "model_tag",
             },
             **kwargs,
