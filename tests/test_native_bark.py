@@ -548,9 +548,8 @@ class NativeBarkTests(unittest.TestCase):
         padding = 16 - ((10 + len(header) + 1) % 16)
         header += b" " * padding + b"\n"
         column_major = values.T.contiguous().reshape(-1).tolist()
-        payload = (
-            b"\x93NUMPY" + bytes((1, 0)) + struct.pack("<H", len(header)) + header +
-            struct.pack("<6q", *column_major))
+        prefix = b"\x93NUMPY\x01\x00" + struct.pack("<H", len(header)) + header
+        payload = prefix + struct.pack("<6q", *column_major)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "coarse_prompt.npy"
             path.write_bytes(payload)
@@ -565,8 +564,8 @@ class NativeBarkTests(unittest.TestCase):
         header = b"{'descr': '<u2', 'fortran_order': False, 'shape': (3,), }"
         padding = 16 - ((10 + len(header) + 1) % 16)
         header += b" " * padding + b"\n"
-        payload = (b"\x93NUMPY" + bytes((1, 0)) + struct.pack("<H", len(header)) + header +
-                   struct.pack("<3H", 7, 9999, 512))
+        prefix = b"\x93NUMPY\x01\x00" + struct.pack("<H", len(header)) + header
+        payload = prefix + struct.pack("<3H", 7, 9999, 512)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "semantic_prompt.npy"
             path.write_bytes(payload)

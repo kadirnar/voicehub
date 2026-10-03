@@ -399,10 +399,10 @@ class BarkCausalModel(nn.Module):
             cache = output.past_key_values
             logits = output.logits[:, -1, :].float()
             start, end = 0, logits.shape[-1]
-            for selected in (
-                    allowed_token_range,
-                    None if alternating_ranges is None else alternating_ranges[step % len(alternating_ranges)],
-            ):
+            ranges = [allowed_token_range]
+            if alternating_ranges is not None:
+                ranges.append(alternating_ranges[step % len(alternating_ranges)])
+            for selected in ranges:
                 if selected is not None:
                     start, end = max(start, selected[0]), min(end, selected[1])
             if not 0 <= start < end <= logits.shape[-1]:
@@ -457,8 +457,8 @@ def _filter_logits(
     top_k: int,
     top_p: float,
 ) -> Tensor:
-    """Apply upstream Bark's filters: top-p and top-k on the unscaled
-    logits, then temperature."""
+    """Apply upstream Bark's filters: top-p and top-k on the unscaled logits,
+    then temperature."""
     if top_p < 1:
         sorted_logits, sorted_indices = torch.sort(
             logits,
@@ -473,11 +473,8 @@ def _filter_logits(
             remove,
             torch.finfo(sorted_logits.dtype).min,
         )
-        logits = torch.full_like(logits, torch.finfo(logits.dtype).min).scatter(
-            1,
-            sorted_indices,
-            sorted_logits,
-        )
+        filtered = torch.full_like(logits, torch.finfo(logits.dtype).min)
+        logits = filtered.scatter(1, sorted_indices, sorted_logits)
     if top_k:
         threshold = torch.topk(
             logits,

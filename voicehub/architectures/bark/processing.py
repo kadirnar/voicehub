@@ -59,8 +59,10 @@ class BarkWordPieceTokenizer:
         # BertTokenizer never splits its special tokens: literal "[MASK]" in
         # the text maps to the special ID, as in upstream Bark.
         special = sorted(
-            {token
-             for token in (unk_token, pad_token, "[CLS]", "[SEP]", "[MASK]") if token in self.token_to_id},
+            {
+                token
+                for token in (unk_token, pad_token, "[CLS]", "[SEP]", "[MASK]") if token in self.token_to_id
+            },
             key=len,
             reverse=True,
         )
