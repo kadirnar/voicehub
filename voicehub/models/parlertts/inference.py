@@ -80,11 +80,14 @@ class ParlerTTSForTextToSpeech(PreTrainedTTSModel):
             ),
             "guidance_scale": generation_values.get("guidance_scale", 1.0),
         }
-        dtype = resolve_torch_dtype(
-            torch,
-            self.config.torch_dtype,
-            self.device,
-        )
+        # Unset dtype means the released checkpoint's FP32 weights, matching
+        # upstream ``from_pretrained`` (config ``torch_dtype: float32``).
+        dtype = (
+            torch.float32 if self.config.torch_dtype is None else resolve_torch_dtype(
+                torch,
+                self.config.torch_dtype,
+                self.device,
+            ))
         # Build on meta first so dtype conversion does not transiently allocate
         # both FP32 and reduced-precision copies of this 878M-parameter graph.
         with torch.device("meta"):

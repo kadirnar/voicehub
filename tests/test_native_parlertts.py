@@ -621,6 +621,77 @@ class ParlerTokenizerTests(unittest.TestCase):
         self.assertEqual(batch.input_ids.tolist(), [[1, 1, 0], [4, 3, 1]])
         self.assertEqual(batch.attention_mask.tolist(), [[1, 1, 0], [1, 1, 1]])
 
+    def test_frontend_keeps_trailing_whitespace_like_upstream_fast_tokenizer(self):
+        # Upstream README inference and training use T5TokenizerFast, e.g.
+        # "Hello world. " -> [8774, 296, 5, 3, 1] where SentencePiece alone
+        # yields [8774, 296, 5, 1]. The trailing "\u2581" (id 3) changes audio.
+
+        class FakeSentencePiece:
+            vocabulary_size = 16
+
+            @staticmethod
+            def encode_as_ids(text):
+                return [7] * len(text.split())
+
+            @staticmethod
+            def piece_to_id(piece):
+                if piece != "\u2581":
+                    raise AssertionError(piece)
+                return 3
+
+        tokenizer = object.__new__(ParlerTextTokenizer)
+        tokenizer.sentencepiece = FakeSentencePiece()
+        tokenizer.eos_token_id = 1
+        tokenizer.pad_token_id = 0
+        tokenizer.model_vocabulary_size = 16
+        self.assertEqual(tokenizer.encode("a b"), (7, 7, 1))
+        self.assertEqual(tokenizer.encode(" a b"), (7, 7, 1))
+        self.assertEqual(tokenizer.encode(""), (1, ))
+        for text in ("a b ", "a b  ", "a b\n", "a b\t", "a b\u00a0", "a b\u3000"):
+            with self.subTest(text=text):
+                self.assertEqual(tokenizer.encode(text), (7, 7, 3, 1))
+        self.assertEqual(tokenizer.encode(" "), (3, 1))
+        # T5TokenizerFast deletes these controls instead of treating them as
+        # whitespace: "a\x0b" -> [3, 9, 1] but "a \x0b" -> [3, 9, 3, 1].
+        for text in ("a b\x0b", "a b\x1c", "a b\x1f\x0b", "\x0b"):
+            with self.subTest(text=text):
+                self.assertEqual(tokenizer.encode(text), (7, ) * len(text.split()) + (1, ))
+        self.assertEqual(tokenizer.encode("a b \x0b"), (7, 7, 3, 1))
+
+
+class ParlerTTSWrapperLoadTests(unittest.TestCase):
+
+    def test_default_config_loads_fp32_weights_like_upstream(self):
+        config = _tiny_config()
+        generation = {"max_length": 32, "min_new_tokens": 1, "do_sample": True}
+        artifacts = SimpleNamespace(
+            config="config.json",
+            generation_config="generation_config.json",
+            tokenizer_model="spiece.model",
+            checkpoint="model.safetensors",
+            official_snapshot=False,
+        )
+        module = "voicehub.models.parlertts.inference"
+        with (
+                patch(f"{module}.resolve_parlertts_artifacts", return_value=artifacts),
+                patch(
+                    f"{module}.read_json_file",
+                    side_effect=lambda path: config.to_dict() if path == "config.json" else generation,
+                ),
+                patch(f"{module}.load_parlertts_checkpoint") as load_checkpoint,
+                patch(f"{module}.ParlerTextTokenizer.from_model_file", return_value=object()),
+        ):
+            model = ParlerTTSForTextToSpeech(model_path="local-fixture", device="cpu")
+            self.assertIsNone(model.config.torch_dtype)
+            model.load()
+        load_checkpoint.assert_called_once()
+        self.assertEqual(
+            {parameter.dtype
+             for parameter in model.model.parameters()},
+            {torch.float32},
+        )
+        self.assertEqual(model.generation_defaults["max_length"], 32)
+
 
 if __name__ == "__main__":
     unittest.main()
