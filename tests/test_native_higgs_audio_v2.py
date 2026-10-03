@@ -9,7 +9,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import torch
 
@@ -423,24 +423,157 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         self.assertTrue(
             all(not parameter.requires_grad for parameter in restored.audio_tokenizer.parameters()))
 
-    def test_generation_constraints_force_only_selected_codebooks(self):
+    def test_repetition_aware_sampling_follows_the_source_window(self):
         with tempfile.TemporaryDirectory() as directory:
             runtime = _small_runtime(Path(directory))
-            generator = HiggsAudioV2Generator(
-                runtime.model,
-                runtime.processor,
-            )
-            logits = torch.zeros(1, 2, 18)
-            forced = generator._force_token(
+            generator = HiggsAudioV2Generator(runtime.model, runtime.processor)
+            logits = torch.full((1, 2, 18), -30.0)
+            logits[0, 0, 3] = 0.0
+            logits[0, 1, 16] = 1.0
+            logits[0, 1, 5] = 0.5
+            # The window covers stream BOS/EOS tokens and reference context:
+            # codebook 1's argmax (BOS) repeats twice and is redrawn from the
+            # raw distribution even though the caller will force it later.
+            history = torch.tensor([[[3, 16], [9, 16], [4, 9]]])
+            draws = torch.Generator().manual_seed(0)
+            frame = generator._sample_frame(
                 logits,
-                torch.tensor([[True, False]]),
-                16,
+                history,
+                temperature=0.0,
+                top_k=None,
+                top_p=1.0,
+                ras_window=3,
+                ras_max_repeats=2,
+                generator=draws,
+            )
+            self.assertEqual(frame[0, 0].item(), 3)
+            self.assertIn(frame[0, 1].item(), (5, 16))
+            self.assertFalse(torch.equal(draws.get_state(), torch.Generator().manual_seed(0).get_state()))
+
+            draws = torch.Generator().manual_seed(0)
+            frame = generator._sample_frame(
+                logits,
+                history[:, -1:],
+                temperature=0.0,
+                top_k=None,
+                top_p=1.0,
+                ras_window=3,
+                ras_max_repeats=2,
+                generator=draws,
+            )
+            self.assertEqual(frame[0].tolist(), [3, 16])
+            # No repetition: greedy decoding draws no random numbers.
+            self.assertTrue(torch.equal(draws.get_state(), torch.Generator().manual_seed(0).get_state()))
+
+    def test_codec_encoder_pads_and_resamples_like_the_source_encoder(self):
+        with torch.device("meta"):
+            released = HiggsAudioV2TokenizerModel(HiggsAudioV2TokenizerConfig(), initialize=False)
+        # xcodec pads by 160 * semantic_downsample_factor, not hop_length // 2.
+        self.assertEqual(released.pad, 320)
+
+        tiny = HiggsAudioV2TokenizerConfig.tiny()
+        acoustic = replace(
+            tiny.acoustic_model_config,
+            downsampling_ratios=(3, 4),
+            upsampling_ratios=(3, 4),
+            sampling_rate=24_000,
+        )
+        config = replace(tiny, sample_rate=24_000, acoustic_model_config=acoustic, target_bandwidths=(16.0, ))
+        torch.manual_seed(0)
+        codec = HiggsAudioV2TokenizerModel(config)
+        self.assertEqual(config.semantic_downsample_factor, 2)
+        self.assertEqual(codec.pad, 4)
+        waveform = torch.randn(1, 1, 250)
+        seen = []
+        handle = codec.acoustic_encoder.register_forward_pre_hook(
+            lambda module, args: seen.append(args[0].shape[-1]))
+        try:
+            codes = codec.encode(waveform).audio_codes
+        finally:
+            handle.remove()
+        self.assertEqual(seen, [250 + 2 * 4])
+        self.assertEqual(codes.shape[-1], 21)
+
+        try:
+            import torchaudio
+        except ImportError:  # pragma: no cover - torchaudio is a test extra.
+            return
+        semantic_input = torch.nn.functional.pad(
+            torchaudio.functional.resample(waveform[:, 0], 24_000, 16_000),
+            (2, 2),
+        )
+        with torch.no_grad():
+            hidden = codec.semantic_model(semantic_input, output_hidden_states=True).hidden_states
+            expected = torch.stack(hidden, dim=1).mean(dim=1)[:, ::2]
+            actual = codec._extract_semantic_features(waveform)
+        torch.testing.assert_close(actual, expected, rtol=0.0, atol=0.0)
+
+    @staticmethod
+    def _scripted_generation(runtime, frames):
+        """Greedy-generate with logits whose argmax follows ``frames``."""
+        config = runtime.model.config
+        steps = iter(frames)
+
+        def forward(*args, **kwargs):
+            codes = next(steps)
+            logits = torch.zeros(1, 1, config.num_codebooks, config.codebook_size)
+            for codebook, code in enumerate(codes):
+                logits[0, 0, codebook, code] = 10.0
+            return SimpleNamespace(
+                logits=logits.reshape(1, 1, -1),
+                past_key_values=object(),
             )
 
-        self.assertEqual(forced[0, 0].argmax().item(), 16)
-        self.assertTrue(torch.isneginf(forced[0, 0, :16]).all())
-        self.assertTrue(torch.isneginf(forced[0, 0, 17:]).all())
-        self.assertTrue(torch.equal(forced[0, 1], logits[0, 1]))
+        runtime.model.forward = forward
+        batch = runtime.processor.generation_batch("hi")
+        return HiggsAudioV2Generator(runtime.model, runtime.processor).generate(
+            batch,
+            max_new_tokens=16,
+            temperature=0.0,
+            ras_window=None,
+        )
+
+    def test_generation_drops_the_aligned_stream_eos_frame(self):
+        # Codebook 0 ends at frame 3; the model does not follow the EOS
+        # diagonal, so the delay constraints finish the pattern. The source
+        # keeps only aligned frames before the EOS column.
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            result = self._scripted_generation(
+                runtime,
+                [(16, 16), (3, 9), (4, 5), (17, 6), (1, 7), (1, 1)],
+            )
+        self.assertEqual(
+            result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 6], [17, 7], [17, 17]])
+        self.assertEqual(result.audio_codes[0].tolist(), [[3, 4], [5, 6]])
+
+    def test_generation_draws_nothing_for_the_opening_bos_frame(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            original = HiggsAudioV2Generator._sample
+            with patch.object(HiggsAudioV2Generator, "_sample", autospec=True,
+                              side_effect=original) as sample:
+                result = self._scripted_generation(
+                    runtime,
+                    [(16, 16), (3, 9), (4, 5), (17, 6), (17, 17)],
+                )
+        # The source's AUDIO_INIT step emits the all-BOS frame without
+        # sampling, so seeded draws start with the first real frame.
+        self.assertEqual(
+            result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 6], [17, 17]])
+        self.assertEqual(sample.call_count, 4)
+
+    def test_generation_ends_lower_codebooks_with_first_stream_eos(self):
+        # Codebook 1 emits EOS before codebook 0: the source forces the lower
+        # codebooks to EOS in the same frame instead of decoding EOS as audio.
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            result = self._scripted_generation(
+                runtime,
+                [(16, 16), (3, 9), (4, 5), (6, 17), (1, 7), (1, 1)],
+            )
+        self.assertEqual(result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 17]])
+        self.assertEqual(result.audio_codes[0].tolist(), [[3], [5]])
 
     def test_public_wrapper_routes_native_generation_options(self):
         response = HiggsAudioV2GenerationOutput(
@@ -472,6 +605,40 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         self.assertEqual(output.audio.tolist(), [0.25, -0.25])
         self.assertEqual(output.metadata["backend"], "voicehub-native")
         self.assertEqual(output.metadata["seed"], 41)
+
+    def test_public_generate_can_disable_top_k_and_repetition_aware_sampling(self):
+        response = HiggsAudioV2GenerationOutput(
+            waveform=torch.tensor([[[0.25, -0.25]]]),
+            audio_codes=torch.ones(1, 2, 1, dtype=torch.long),
+            delayed_audio_codes=torch.ones(1, 2, 2, dtype=torch.long),
+            text_sequence=torch.ones(1, 2, dtype=torch.long),
+            sample_rate=24_000,
+            generated_steps=2,
+        )
+        runtime = SimpleNamespace(generate=Mock(return_value=response))
+        wrapper = HiggsTTSForTextToSpeech(device="cpu")
+        wrapper._runtime = runtime
+
+        def load(model):
+            model.model = torch.nn.Linear(1, 1)
+
+        with patch.object(HiggsTTSForTextToSpeech, "_load_pretrained_model", load), patch.object(
+                HiggsTTSForTextToSpeech,
+                "_prepare_for_inference",
+                lambda model: None,
+        ):
+            # ``None`` overrides are dropped by the shared generation config,
+            # so the public path must accept ``0`` to switch these off.
+            wrapper.generate("hello", seed=3, temperature=0.0, top_k=0, ras_win_len=0)
+            options = runtime.generate.call_args.kwargs
+            self.assertIsNone(options["top_k"])
+            self.assertIsNone(options["ras_window"])
+            wrapper.generate("hello", seed=3)
+            options = runtime.generate.call_args.kwargs
+            self.assertEqual(options["top_k"], 50)
+            self.assertEqual(options["ras_window"], 7)
+            with self.assertRaises(ValueError):
+                wrapper.generate("hello", ras_win_len=-1)
 
     def test_public_config_rejects_remote_code_and_pickle_checkpoints(self):
         self.assertEqual(

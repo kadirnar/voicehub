@@ -22,7 +22,7 @@ from voicehub.architectures.higgs_audio_v2.tokenizer_configuration import (
 )
 from voicehub.architectures.hubert import HubertModel
 from voicehub.kernels.codecs import CodecSnakeKernelOptimizable
-from voicehub.processing.waveform import resample_waveform
+from voicehub.processing.waveform import resample_waveform_hann
 
 
 class Snake1d(CodecSnakeKernelOptimizable, nn.Module):
@@ -522,7 +522,11 @@ class HiggsAudioV2TokenizerModel(nn.Module):
     ) -> None:
         super().__init__()
         self.config = HiggsAudioV2TokenizerConfig.coerce(config)
-        self.pad = self.config.hop_length // 2
+        # The released xcodec encoder pads the acoustic input by
+        # ``160 * semantic_downsample_factor`` samples per side (320 at
+        # 24 kHz), i.e. half a HuBERT hop per semantic step. It is not half
+        # the 960-sample acoustic hop; that offset shifts every frame.
+        self.pad = (self.config.downsample_factor // 2 * self.config.semantic_downsample_factor)
         self.acoustic_encoder = DacEncoder(self.config.acoustic_model_config)
         self.acoustic_decoder = DacDecoder(self.config.acoustic_model_config)
         self.encoder_semantic = SemanticEncoder(self.config)
@@ -616,17 +620,13 @@ class HiggsAudioV2TokenizerModel(nn.Module):
         input_values: Tensor,
     ) -> Tensor:
         if self.config.sample_rate != self.config.semantic_sample_rate:
-            resampled = [
-                resample_waveform(
-                    waveform[0],
-                    self.config.sample_rate,
-                    self.config.semantic_sample_rate,
-                ) for waveform in input_values
-            ]
-            lengths = {waveform.shape[-1] for waveform in resampled}
-            if len(lengths) != 1:
-                raise ValueError("Batched Higgs waveforms must have equal lengths.")
-            semantic_input = torch.stack(resampled)
+            # The source tokenizer uses torchaudio's default resampler
+            # (Hann-windowed sinc); HuBERT features are sensitive to it.
+            semantic_input = resample_waveform_hann(
+                input_values[:, 0],
+                self.config.sample_rate,
+                self.config.semantic_sample_rate,
+            )
         else:
             semantic_input = input_values[:, 0]
         semantic_padding = self.config.downsample_factor // 2
@@ -682,10 +682,11 @@ class HiggsAudioV2TokenizerModel(nn.Module):
         else:
             acoustic_input = input_values
         acoustic = self.acoustic_encoder(acoustic_input)
-        if acoustic.shape[-1] != semantic.shape[-1]:
-            raise RuntimeError(
-                "Higgs semantic and acoustic frame counts disagree after "
-                f"alignment ({semantic.shape[-1]} != {acoustic.shape[-1]}).")
+        # Like the source encoder, trim the longer stream when padding alone
+        # cannot align the two frame counts.
+        frames = min(acoustic.shape[-1], semantic.shape[-1])
+        acoustic = acoustic[..., :frames]
+        semantic = semantic[..., :frames]
         embeddings = torch.cat(
             [acoustic.to(device=semantic.device), semantic],
             dim=1,

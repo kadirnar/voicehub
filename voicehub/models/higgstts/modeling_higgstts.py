@@ -175,9 +175,12 @@ class HiggsTTSForTextToSpeech(PreTrainedTTSModel):
         scene_prompt = model_inputs.get("scene_prompt")
         if scene_prompt is not None and (not isinstance(scene_prompt, str) or not scene_prompt.strip()):
             raise ValueError("`scene_prompt` must be a non-empty string or None.")
+        # Public generation configs drop ``None`` overrides, so ``0`` is the
+        # explicit way to disable top-k or repetition-aware sampling (the
+        # upstream serving engine also treats ``ras_win_len <= 0`` as off).
         top_k = model_inputs.get("top_k", 50)
-        if top_k is not None and (isinstance(top_k, bool) or not isinstance(top_k, int) or top_k <= 0):
-            raise ValueError("`top_k` must be a positive integer or None.")
+        if top_k is not None and (isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 0):
+            raise ValueError("`top_k` must be a non-negative integer (0 disables) or None.")
         temperature = model_inputs.get("temperature", 1.0)
         top_p = model_inputs.get("top_p", 0.95)
         if (isinstance(temperature, bool) or not isinstance(temperature, Real) or
@@ -194,9 +197,11 @@ class HiggsTTSForTextToSpeech(PreTrainedTTSModel):
             value = model_inputs.get(name, default)
             if name == "ras_win_len" and value is None:
                 continue
-            if (isinstance(value, bool) or not isinstance(value, int) or value <= 0):
+            minimum = 0 if name == "ras_win_len" else 1
+            if (isinstance(value, bool) or not isinstance(value, int) or value < minimum):
                 raise ValueError(
-                    f"`{name}` must be a positive integer" + (" or None." if name == "ras_win_len" else "."))
+                    f"`{name}` must be a positive integer" +
+                    (", 0 (disabled), or None." if name == "ras_win_len" else "."))
 
     def _generate(
         self,
@@ -231,9 +236,9 @@ class HiggsTTSForTextToSpeech(PreTrainedTTSModel):
             scene_prompt=(self.config.scene_prompt if scene_prompt is None else scene_prompt),
             max_new_tokens=max_new_tokens,
             temperature=temperature,
-            top_k=top_k,
+            top_k=top_k or None,
             top_p=top_p,
-            ras_window=ras_win_len,
+            ras_window=ras_win_len or None,
             ras_max_repeats=ras_win_max_num_repeat,
             seed=seed,
         )
