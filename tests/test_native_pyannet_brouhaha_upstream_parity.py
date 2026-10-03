@@ -137,7 +137,6 @@ class BrouhahaFrameGridTests(unittest.TestCase):
             for frame, value in expected.items():
                 self.assertEqual(output.scores[frame, 0].item(), value, (num_samples, frame))
 
-
     def test_last_chunk_runs_as_its_own_batch_like_pyannote(self):
         # BrouhahaInference.slide: complete chunks in batch_size batches, then
         # infer(last_chunk[None]); GPU kernels are batch-size dependent.
