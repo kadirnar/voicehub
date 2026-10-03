@@ -288,8 +288,9 @@ def _join_until_twelve_seconds(
 def pydub_sample_width(path: str | Path) -> int:
     """Return the integer sample width pydub measures a WAVE file in.
 
-    16-bit (and 8-bit) PCM is read as is; 24/32-bit PCM is widened to 32 bits,
-    and float WAVE files are converted to 32-bit PCM through FFmpeg.
+    16-bit (and 8-bit) PCM is read as is; 24/32-bit PCM is widened to 32
+    bits, and float WAVE files are converted to 32-bit PCM through
+    FFmpeg.
     """
     with open(path, "rb") as stream:
         header = stream.read(12)
@@ -323,13 +324,14 @@ def preprocess_reference_audio(
 ) -> torch.Tensor:
     """Clip and trim a mono reference like F5-TTS' released recipe.
 
-    This ports ``preprocess_ref_audio_text`` at its native sampling rate:
-    keep whole non-silent phrases up to about 12 seconds, hard-clip at 12
-    seconds otherwise, trim leading/trailing audio quieter than -42 dBFS
-    in 10 ms steps, and append 50 ms of silence. ``sample_width`` is the
-    integer width pydub measures loudness in (see :func:`pydub_sample_width`).
-    The released recipe runs pydub at 11025 Hz or above; lower rates are
-    first upsampled by pydub and are therefore not reproduced bit for bit.
+    This ports ``preprocess_ref_audio_text`` at its native sampling
+    rate: keep whole non-silent phrases up to about 12 seconds, hard-
+    clip at 12 seconds otherwise, trim leading/trailing audio quieter
+    than -42 dBFS in 10 ms steps, and append 50 ms of silence.
+    ``sample_width`` is the integer width pydub measures loudness in
+    (see :func:`pydub_sample_width`). The released recipe runs pydub at
+    11025 Hz or above; lower rates are first upsampled by pydub and are
+    therefore not reproduced bit for bit.
     """
     sample_rate = int(sample_rate)
     if waveform.ndim not in (1, 2):
@@ -415,8 +417,8 @@ def cross_fade(
 ) -> torch.Tensor:
     """Concatenate mono waveforms using a linear cross-fade.
 
-    The released recipe mixes with float64 NumPy ramps; the overlap is mixed
-    in float64 the same way and returned in the inputs' dtype.
+    The released recipe mixes with float64 NumPy ramps; the overlap is
+    mixed in float64 the same way and returned in the inputs' dtype.
     """
     overlap = min(overlap_samples, first.numel(), second.numel())
     if overlap <= 0:

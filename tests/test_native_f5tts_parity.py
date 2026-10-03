@@ -270,11 +270,13 @@ class ReducedPrecisionLoadingTests(unittest.TestCase):
                 device="cpu",
             )
             # CPU maps half precision to float32; force the CUDA resolution.
-            with patch("voicehub.models.f5tts.inference.resolve_torch_dtype", return_value=torch.float16), \
-                    patch("voicehub.models.f5tts.inference.resolve_f5tts_artifacts", return_value=artifacts), \
-                    patch("voicehub.models.f5tts.inference.load_f5tts_checkpoint"), \
-                    patch("voicehub.models.f5tts.inference.load_vocos_checkpoint"), \
-                    patch("voicehub.models.f5tts.inference.NativeVocos", TinyVocoder):
+            with (
+                    patch("voicehub.models.f5tts.inference.resolve_torch_dtype", return_value=torch.float16),
+                    patch("voicehub.models.f5tts.inference.resolve_f5tts_artifacts", return_value=artifacts),
+                    patch("voicehub.models.f5tts.inference.load_f5tts_checkpoint"),
+                    patch("voicehub.models.f5tts.inference.load_vocos_checkpoint"),
+                    patch("voicehub.models.f5tts.inference.NativeVocos", TinyVocoder),
+            ):
                 model._load_pretrained_model()
         runtime = model.model
         self.assertEqual(next(runtime.ema_model.transformer.parameters()).dtype, torch.float16)

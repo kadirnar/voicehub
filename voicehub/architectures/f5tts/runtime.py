@@ -51,7 +51,8 @@ def chunk_text(text: str, *, maximum_bytes: int) -> tuple[str, ...]:
 
 
 def prompt_reference_text(text: str) -> str:
-    """Terminate the reference transcript like ``preprocess_ref_audio_text``."""
+    """Terminate the reference transcript like
+    ``preprocess_ref_audio_text``."""
     if not text.strip():
         raise ValueError(
             "`reference_text` is required by the native F5-TTS runtime. "
@@ -65,9 +66,10 @@ def prompt_reference_text(text: str) -> str:
 def normalize_reference_text(text: str) -> str:
     """Return the reference transcript exactly as the released model sees it.
 
-    ``infer_batch_process`` appends one more space after a single-byte final
-    character, so an English transcript ends with ``".  "``. That text is
-    both prepended to the generated text and used for duration estimation.
+    ``infer_batch_process`` appends one more space after a single-byte
+    final character, so an English transcript ends with ``".  "``. That
+    text is both prepended to the generated text and used for duration
+    estimation.
     """
     normalized = prompt_reference_text(text)
     if len(normalized[-1].encode("utf-8")) == 1:
@@ -187,8 +189,9 @@ class NativeF5TTSRuntime(nn.Module):
     ) -> tuple[torch.Tensor, float, float]:
         """Return the 24 kHz prompt, its original RMS, and its source duration.
 
-        Clipping, silence trimming, and RMS normalization run at the file's
-        own sampling rate before resampling, in the released order.
+        Clipping, silence trimming, and RMS normalization run at the
+        file's own sampling rate before resampling, in the released
+        order.
         """
         # Keep channels: pydub measures loudness over all of them, and the
         # released recipe only downmixes after clipping and trimming.
