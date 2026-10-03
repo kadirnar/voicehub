@@ -144,6 +144,9 @@ MOSS_CODEC_CHECKPOINTS = MappingProxyType({
 # ``tts_robust_normalizer_single_script.normalize_tts_text``.
 MOSS_TTS_TEXT_NORMALIZER_FILENAME = "tts_robust_normalizer_single_script.py"
 MOSS_TTS_TEXT_NORMALIZED_REPOSITORIES = frozenset({MOSS_TTS_DELAY_V15_REPOSITORY})
+# Exported ``config.json`` key recording whether the processor normalizes
+# text, so a saved snapshot keeps the behavior without the source script.
+MOSS_TTS_TEXT_NORMALIZER_CONFIG_KEY = "voicehub_text_normalizer"
 
 MOSS_TTS_REVISIONS = MappingProxyType({
     repository: str(facts["revision"])
@@ -174,6 +177,7 @@ __all__ = [
     "MOSS_TTS_REALTIME_REVISION",
     "MOSS_TTS_REVISIONS",
     "MOSS_TTS_TEXT_NORMALIZED_REPOSITORIES",
+    "MOSS_TTS_TEXT_NORMALIZER_CONFIG_KEY",
     "MOSS_TTS_TEXT_NORMALIZER_FILENAME",
     "OPENMOSS_CODEC_SOURCE",
     "OPENMOSS_CODEC_SOURCE_REVISION",

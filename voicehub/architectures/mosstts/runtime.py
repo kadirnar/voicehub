@@ -28,6 +28,7 @@ from voicehub.architectures.mosstts.metadata import (
     MOSS_CODEC_V2_REPOSITORY,
     MOSS_TTS_CHECKPOINTS,
     MOSS_TTS_TEXT_NORMALIZED_REPOSITORIES,
+    MOSS_TTS_TEXT_NORMALIZER_CONFIG_KEY,
     MOSS_TTS_TEXT_NORMALIZER_FILENAME,
 )
 from voicehub.architectures.mosstts.modeling import MossRealtimeModel, MossTTSModel, MossTTSOutput, build_mosstts_model
@@ -562,18 +563,28 @@ class MossTTSRuntime(nn.Module):
             self.model,
             directory,
             state_override=state_override,
+            normalize_text=self.processor.normalize_text,
         )
         self.tokenizer.save_pretrained(destination)
         return destination
 
 
-def uses_source_text_normalizer(artifacts: MossTTSArtifacts) -> bool:
+def uses_source_text_normalizer(
+    artifacts: MossTTSArtifacts,
+    config_values: Mapping[str, Any] | None = None,
+) -> bool:
     """Whether the official processor of this snapshot normalizes text.
 
     MOSS-TTS-v1.5 ships ``tts_robust_normalizer_single_script.py`` and
     its processor applies it to every user text; earlier releases do
-    not.
+    not.  Snapshots exported by VoiceHub record the decision in their
+    ``config.json``, which takes precedence over release detection.
     """
+    if config_values is not None and MOSS_TTS_TEXT_NORMALIZER_CONFIG_KEY in config_values:
+        recorded = config_values[MOSS_TTS_TEXT_NORMALIZER_CONFIG_KEY]
+        if not isinstance(recorded, bool):
+            raise TypeError(f"MOSS-TTS config `{MOSS_TTS_TEXT_NORMALIZER_CONFIG_KEY}` must be a boolean.")
+        return recorded
     if artifacts.source in MOSS_TTS_TEXT_NORMALIZED_REPOSITORIES:
         return True
     return (Path(artifacts.root) / MOSS_TTS_TEXT_NORMALIZER_FILENAME).is_file()
@@ -603,8 +614,9 @@ def load_mosstts_runtime(
         token=token,
         local_files_only=local_files_only,
     )
+    config_values = read_json_file(artifacts.config)
     config = MossTTSConfig.from_dict(
-        read_json_file(artifacts.config),
+        config_values,
         variant=variant,
     )
     dtype = resolve_mosstts_dtype(compute_dtype, device)
@@ -631,7 +643,7 @@ def load_mosstts_runtime(
     processor = MossTTSProcessor(
         config,
         tokenizer,
-        normalize_text=uses_source_text_normalizer(artifacts),
+        normalize_text=uses_source_text_normalizer(artifacts, config_values),
     )
     if codec is None and load_codec:
         resolved_codec_source = codec_source
