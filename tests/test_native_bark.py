@@ -371,6 +371,24 @@ class NativeBarkTests(unittest.TestCase):
         encoded = processor(text="Hello", max_length=4)
         self.assertEqual(tuple(encoded["input_ids"].shape), (1, 4))
 
+    def test_wordpiece_cleaning_matches_bert_basic_tokenizer(self):
+        from voicehub.architectures.bark.processing import BarkWordPieceTokenizer
+
+        tokenizer = BarkWordPieceTokenizer(["[PAD]", "[UNK]", "Hello", ",", "world", "caf", "##é"])
+        # Newlines/tabs separate words (they are whitespace, not dropped
+        # control characters), as in upstream Bark's BertTokenizer.
+        self.assertEqual(
+            tokenizer.tokenize("Hello,\nworld\tHello\r\nworld\x00"),
+            ["Hello", ",", "world", "Hello", "world"],
+        )
+        # Decomposed accents are NFC-composed before WordPiece lookup.
+        self.assertEqual(tokenizer.tokenize("cafe\u0301"), ["caf", "##é"])
+        self.assertEqual(tokenizer.tokenize("caf\u00e9"), ["caf", "##é"])
+
+        special = BarkWordPieceTokenizer(["[PAD]", "[UNK]", "[MASK]", "[", "]", "a", "##b", "MASK"])
+        self.assertEqual(special.tokenize("ab[MASK]a"), ["a", "##b", "[MASK]", "a"])
+        self.assertEqual(special.tokenize("[ MASK ]"), ["[", "MASK", "]"])
+
     def test_voice_preset_rejects_path_traversal(self):
         from voicehub.architectures.bark.processing import BarkProcessor, BarkWordPieceTokenizer
 
