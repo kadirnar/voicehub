@@ -318,6 +318,51 @@ class NativeSpeechBrainArchitectureTests(unittest.TestCase):
         self.assertEqual(len(first.token_ids), 1)
         self.assertLessEqual(len(first.token_ids[0]), 4)
 
+    def test_beam_search_scores_coverage_at_every_step_like_coverage_scorer(self):
+        # The released hyperparams.yaml (SpeechBrain >= 1.0) registers
+        # coverage as a full ``CoverageScorer``: each step subtracts
+        # ``penalty(cumulative attention) / (step + 1)`` before top-k, and an
+        # ended hypothesis keeps its length-normalized running score. Rescore
+        # the returned path by teacher forcing and require that exact score;
+        # penalizing coverage only once at EOS (the 2021 searcher) differs.
+        config = SpeechBrainCRDNNASRConfig.coerce({
+            **_tiny_config().to_dict(),
+            "beam_size": 3,
+            "lm_weight": 0.5,
+            "coverage_penalty": 1.5,
+            "eos_threshold": 1e6,
+        })
+        torch.manual_seed(27)
+        model = SpeechBrainCRDNNForASR(config).eval()
+        states = torch.randn(1, 8, 4)
+        with torch.no_grad():
+            # Make EOS reachable so the best path ends before the step limit.
+            model.sequence_linear.bias[config.eos_token_id] += 0.25
+
+        result = SpeechBrainRNNLMBeamSearch(model)(states, torch.ones(1))
+
+        path = list(result.token_ids[0]) + [config.eos_token_id]
+        self.assertEqual(len(path), 3)
+        attention_state = model.decoder.attention.initialize(states, torch.tensor([states.shape[1]]))
+        context = states.new_zeros(1, config.attention_dim)
+        hidden = lm_hidden = coverage = None
+        previous = torch.tensor([config.bos_token_id])
+        total = torch.zeros(())
+        with torch.no_grad():
+            for step, token in enumerate(path):
+                output, hidden, context, attention, attention_state = model.decoder.forward_step(
+                    model.embedding(previous), hidden, context, states, attention_state)
+                acoustic = (model.sequence_linear(output) / config.temperature).log_softmax(-1)
+                lm_logits, lm_hidden = model.language_model(previous, lm_hidden)
+                lm = (lm_logits / config.lm_temperature).log_softmax(-1)
+                coverage = attention if coverage is None else coverage + attention
+                penalty = coverage.clamp_min(0.5).sum(-1) - coverage.shape[-1] * 0.5
+                total = total + acoustic[0, token] + config.lm_weight * lm[0, token]
+                total = total - config.coverage_penalty * penalty[0] / (step + 1)
+                previous = torch.tensor([token])
+
+        self.assertAlmostEqual(result.scores[0], float(total) / len(path), places=5)
+
     def test_validation_beam_search_does_not_execute_the_language_model(self):
         torch.manual_seed(24)
         model = SpeechBrainCRDNNForASR(_tiny_config()).eval()
