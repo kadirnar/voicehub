@@ -589,6 +589,21 @@ class NativeVoxCPMProviderTests(unittest.TestCase):
                     runtime.generate("a a", max_length=requested)
                 self.assertEqual(generate.call_args.kwargs["max_length"], expected)
 
+    def test_public_generation_defaults_match_source_voxcpm_generate(self):
+        # Source `VoxCPM.generate`: cfg_value=2.0, inference_timesteps=10,
+        # min_len=2, max_len=4096.
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            wrapper = VoxCPMForTextToSpeech(VoxCPMConfig(), device="cpu")
+            wrapper._runtime = runtime
+            with patch.object(runtime, "generate", return_value=torch.zeros(1, 32)) as generate:
+                wrapper.generate("a")
+        options = generate.call_args.kwargs
+        self.assertEqual(options["guidance"], 2.0)
+        self.assertEqual(options["diffusion_steps"], 10)
+        self.assertEqual(options["min_length"], 2)
+        self.assertEqual(options["max_length"], 4_096)
+
     def test_generation_folds_target_text_whitespace_like_source(self):
         with tempfile.TemporaryDirectory() as directory:
             runtime = _tiny_runtime(Path(directory))

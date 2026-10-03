@@ -100,7 +100,7 @@ class VoxCPMConfig(VoiceHubConfig):
         generation_defaults = {
             "cfg_value": 2.0,
             "inference_timesteps": 10,
-            "max_len": 2_000,
+            "max_len": 4_096,
             "min_len": 2,
         }
         if generation_config is not None:

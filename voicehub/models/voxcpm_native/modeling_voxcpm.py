@@ -194,7 +194,7 @@ class VoxCPMForTextToSpeech(PreTrainedTTSModel):
         if isinstance(steps, bool) or not isinstance(steps, int) or steps <= 0:
             raise ValueError("`inference_timesteps` must be a positive integer.")
         minimum = model_inputs.get("min_len", 2)
-        maximum = model_inputs.get("max_len", 2_000)
+        maximum = model_inputs.get("max_len", 4_096)
         for name, value in (("min_len", minimum), ("max_len", maximum)):
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise ValueError(f"`{name}` must be a positive integer.")
@@ -224,7 +224,7 @@ class VoxCPMForTextToSpeech(PreTrainedTTSModel):
         inference_timesteps: int = 10,
         seed: int | None = None,
         min_len: int = 2,
-        max_len: int = 2_000,
+        max_len: int = 4_096,
         normalize: bool = False,
         denoise: bool = False,
         retry_badcase: bool = False,
