@@ -13,6 +13,6 @@
   "notes": [
     "The stay/change trellis, backtracking, wildcard-label behavior, and character confidence semantics follow the pinned WhisperX source.",
     "VoiceHub replaces NumPy, pandas, NLTK, torchaudio, and Transformers with Torch-only typed processing.",
-    "VoiceHub preserves Whisper segment boundaries and adds aligned word intervals instead of re-segmenting sentences with downloaded Punkt data."
+    "Like WhisperX, text to align is decoded without timestamp tokens per chunk of at most 30 seconds; without a VAD, each Whisper decoding window is one chunk. Aligned segments span their first to last aligned word but are not re-split into sentences with downloaded Punkt data."
   ]
 }

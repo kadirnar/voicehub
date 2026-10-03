@@ -162,6 +162,7 @@ class NativeWhisperXProviderTests(unittest.TestCase):
             device="cpu",
         )
         model.generation_adapter = SimpleNamespace(token_set=SimpleNamespace(is_multilingual=True), )
+        model.native_config = SimpleNamespace(expected_input_frames=3000)
         tokenizer = SimpleNamespace(
             vocabulary={
                 "<pad>": 0,
@@ -215,10 +216,55 @@ class NativeWhisperXProviderTests(unittest.TestCase):
         self.assertTrue(output.metadata["aligned"])
         self.assertEqual(output.metadata["pipeline"], "voicehub-native-whisperx")
         self.assertEqual(output.segments[0].words[0].text, "hi")
+        # WhisperX transcribes without timestamp tokens before aligning.
         self.assertEqual(
             transcribe.call_args.kwargs["return_timestamps"],
-            True,
+            False,
         )
+        self.assertEqual(output.segments[0].start, output.segments[0].words[0].start)
+        self.assertEqual(output.segments[0].end, output.segments[0].words[-1].end)
+
+    def test_word_request_aligns_untimestamped_whisper_windows_like_whisperx(self):
+        # WhisperX decodes each <= 30 s chunk without timestamps and aligns
+        # the text against the whole chunk, so the transcript is the one a
+        # plain request returns.
+        model = WhisperXForSpeechRecognition(
+            WhisperXConfig(name_or_path="small", alignment_model_path="local/alignment"),
+            device="cpu",
+        )
+        model.generation_adapter = SimpleNamespace(token_set=SimpleNamespace(is_multilingual=True))
+        model.native_config = SimpleNamespace(expected_input_frames=3000)
+        windows = []
+
+        def transcribe_window(audio, **kwargs):
+            windows.append((audio.numel(), kwargs["return_timestamps"]))
+            text = " first window." if len(windows) == 1 else " second window."
+            return ASROutput(text=text, language="en", duration=audio.numel() / 16_000)
+
+        aligned = []
+
+        def align(output, *, waveform, language):
+            aligned.append((output, waveform.numel(), language))
+            return output.segments
+
+        with (
+                patch.object(WhisperForSpeechRecognition, "_transcribe", side_effect=transcribe_window),
+                patch.object(model, "_align_segments", side_effect=align),
+        ):
+            output = model._transcribe(
+                torch.zeros(40 * 16_000),
+                sampling_rate=16_000,
+                language="en",
+                return_timestamps="word",
+            )
+
+        self.assertEqual(windows, [(480_000, False), (160_000, False)])
+        self.assertEqual(output.text, "first window. second window.")
+        self.assertEqual(
+            [(segment.text, segment.start, segment.end) for segment in aligned[0][0].segments],
+            [("first window.", 0.0, 30.0), ("second window.", 30.0, 40.0)],
+        )
+        self.assertEqual(aligned[0][1:], (640_000, "en"))
 
     def test_alignment_emission_uses_raw_samples_like_whisperx(self):
         # WhisperX feeds its alignment models raw audio; the Transformers
