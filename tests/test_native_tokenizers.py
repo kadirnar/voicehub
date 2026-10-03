@@ -549,5 +549,63 @@ class ByteBPEBehaviorTests(unittest.TestCase):
         self.assertEqual(unsplit.encode("a!").input_ids, (256, ))
 
 
+class SentencePieceUnigramDecodeTests(unittest.TestCase):
+
+    @staticmethod
+    def _tokenizer(*, add_dummy_prefix, remove_extra_whitespaces):
+        from voicehub.tokenization.sentencepiece_unigram import (
+            SentencePieceUnigramAssets,
+            SentencePieceUnigramPiece,
+            SentencePieceUnigramTokenizer,
+        )
+
+        pieces = (
+            SentencePieceUnigramPiece("<unk>", 0.0, 2),
+            SentencePieceUnigramPiece("<s>", 0.0, 3),
+            SentencePieceUnigramPiece("</s>", 0.0, 3),
+            SentencePieceUnigramPiece("\u2581", -1.0),
+            SentencePieceUnigramPiece("\u2581the", -1.0),
+            SentencePieceUnigramPiece("lo", -1.0),
+            SentencePieceUnigramPiece("<|en|>", 0.0, 4),
+        )
+        return SentencePieceUnigramTokenizer(
+            SentencePieceUnigramAssets(
+                pieces=pieces,
+                unk_token_id=0,
+                bos_token_id=1,
+                eos_token_id=2,
+                pad_token_id=-1,
+                unk_surface=" \u2047 ",
+                byte_fallback=False,
+                normalizer_name="identity",
+                add_dummy_prefix=add_dummy_prefix,
+                remove_extra_whitespaces=remove_extra_whitespaces,
+                escape_whitespaces=True,
+                has_precompiled_normalizer=False,
+                original_model=b"",
+            ))
+
+    def test_decode_strips_only_the_first_emitted_whitespace_marker(self):
+        # Expected strings are sentencepiece.SentencePieceProcessor.decode
+        # outputs for the same flags (SenseVoiceSmall: dummy prefix off,
+        # extra-whitespace removal on).
+        for add_dummy_prefix, remove_extra_whitespaces in ((False, True), (True, False), (True, True)):
+            tokenizer = self._tokenizer(
+                add_dummy_prefix=add_dummy_prefix,
+                remove_extra_whitespaces=remove_extra_whitespaces,
+            )
+            self.assertEqual(tokenizer.decode([4, 5]), "thelo")
+            self.assertEqual(
+                tokenizer.decode([1, 3, 4, 5]), "thelo" if remove_extra_whitespaces else " thelo")
+            self.assertEqual(tokenizer.decode([6, 4]), "<|en|> the")
+            self.assertEqual(tokenizer.decode([0, 4]), " \u2047  the")
+            self.assertEqual(tokenizer.decode([4, 2, 5]), "thelo")
+            # Only extra-whitespace removal keeps stripping bare markers
+            # while the text is still empty.
+            self.assertEqual(tokenizer.decode([1, 3, 3, 4]), "the" if remove_extra_whitespaces else "  the")
+        plain = self._tokenizer(add_dummy_prefix=False, remove_extra_whitespaces=False)
+        self.assertEqual(plain.decode([4, 5]), " thelo")
+
+
 if __name__ == "__main__":
     unittest.main()
