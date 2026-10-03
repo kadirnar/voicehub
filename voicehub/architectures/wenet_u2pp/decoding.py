@@ -113,7 +113,8 @@ def ctc_prefix_beam_search(
                         target = next_scores[prefix]
                         target.blank = _log_add(
                             target.blank,
-                            source.total + probability,
+                            source.blank + probability,
+                            source.nonblank + probability,
                         )
                         candidate = source.viterbi + probability
                         if candidate > target.viterbi_blank:
@@ -148,7 +149,8 @@ def ctc_prefix_beam_search(
                         extended = next_scores[prefix + (token, )]
                         extended.nonblank = _log_add(
                             extended.nonblank,
-                            source.total + probability,
+                            source.blank + probability,
+                            source.nonblank + probability,
                         )
                         candidate = source.viterbi + probability
                         if candidate > extended.viterbi_nonblank:

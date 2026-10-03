@@ -281,6 +281,60 @@ class NativeWeNetArchitectureTests(unittest.TestCase):
         self.assertIsInstance(greedy.token_ids, tuple)
         self.assertIn(rescored.token_ids, {item.token_ids for item in nbest})
 
+    def test_ctc_prefix_beam_search_matches_wenet_reference_bit_for_bit(self):
+        # Reference: ASRModel._ctc_prefix_beam_search at the pinned revision.
+        # Its scores feed attention rescoring through `ctc_weight`.
+        def log_add(values):
+            if all(value == -math.inf for value in values):
+                return -math.inf
+            maximum = max(values)
+            return maximum + math.log(sum(math.exp(value - maximum) for value in values))
+
+        def reference(probabilities, beam_size):
+            current = [((), (0.0, -math.inf))]
+            for row in probabilities:
+                following = {}
+                for token in row.topk(beam_size).indices.tolist():
+                    probability = row[token].item()
+                    for prefix, (blank, nonblank) in current:
+                        last = prefix[-1] if prefix else None
+                        if token == 0:
+                            old_blank, old_nonblank = following.get(prefix, (-math.inf, -math.inf))
+                            following[prefix] = (
+                                log_add([old_blank, blank + probability, nonblank + probability]),
+                                old_nonblank,
+                            )
+                        elif token == last:
+                            old_blank, old_nonblank = following.get(prefix, (-math.inf, -math.inf))
+                            following[prefix] = (old_blank, log_add([old_nonblank, nonblank + probability]))
+                            extended = prefix + (token, )
+                            old_blank, old_nonblank = following.get(extended, (-math.inf, -math.inf))
+                            following[extended] = (old_blank, log_add([old_nonblank, blank + probability]))
+                        else:
+                            extended = prefix + (token, )
+                            old_blank, old_nonblank = following.get(extended, (-math.inf, -math.inf))
+                            following[extended] = (
+                                old_blank,
+                                log_add([old_nonblank, blank + probability, nonblank + probability]),
+                            )
+                current = sorted(following.items(), key=lambda item: log_add(list(item[1])), reverse=True)[:beam_size]
+            return [(prefix, log_add(list(scores))) for prefix, scores in current]
+
+        for seed in range(40):
+            generator = torch.Generator().manual_seed(seed)
+            probabilities = torch.log_softmax(torch.randn(30, 8, generator=generator) * 2, dim=-1)
+            expected = reference(probabilities, 4)
+            actual = ctc_prefix_beam_search(
+                probabilities.unsqueeze(0),
+                torch.tensor([30]),
+                beam_size=4,
+            )[0]
+            self.assertEqual(
+                [(item.token_ids, item.score) for item in actual],
+                expected,
+                msg=f"seed {seed}",
+            )
+
     def test_attention_rescoring_replaces_padding_with_eos(self):
         model = WeNetU2PPForASR(_tiny_config()).eval()
         nbest = (
