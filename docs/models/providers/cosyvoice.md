@@ -22,7 +22,7 @@ hide:
 <details class="vh-model-detail__resources">
 <summary class="vh-model-detail__action">Resources</summary>
 <div class="vh-model-detail__resource-menu">
-<a href="https://arxiv.org/abs/2407.05407" data-vh-model-action="paper">Paper</a>
+<a href="https://arxiv.org/abs/2505.17589" data-vh-model-action="paper">Paper</a>
 <a href="https://github.com/FunAudioLLM/CosyVoice" data-vh-model-action="github">Upstream GitHub</a>
 <a href="https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling_cosyvoice.py" data-vh-model-action="source">VoiceHub source</a>
 <a href="https://colab.research.google.com/github/kadirnar/voicehub/blob/main/notebooks/models/cosyvoice.ipynb" data-vh-model-action="colab">Open in Colab</a>
@@ -111,7 +111,7 @@ The card additionally names Guangdong, Minnan, Sichuan, Dongbei, Shan3xi, Shan1x
 
 ## Paper and GitHub
 
-- **Paper:** [CosyVoice: Multi-Lingual Large Voice Generation Model](https://arxiv.org/abs/2407.05407)
+- **Paper:** [CosyVoice 3: Towards In-the-wild Speech Generation via Scaling-up and Post-training](https://arxiv.org/abs/2505.17589)
 - **Upstream GitHub:** [CosyVoice](https://github.com/FunAudioLLM/CosyVoice)
 - **VoiceHub source:** [VoiceHub model implementation](https://github.com/kadirnar/voicehub/blob/main/voicehub/models/cosyvoice/modeling_cosyvoice.py)
 

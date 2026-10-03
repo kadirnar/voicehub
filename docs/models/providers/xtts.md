@@ -48,7 +48,9 @@ This example is maintained against VoiceHub's public API; it is not copied from 
 
 **Model-specific path:** Supplies the mandatory XTTS v2 speaker reference and a supported language code.
 
-**Inputs and controls:** XTTS rejects missing reference files and unsupported checkpoint language codes before synthesis.
+**Inputs and controls:** Load a local directory converted once from the published `model.pth` with `convert_trusted_legacy_xtts2_checkpoint`; XTTS rejects missing reference files and unsupported checkpoint language codes before synthesis.
+
+**Checkpoint note:** `coqui/XTTS-v2` publishes only the legacy pickle `model.pth`, and VoiceHub never unpickles while loading. Download `config.json`, `vocab.json`, and `model.pth` at the pinned revision, review them, run `voicehub.architectures.xtts2.convert_trusted_legacy_xtts2_checkpoint("model.pth", "checkpoints/xtts-v2/model.safetensors", trust_legacy_pickle=True)` once, and copy `config.json` and `vocab.json` into `checkpoints/xtts-v2`.
 
 ```python
 from pathlib import Path
@@ -61,7 +63,7 @@ if not REFERENCE_AUDIO.is_file():
     raise FileNotFoundError(REFERENCE_AUDIO)
 
 model = AutoModelForTextToSpeech.from_pretrained(
-    'coqui/XTTS-v2',
+    'checkpoints/xtts-v2',
     model_type='xtts',
     device="cuda",
     lazy_load=True,
@@ -136,7 +138,7 @@ Create the registered processor without allocating model weights:
 from voicehub import AutoProcessor
 
 processor = AutoProcessor.from_pretrained(
-    'coqui/XTTS-v2',
+    'checkpoints/xtts-v2',
     model_type='xtts',
 )
 print(type(processor).__name__)
@@ -206,7 +208,7 @@ Confirm the checkpoint revision, access terms, provenance, and license.
 
 ### Limitations
 
-- No integration-specific checkpoint limitation is registered. Verify the selected checkpoint revision and its documented runtime requirements.
+- `coqui/XTTS-v2` publishes only the legacy pickle `model.pth`, and VoiceHub never unpickles while loading. Download `config.json`, `vocab.json`, and `model.pth` at the pinned revision, review them, run `voicehub.architectures.xtts2.convert_trusted_legacy_xtts2_checkpoint("model.pth", "checkpoints/xtts-v2/model.safetensors", trust_legacy_pickle=True)` once, and copy `config.json` and `vocab.json` into `checkpoints/xtts-v2`.
 - Validate memory, precision, and optional dependencies on the target system.
 - Public optimizations fail closed when the runtime or hardware cannot satisfy
   their validation contract; an unavailable pass is not reported as applied.

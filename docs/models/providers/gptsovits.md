@@ -12,7 +12,7 @@ hide:
 
 # GPTSoVITS {.vh-model-title}
 
-<p class="vh-model-detail__summary">Defines both target and prompt languages for GPT-SoVITS zero-shot voice prompting.</p>
+<p class="vh-model-detail__summary">Runs the native GPT-SoVITS S1 language model and S2 decoder on one prepared fragment.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Text to speech</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">gptsovits</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-gptsovits">Parameters: 128.9M</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: zh, en +3</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: preprocessed</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-gptsovits"><strong>Parameter metadata:</strong> Exact learned-parameter total for VoiceHub&#x27;s audited native primary graph at the registered default selection; separately loaded auxiliary models are excluded.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -46,25 +46,25 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Defines both target and prompt languages for GPT-SoVITS zero-shot voice prompting.
+**Model-specific path:** Runs the native GPT-SoVITS S1 language model and S2 decoder on one prepared fragment.
 
-**Inputs and controls:** Use the language codes accepted by the selected GPT-SoVITS checkpoint and an exact prompt transcript.
+**Inputs and controls:** VoiceHub has no raw-text or raw-audio frontend for GPT-SoVITS: produce the phoneme IDs, [1, 1024, phonemes] BERT features, prompt semantic IDs, and reference spectrogram with the upstream frontend for this checkpoint version. The text argument is not re-analyzed.
 
 ```python
 from pathlib import Path
+import json
 
-from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig, AutoConfig
 
-REFERENCE_AUDIO = Path("reference.wav")
-REFERENCE_TEXT = "The reference transcript must exactly match the authorized audio."
-if not REFERENCE_AUDIO.is_file():
-    raise FileNotFoundError(REFERENCE_AUDIO)
+PREPARED_FILE = Path("gptsovits_prepared.json")
+PREPARED = json.loads(PREPARED_FILE.read_text(encoding="utf-8"))
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'lj1995/GPT-SoVITS',
     model_type='gptsovits',
     device="cuda",
     lazy_load=True,
+    config=AutoConfig.for_model("gptsovits", trust_pickle_checkpoint=True),
 )
 output = model.generate(
     'VoiceHub keeps model integrations explicit and reproducible.',
@@ -72,11 +72,12 @@ output = model.generate(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    text_language="en",
-    speaker_audio_path=str(REFERENCE_AUDIO),
-    prompt_language="en",
-    prompt_text=REFERENCE_TEXT,
-    text_split_method="cut5",
+    s1_phoneme_ids=PREPARED["s1_phoneme_ids"],
+    s1_bert_features=PREPARED["s1_bert_features"],
+    s2_phoneme_ids=PREPARED["s2_phoneme_ids"],
+    prompt_semantic_ids=PREPARED["prompt_semantic_ids"],
+    reference_spectrogram=PREPARED["reference_spectrogram"],
+    top_k=15,
 )
 print(output.file_path, output.sample_rate, output.metadata)
 ```

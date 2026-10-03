@@ -12,7 +12,7 @@ hide:
 
 # StyleTTS2 {.vh-model-title}
 
-<p class="vh-model-detail__summary">Uses an explicit local VoiceHub artifact and the native phoneme boundary required by StyleTTS 2.</p>
+<p class="vh-model-detail__summary">Loads the released StyleTTS 2 LibriTTS checkpoint and uses the native phoneme boundary.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Text to speech</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">styletts2</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-styletts2">Parameters: Not reported</span><span class="vh-model-detail__chip" data-chip-kind="language">Language: en-US</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: preprocessed</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-styletts2"><strong>Parameter metadata:</strong> Not reported: the audited metadata available for the registered default does not provide an exact parameter total.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -44,14 +44,14 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Uses an explicit local VoiceHub artifact and the native phoneme boundary required by StyleTTS 2.
+**Model-specific path:** Loads the released StyleTTS 2 LibriTTS checkpoint and uses the native phoneme boundary.
 
-**Inputs and controls:** Convert or review the upstream LibriTTS files first; the HF repository is provenance, not a drop-in VoiceHub directory.
+**Inputs and controls:** Download `Models/LibriTTS/epochs_2nd_00020.pth` and its sibling `config.yml` from the upstream repository, review them, and opt into the pickle once; `save_pretrained` then writes a Safetensors artifact. Text must already be eSpeak phonemes.
 
 ```python
 from pathlib import Path
 
-from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig, AutoConfig
 
 REFERENCE_AUDIO = Path("reference.wav")
 REFERENCE_TEXT = "The reference transcript must exactly match the authorized audio."
@@ -59,10 +59,11 @@ if not REFERENCE_AUDIO.is_file():
     raise FileNotFoundError(REFERENCE_AUDIO)
 
 model = AutoModelForTextToSpeech.from_pretrained(
-    'checkpoints/styletts2/model.safetensors',
+    'checkpoints/StyleTTS2-LibriTTS/Models/LibriTTS/epochs_2nd_00020.pth',
     model_type='styletts2',
     device="cuda",
     lazy_load=True,
+    config=AutoConfig.for_model("styletts2", trust_pickle_checkpoint=True),
 )
 output = model.generate(
     'həˈloʊ fɹʌm vɔɪs hʌb',
@@ -135,7 +136,7 @@ Create the registered processor without allocating model weights:
 from voicehub import AutoProcessor
 
 processor = AutoProcessor.from_pretrained(
-    'checkpoints/styletts2/model.safetensors',
+    'checkpoints/StyleTTS2-LibriTTS/Models/LibriTTS/epochs_2nd_00020.pth',
     model_type='styletts2',
 )
 print(type(processor).__name__)
@@ -189,7 +190,7 @@ Prepare the exact tensors listed in the data contract before this step. Call `mo
 | Property | Value |
 | --- | --- |
 | Default checkpoint | No default; pass a compatible Hub ID or local directory. |
-| Hugging Face ID | [`yl4579/StyleTTS2-LibriTTS`](https://huggingface.co/yl4579/StyleTTS2-LibriTTS)<br>Upstream LibriTTS repository, verified available on 2026-08-11. VoiceHub requires a reviewed local artifact because the published layout is not a native VoiceHub directory. |
+| Hugging Face ID | [`yl4579/StyleTTS2-LibriTTS`](https://huggingface.co/yl4579/StyleTTS2-LibriTTS)<br>Upstream LibriTTS repository, verified available on 2026-08-11. VoiceHub loads a local copy of its released `Models/LibriTTS/epochs_2nd_00020.pth` with the sibling `config.yml` after an explicit `trust_pickle_checkpoint=True` opt-in. |
 | Checkpoint status | No registry default; provide the compatible local artifact described on this page |
 | Optional dependency extra | Core package |
 | Hardware and runtime | Usage selects `cuda`; verify checkpoint-specific requirements |

@@ -12,7 +12,7 @@ hide:
 
 # MeloTTS {.vh-model-title}
 
-<p class="vh-model-detail__summary">Opts into the pinned legacy MeloTTS release explicitly and selects its English speaker table.</p>
+<p class="vh-model-detail__summary">Opts into the pinned legacy MeloTTS release explicitly and synthesizes prepared linguistic features.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Text to speech</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">melotts</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-melotts">Parameters: Not reported</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: en, fr +4</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: preprocessed</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-melotts"><strong>Parameter metadata:</strong> Not reported: the audited metadata available for the registered default does not provide an exact parameter total.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -44,14 +44,18 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Opts into the pinned legacy MeloTTS release explicitly and selects its English speaker table.
+**Model-specific path:** Opts into the pinned legacy MeloTTS release explicitly and synthesizes prepared linguistic features.
 
-**Inputs and controls:** The official release is a reviewed pickle checkpoint; keep `trust_pickle_checkpoint` false for arbitrary files.
+**Inputs and controls:** VoiceHub has no MeloTTS G2P or BERT frontend: produce the phone, tone, and language IDs plus 1024-channel BERT and 768-channel Japanese-BERT features with upstream MeloTTS for this checkpoint. The text argument is not re-analyzed. The official release is a reviewed pickle checkpoint; keep `trust_pickle_checkpoint` false for arbitrary files.
 
 ```python
 from pathlib import Path
+import json
 
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig, AutoConfig
+
+FEATURES_FILE = Path("melotts_features.json")
+FEATURES = json.loads(FEATURES_FILE.read_text(encoding="utf-8"))
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'EN',
@@ -66,6 +70,11 @@ output = model.generate(
         seed=42,
         output_file=Path("output.wav"),
     ),
+    input_ids=FEATURES["input_ids"],
+    tone_ids=FEATURES["tone_ids"],
+    language_ids=FEATURES["language_ids"],
+    bert_features=FEATURES["bert_features"],
+    ja_bert_features=FEATURES["ja_bert_features"],
     speaker="EN-US",
     speed=1.0,
 )

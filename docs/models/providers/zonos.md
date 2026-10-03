@@ -12,7 +12,7 @@ hide:
 
 # Zonos {.vh-model-title}
 
-<p class="vh-model-detail__summary">Conditions Zonos on an eSpeak language code and an authorized speaker reference.</p>
+<p class="vh-model-detail__summary">Conditions Zonos on explicit eSpeak phonemes and a matching eSpeak language code.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Text to speech</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">zonos</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-zonos">Parameters: 1.6B</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: en, ja +3</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: preprocessed</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-zonos"><strong>Parameter metadata:</strong> Exact learned-parameter total for VoiceHub&#x27;s audited native primary graph at the registered default selection; separately loaded auxiliary models are excluded.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -46,19 +46,14 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Conditions Zonos on an eSpeak language code and an authorized speaker reference.
+**Model-specific path:** Conditions Zonos on explicit eSpeak phonemes and a matching eSpeak language code.
 
-**Inputs and controls:** Tune emotion and sampling only after establishing a deterministic seeded baseline.
+**Inputs and controls:** VoiceHub has no built-in Zonos G2P: pass the eSpeak phonemes upstream produces for the text. Cloning needs a precomputed 128-value `speaker_embedding` tensor; `speaker_audio_path` requires an injected trusted `speaker_encoder`.
 
 ```python
 from pathlib import Path
 
 from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
-
-REFERENCE_AUDIO = Path("reference.wav")
-REFERENCE_TEXT = "The reference transcript must exactly match the authorized audio."
-if not REFERENCE_AUDIO.is_file():
-    raise FileNotFoundError(REFERENCE_AUDIO)
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'Zyphra/Zonos-v0.1-transformer',
@@ -72,7 +67,7 @@ output = model.generate(
         seed=42,
         output_file=Path("output.wav"),
     ),
-    speaker_audio_path=str(REFERENCE_AUDIO),
+    phonemes="vˈɔɪs hˈʌb kˈiːps mˈɑːdəl ˌɪntᵻɡɹˈeɪʃənz ɛksplˈɪsɪt ænd ɹᵻpɹədˈuːsᵻbəl.",
     language="en-us",
     cfg_scale=2.0,
     max_new_tokens=2_048,

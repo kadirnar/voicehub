@@ -205,7 +205,7 @@ _HUGGING_FACE_OVERRIDES = {
     ),
     "styletts2": (
         "yl4579/StyleTTS2-LibriTTS",
-        "Upstream LibriTTS repository, verified available on 2026-08-11. VoiceHub requires a reviewed local artifact because the published layout is not a native VoiceHub directory.",
+        "Upstream LibriTTS repository, verified available on 2026-08-11. VoiceHub loads a local copy of its released `Models/LibriTTS/epochs_2nd_00020.pth` with the sibling `config.yml` after an explicit `trust_pickle_checkpoint=True` opt-in.",
     ),
 }
 
@@ -226,8 +226,18 @@ _NO_HUGGING_FACE_REASON = {
 }
 
 _EXAMPLE_OVERRIDES = {
-    "styletts2": "checkpoints/styletts2/model.safetensors",
+    "styletts2": "checkpoints/StyleTTS2-LibriTTS/Models/LibriTTS/epochs_2nd_00020.pth",
     "vad_transformers": "checkpoints/frame-vad",
+    "xtts": "checkpoints/xtts-v2",
+}
+
+_CHECKPOINT_NOTE_OVERRIDES = {
+    "xtts": (
+        "`coqui/XTTS-v2` publishes only the legacy pickle `model.pth`, and VoiceHub never unpickles "
+        "while loading. Download `config.json`, `vocab.json`, and `model.pth` at the pinned revision, "
+        "review them, run `voicehub.architectures.xtts2.convert_trusted_legacy_xtts2_checkpoint("
+        "\"model.pth\", \"checkpoints/xtts-v2/model.safetensors\", trust_legacy_pickle=True)` once, "
+        "and copy `config.json` and `vocab.json` into `checkpoints/xtts-v2`."),
 }
 
 _CHECKPOINT_STATUS_OVERRIDES = {
@@ -272,7 +282,10 @@ def checkpoint_documentation(spec) -> CheckpointDocumentation:
                 "No registry default; provide the compatible local artifact described on this page"),
         ),
     )
-    note = metadata.get("documentation_checkpoint_note")
+    note = metadata.get(
+        "documentation_checkpoint_note",
+        _CHECKPOINT_NOTE_OVERRIDES.get(spec.model_type),
+    )
 
     if provider == "huggingface":
         hugging_face_id = identifier
@@ -327,6 +340,14 @@ REFERENCE_AUDIO_SETUP = (
     'REFERENCE_TEXT = "The reference transcript must exactly match the authorized audio."',
     "if not REFERENCE_AUDIO.is_file():",
     "    raise FileNotFoundError(REFERENCE_AUDIO)",
+)
+MELOTTS_FEATURES_SETUP = (
+    'FEATURES_FILE = Path("melotts_features.json")',
+    "FEATURES = json.loads(FEATURES_FILE.read_text(encoding=\"utf-8\"))",
+)
+GPTSOVITS_PREPARED_SETUP = (
+    'PREPARED_FILE = Path("gptsovits_prepared.json")',
+    "PREPARED = json.loads(PREPARED_FILE.read_text(encoding=\"utf-8\"))",
 )
 SPEAKER_EMBEDDING_SETUP = (
     'SPEAKER_EMBEDDING_FILE = Path("speaker_embedding.json")',
@@ -465,22 +486,39 @@ INFERENCE_PROFILES = {
     ),
     "gptsovits":
     _tts(
-        "Defines both target and prompt languages for GPT-SoVITS zero-shot voice prompting.",
-        "Use the language codes accepted by the selected GPT-SoVITS checkpoint and an exact prompt transcript.",
-        setup=REFERENCE_AUDIO_SETUP,
+        "Runs the native GPT-SoVITS S1 language model and S2 decoder on one prepared fragment.",
+        "VoiceHub has no raw-text or raw-audio frontend for GPT-SoVITS: produce the phoneme IDs, "
+        "[1, 1024, phonemes] BERT features, prompt semantic IDs, and reference spectrogram with the "
+        "upstream frontend for this checkpoint version. The text argument is not re-analyzed.",
+        setup=GPTSOVITS_PREPARED_SETUP,
         arguments=(
-            'text_language="en"',
-            "speaker_audio_path=str(REFERENCE_AUDIO)",
-            'prompt_language="en"',
-            "prompt_text=REFERENCE_TEXT",
-            'text_split_method="cut5"',
+            's1_phoneme_ids=PREPARED["s1_phoneme_ids"]',
+            's1_bert_features=PREPARED["s1_bert_features"]',
+            's2_phoneme_ids=PREPARED["s2_phoneme_ids"]',
+            'prompt_semantic_ids=PREPARED["prompt_semantic_ids"]',
+            'reference_spectrogram=PREPARED["reference_spectrogram"]',
+            "top_k=15",
         ),
+        load_arguments=("config=AutoConfig.for_model(\"gptsovits\", trust_pickle_checkpoint=True)", ),
+        voicehub_imports=("AutoConfig", ),
     ),
     "melotts":
     _tts(
-        "Opts into the pinned legacy MeloTTS release explicitly and selects its English speaker table.",
-        "The official release is a reviewed pickle checkpoint; keep `trust_pickle_checkpoint` false for arbitrary files.",
-        arguments=('speaker="EN-US"', "speed=1.0"),
+        "Opts into the pinned legacy MeloTTS release explicitly and synthesizes prepared linguistic features.",
+        "VoiceHub has no MeloTTS G2P or BERT frontend: produce the phone, tone, and language IDs plus "
+        "1024-channel BERT and 768-channel Japanese-BERT features with upstream MeloTTS for this "
+        "checkpoint. The text argument is not re-analyzed. The official release is a reviewed pickle "
+        "checkpoint; keep `trust_pickle_checkpoint` false for arbitrary files.",
+        setup=MELOTTS_FEATURES_SETUP,
+        arguments=(
+            'input_ids=FEATURES["input_ids"]',
+            'tone_ids=FEATURES["tone_ids"]',
+            'language_ids=FEATURES["language_ids"]',
+            'bert_features=FEATURES["bert_features"]',
+            'ja_bert_features=FEATURES["ja_bert_features"]',
+            'speaker="EN-US"',
+            "speed=1.0",
+        ),
         load_arguments=("config=AutoConfig.for_model(\"melotts\", trust_pickle_checkpoint=True)", ),
         voicehub_imports=("AutoConfig", ),
     ),
@@ -518,8 +556,10 @@ INFERENCE_PROFILES = {
     ),
     "styletts2":
     _tts(
-        "Uses an explicit local VoiceHub artifact and the native phoneme boundary required by StyleTTS 2.",
-        "Convert or review the upstream LibriTTS files first; the HF repository is provenance, not a drop-in VoiceHub directory.",
+        "Loads the released StyleTTS 2 LibriTTS checkpoint and uses the native phoneme boundary.",
+        "Download `Models/LibriTTS/epochs_2nd_00020.pth` and its sibling `config.yml` from the upstream "
+        "repository, review them, and opt into the pickle once; `save_pretrained` then writes a "
+        "Safetensors artifact. Text must already be eSpeak phonemes.",
         setup=REFERENCE_AUDIO_SETUP,
         arguments=(
             "speaker_audio_path=str(REFERENCE_AUDIO)",
@@ -527,6 +567,8 @@ INFERENCE_PROFILES = {
             "diffusion_steps=5",
             "embedding_scale=1.0",
         ),
+        load_arguments=("config=AutoConfig.for_model(\"styletts2\", trust_pickle_checkpoint=True)", ),
+        voicehub_imports=("AutoConfig", ),
         text="həˈloʊ fɹʌm vɔɪs hʌb",
     ),
     "mosstts":
@@ -549,11 +591,12 @@ INFERENCE_PROFILES = {
     ),
     "zonos":
     _tts(
-        "Conditions Zonos on an eSpeak language code and an authorized speaker reference.",
-        "Tune emotion and sampling only after establishing a deterministic seeded baseline.",
-        setup=REFERENCE_AUDIO_SETUP,
+        "Conditions Zonos on explicit eSpeak phonemes and a matching eSpeak language code.",
+        "VoiceHub has no built-in Zonos G2P: pass the eSpeak phonemes upstream produces for the text. "
+        "Cloning needs a precomputed 128-value `speaker_embedding` tensor; `speaker_audio_path` "
+        "requires an injected trusted `speaker_encoder`.",
         arguments=(
-            "speaker_audio_path=str(REFERENCE_AUDIO)",
+            'phonemes="vˈɔɪs hˈʌb kˈiːps mˈɑːdəl ˌɪntᵻɡɹˈeɪʃənz ɛksplˈɪsɪt ænd ɹᵻpɹədˈuːsᵻbəl."',
             'language="en-us"',
             "cfg_scale=2.0",
             "max_new_tokens=2_048",
@@ -610,7 +653,9 @@ INFERENCE_PROFILES = {
     "xtts":
     _tts(
         "Supplies the mandatory XTTS v2 speaker reference and a supported language code.",
-        "XTTS rejects missing reference files and unsupported checkpoint language codes before synthesis.",
+        "Load a local directory converted once from the published `model.pth` with "
+        "`convert_trusted_legacy_xtts2_checkpoint`; XTTS rejects missing reference files and unsupported "
+        "checkpoint language codes before synthesis.",
         setup=REFERENCE_AUDIO_SETUP,
         arguments=("speaker_audio_path=str(REFERENCE_AUDIO)", 'language="en"', "speed=1.0"),
     ),
