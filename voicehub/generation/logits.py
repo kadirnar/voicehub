@@ -7,7 +7,6 @@ import math
 import torch
 from torch import Tensor
 
-
 _NON_FINITE_MESSAGE = "`logits` cannot contain NaN or positive infinity."
 _NO_CANDIDATE_MESSAGE = "Every logit row must contain at least one finite candidate."
 _TOKEN_RANGE_MESSAGE = "`token_ids` contains an ID outside the logits vocabulary."
@@ -267,11 +266,10 @@ def _raise_processing_error(
     *,
     repetition_penalty: float,
 ) -> None:
-    """Raise the error the eager checks would have raised, in their
-    order."""
+    """Raise the error the eager checks would have raised, in their order."""
     _raise_for_logit_values(logits)
-    if (float(repetition_penalty) != 1.0 and token_ids.numel() and
-        ((token_ids < 0) | (token_ids >= logits.shape[-1])).any()):
-        raise ValueError(_TOKEN_RANGE_MESSAGE)
+    if float(repetition_penalty) != 1.0 and token_ids.numel():
+        if ((token_ids < 0) | (token_ids >= logits.shape[-1])).any():
+            raise ValueError(_TOKEN_RANGE_MESSAGE)
     _raise_for_logit_values(processed)
     raise RuntimeError("Generation logits failed validation.")

@@ -332,11 +332,12 @@ class HostSynchronizationTests(unittest.TestCase):
             pad_token_id=0,
             **_SAMPLING_CONFIG,
         )
-        output, reads = _count_host_reads(lambda: AutoregressiveGenerator().generate(
-            decoder_step,
-            torch.tensor([[1, 5, 6]]),
-            config,
-        ))
+        output, reads = _count_host_reads(
+            lambda: AutoregressiveGenerator().generate(
+                decoder_step,
+                torch.tensor([[1, 5, 6]]),
+                config,
+            ))
 
         steps = output.sequences.shape[1] - 3
         self.assertGreater(steps, 0)
