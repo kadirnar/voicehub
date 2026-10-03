@@ -19,10 +19,9 @@ REFERENCE_AUDIO_START_TOKEN_ID = 103
 REFERENCE_AUDIO_END_TOKEN_ID = 104
 
 
-def _is_cjk(character: str) -> bool:
-    return (
-        "\u3400" <= character <= "\u4dbf" or "\u4e00" <= character <= "\u9fff" or
-        "\uf900" <= character <= "\ufaff" or "\U00020000" <= character <= "\U0002a6df")
+def _is_cjk_unified(character: str) -> bool:
+    # Source ``mask_multichar_chinese_tokens`` uses exactly this range.
+    return "\u4e00" <= character <= "\u9fff"
 
 
 class VoxCPM2Tokenizer:
@@ -61,14 +60,18 @@ class VoxCPM2Tokenizer:
         vocabulary = dict(assets.vocabulary)
         vocabulary.update(assets.special_tokens)
         vocabulary.update(assets.added_tokens)
+        # Source ``mask_multichar_chinese_tokens``: a token is split into
+        # characters when its spelling without "\u2581" is itself a
+        # vocabulary entry made of two or more CJK unified ideographs.
+        multichar = {
+            spelling
+            for spelling in vocabulary if len(spelling) >= 2 and all(_is_cjk_unified(c) for c in spelling)
+        }
         split_map: dict[int, tuple[int, ...]] = {}
         for spelling, token_id in vocabulary.items():
             clean = spelling.replace("\u2581", "")
-            if len(clean) < 2 or not all(_is_cjk(character) for character in clean):
-                continue
-            character_ids = tuple(vocabulary.get(character, assets.unk_token_id) for character in clean)
-            if all(value != assets.unk_token_id for value in character_ids):
-                split_map[token_id] = character_ids
+            if clean in multichar:
+                split_map[token_id] = tuple(vocabulary.get(character, assets.unk_token_id) for character in clean)
         return cls(
             tokenizer,
             split_map=split_map,

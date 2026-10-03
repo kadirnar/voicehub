@@ -285,6 +285,63 @@ def _source_rope_tables(config, dtype: torch.dtype) -> tuple[torch.Tensor, torch
     return embedding.cos().to(dtype), embedding.sin().to(dtype)
 
 
+class NativeVoxCPMTokenizerTests(unittest.TestCase):
+
+    def test_cjk_split_matches_source_mask_multichar_chinese_tokens(self):
+        # Source rule: split a token iff its spelling without U+2581 is itself
+        # a vocabulary entry of >= 2 characters in U+4E00..U+9FFF; characters
+        # missing from the vocabulary become <unk>.
+        vocabulary = {
+            "<unk>": 0,
+            "<s>": 1,
+            "</s>": 2,
+            "▁": 3,
+            "你": 10,  # 你
+            "好": 11,  # 好
+            "你好": 12,  # 你好 (in vocabulary -> split)
+            "▁你好": 13,  # ▁你好 (clean form in vocabulary -> split)
+            "▁注解": 14,  # ▁注解 (注解 not in vocabulary -> kept)
+            "注": 15,
+            "解": 16,
+            "㐀㐁": 17,  # CJK Ext-A pair (outside source range -> kept)
+            "㐀": 18,
+            "㐁": 19,
+            "天气": 20,  # 天气 with 气 missing -> split to <unk>
+            "天": 21,
+            "a": 127,
+        }
+        assets = SentencePieceBPEAssets(
+            vocabulary=vocabulary,
+            merges=(),
+            special_tokens={},
+            added_tokens={},
+            unk_token_id=0,
+            prefix_token_ids=(1, ),
+            prepend=" ",
+            replacement_source=" ",
+            replacement_target="▁",
+            byte_fallback=False,
+            fuse_unk=False,
+            original_document={},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tokenizer.json"
+            path.write_text("{}\n", encoding="utf-8")
+            with patch(
+                    "voicehub.architectures.voxcpm2.processing.load_sentencepiece_bpe",
+                    return_value=assets,
+            ):
+                tokenizer = VoxCPM2Tokenizer.from_file(path, config=_tiny_config())
+        self.assertEqual(
+            tokenizer.split_map,
+            {
+                12: (10, 11),
+                13: (10, 11),
+                20: (21, 0),
+            },
+        )
+
+
 class NativeVoxCPMSourceNumericsTests(unittest.TestCase):
 
     def test_local_transformers_inherit_backbone_longrope_factors(self):
