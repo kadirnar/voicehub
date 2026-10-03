@@ -224,7 +224,7 @@ class SpeechBrainASRForSpeechRecognition(PreTrainedASRModel):
     ) -> ASROutput:
         import torch
 
-        from voicehub.processing.waveform import load_native_audio
+        from voicehub.processing.waveform import load_native_audio, resample_waveform_hann
 
         resolved_language, beam_size = self._validate_inference_request(
             language=language,
@@ -243,9 +243,19 @@ class SpeechBrainASRForSpeechRecognition(PreTrainedASRModel):
         materialized = load_native_audio(
             audio,
             sampling_rate=sampling_rate,
-            target_sampling_rate=self.native_config.sampling_rate,
         )
+        parameter = next(self.model.parameters())
         waveform = materialized.waveform
+        if materialized.sampling_rate != self.native_config.sampling_rate:
+            # SpeechBrain's ``transcribe_file`` (AudioNormalizer) moves the
+            # signal to the model device and resamples it with
+            # ``torchaudio.transforms.Resample``.
+            waveform = resample_waveform_hann(
+                waveform.to(device=parameter.device, dtype=torch.float32),
+                materialized.sampling_rate,
+                self.native_config.sampling_rate,
+                match="transform",
+            )
         minimum_samples = max(
             self.native_config.win_length,
             self.native_config.hop_length * (self.native_config.time_pooling_size - 1),
@@ -255,7 +265,6 @@ class SpeechBrainASRForSpeechRecognition(PreTrainedASRModel):
                 waveform,
                 (0, minimum_samples - waveform.numel()),
             )
-        parameter = next(self.model.parameters())
         waveforms = waveform.unsqueeze(0).to(
             device=parameter.device,
             dtype=torch.float32,

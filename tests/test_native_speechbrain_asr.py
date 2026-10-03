@@ -604,6 +604,28 @@ print(json.dumps({name: name in sys.modules for name in blocked}))
             self.assertTrue(artifacts.converted_from_pickle)
             resolver.assert_called_once()
 
+    def test_inference_resamples_like_torchaudio_transforms_resample(self):
+        # SpeechBrain's transcribe_file resamples with
+        # torchaudio.transforms.Resample (AudioNormalizer); the generic
+        # windowed-sinc resampler is not a substitute.
+        from voicehub.processing.waveform import resample_waveform_hann
+
+        torch.manual_seed(31)
+        audio = torch.randn(441)
+        with tempfile.TemporaryDirectory() as directory:
+            _write_native_artifact(Path(directory))
+            wrapper = SpeechBrainASRForSpeechRecognition(
+                model_path=directory,
+                device="cpu",
+                lazy_load=False,
+            )
+            encode = Mock(wraps=wrapper.model.encode)
+            with patch.object(wrapper.model, "encode", encode):
+                wrapper(audio, sampling_rate=22_050, num_beams=1)
+
+        expected = resample_waveform_hann(audio, 22_050, 16_000, match="transform")
+        self.assertTrue(torch.equal(encode.call_args.args[0][0], expected))
+
     def test_local_inference_training_and_export_reload(self):
         torch.manual_seed(29)
         with tempfile.TemporaryDirectory() as directory:
