@@ -1,4 +1,5 @@
 import logging
+import math
 from dataclasses import replace
 from typing import List, Optional, Union
 
@@ -8,7 +9,7 @@ from torch import Tensor, nn
 
 from voicehub.architectures.causal_lm.configuration import LlamaConfig
 from voicehub.architectures.causal_lm.modeling import CausalLMModel
-from voicehub.generation.logits import process_logits
+from voicehub.generation.logits import apply_repetition_penalty, filter_min_p, filter_top_p
 from voicehub.models.chatterbox.models.t3.llama_configs import LLAMA_CONFIGS
 from voicehub.models.chatterbox.models.t3.modules.cond_enc import T3Cond, T3CondEnc
 from voicehub.models.chatterbox.models.t3.modules.learned_pos_emb import LearnedPositionEmbeddings
@@ -30,6 +31,39 @@ def _ensure_BOT_EOT(text_tokens: Tensor, hp):
         raise ValueError("Every Chatterbox text sequence requires a start text token.")
     if not bool(has_stop.all()):
         raise ValueError("Every Chatterbox text sequence requires a stop text token.")
+
+
+def _process_sampling_logits(
+    logits: Tensor,
+    generated_ids: Tensor,
+    *,
+    do_sample: bool,
+    temperature: float,
+    min_p: Optional[float],
+    top_p: Optional[float],
+    repetition_penalty: float,
+) -> Tensor:
+    """Apply the released Chatterbox order: temperature, repetition penalty,
+    min-p, then top-p.
+
+    Top-p after min-p uses the renormalized distribution, so the order
+    is observable whenever ``top_p < 1``; a generic order changes
+    sampling.
+    """
+    if not do_sample:
+        return apply_repetition_penalty(logits, generated_ids, repetition_penalty)
+    if isinstance(temperature, bool) or not isinstance(temperature, (int, float)):
+        raise TypeError("`temperature` must be a real number.")
+    if not math.isfinite(temperature) or temperature <= 0.0:
+        raise ValueError("`temperature` must be finite and greater than zero.")
+    if temperature != 1.0:
+        logits = logits / temperature
+    logits = apply_repetition_penalty(logits, generated_ids, repetition_penalty)
+    if min_p is not None:
+        logits = filter_min_p(logits, min_p)
+    if top_p is not None:
+        logits = filter_top_p(logits, top_p)
+    return logits
 
 
 class T3(nn.Module):
@@ -505,7 +539,7 @@ class T3(nn.Module):
                 logits_uncond = logits[1:2]
                 logits = logits_cond + cfg_weight * (logits_cond - logits_uncond)
 
-            logits = process_logits(
+            logits = _process_sampling_logits(
                 logits,
                 generated_ids,
                 do_sample=do_sample,

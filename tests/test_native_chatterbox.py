@@ -171,6 +171,52 @@ class NativeChatterboxTests(unittest.TestCase):
             reference = Resample(source_rate, target_rate)(waveform)
             self.assertTrue(torch.equal(_resample_batch(waveform, source_rate, target_rate), reference))
 
+    def test_flow_noise_is_reproducible_across_processes_and_rng_states(self):
+        # The causal CFM uses construction-time noise. It must not depend on the
+        # (per-process random) global RNG, or seed= cannot reproduce audio.
+        from voicehub.models.chatterbox.models.s3gen.flow_matching import CausalConditionalCFM
+
+        torch.manual_seed(1)
+        first = CausalConditionalCFM(estimator=nn.Identity()).rand_noise
+        state = torch.random.get_rng_state()
+        torch.manual_seed(2)
+        second = CausalConditionalCFM(estimator=nn.Identity()).rand_noise
+        torch.manual_seed(1)
+        CausalConditionalCFM(estimator=nn.Identity())
+        torch.testing.assert_close(first, second, rtol=0, atol=0)
+        self.assertTrue(torch.equal(torch.random.get_rng_state(), state))
+        self.assertEqual(tuple(first.shape), (1, 80, 15_000))
+        self.assertAlmostEqual(float(first.std()), 1.0, places=2)
+
+    def test_t3_sampling_applies_min_p_before_top_p_like_the_release(self):
+        # Released order: temperature -> repetition penalty -> min-p -> top-p
+        # (HF warpers). Top-p then sees the min-p-renormalized distribution.
+        from voicehub.models.chatterbox.models.t3.t3 import _process_sampling_logits
+
+        logits = torch.tensor([[0.5, 0.3, 0.15, 0.04, 0.01]]).log()
+        result = _process_sampling_logits(
+            logits,
+            torch.empty(1, 0, dtype=torch.long),
+            do_sample=True,
+            temperature=1.0,
+            min_p=0.05,
+            top_p=0.955,
+            repetition_penalty=1.0,
+        )
+        self.assertEqual(torch.isfinite(result).tolist(), [[True, True, True, False, False]])
+
+        logits = torch.tensor([[2.0, -1.0, 0.5]])
+        result = _process_sampling_logits(
+            logits,
+            torch.tensor([[0, 1]]),
+            do_sample=True,
+            temperature=0.8,
+            min_p=0.0,
+            top_p=1.0,
+            repetition_penalty=1.2,
+        )
+        torch.testing.assert_close(result, torch.tensor([[2.0 / 0.8 / 1.2, -1.0 / 0.8 * 1.2, 0.5 / 0.8]]))
+
     def test_generation_limit_rejects_values_beyond_t3_capacity(self):
         from voicehub.models.chatterbox.tts import ChatterboxTTS
 
