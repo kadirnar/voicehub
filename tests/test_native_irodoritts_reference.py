@@ -18,9 +18,9 @@ from torch import nn
 
 from tests.test_native_irodoritts import _tiny_config, _write_tokenizer
 from voicehub.architectures.irodoritts.codec import IrodoriDACVAECodec
-from voicehub.processing.loudness import integrated_loudness, normalize_loudness
 from voicehub.architectures.irodoritts.modeling import TextToLatentRFDiT
 from voicehub.architectures.irodoritts.runtime import InferenceRuntime, SamplingRequest
+from voicehub.processing.loudness import integrated_loudness, normalize_loudness
 from voicehub.processing.waveform import resample_waveform_hann
 
 RATE = 48_000

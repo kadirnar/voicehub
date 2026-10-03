@@ -126,8 +126,8 @@ class CodecCompatibilityTests(unittest.TestCase):
             ),
             # Surround channels are weighted by 1.41, as in audiotools.
             "five_channels": (
-                torch.stack([tone(100.0 * (index + 1), 1.0, 0.05 * (index + 1), 16_000)
-                             for index in range(5)])[None],
+                torch.stack(
+                    [tone(100.0 * (index + 1), 1.0, 0.05 * (index + 1), 16_000) for index in range(5)])[None],
                 16_000,
                 -11.228500366210938,
             ),

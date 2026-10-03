@@ -104,8 +104,9 @@ def _as_batched_channels(audio: torch.Tensor) -> torch.Tensor:
     if audio.ndim == 2:
         return audio[None]
     if audio.ndim != 3:
-        raise ValueError("Audio must have shape (time,), (channels, time), or "
-                         f"(batch, channels, time); received {tuple(audio.shape)}.")
+        raise ValueError(
+            "Audio must have shape (time,), (channels, time), or "
+            f"(batch, channels, time); received {tuple(audio.shape)}.")
     return audio
 
 
@@ -113,10 +114,10 @@ def integrated_loudness(audio: torch.Tensor, sample_rate: int) -> torch.Tensor:
     """Gated BS.1770 loudness like ``audiotools.AudioSignal.loudness()``.
 
     ``audio`` has shape ``(time,)``, ``(channels, time)`` or ``(batch,
-    channels, time)`` with at most five channels. Signals shorter than 0.5 s
-    are zero-padded and the result is floored at -70 LUFS, as in audiotools.
-    Returns one float32 value per batch item on the CPU. The measurement is
-    differentiable with respect to ``audio``.
+    channels, time)`` with at most five channels. Signals shorter than
+    0.5 s are zero-padded and the result is floored at -70 LUFS, as in
+    audiotools. Returns one float32 value per batch item on the CPU. The
+    measurement is differentiable with respect to ``audio``.
     """
     if sample_rate <= 0:
         raise ValueError("sample_rate must be positive.")
