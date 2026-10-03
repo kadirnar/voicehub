@@ -228,7 +228,8 @@ class ParlerDecoderCache:
     """Per-layer decoder keys/values for incremental generation.
 
     Self-attention entries grow by one position per decoded step. Cross-
-    attention entries are projected once from the constant encoder states.
+    attention entries are projected once from the constant encoder
+    states.
     """
 
     self_attention: DynamicKVCache = field(default_factory=DynamicKVCache)
@@ -1109,13 +1110,14 @@ class ParlerTTSForConditionalGeneration(nn.Module):
                     cache=cache,
                 )
             else:
-                decoder_attention_mask = (None if prompt_attention_mask is None else torch.cat(
-                    (
-                        prompt_attention_mask,
-                        prompt_attention_mask.new_ones(batch_size, constrained.shape[1]),
-                    ),
-                    dim=1,
-                ))
+                decoder_attention_mask = (
+                    None if prompt_attention_mask is None else torch.cat(
+                        (
+                            prompt_attention_mask,
+                            prompt_attention_mask.new_ones(batch_size, constrained.shape[1]),
+                        ),
+                        dim=1,
+                    ))
                 output = self.decoder(
                     constrained[:, decoded_length:],
                     attention_mask=decoder_attention_mask,
