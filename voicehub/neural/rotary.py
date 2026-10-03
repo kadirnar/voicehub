@@ -33,13 +33,17 @@ class RotaryEmbedding(nn.Module):
             raise ValueError("Rotary embedding base must be greater than one.")
         self.dimension = dimension
         self.base = float(base)
+        # Always evaluate the frequencies on the CPU (as the Hugging Face
+        # reference implementations do) and move them afterwards: CUDA `pow`
+        # rounds some of these float32 values differently, which shifts RoPE
+        # angles at long positions and changes bfloat16 outputs.
         inverse_frequency = 1.0 / (
             self.base**(torch.arange(
                 0,
                 dimension,
                 2,
                 dtype=torch.float32,
-                device=device,
+                device="cpu",
             ) / dimension))
         if scaling is not None:
             rope_type = scaling.get("rope_type", scaling.get("type", "default"))
@@ -67,7 +71,8 @@ class RotaryEmbedding(nn.Module):
                 )
         self.register_buffer(
             "inverse_frequency",
-            inverse_frequency,
+            # `device=None` follows the ambient default (e.g. a meta context).
+            inverse_frequency.to(device=torch.empty(0).device if device is None else device),
             persistent=False,
         )
 

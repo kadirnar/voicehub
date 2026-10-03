@@ -65,12 +65,15 @@ def _required(root: Path, filename: str) -> Path:
     path = root / filename
     if not path.is_file():
         raise FileNotFoundError(f"Native MOSS-TTS requires {filename!r} in {root}.")
-    return path.resolve()
+    # Keep the logical snapshot path: Hugging Face cache snapshots expose
+    # files as symlinks into an extensionless blob store, so resolving would
+    # lose the `.safetensors` names and break sibling-shard lookup.
+    return path.absolute()
 
 
 def _optional(root: Path, filename: str) -> Path | None:
     path = root / filename
-    return path.resolve() if path.is_file() else None
+    return path.absolute() if path.is_file() else None
 
 
 def _safe_shards(index: Path) -> tuple[str, ...]:
@@ -103,7 +106,7 @@ def _resolve_local(source: Path) -> MossTTSArtifacts:
     checkpoint_override: Path | None = None
     if source.is_file():
         _validate_checkpoint(source)
-        checkpoint_override = source.resolve()
+        checkpoint_override = source.absolute()
         root = source.parent.resolve()
     else:
         root = source.resolve()
@@ -140,7 +143,7 @@ def _resolve_codec_local(source: Path) -> MossCodecArtifacts:
     checkpoint_override: Path | None = None
     if source.is_file():
         _validate_checkpoint(source)
-        checkpoint_override = source.resolve()
+        checkpoint_override = source.absolute()
         root = source.parent.resolve()
     else:
         root = source.resolve()

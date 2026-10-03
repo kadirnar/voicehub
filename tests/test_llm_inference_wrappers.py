@@ -452,8 +452,8 @@ class WrapperHelperTests(unittest.TestCase):
         class Codec:
 
             @staticmethod
-            def decode(codes, lengths):
-                del codes, lengths
+            def decode(codes, lengths, *, chunk_duration=None):
+                del codes, lengths, chunk_duration
                 if not torch.is_inference_mode_enabled():
                     raise AssertionError("codec decode must use inference mode")
                 return MossCodecDecodeOutput(

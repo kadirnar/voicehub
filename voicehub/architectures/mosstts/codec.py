@@ -158,6 +158,8 @@ class MossAudioCodec(Protocol):
         self,
         audio_codes: Tensor,
         lengths: Tensor | None = None,
+        *,
+        chunk_duration: float | None = None,
     ) -> MossCodecDecodeOutput:
         ...
 
@@ -189,8 +191,10 @@ class MossCodecUnavailable:
         self,
         audio_codes: Tensor,
         lengths: Tensor | None = None,
+        *,
+        chunk_duration: float | None = None,
     ) -> MossCodecDecodeOutput:
-        del audio_codes, lengths
+        del audio_codes, lengths, chunk_duration
         raise self._error("decoding")
 
 
@@ -389,7 +393,15 @@ class NativeMossAudioCodec(nn.Module):
         self,
         audio_codes: Tensor,
         lengths: Tensor | None = None,
+        *,
+        chunk_duration: float | None = None,
     ) -> MossCodecDecodeOutput:
+        """Decode codes, optionally as causal streaming chunks.
+
+        ``chunk_duration`` (seconds) selects the checkpoint's streaming
+        decoder used by the official processors; it requires batch size
+        1.
+        """
         codes, _, padding_mask = self._code_batch(audio_codes, lengths)
         context = torch.no_grad() if self.frozen else torch.enable_grad()
         with context:
@@ -398,6 +410,7 @@ class NativeMossAudioCodec(nn.Module):
                 padding_mask=padding_mask,
                 num_quantizers=codes.shape[0],
                 return_dict=True,
+                chunk_duration=chunk_duration,
             )
         waveform = output.audio
         waveform_lengths = output.audio_lengths

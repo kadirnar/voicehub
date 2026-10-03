@@ -8,6 +8,7 @@ retaining their architecture-specific logits and generation schedules.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import TypeAlias
 
@@ -18,7 +19,7 @@ from torch.nn import functional
 from voicehub.architectures.causal_lm.modeling import CausalLMModel
 from voicehub.architectures.mosstts.configuration import MossGPT2Config, MossTTSConfig
 from voicehub.architectures.mosstts.local_transformer import MossGPT2Model, MossQwenDepthModel
-from voicehub.architectures.mosstts.sampling import sample_token
+from voicehub.architectures.mosstts.sampling import apply_repetition_penalty, sample_delay_token, sample_token
 from voicehub.neural.cache import DynamicKVCache
 from voicehub.neural.normalization import RMSNorm
 from voicehub.optimization.protocols import OptimizationCompileTarget
@@ -108,9 +109,15 @@ def _channelwise_cross_entropy(
     return total, tuple(losses)
 
 
-def _find_last_equal(input_ids: Tensor, value: int) -> Tensor:
+def _find_last_equal(input_ids: Tensor, value: int, *, required: bool = True) -> Tensor:
+    """Return the last index of ``value`` per row, or ``-1`` when absent.
+
+    ``required=False`` mirrors the source ``find_last_equal_C`` helper,
+    whose missing-token sentinel is legitimate for prompts without
+    audio.
+    """
     matches = input_ids.eq(value)
-    if not bool(matches.any(dim=1).all()):
+    if required and not bool(matches.any(dim=1).all()):
         raise ValueError(f"Every sequence must contain token ID {value}.")
     positions = torch.arange(
         input_ids.shape[1],
@@ -306,8 +313,23 @@ class MossDelayModel(nn.Module):
         audio_top_k: int = 25,
         audio_repetition_penalty: float = 1.0,
     ) -> list[tuple[int, Tensor]]:
-        """Generate with the source-audited diagonal delay schedule."""
+        """Generate with the source-audited diagonal delay schedule.
+
+        A temperature of zero selects greedy decoding for that stream.
+        """
         _validate_multichannel_ids(input_ids, channels=self.config.channels)
+        for name, value in (
+            ("text_temperature", text_temperature),
+            ("audio_temperature", audio_temperature),
+        ):
+            if not math.isfinite(float(value)) or float(value) < 0.0:
+                raise ValueError(f"`{name}` must be finite and non-negative.")
+        if (not math.isfinite(float(audio_repetition_penalty)) or float(audio_repetition_penalty) <= 0.0):
+            raise ValueError("`audio_repetition_penalty` must be positive.")
+        text_do_sample = float(text_temperature) > 0.0
+        text_scale = float(text_temperature) if text_do_sample else 1.0
+        audio_do_sample = float(audio_temperature) > 0.0
+        audio_scale = float(audio_temperature) if audio_do_sample else 1.0
         if isinstance(max_new_tokens, bool) or max_new_tokens <= 0:
             raise ValueError("`max_new_tokens` must be a positive integer.")
         if input_ids.shape[1] == 0:
@@ -339,9 +361,11 @@ class MossDelayModel(nn.Module):
         maximum = torch.iinfo(torch.long).max
         delayed_lengths = torch.full_like(audio_lengths, maximum)
         text_ids = input_ids[..., 0]
+        # Direct (reference-free) prompts contain no audio-start token.
         audio_start_indices = _find_last_equal(
             text_ids,
             self.config.audio_start_token_id,
+            required=False,
         )
         continuation = (
             text_ids[:, -1].eq(self.config.audio_start_token_id)
@@ -368,15 +392,22 @@ class MossDelayModel(nn.Module):
             self.config.audio_assistant_delay_slot_token_id,
         ]] = False
 
+        # An all-ones mask carries no information. Passing it would force
+        # the explicit float32 masked-attention path, whereas the official
+        # SDPA implementation drops such a mask; keep the mask only while a
+        # row is left-padded or has already stopped.
+        prompt_padded = not bool(current_mask.all())
         for step in range(max_new_tokens):
+            step_mask = (current_mask if prompt_padded or bool(stopped.any()) else None)
             output = self(
                 current_ids,
-                attention_mask=current_mask,
+                attention_mask=step_mask,
                 past_key_values=cache,
                 use_cache=True,
             )
             cache = output.past_key_values
-            text_logits = output.logits[0][:, -1].clone()
+            # Source order: scale by temperature in the logits dtype first.
+            text_logits = output.logits[0][:, -1] / text_scale
             next_text = torch.full(
                 (batch_size, ),
                 self.config.pad_token_id,
@@ -405,13 +436,14 @@ class MossDelayModel(nn.Module):
                 ] = -torch.inf
             if step <= self.config.n_vq:
                 text_logits[..., self.config.im_end_token_id] = -torch.inf
-            if bool(sampling_text.any()):
-                next_text[sampling_text] = sample_token(
-                    text_logits[sampling_text],
-                    temperature=text_temperature,
-                    top_k=text_top_k,
-                    top_p=text_top_p,
-                )
+            # Like the source, the text draw runs even when no row samples
+            # text so seeded runs consume the generator identically.
+            next_text[sampling_text] = sample_delay_token(
+                text_logits[sampling_text],
+                do_sample=text_do_sample,
+                top_k=text_top_k,
+                top_p=text_top_p,
+            )
             in_audio |= next_text.eq(self.config.audio_start_token_id)
             stopped |= next_text.eq(self.config.im_end_token_id)
 
@@ -429,18 +461,32 @@ class MossDelayModel(nn.Module):
             post_audio = codebook > delayed_lengths.unsqueeze(1) - 1
             post_audio[delayed_lengths.eq(maximum)] = True
             sample_audio = pre_audio & post_audio
-            for channel in range(self.config.n_vq):
-                active = sample_audio[:, channel]
-                if not bool(active.any()):
-                    continue
-                channel_logits = output.logits[channel + 1][:, -1][active]
-                next_audio[active, channel] = sample_token(
-                    channel_logits,
-                    temperature=audio_temperature,
+            if bool(sample_audio.any()):
+                audio_logits = torch.stack(
+                    [logits[:, -1] / audio_scale for logits in output.logits[1:]],
+                    dim=1,
+                )
+                if float(audio_repetition_penalty) != 1.0:
+                    for channel in range(self.config.n_vq):
+                        audio_logits[:, channel] = apply_repetition_penalty(
+                            audio_logits[:, channel],
+                            generated[:, :, channel + 1],
+                            audio_repetition_penalty,
+                        )
+                audio_logits[..., self.config.audio_pad_token_id] = -torch.inf
+                # The source draws the first codebook, then every remaining
+                # active (row, codebook) pair in one multinomial call.
+                next_audio[:, 0][sample_audio[:, 0]] = sample_delay_token(
+                    audio_logits[:, 0][sample_audio[:, 0]],
+                    do_sample=audio_do_sample,
                     top_k=audio_top_k,
                     top_p=audio_top_p,
-                    repetition_penalty=audio_repetition_penalty,
-                    previous_token_ids=generated[active, :, channel + 1],
+                )
+                next_audio[:, 1:][sample_audio[:, 1:]] = sample_delay_token(
+                    audio_logits[:, 1:][sample_audio[:, 1:]],
+                    do_sample=audio_do_sample,
+                    top_k=audio_top_k,
+                    top_p=audio_top_p,
                 )
             audio_lengths[next_text.eq(self.config.audio_start_token_id)
                           | next_text.eq(self.config.audio_assistant_slot_token_id)
