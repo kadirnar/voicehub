@@ -150,6 +150,96 @@ class NativeDiaUpstreamParityTests(unittest.TestCase):
         self.assertTrue((tokens[0, :, 0] == 8).any())
         self.assertTrue((tokens[0, :, 1] == 8).any())
 
+    @staticmethod
+    def decisive_components():
+        import torch
+
+        model, codec, processor = NativeDiaUpstreamParityTests.components()
+        # Wide float64 weights give clear argmax margins, so the cached and
+        # recomputed decoders must agree token for token.
+        torch.manual_seed(0)
+        model = model.double()
+        with torch.no_grad():
+            for name, parameter in model.named_parameters():
+                if not name.endswith("norm.weight"):
+                    parameter.normal_(0.0, 0.5)
+        return model, codec, processor
+
+    def test_cached_generation_matches_full_decoder_recompute(self):
+        # Upstream Dia reuses self-attention K/V and projects cross-attention
+        # K/V once; the native loop recomputed the whole prefix every step.
+        import torch
+
+        model, _, processor = self.decisive_components()
+        audio = [
+            {"array": torch.linspace(-0.3, 0.3, 4 * 6), "sampling_rate": 16_000},
+            {"array": torch.linspace(0.2, -0.2, 4 * 3), "sampling_rate": 16_000},
+        ]
+        batches = {
+            "text": processor(text=["Hello", "A longer line."], generation=True),
+            "prompt": processor(text=["Hello", "A longer line."], audio=audio, generation=True),
+        }
+        for name, batch in batches.items():
+            for guidance_scale in (None, 3.0):
+                for do_sample in (False, True):
+                    with self.subTest(batch=name, guidance_scale=guidance_scale, do_sample=do_sample):
+                        options = dict(
+                            max_new_tokens=24,
+                            do_sample=do_sample,
+                            guidance_scale=guidance_scale,
+                            top_k=5,
+                        )
+                        torch.manual_seed(7)
+                        cached = model.generate(**batch, use_cache=True, **options)
+                        torch.manual_seed(7)
+                        recomputed = model.generate(**batch, use_cache=False, **options)
+                        self.assertTrue(torch.equal(cached, recomputed))
+
+    def test_cached_generation_feeds_one_frame_per_step_with_batched_guidance(self):
+        import torch
+
+        model, _, processor = self.decisive_components()
+        batch = processor(text=["Hello"], generation=True)
+        forward = model.forward
+        calls = []
+
+        def record(**kwargs):
+            calls.append(tuple(kwargs["decoder_input_ids"].shape[:2]))
+            return forward(**kwargs)
+
+        with patch.object(model, "forward", side_effect=record):
+            model.generate(**batch, max_new_tokens=12, do_sample=False, guidance_scale=3.0)
+        self.assertGreater(len(calls), 2)
+        # Conditional and unconditional rows share one decoder call; after
+        # the prefill only the newest frame is decoded.
+        self.assertEqual(calls[0], (2, 1))
+        self.assertEqual(set(calls[1:]), {(2, 1)})
+
+    def test_decoder_cache_logits_match_teacher_forcing(self):
+        import torch
+
+        from voicehub.architectures.dia.modeling import DiaDecoderCache
+
+        model, _, _ = self.decisive_components()
+        input_ids = torch.randint(0, 256, (2, 7))
+        attention_mask = torch.ones_like(input_ids)
+        attention_mask[1, :2] = 0
+        decoder_ids = torch.randint(0, 8, (2, 9, 2))
+        with torch.no_grad():
+            encoded = model.model.encoder(input_ids, attention_mask).last_hidden_state
+            full = model(attention_mask=attention_mask, decoder_input_ids=decoder_ids, encoder_outputs=encoded)
+            cache = DiaDecoderCache(decoder_ids.shape[1])
+            steps = [
+                model(
+                    attention_mask=attention_mask,
+                    decoder_input_ids=decoder_ids[:, start:end],
+                    encoder_outputs=encoded,
+                    decoder_cache=cache,
+                ).logits for start, end in ((0, 4), (4, 5), (5, 6), (6, 9))
+            ]
+        self.assertEqual(cache.length, decoder_ids.shape[1])
+        torch.testing.assert_close(torch.cat(steps, dim=1), full.logits, rtol=1e-12, atol=1e-12)
+
     def test_codec_stays_float32_for_half_precision_compute(self):
         import torch
 
