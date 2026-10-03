@@ -304,6 +304,30 @@ class LlasaDependencyAndProvenanceTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 resolve_llasa_artifacts(snapshot)
 
+    def test_default_codec_revision_pins_only_the_reference_codec_repository(self):
+        # The reference XCodec2 commit is applied by the resolver for its own
+        # repository; a config-level default must not leak onto custom codecs.
+        self.assertIsNone(LlasaConfig().codec_revision)
+        requested = []
+
+        def capture(repo_id, filename, *, revision, **kwargs):
+            del filename, kwargs
+            requested.append((repo_id, revision))
+            raise LookupError("captured")
+
+        with patch("voicehub.models.llasa.artifacts.resolve_pretrained_file", side_effect=capture):
+            for repo_id in ("HKUSTAudio/xcodec2-hf", "example/xcodec2-finetuned"):
+                config = LlasaConfig(codec_name_or_path=repo_id)
+                with self.assertRaisesRegex(LookupError, "captured"):
+                    resolve_xcodec2_artifacts(
+                        config.codec_name_or_path,
+                        revision=config.codec_revision,
+                    )
+        self.assertEqual(
+            requested,
+            [("HKUSTAudio/xcodec2-hf", XCODEC2_HF_REVISION), ("example/xcodec2-finetuned", "main")],
+        )
+
     def test_top_k_default_matches_original_transformers_sampling(self):
         self.assertEqual(LlasaConfig().top_k, 50)
         self.assertEqual(LlasaConfig(top_k=0).to_dict()["top_k"], 0)
