@@ -14,6 +14,7 @@ from torch import Tensor
 from voicehub.architectures.styletts2.checkpoint import load_styletts2_checkpoint, read_legacy_styletts2_checkpoint
 from voicehub.architectures.styletts2.configuration import StyleTTS2ArchitectureConfig, load_styletts2_config
 from voicehub.architectures.styletts2.frontend import (
+    STYLETTS2_INPUT_MEL_FILTER_SAMPLE_RATE,
     NativeStyleTTS2Frontend,
     StyleTTS2MelSpectrogram,
     load_style_reference,
@@ -55,7 +56,7 @@ class StyleTTS2Runtime:
         self.sample_rate = self.config.sample_rate
         self.frontend = NativeStyleTTS2Frontend()
         self.to_mel = StyleTTS2MelSpectrogram(
-            sample_rate=self.config.sample_rate,
+            sample_rate=STYLETTS2_INPUT_MEL_FILTER_SAMPLE_RATE,
             n_fft=self.config.n_fft,
             win_length=self.config.win_length,
             hop_length=self.config.hop_length,
@@ -90,7 +91,8 @@ class StyleTTS2Runtime:
                 self.model.to(device=self.device)
             else:
                 self.model.to(device=self.device, dtype=dtype)
-        self.to_mel.to(device=self.device)
+        # The reference mel stays on the CPU, as in the released
+        # `compute_style`; it is one short STFT per request.
         self.eval()
         self.sampler = StyleTTS2DiffusionSampler(
             self.model.diffusion.diffusion,
@@ -242,12 +244,15 @@ class StyleTTS2Runtime:
         waveform = load_style_reference(
             audio,
             sample_rate=self.sample_rate,
-        ).to(device=self.device)
+        ).to(
+            device="cpu", dtype=torch.float32)
         reference_parameter = next(self.model.style_encoder.parameters())
-        waveform = waveform.to(dtype=reference_parameter.dtype)
         mel = self.to_mel(waveform)
         mel = (torch.log(1e-5 + mel.unsqueeze(0)) + 4.0) / 4.0
-        mel = mel.unsqueeze(1)
+        mel = mel.unsqueeze(1).to(
+            device=self.device,
+            dtype=reference_parameter.dtype,
+        )
         with torch.no_grad():
             reference = self.model.style_encoder(mel)
             prosody = self.model.predictor_encoder(mel)
@@ -302,8 +307,10 @@ class StyleTTS2Runtime:
                 attention_mask=(~text_mask).int(),
             )
             duration_encoding = self.model.bert_encoder(bert_duration).transpose(-1, -2)
-            noise = torch.randn(
-                (1, 1, self.config.style_dim * 2),
+            # Released inference draws the diffusion noise from the CPU
+            # generator and then moves it, which also leaves the CUDA stream
+            # untouched for the ADPM2 and source-module draws that follow.
+            noise = torch.randn((1, 1, self.config.style_dim * 2)).to(
                 device=self.device,
                 dtype=text_encoding.dtype,
             )

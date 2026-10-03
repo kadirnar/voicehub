@@ -33,8 +33,8 @@ class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
         raw_source = model_path if model_path is not None else (
             config if isinstance(config, (str, Path)) else getattr(config, "name_or_path", None))
         self._caller_source = (
-            Path(raw_source).expanduser().absolute() if isinstance(raw_source, (str, Path)) and
-            is_explicit_local_path(raw_source) else None)
+            Path(raw_source).expanduser().absolute()
+            if isinstance(raw_source, (str, Path)) and is_explicit_local_path(raw_source) else None)
         config = self._coerce_config(
             config,
             model_path=model_path,
@@ -60,9 +60,16 @@ class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
                 "config.json")
         else:
             checkpoint_path = source
-            config_path = (
-                Path(self.config.config_path).expanduser() if self.config.config_path else
-                Path(__file__).parent / "source" / "styletts2" / "Configs" / "config_libritts.yml")
+            # Released checkpoints ship `Models/<name>/config.yml` beside the
+            # weights; it holds the trained diffusion sigma_data.
+            released_config = source.parent / "config.yml"
+            if self.config.config_path:
+                config_path = Path(self.config.config_path).expanduser()
+            elif released_config.is_file():
+                config_path = released_config
+            else:
+                config_path = (
+                    Path(__file__).parent / "source" / "styletts2" / "Configs" / "config_libritts.yml")
         if not checkpoint_path.is_file():
             raise FileNotFoundError(f"StyleTTS 2 checkpoint was not found: {checkpoint_path}.")
         if not config_path.is_file():

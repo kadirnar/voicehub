@@ -22,6 +22,13 @@ _IPA = (
     "ɹɺɾɻʀʁɽʂʃʈʧʉʊʋⱱʌɣɤʍχʎʏʑʐʒʔʡʕʢǀǁǂǃˈˌːˑʼʴʰʱʲʷˠˤ˞↓↑→↗↘'̩'ᵻ")
 STYLETTS2_SYMBOLS = tuple(_PAD + _PUNCTUATION + _LETTERS + _IPA)
 STYLETTS2_SYMBOL_TO_ID = {symbol: index for index, symbol in enumerate(STYLETTS2_SYMBOLS)}
+# Released StyleTTS 2 builds its model-input mel with
+# ``torchaudio.transforms.MelSpectrogram(n_mels=80, n_fft=2048,
+# win_length=1200, hop_length=300)`` (meldataset.py and the inference
+# notebooks). That call omits ``sample_rate``, so the 24 kHz audio is binned by
+# torchaudio's default 16 kHz HTK filter bank. The checkpoints were trained on
+# those features; the 24 kHz rate applies only to the mel losses.
+STYLETTS2_INPUT_MEL_FILTER_SAMPLE_RATE = 16_000
 
 
 class NativeStyleTTS2Frontend:
@@ -229,6 +236,7 @@ def load_style_reference(
 
 __all__ = [
     "NativeStyleTTS2Frontend",
+    "STYLETTS2_INPUT_MEL_FILTER_SAMPLE_RATE",
     "STYLETTS2_SYMBOLS",
     "STYLETTS2_SYMBOL_TO_ID",
     "StyleTTS2MelSpectrogram",

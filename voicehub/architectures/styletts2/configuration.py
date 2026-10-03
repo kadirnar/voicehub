@@ -13,6 +13,10 @@ from typing import Any
 from voicehub.architectures.kokoro.configuration import KokoroAlbertConfig
 from voicehub.architectures.styletts2.metadata import (
     STYLETTS2_LEGACY_CONFIG_SHA256,
+    STYLETTS2_RELEASED_LIBRITTS_CONFIG_SHA256,
+    STYLETTS2_RELEASED_LIBRITTS_SIGMA_DATA,
+    STYLETTS2_RELEASED_LJSPEECH_CONFIG_SHA256,
+    STYLETTS2_RELEASED_LJSPEECH_SIGMA_DATA,
     STYLETTS2_SINGLE_SPEAKER_CONFIG_SHA256,
 )
 
@@ -411,6 +415,17 @@ def load_styletts2_config(path: str | Path | None, ) -> StyleTTS2ArchitectureCon
             multispeaker=False,
             decoder=StyleTTS2DecoderConfig.released_istftnet(),
         )
+    if digest == STYLETTS2_RELEASED_LJSPEECH_CONFIG_SHA256:
+        return StyleTTS2ArchitectureConfig(
+            multispeaker=False,
+            decoder=StyleTTS2DecoderConfig.released_istftnet(),
+            diffusion=StyleTTS2DiffusionConfig(
+                dist=StyleTTS2DistributionConfig(sigma_data=STYLETTS2_RELEASED_LJSPEECH_SIGMA_DATA)),
+        )
+    if digest == STYLETTS2_RELEASED_LIBRITTS_CONFIG_SHA256:
+        return StyleTTS2ArchitectureConfig(
+            diffusion=StyleTTS2DiffusionConfig(
+                dist=StyleTTS2DistributionConfig(sigma_data=STYLETTS2_RELEASED_LIBRITTS_SIGMA_DATA)))
     return StyleTTS2ArchitectureConfig()
 
 

@@ -20,13 +20,15 @@ from voicehub.architectures.styletts2.checkpoint import (
 )
 from voicehub.architectures.styletts2.configuration import StyleTTS2ArchitectureConfig, load_styletts2_config
 from voicehub.architectures.styletts2.frontend import (
+    STYLETTS2_INPUT_MEL_FILTER_SAMPLE_RATE,
     STYLETTS2_SYMBOLS,
     NativeStyleTTS2Frontend,
     StyleTTS2MelSpectrogram,
     trim_reference_silence,
 )
-from voicehub.architectures.styletts2.modeling import DEPLOYABLE_STYLETTS2_COMPONENTS
+from voicehub.architectures.styletts2.modeling import DEPLOYABLE_STYLETTS2_COMPONENTS, build_styletts2_model
 from voicehub.architectures.styletts2.registration import create_styletts2_architecture_spec
+from voicehub.architectures.styletts2.runtime import StyleTTS2Runtime
 from voicehub.architectures.styletts2.training import StyleTTS2LossWeights, StyleTTS2TrainingModel
 from voicehub.models.styletts2.inference import StyleTTS2ForTextToSpeech
 from voicehub.models.styletts2.source.styletts2.models import StyleTTS2Modules
@@ -507,6 +509,99 @@ class NativeStyleTTS2Tests(unittest.TestCase):
         self.assertEqual(batch["f0_targets"].shape, (2, 8))
         self.assertEqual(batch["audio_values"].shape, (2, 1, 32))
         self.assertEqual(batch["audio_lengths"].tolist(), [24, 32])
+
+    def test_released_checkpoint_configs_pin_trained_sigma_data(self):
+        fixtures = ROOT / "tests" / "fixtures" / "styletts2"
+        libritts = load_styletts2_config(fixtures / "libritts_released_config.yml")
+        ljspeech = load_styletts2_config(fixtures / "ljspeech_released_config.yml")
+        self.assertTrue(libritts.multispeaker)
+        self.assertEqual(libritts.decoder.type, "hifigan")
+        self.assertEqual(libritts.diffusion.dist.sigma_data, 0.19926648961191362)
+        self.assertFalse(ljspeech.multispeaker)
+        self.assertEqual(ljspeech.decoder.type, "istftnet")
+        self.assertEqual(ljspeech.diffusion.dist.sigma_data, 0.45731624995853165)
+
+    def test_public_wrapper_uses_released_config_beside_checkpoint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory) / "Models" / "LibriTTS"
+            folder.mkdir(parents=True)
+            checkpoint = folder / "epochs_2nd_00020.pth"
+            checkpoint.write_bytes(b"pickle")
+            captured = []
+
+            class _Runtime:
+
+                def __init__(self, **kwargs):
+                    captured.append(kwargs)
+                    self.config = None
+                    self.sample_rate = 24_000
+
+            with unittest.mock.patch("voicehub.architectures.styletts2.runtime.StyleTTS2Runtime", _Runtime):
+                StyleTTS2ForTextToSpeech(model_path=str(checkpoint), device="cpu").load()
+                (folder / "config.yml").write_text("model_params: {}\n", encoding="utf-8")
+                StyleTTS2ForTextToSpeech(model_path=str(checkpoint), device="cpu").load()
+        self.assertEqual(Path(captured[0]["config_path"]).name, "config_libritts.yml")
+        self.assertEqual(Path(captured[1]["config_path"]), folder / "config.yml")
+
+    def _tiny_runtime(self, directory: Path, dtype: torch.dtype | None = None) -> StyleTTS2Runtime:
+        import dataclasses
+        import json
+
+        config = dataclasses.replace(
+            _tiny_config(), n_mels=80, sample_rate=24_000, n_fft=2_048, win_length=1_200, hop_length=300)
+        (directory / "config.json").write_text(json.dumps(config.to_dict()), encoding="utf-8")
+        export_styletts2_checkpoint(build_styletts2_model(config), directory / "model.safetensors")
+        return StyleTTS2Runtime(
+            checkpoint_path=str(directory / "model.safetensors"),
+            config_path=str(directory / "config.json"),
+            dtype=dtype,
+        )
+
+    def test_reference_style_mel_is_float32_cpu_then_cast(self):
+        # Released compute_style() builds the mel on the CPU in float32 and
+        # only then moves it to the model; reduced-precision models must
+        # receive it in their own dtype.
+        reference = {"array": torch.sin(torch.arange(24_000) * 0.05) * 0.5, "sampling_rate": 24_000}
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = self._tiny_runtime(Path(directory), dtype=torch.bfloat16)
+        self.assertEqual(runtime.to_mel.mel_filters.device.type, "cpu")
+        style = runtime._reference_style(reference)
+        self.assertEqual(style.dtype, torch.bfloat16)
+        self.assertTrue(bool(torch.isfinite(style.float()).all()))
+
+    def test_reference_mel_uses_released_16khz_filter_bank(self):
+        # torchaudio.transforms.MelSpectrogram(n_mels=80, n_fft=2048,
+        # win_length=1200, hop_length=300) as called by upstream: the
+        # 3 kHz tone of 24 kHz audio peaks in mel bin 42.
+        self.assertEqual(STYLETTS2_INPUT_MEL_FILTER_SAMPLE_RATE, 16_000)
+        tone = torch.sin(torch.arange(24_000) * 2 * torch.pi * 3_000 / 24_000)
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = self._tiny_runtime(Path(directory))
+        self.assertEqual(runtime.sample_rate, 24_000)
+        self.assertAlmostEqual(float(runtime.to_mel.mel_filters.sum()), 1005.5020751953125, places=2)
+        self.assertEqual(int(runtime.to_mel(tone)[:, 10].argmax()), 42)
+
+    def test_style_diffusion_noise_comes_from_cpu_generator(self):
+
+        class _Decoder(nn.Module):
+
+            def forward(self, encoded, f0, noise, style):
+                return encoded.new_zeros((1, 1, encoded.shape[-1] * 300))
+
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = self._tiny_runtime(Path(directory))
+        runtime.model.decoder = _Decoder()
+        calls = []
+        real_randn = torch.randn
+
+        def recording_randn(*args, **kwargs):
+            calls.append(kwargs.get("device"))
+            return real_randn(*args, **kwargs)
+
+        reference = {"array": torch.sin(torch.arange(24_000) * 0.05) * 0.5, "sampling_rate": 24_000}
+        with unittest.mock.patch("voicehub.architectures.styletts2.runtime.torch.randn", recording_randn):
+            runtime.generate("", input_ids=[0, 1, 2, 3], speaker_audio_path=reference, seed=0)
+        self.assertEqual(calls, [None])
 
     def test_architecture_spec_is_truthful(self):
         spec = create_styletts2_architecture_spec()
