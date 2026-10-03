@@ -33,18 +33,25 @@ class RotaryEmbedding(nn.Module):
             raise ValueError("Rotary embedding base must be greater than one.")
         self.dimension = dimension
         self.base = float(base)
-        # Always evaluate the frequencies on the CPU (as the Hugging Face
-        # reference implementations do) and move them afterwards: CUDA `pow`
-        # rounds some of these float32 values differently, which shifts RoPE
-        # angles at long positions and changes bfloat16 outputs.
-        inverse_frequency = 1.0 / (
-            self.base**(torch.arange(
-                0,
-                dimension,
-                2,
-                dtype=torch.float32,
-                device="cpu",
-            ) / dimension))
+        self.scaling = None if scaling is None else dict(scaling)
+        self.register_buffer(
+            "inverse_frequency",
+            # `device=None` follows the ambient default (e.g. a meta context).
+            self._compute_inverse_frequency().to(device=torch.empty(0).device if device is None else device),
+            persistent=False,
+        )
+
+    def _compute_inverse_frequency(self) -> Tensor:
+        """Return the (scaled) float32 inverse frequencies on the CPU.
+
+        The frequencies are always evaluated on the CPU (as the Hugging Face
+        reference implementations do) and moved afterwards: CUDA `pow` rounds
+        some of these float32 values differently, which shifts RoPE angles at
+        long positions and changes bfloat16 outputs.
+        """
+        exponents = torch.arange(0, self.dimension, 2, dtype=torch.int64, device="cpu").float() / self.dimension
+        inverse_frequency = 1.0 / (self.base**exponents)
+        scaling = self.scaling
         if scaling is not None:
             rope_type = scaling.get("rope_type", scaling.get("type", "default"))
             if rope_type == "llama3":
@@ -69,12 +76,16 @@ class RotaryEmbedding(nn.Module):
                     interpolated,
                     scaled_frequency,
                 )
-        self.register_buffer(
-            "inverse_frequency",
-            # `device=None` follows the ambient default (e.g. a meta context).
-            inverse_frequency.to(device=torch.empty(0).device if device is None else device),
-            persistent=False,
-        )
+        return inverse_frequency
+
+    def reset_inverse_frequency(self, device=None) -> None:
+        """Rebuild the non-persistent frequencies, e.g. after a meta load.
+
+        Applies the same CPU evaluation and RoPE scaling as construction, so
+        loaders never need their own copy of the formula.
+        """
+        target = self.inverse_frequency.device if device is None else torch.device(device)
+        self.inverse_frequency = self._compute_inverse_frequency().to(device=target)
 
     def forward(
         self,

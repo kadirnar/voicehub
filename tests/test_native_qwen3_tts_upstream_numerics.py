@@ -22,7 +22,6 @@ from voicehub.architectures.qwen3_tts.codec import Qwen3TTSSpeechDecoder, materi
 from voicehub.architectures.qwen3_tts.modeling import (
     Qwen3TTSForConditionalGeneration,
     materialize_qwen3_tts_buffers,
-    qwen3_tts_rope_inverse_frequency,
 )
 
 
@@ -163,11 +162,12 @@ class Qwen3TTSUpstreamNumericsTests(unittest.TestCase):
     def test_rope_inverse_frequency_matches_transformers_cpu_init(self):
         for base, dimension in ((10_000.0, 64), (1_000_000.0, 128), (10_000.0, 4)):
             with self.subTest(base=base, dimension=dimension):
-                self.assertTrue(
-                    torch.equal(
-                        qwen3_tts_rope_inverse_frequency(base, dimension, device="cpu"),
-                        _transformers_inverse_frequency(base, dimension),
-                    ))
+                rotary = qwen3_tts_modeling.RotaryEmbedding(dimension, base=base, device="meta")
+                materialize_qwen3_tts_buffers(rotary, device="cpu")
+                self.assertTrue(torch.equal(
+                    rotary.inverse_frequency,
+                    _transformers_inverse_frequency(base, dimension),
+                ))
 
     def test_speaker_mel_filters_match_librosa_slaney_bank_bitwise(self):
         from voicehub.architectures.qwen3_tts.runtime import _qwen3_tts_speaker_mel_filters

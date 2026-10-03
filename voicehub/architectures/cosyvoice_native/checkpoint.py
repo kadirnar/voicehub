@@ -17,6 +17,7 @@ from voicehub.architectures.cosyvoice_native.metadata import (
 )
 from voicehub.checkpointing import SafeTensorReader, save_safetensors
 from voicehub.checkpointing.errors import CheckpointCompatibilityError, CheckpointIntegrityError
+from voicehub.neural.rotary import RotaryEmbedding
 
 _FLOATING_DTYPES = frozenset({
     "BF16",
@@ -121,19 +122,8 @@ def _materialize_runtime_buffers(
     if callable(materialize):
         materialize(target_device)
     for module in model.modules():
-        inverse_frequency = module._buffers.get("inverse_frequency")
-        if (isinstance(inverse_frequency, Tensor) and inverse_frequency.device.type == "meta" and
-                hasattr(module, "dimension") and hasattr(module, "base")):
-            dimension = int(module.dimension)
-            base = float(module.base)
-            exponents = torch.arange(
-                0,
-                dimension,
-                2,
-                dtype=torch.float32,
-                device=target_device,
-            ) / dimension
-            module.inverse_frequency = 1.0 / torch.pow(base, exponents)
+        if isinstance(module, RotaryEmbedding) and module.inverse_frequency.device.type == "meta":
+            module.reset_inverse_frequency(target_device)
         stft_window = module._buffers.get("stft_window")
         config = getattr(module, "config", None)
         if (isinstance(stft_window, Tensor) and stft_window.device.type == "meta" and config is not None and

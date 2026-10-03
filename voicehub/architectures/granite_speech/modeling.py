@@ -953,24 +953,8 @@ def materialize_granite_speech_nonpersistent_buffers(
             encoder.config.context_size,
         ) + encoder.config.max_pos_emb)
     for module in model.modules():
-        if not isinstance(module, RotaryEmbedding):
-            continue
-        exponents = torch.arange(
-            0,
-            module.dimension,
-            2,
-            dtype=torch.float32,
-            device=target,
-        ) / module.dimension
-        module.inverse_frequency = (
-            1.0 / torch.pow(
-                torch.tensor(
-                    module.base,
-                    dtype=torch.float32,
-                    device=target,
-                ),
-                exponents,
-            ))
+        if isinstance(module, RotaryEmbedding):
+            module.reset_inverse_frequency(target)
 
 
 __all__ = [

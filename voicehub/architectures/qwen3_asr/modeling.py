@@ -725,20 +725,8 @@ def materialize_qwen3_asr_nonpersistent_buffers(
 
     target = torch.device(device)
     for module in model.modules():
-        if not isinstance(module, RotaryEmbedding):
-            continue
-        exponents = torch.arange(
-            0,
-            module.dimension,
-            2,
-            dtype=torch.float32,
-            device=target,
-        ) / module.dimension
-        inverse_frequency = 1.0 / torch.pow(
-            module.base,
-            exponents,
-        )
-        module.inverse_frequency = inverse_frequency
+        if isinstance(module, RotaryEmbedding):
+            module.reset_inverse_frequency(target)
 
 
 __all__ = [

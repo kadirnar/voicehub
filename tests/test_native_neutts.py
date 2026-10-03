@@ -462,6 +462,11 @@ class NativeNeuTTSTests(unittest.TestCase):
         rotary = model.model.layers[0].self_attn.rotary
         self.assertIsInstance(rotary, LinearScalingRotaryEmbedding)
         self.assertEqual(rotary.factor, 2.0)
+        unscaled = 1.0 / (rotary.base**(torch.arange(0, rotary.dimension, 2).float() / rotary.dimension))
+        self.assertTrue(torch.equal(rotary.inverse_frequency, unscaled / 2.0))
+        # A meta-load rebuild must keep the linear interpolation factor.
+        rotary.reset_inverse_frequency()
+        self.assertTrue(torch.equal(rotary.inverse_frequency, unscaled / 2.0))
 
         tokens = torch.tensor([[1, 4, 5, 2]])
         output = model(tokens, labels=tokens)
