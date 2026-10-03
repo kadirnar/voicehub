@@ -245,7 +245,7 @@ class TTS(GPTSoVITSRuntime):
             "prompt_lang",
             "text_lang",
         }
-        if not all(name in request for name in (
+        if not all(request.get(name) is not None for name in (
                 "s1_phoneme_ids",
                 "s1_bert_features",
                 "s2_phoneme_ids",

@@ -34,7 +34,7 @@ from voicehub.architectures.gptsovits.frontend import (
 from voicehub.architectures.gptsovits.metadata import GPT_SOVITS_VARIANTS
 from voicehub.architectures.gptsovits.modeling import build_s2_discriminator, build_s2_generator
 from voicehub.architectures.gptsovits.registration import create_gptsovits_architecture_spec
-from voicehub.architectures.gptsovits.runtime import GPTSoVITSRuntime, TTS_Config
+from voicehub.architectures.gptsovits.runtime import TTS, GPTSoVITSRuntime, TTS_Config
 from voicehub.architectures.gptsovits.semantic import GPTSoVITSSemanticModel
 from voicehub.architectures.gptsovits.training import GPTSoVITSS2TrainingModel, build_staged_training_model
 from voicehub.models.gptsovits.training import GPTSoVITSTrainingAdapter
@@ -216,15 +216,17 @@ class NativeGPTSoVITSTests(unittest.TestCase):
                 )
 
     def test_release_defaults_match_pinned_upstream_inference_defaults(self):
-        source = (PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "source" / "GPT_SoVITS" /
-                  "TTS_infer_pack" / "TTS.py").read_text(encoding="utf-8")
+        source = (
+            PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "source" / "GPT_SoVITS" / "TTS_infer_pack" /
+            "TTS.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         defaults = None
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name == "TTS_Config":
                 for statement in node.body:
                     if (isinstance(statement, ast.Assign) and
-                            any(getattr(target, "id", None) == "default_configs" for target in statement.targets)):
+                            any(getattr(target, "id", None) == "default_configs"
+                                for target in statement.targets)):
                         defaults = ast.literal_eval(statement.value)
         self.assertIsNotNone(defaults)
         prefix = "GPT_SoVITS/pretrained_models/"
@@ -265,6 +267,23 @@ class NativeGPTSoVITSTests(unittest.TestCase):
                 prompt_semantic_ids=None,
                 reference_spectrogram=torch.zeros(1_025, 3),
             )
+
+    def test_public_raw_text_request_fails_closed_with_frontend_error(self):
+        # The public wrapper always sends every prepared key, set to None for
+        # raw-text calls; the runtime must still reject them explicitly.
+        request = {
+            "text": "Hello.",
+            "text_lang": "en",
+            "ref_audio_path": "reference.wav",
+            "prompt_text": "Reference.",
+            "prompt_lang": "en",
+            "s1_phoneme_ids": None,
+            "s1_bert_features": None,
+            "s2_phoneme_ids": None,
+            "reference_spectrogram": None,
+        }
+        with self.assertRaisesRegex(ValueError, "requires prepared IDs/features/spectrograms"):
+            next(TTS.run(SimpleNamespace(), request))
 
     def test_pro_frontend_requires_exact_prepared_speaker_embedding(self):
         s1_config = GPTSoVITSS1Config.for_variant("v2Pro")
