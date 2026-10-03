@@ -515,14 +515,18 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
                     phase="full",
                 )
 
+        # Upstream fine-tuning layout: decoder reads `</s> __eng__ text`,
+        # predicts `text </s>`; the language-token target is not scored.
         self.assertEqual(
-            prepared["labels"][0, :2].tolist(),
-            [3, SEAMLESS_M4T_V2_LANGUAGE_TO_ID["eng"]],
+            prepared["decoder_input_ids"].tolist(),
+            [[3, SEAMLESS_M4T_V2_LANGUAGE_TO_ID["eng"], 13]],
         )
+        self.assertEqual(prepared["labels"].tolist(), [[-100, 13, 3]])
+        self.assertEqual(prepared["decoder_attention_mask"].tolist(), [[True, True, True]])
         self.assertEqual(batched["labels"].shape[0], 2)
         self.assertEqual(
-            batched["labels"][:, 1].tolist(),
-            [SEAMLESS_M4T_V2_LANGUAGE_TO_ID["eng"]] * 2,
+            batched["decoder_input_ids"][:, :2].tolist(),
+            [[3, SEAMLESS_M4T_V2_LANGUAGE_TO_ID["eng"]]] * 2,
         )
         self.assertTrue(torch.isfinite(output.loss))
         self.assertIsInstance(
