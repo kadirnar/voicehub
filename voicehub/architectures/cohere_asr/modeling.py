@@ -19,7 +19,7 @@ from torch.nn import functional as F
 from torch.utils.checkpoint import checkpoint
 
 from voicehub.architectures.cohere_asr.configuration import CohereAsrConfig
-from voicehub.processing.audio import mel_filter_bank
+from voicehub.processing.audio import _hz_to_mel, _mel_to_hz
 
 LOG_ZERO_GUARD = 2**-24
 NORMALIZATION_EPSILON = 1e-5
@@ -72,13 +72,39 @@ def frontend_window_and_filters(config: CohereAsrConfig) -> tuple[torch.Tensor, 
             periodic=False,
             dtype=torch.float32,
         )
-        filters = mel_filter_bank(
+        filters = _librosa_float32_slaney_filters(
             sample_rate=config.sample_rate,
             n_fft=config.n_fft,
             n_mels=config.encoder_config.num_mel_bins,
-            dtype=torch.float64,
-        ).to(torch.float32)
+        )
     return window, filters
+
+
+def _librosa_float32_slaney_filters(
+    *,
+    sample_rate: int,
+    n_fft: int,
+    n_mels: int,
+) -> torch.Tensor:
+    """Reproduce ``librosa.filters.mel(..., norm="slaney")`` bit-exactly.
+
+    librosa evaluates the triangles in float64 but stores them in its
+    float32 output before applying the float64 Slaney area normalization
+    in place, so each weight is rounded twice. A single float64
+    evaluation differs from the reference bank by one float32 ULP in 157
+    of the 32,896 weights of the published 128-bin configuration.
+    """
+    frequencies = torch.linspace(0.0, sample_rate / 2.0, n_fft // 2 + 1, dtype=torch.float64)
+    minimum_mel = _hz_to_mel(torch.tensor(0.0, dtype=torch.float64))
+    maximum_mel = _hz_to_mel(torch.tensor(sample_rate / 2.0, dtype=torch.float64))
+    edges = _mel_to_hz(torch.linspace(minimum_mel, maximum_mel, n_mels + 2, dtype=torch.float64))
+    ramps = edges.unsqueeze(1) - frequencies.unsqueeze(0)
+    widths = edges[1:] - edges[:-1]
+    lower = -ramps[:-2] / widths[:-1].unsqueeze(1)
+    upper = ramps[2:] / widths[1:].unsqueeze(1)
+    triangles = torch.clamp(torch.minimum(lower, upper), min=0.0).to(torch.float32)
+    normalization = 2.0 / (edges[2:] - edges[:-2])
+    return (triangles.to(torch.float64) * normalization.unsqueeze(1)).to(torch.float32)
 
 
 class FilterbankFeatures(nn.Module):

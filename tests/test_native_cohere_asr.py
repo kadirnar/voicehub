@@ -612,6 +612,19 @@ class CohereAsrTokenizerAndProcessorTests(unittest.TestCase):
                 atol=0,
             )
 
+    def test_published_mel_bank_matches_librosa_float32_rounding(self):
+        try:
+            import librosa
+        except (ImportError, ModuleNotFoundError) as error:
+            self.skipTest(f"Optional librosa reference unavailable: {error}")
+        from voicehub.architectures.cohere_asr.modeling import _librosa_float32_slaney_filters
+
+        reference = librosa.filters.mel(
+            sr=16_000, n_fft=512, n_mels=128, fmin=0.0, fmax=8_000.0, norm="slaney")
+        actual = _librosa_float32_slaney_filters(sample_rate=16_000, n_fft=512, n_mels=128)
+        self.assertEqual(actual.dtype, torch.float32)
+        self.assertTrue(torch.equal(actual, torch.from_numpy(reference)))
+
     def test_frontend_ignores_bfloat16_checkpoint_frontend_buffers(self):
         # The published checkpoint stores the window and mel bank rounded to
         # bfloat16; the reference frontend uses exact float32 tensors.

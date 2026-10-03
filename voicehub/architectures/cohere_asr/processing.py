@@ -223,7 +223,8 @@ class CohereAsrFeatureExtractor:
             pad_mode="constant",
             return_complex=True,
         )
-        power = spectrum.abs().square()
+        # Reference magnitude formula (not ``abs()``, which rounds differently).
+        power = torch.sqrt(torch.view_as_real(spectrum).pow(2).sum(-1)).pow(2)
         filters = self.mel_filters.to(
             device=padded.device,
             dtype=power.dtype,
