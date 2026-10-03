@@ -603,6 +603,16 @@ class NativeStyleTTS2Tests(unittest.TestCase):
             runtime.generate("", input_ids=[0, 1, 2, 3], speaker_audio_path=reference, seed=0)
         self.assertEqual(calls, [None])
 
+    def test_istftnet_window_matches_float64_scipy_window(self):
+        from voicehub.models.styletts2.source.styletts2.Modules.istftnet import TorchSTFT
+
+        stft = TorchSTFT(filter_length=20, hop_length=5, win_length=20)
+        # float32(scipy.signal.get_window("hann", 20, fftbins=True)); index 1
+        # is where a float32 torch.hann_window differs by one ulp.
+        expected = torch.hann_window(20, periodic=True, dtype=torch.float64).float()
+        self.assertTrue(torch.equal(stft.window, expected))
+        self.assertEqual(stft.window[1].item(), 0.024471741169691086)
+
     def test_architecture_spec_is_truthful(self):
         spec = create_styletts2_architecture_spec()
         from voicehub.registry import get_model_spec
