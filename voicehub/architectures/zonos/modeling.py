@@ -34,6 +34,7 @@ class ZonosInferenceCache:
     batch_offset: int = 0
     key_values: dict[int, Tensor] = field(default_factory=dict)
     lengths_per_sample: Tensor | None = None
+    rotary_frequencies: Tensor | None = None
 
 
 @dataclass(frozen=True)
@@ -581,19 +582,24 @@ class ZonosTransformerBackbone(nn.Module):
     ) -> Tensor:
         if cache.lengths_per_sample is None:
             raise RuntimeError("Zonos inference cache has no per-sample positions.")
+        # Check capacity on the host offset that the KV write uses, so decode
+        # steps never synchronize with the device.
+        if cache.sequence_offset + hidden_states.shape[1] > cache.max_sequence_length:
+            raise RuntimeError("Zonos rotary position exceeds the allocated sequence length.")
         positions = (
             torch.arange(
                 hidden_states.shape[1],
                 device=hidden_states.device,
             )[None, :] + cache.lengths_per_sample.to(hidden_states.device)[:, None])
-        if int(positions.max().item()) >= cache.max_sequence_length:
-            raise RuntimeError("Zonos rotary position exceeds the allocated sequence length.")
-        all_frequencies = precompute_rotary_frequencies(
-            cache.max_sequence_length,
-            self.config.head_dim,
-            device=hidden_states.device,
-        )
-        frequencies = all_frequencies[positions]
+        if cache.rotary_frequencies is None:
+            # Build the table once per cache, as the released backbone does
+            # when it allocates its inference cache.
+            cache.rotary_frequencies = precompute_rotary_frequencies(
+                cache.max_sequence_length,
+                self.config.head_dim,
+                device=hidden_states.device,
+            )
+        frequencies = cache.rotary_frequencies[positions]
         for layer in self.layers:
             hidden_states = layer(
                 hidden_states,
