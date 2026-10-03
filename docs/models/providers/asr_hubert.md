@@ -12,7 +12,7 @@ hide:
 
 # Hubert {.vh-model-title}
 
-<p class="vh-model-detail__summary">Uses the HuBERT CTC fine-tuned head with an explicit English transcription task.</p>
+<p class="vh-model-detail__summary">Uses the English LibriSpeech HuBERT CTC fine-tuned head with an explicit transcription task.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Automatic speech recognition</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">hubert</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-asr_hubert">Parameters: Not reported</span><span class="vh-model-detail__chip" data-chip-kind="language">Language: en</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-asr_hubert"><strong>Parameter metadata:</strong> Not reported: the audited metadata available for the registered default does not provide an exact parameter total.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -47,9 +47,9 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Uses the HuBERT CTC fine-tuned head with an explicit English transcription task.
+**Model-specific path:** Uses the English LibriSpeech HuBERT CTC fine-tuned head with an explicit transcription task.
 
-**Inputs and controls:** The base HuBERT family is self-supervised; this exact HF ID includes the ASR head required here.
+**Inputs and controls:** The base HuBERT family is self-supervised; this exact HF ID includes the ASR head required here. Its single CTC vocabulary takes no runtime `language` argument.
 
 ```python
 from pathlib import Path
@@ -68,7 +68,6 @@ model = AutoModelForSpeechRecognition.from_pretrained(
 )
 output = model.transcribe(
     AUDIO_FILE,
-    language="en",
     task="transcribe",
 )
 print(output.text)

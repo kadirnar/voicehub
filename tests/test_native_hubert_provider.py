@@ -326,6 +326,32 @@ print(json.dumps({name: name in sys.modules for name in names}))
             finally:
                 handle.remove()
 
+    def test_documented_transcription_arguments_are_accepted(self):
+        # The generated model page and notebook passed `language="en"`, which
+        # the single-vocabulary CTC runtime rejects, so the example raised.
+        import ast
+        import runpy
+
+        documentation = runpy.run_path(str(PROJECT_ROOT / "scripts" / "model_documentation.py"))
+        arguments = {}
+        for argument in documentation["INFERENCE_PROFILES"]["asr_hubert"].arguments:
+            keyword = ast.parse(f"f({argument})", mode="eval").body.keywords[0]
+            arguments[keyword.arg] = ast.literal_eval(keyword.value)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = HubertForSpeechRecognition(
+                HubertASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+                lazy_load=False,
+            )
+            output = wrapper.transcribe(
+                torch.randn(1_600, generator=torch.Generator().manual_seed(5)),
+                sampling_rate=16_000,
+                **arguments,
+            )
+        self.assertIsInstance(output.text, str)
+
     def test_local_sharded_checkpoint_loads_strictly(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

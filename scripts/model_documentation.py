@@ -770,9 +770,10 @@ INFERENCE_PROFILES = {
     ),
     "asr_hubert":
     _asr(
-        "Uses the HuBERT CTC fine-tuned head with an explicit English transcription task.",
-        "The base HuBERT family is self-supervised; this exact HF ID includes the ASR head required here.",
-        arguments=('language="en"', 'task="transcribe"'),
+        "Uses the English LibriSpeech HuBERT CTC fine-tuned head with an explicit transcription task.",
+        "The base HuBERT family is self-supervised; this exact HF ID includes the ASR head required here. "
+        "Its single CTC vocabulary takes no runtime `language` argument.",
+        arguments=('task="transcribe"', ),
     ),
     "asr_wavlm":
     _asr(
