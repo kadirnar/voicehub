@@ -17,6 +17,7 @@ from voicehub.architectures.omnivoice.codec import HiggsAudioV2Tokenizer
 from voicehub.architectures.omnivoice.configuration import OmniVoiceArchitectureConfig
 from voicehub.architectures.qwen3_asr.tokenization import qwen2_pretokenize
 from voicehub.audio import load_audio
+from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.tokenization import ByteBPETokenizer, Encoding
 
 END_OF_TEXT = "<|endoftext|>"
@@ -317,12 +318,15 @@ class OmniVoiceSampleProcessor:
                 raise ValueError(
                     "Raw OmniVoice `sampling_rate`, when provided, must be "
                     "a positive integer.")
-            loaded = load_audio(
-                value,
-                sampling_rate=sample_rate,
-                target_sampling_rate=self.audio_tokenizer.sample_rate,
-            )
+            loaded = load_audio(value, sampling_rate=sample_rate)
             waveform = _mono_waveform(loaded.waveform)
+            if loaded.sampling_rate != self.audio_tokenizer.sample_rate:
+                # Upstream training data uses torchaudio's default kernel.
+                waveform = resample_waveform_hann(
+                    waveform,
+                    loaded.sampling_rate,
+                    self.audio_tokenizer.sample_rate,
+                )
             if self.masking.normalize_raw_audio:
                 waveform = (waveform / (waveform.abs().max() + 1e-7) * 0.9)
             codec_device = self.audio_tokenizer.device

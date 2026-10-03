@@ -19,7 +19,7 @@ from torch.nn import functional
 from voicehub.architectures.hubert import HubertModel
 from voicehub.architectures.omnivoice.configuration import HiggsAcousticConfig, HiggsAudioV2Config
 from voicehub.kernels.codecs import CodecSnakeKernelOptimizable
-from voicehub.processing.waveform import resample_waveform_kaiser
+from voicehub.processing.waveform import resample_waveform_hann
 
 
 @dataclass(frozen=True, slots=True)
@@ -601,7 +601,9 @@ class HiggsAudioV2Tokenizer(nn.Module):
     def _semantic_features(self, input_values: Tensor) -> Tensor:
         values = input_values[:, 0, :]
         if self.config.sample_rate != self.config.semantic_sample_rate:
-            values = resample_waveform_kaiser(
+            # The Transformers reference uses torchaudio's default
+            # Hann-windowed sinc resampler for the HuBERT input.
+            values = resample_waveform_hann(
                 values,
                 self.config.sample_rate,
                 self.config.semantic_sample_rate,

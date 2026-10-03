@@ -48,7 +48,8 @@ class OmniVoiceCheckpointReport:
 
 
 def inspect_omnivoice_checkpoint(path: str | Path, ) -> OmniVoiceCheckpointReport:
-    source = Path(path).expanduser().resolve()
+    # Do not resolve symlinks: a Hugging Face cache blob has no suffix.
+    source = Path(path).expanduser().absolute()
     if source.suffix.lower() != ".safetensors":
         raise ValueError("Native OmniVoice checkpoints must use Safetensors.")
     with SafeTensorReader(source) as reader:
@@ -150,10 +151,39 @@ def load_omnivoice_checkpoint(
                 strict=False,
                 assign=True,
             )
-    remaining = [name for name, value in model.state_dict().items() if value.device.type == "meta"]
+    _materialize_rotary_buffers(model, target_device)
+    # Non-persistent buffers are absent from ``state_dict()``; inspect every
+    # tensor so a meta-initialized graph can never reach inference.
+    remaining = [
+        name for name, value in (*model.named_parameters(), *model.named_buffers())
+        if value.device.type == "meta"
+    ]
     if remaining:
         raise CheckpointCompatibilityError("Streaming load left meta tensors: " + ", ".join(remaining[:12]))
     return report
+
+
+def _materialize_rotary_buffers(model: nn.Module, device: torch.device) -> None:
+    # RoPE frequencies are deterministic non-persistent buffers, so they are
+    # not in the checkpoint and must be rebuilt after a meta-device load.
+    from voicehub.architectures.causal_lm.modeling import CausalSelfAttention
+    from voicehub.neural.rotary import RotaryEmbedding
+
+    for module in model.modules():
+        if not isinstance(module, CausalSelfAttention):
+            continue
+        rotary = module.rotary
+        if rotary.inverse_frequency.device.type != "meta":
+            continue
+        # Compute on CPU like the reference: CUDA ``pow`` differs in the last
+        # bit for some frequencies, which perturbs every attention layer.
+        replacement = RotaryEmbedding(
+            rotary.dimension,
+            base=module.config.rope_theta,
+            scaling=module.config.rope_scaling,
+            device="cpu",
+        )
+        rotary.inverse_frequency = replacement.inverse_frequency.to(device)
 
 
 def export_omnivoice_checkpoint(

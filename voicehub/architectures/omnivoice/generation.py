@@ -13,6 +13,7 @@ from torch.nn import functional
 
 from voicehub.architectures.omnivoice.codec import HiggsAudioV2Tokenizer
 from voicehub.architectures.omnivoice.duration import RuleDurationEstimator
+from voicehub.architectures.omnivoice.languages import resolve_language
 from voicehub.architectures.omnivoice.modeling import OmniVoiceModel
 from voicehub.architectures.omnivoice.processing import (
     TEXT_END,
@@ -21,19 +22,28 @@ from voicehub.architectures.omnivoice.processing import (
     combine_text,
     style_prompt,
 )
+from voicehub.architectures.omnivoice.silence import remove_silence
+from voicehub.architectures.omnivoice.voice_design import CHINESE_CHARACTER, resolve_instruction
 from voicehub.checkpointing import SafeTensorReader, save_safetensors
-from voicehub.processing.waveform import resample_waveform_kaiser
+from voicehub.processing.waveform import resample_waveform_hann
 
 _PROMPT_FORMAT = "voicehub-native-omnivoice-prompt-v1"
 _SPLIT_PUNCTUATION = frozenset(".,;:!?。，；：！？")
+# Reference transcripts ending in one of these keep their final mark.
+_END_PUNCTUATION = frozenset({
+    ";", ":", ",", ".", "!", "?", "…", ")", "]", "}", '"', "'", "“", "”", "‘", "’", "；", "：", "，", "。", "！",
+    "？", "、", "）", "】"
+})
 _CLOSING_MARKS = frozenset("\"'“”‘’）]》>」】")
 _ABBREVIATIONS = frozenset({
     "Apr.",
     "Aug.",
+    "Ave.",
+    "Blvd.",
     "Capt.",
     "Cmdr.",
-    "Col.",
     "Co.",
+    "Col.",
     "Corp.",
     "Cpl.",
     "Dec.",
@@ -42,6 +52,7 @@ _ABBREVIATIONS = frozenset({
     "Est.",
     "Etc.",
     "Feb.",
+    "Fr.",
     "Ft.",
     "Gen.",
     "Gov.",
@@ -49,10 +60,8 @@ _ABBREVIATIONS = frozenset({
     "Inc.",
     "Jan.",
     "Jr.",
-    "Jul.",
-    "Jun.",
-    "Ltd.",
     "Lt.",
+    "Ltd.",
     "Maj.",
     "Mar.",
     "Mr.",
@@ -62,7 +71,9 @@ _ABBREVIATIONS = frozenset({
     "No.",
     "Nov.",
     "Oct.",
+    "Pres.",
     "Prof.",
+    "Rd.",
     "Rep.",
     "Rev.",
     "Sen.",
@@ -236,6 +247,17 @@ def _top_k(values: Tensor, ratio: float = 0.1) -> Tensor:
     return filtered
 
 
+def _linspace(start: float, stop: float, count: int) -> Tensor:
+    """``numpy.linspace(start, stop, count, dtype=float32)``, bit for bit."""
+    values = torch.arange(count, dtype=torch.float64)
+    if count > 1:
+        values = values * ((stop - start) / (count - 1))
+    values = values + start
+    if count > 1:
+        values[-1] = stop
+    return values.float()
+
+
 def _time_steps(config: OmniVoiceGenerationConfig, device: torch.device) -> Tensor:
     steps = torch.linspace(
         0.0,
@@ -246,10 +268,34 @@ def _time_steps(config: OmniVoiceGenerationConfig, device: torch.device) -> Tens
     return config.time_shift * steps / (1.0 + (config.time_shift - 1.0) * steps)
 
 
-def _chunk_text(text: str, *, maximum_characters: int) -> list[str]:
-    """Split on source-compatible punctuation, retaining closing marks."""
+def _resolve_style(
+    text: str,
+    language: str | None,
+    instruction: str | None,
+) -> tuple[str | None, str | None]:
+    """Upstream language-name and voice-design normalization."""
+    if language is not None and not isinstance(language, str):
+        raise TypeError("`language` must be a string or None.")
+    if instruction is not None and not isinstance(instruction, str):
+        raise TypeError("`instruction` must be a string or None.")
+    use_chinese = bool(isinstance(text, str) and CHINESE_CHARACTER.search(text))
+    return (
+        resolve_language(language),
+        resolve_instruction(instruction, use_chinese=use_chinese),
+    )
+
+
+def _chunk_text(
+    text: str,
+    *,
+    maximum_characters: int,
+    minimum_characters: int = 3,
+) -> list[str]:
+    """Port of upstream ``chunk_text_punctuation`` (revision 468e927)."""
     if maximum_characters <= 0:
         raise ValueError("`maximum_characters` must be positive.")
+    # 1. Split at punctuation; leading punctuation joins the previous
+    # sentence and abbreviations such as "Mr." do not end a sentence.
     sentences: list[list[str]] = []
     current: list[str] = []
     for character in text:
@@ -269,27 +315,30 @@ def _chunk_text(text: str, *, maximum_characters: int) -> list[str]:
     if current:
         sentences.append(current)
 
-    chunks: list[list[str]] = []
+    # 2. Greedily merge whole sentences; a long sentence is never split.
+    merged: list[list[str]] = []
     current = []
     for sentence in sentences:
-        if current and len(current) + len(sentence) > maximum_characters:
-            chunks.append(current)
-            current = []
-        current.extend(sentence)
-        while len(current) > maximum_characters:
-            chunks.append(current[:maximum_characters])
-            current = current[maximum_characters:]
+        if len(current) + len(sentence) <= maximum_characters:
+            current.extend(sentence)
+        else:
+            if current:
+                merged.append(current)
+            current = sentence
     if current:
-        chunks.append(current)
-    result = ["".join(chunk).strip() for chunk in chunks]
-    result = [chunk for chunk in result if chunk]
-    if len(result) > 1 and len(result[0]) < 3:
-        result[1] = result[0] + result[1]
-        result.pop(0)
-    if len(result) > 1 and len(result[-1]) < 3:
-        result[-2] += result[-1]
-        result.pop()
-    return result or [text]
+        merged.append(current)
+
+    # 3. Merge undersized chunks into the previous (or, first, the next) one.
+    first_is_short = bool(merged) and len(merged[0]) < minimum_characters
+    chunks: list[list[str]] = []
+    for index, chunk in enumerate(merged):
+        if index == 1 and first_is_short:
+            chunks[-1].extend(chunk)
+        elif len(chunk) >= minimum_characters or not chunks:
+            chunks.append(chunk)
+        else:
+            chunks[-1].extend(chunk)
+    return ["".join(chunk).strip() for chunk in chunks if "".join(chunk).strip()]
 
 
 class OmniVoiceGenerator:
@@ -337,7 +386,8 @@ class OmniVoiceGenerator:
             raise TypeError("`preprocess_prompt` must be a boolean.")
         values = _mono_waveform(waveform)
         if sampling_rate != self.audio_tokenizer.sample_rate:
-            values = resample_waveform_kaiser(
+            # Upstream uses torchaudio's default Hann-windowed resampler.
+            values = resample_waveform_hann(
                 values,
                 sampling_rate,
                 self.audio_tokenizer.sample_rate,
@@ -347,7 +397,19 @@ class OmniVoiceGenerator:
         rms = float(values.square().mean().sqrt().item())
         codec_input = values
         if 0 < rms < 0.1:
-            codec_input = codec_input * (0.1 / rms)
+            codec_input = codec_input * 0.1 / rms
+        if preprocess_prompt:
+            codec_input = remove_silence(
+                codec_input,
+                self.audio_tokenizer.sample_rate,
+                middle_ms=200,
+                leading_ms=100,
+                trailing_ms=200,
+            )
+            if codec_input.numel() == 0:
+                raise ValueError(
+                    "Reference audio is empty after silence removal; "
+                    "try `preprocess_prompt=False`.")
         remainder = codec_input.numel() % self.audio_tokenizer.config.hop_length
         if remainder:
             codec_input = codec_input[:-remainder]
@@ -356,9 +418,11 @@ class OmniVoiceGenerator:
         with torch.no_grad():
             codes = self.audio_tokenizer.encode(codec_input.to(
                 self.audio_tokenizer.device)[None, None, :]).audio_codes[0].cpu()
-        text = reference_text.strip()
-        if preprocess_prompt and text[-1] not in ".!?。！？":
-            text += "。" if any("\u4e00" <= char <= "\u9fff" for char in text) else "."
+        text = reference_text
+        if preprocess_prompt:
+            text = text.strip()
+            if text[-1] not in _END_PUNCTUATION:
+                text += "。" if any("\u4e00" <= char <= "\u9fff" for char in text) else "."
         return OmniVoicePrompt(codes, text, rms)
 
     def estimate_target_frames(
@@ -443,6 +507,30 @@ class OmniVoiceGenerator:
         speed: float = 1.0,
         config: OmniVoiceGenerationConfig | None = None,
         generator: torch.Generator | None = None,
+    ) -> Tensor:
+        language, instruction = _resolve_style(text, language, instruction)
+        return self._generate_tokens(
+            text,
+            prompt=prompt,
+            language=language,
+            instruction=instruction,
+            duration=duration,
+            speed=speed,
+            config=config,
+            generator=generator,
+        )
+
+    def _generate_tokens(
+        self,
+        text: str,
+        *,
+        prompt: OmniVoicePrompt | None,
+        language: str | None,
+        instruction: str | None,
+        duration: float | None,
+        speed: float,
+        config: OmniVoiceGenerationConfig | None,
+        generator: torch.Generator | None,
     ) -> Tensor:
         if not isinstance(text, str) or not text.strip():
             raise ValueError("OmniVoice generation text must be non-empty.")
@@ -590,8 +678,10 @@ class OmniVoiceGenerator:
         self,
         audio_tokens: Tensor,
     ) -> Tensor:
+        # Post-processing runs on CPU like upstream's NumPy path: CUDA divides
+        # by a Python scalar via its reciprocal, which differs by one ULP.
         return self.audio_tokenizer.decode(audio_tokens.to(
-            self.audio_tokenizer.device).unsqueeze(0)).audio_values[0, 0].float()
+            self.audio_tokenizer.device).unsqueeze(0)).audio_values[0, 0].float().cpu()
 
     def _postprocess(
         self,
@@ -601,9 +691,22 @@ class OmniVoiceGenerator:
         config: OmniVoiceGenerationConfig | None = None,
     ) -> Tensor:
         generation = config or OmniVoiceGenerationConfig()
+        waveform = waveform.cpu()
+        if generation.postprocess_output:
+            waveform = remove_silence(
+                waveform,
+                self.audio_tokenizer.sample_rate,
+                middle_ms=500,
+                leading_ms=100,
+                trailing_ms=100,
+            )
+        if waveform.numel() == 0:
+            return waveform
+        # Like upstream, prompt-free output is always peak-normalized; only
+        # silence removal depends on ``postprocess_output``.
         if prompt is not None and prompt.reference_rms < 0.1:
-            waveform = waveform * (prompt.reference_rms / 0.1)
-        elif prompt is None and generation.postprocess_output:
+            waveform = waveform * prompt.reference_rms / 0.1
+        elif prompt is None:
             peak = waveform.abs().max()
             if peak > 1e-6:
                 waveform = waveform / peak * 0.5
@@ -613,15 +716,9 @@ class OmniVoiceGenerator:
             waveform.numel() // 2,
         )
         if fade:
-            curve = torch.linspace(
-                0.0,
-                1.0,
-                fade,
-                dtype=waveform.dtype,
-                device=waveform.device,
-            )
-            waveform[:fade] *= curve
-            waveform[-fade:] *= curve.flip(0)
+            waveform = waveform.clone()
+            waveform[:fade] *= _linspace(0.0, 1.0, fade).to(waveform)
+            waveform[-fade:] *= _linspace(1.0, 0.0, fade).to(waveform)
         if padding:
             waveform = functional.pad(waveform, (padding, padding))
         return waveform
@@ -657,23 +754,11 @@ class OmniVoiceGenerator:
         for waveform in waveforms[1:]:
             outgoing = min(fade_length, merged.numel())
             if outgoing:
-                merged[-outgoing:] *= torch.linspace(
-                    1.0,
-                    0.0,
-                    outgoing,
-                    dtype=merged.dtype,
-                    device=merged.device,
-                )
+                merged[-outgoing:] *= _linspace(1.0, 0.0, outgoing).to(merged)
             incoming_waveform = waveform.clone()
             incoming = min(fade_length, incoming_waveform.numel())
             if incoming:
-                incoming_waveform[:incoming] *= torch.linspace(
-                    0.0,
-                    1.0,
-                    incoming,
-                    dtype=incoming_waveform.dtype,
-                    device=incoming_waveform.device,
-                )
+                incoming_waveform[:incoming] *= _linspace(0.0, 1.0, incoming).to(incoming_waveform)
             merged = torch.cat([
                 merged,
                 merged.new_zeros(silence_length),
@@ -696,6 +781,7 @@ class OmniVoiceGenerator:
     ) -> Tensor:
         """Generate one utterance, chunking long text at punctuation."""
         generation = config or OmniVoiceGenerationConfig()
+        language, instruction = _resolve_style(text, language, instruction)
         target_frames = self.estimate_target_frames(
             text,
             prompt=prompt,
@@ -704,7 +790,7 @@ class OmniVoiceGenerator:
         )
         threshold = int(generation.audio_chunk_threshold * self.audio_tokenizer.frame_rate)
         if (generation.audio_chunk_duration <= 0 or target_frames <= threshold):
-            tokens = self.generate_tokens(
+            tokens = self._generate_tokens(
                 text,
                 prompt=prompt,
                 language=language,
@@ -741,11 +827,12 @@ class OmniVoiceGenerator:
         for index, chunk in enumerate(chunks):
             if index and prompt is None:
                 reference_prompt = first_generated_prompt
-            tokens = self.generate_tokens(
+            tokens = self._generate_tokens(
                 chunk,
                 prompt=reference_prompt,
                 language=language,
                 instruction=instruction,
+                duration=None,
                 speed=chunk_speed,
                 config=generation,
                 generator=generator,

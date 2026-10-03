@@ -111,10 +111,11 @@ class OmniVoiceRuntime:
         sampling_rate: int | None = None,
         preprocess_prompt: bool = True,
     ) -> OmniVoicePrompt:
+        # Resampling happens in the generator with the upstream-compatible
+        # (torchaudio default) kernel, not VoiceHub's generic loader kernel.
         loaded = load_audio(
             audio,
             sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
         )
         return self.generator.create_prompt(
             loaded.waveform,
