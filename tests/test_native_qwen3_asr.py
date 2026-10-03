@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import torch
@@ -148,6 +149,95 @@ class NativeQwen3ASRTests(unittest.TestCase):
             shapes["thinker.lm_head.weight"],
             (151_936, 8),
         )
+
+    def test_audio_attention_stays_inside_inference_windows(self):
+        # Qwen3-ASR's audio encoder attends within `n_window_infer` frame
+        # windows, as in the official FlashAttention-2 and vLLM paths and
+        # the Transformers port. The original Transformers backend's SDPA
+        # and eager paths never build that mask and attend globally.
+        torch.manual_seed(0)
+        tower = Qwen3ASRForConditionalGeneration(_tiny_config()).thinker.audio_tower.eval()
+        # n_window_infer=100 frames -> windows of 13 encoder tokens.
+        features = torch.randn(128, 300)
+        changed = features.clone()
+        changed[:, 200:] += 1.0
+        lengths = torch.tensor([300])
+        with torch.no_grad():
+            original = tower(features, feature_lengths=lengths)
+            edited = tower(changed, feature_lengths=lengths)
+        self.assertEqual(original.shape[0], 39)
+        torch.testing.assert_close(original[:26], edited[:26], rtol=0, atol=0)
+        self.assertFalse(torch.allclose(original[26:], edited[26:]))
+
+    def test_unpadded_generation_uses_the_maskless_decoder_path(self):
+        from voicehub.generation.config import GenerationConfig
+
+        torch.manual_seed(0)
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = _runtime(Path(temporary))
+            model = runtime.model.eval()
+            prepared = runtime.processor.prepare_inference_batch(
+                (torch.randn(3_200) * 0.1, ),
+                sampling_rates=(16_000, ),
+            )
+            inputs = {
+                "input_features": prepared["input_features"],
+                "feature_attention_mask": prepared["feature_attention_mask"],
+            }
+            masks = []
+            decoder = model.thinker.model
+            original_forward = decoder.forward
+
+            def spy(*args, **kwargs):
+                masks.append(kwargs.get("attention_mask"))
+                return original_forward(*args, **kwargs)
+
+            config = GenerationConfig(
+                max_new_tokens=6,
+                do_sample=False,
+                eos_token_id=(151_643, 151_645),
+                pad_token_id=151_643,
+                use_cache=True,
+            )
+            with torch.no_grad(), unittest.mock.patch.object(decoder, "forward", spy):
+                generated = model.generate(
+                    prepared["input_ids"],
+                    attention_mask=prepared["attention_mask"],
+                    generation_config=config,
+                    **inputs,
+                )
+            self.assertTrue(masks)
+            self.assertTrue(all(mask is None for mask in masks))
+
+            # Reference: uncached greedy decoding through the explicit
+            # masked attention path.
+            sequence = prepared["input_ids"]
+            with torch.no_grad():
+                for _ in range(int(generated.generated_lengths[0])):
+                    logits = model(
+                        sequence,
+                        attention_mask=torch.ones_like(sequence, dtype=torch.bool),
+                        use_cache=False,
+                        **inputs,
+                    ).logits
+                    sequence = torch.cat((sequence, logits[:, -1].argmax(-1, keepdim=True)), dim=-1)
+            torch.testing.assert_close(generated.sequences[:, :sequence.shape[1]], sequence)
+
+            # Left-padded prompts keep the explicit mask.
+            padded_ids = torch.cat((torch.full((1, 2), 151_643), prepared["input_ids"]), dim=-1)
+            padded_mask = torch.cat(
+                (torch.zeros(1, 2, dtype=torch.bool), prepared["attention_mask"]),
+                dim=-1,
+            )
+            masks.clear()
+            with torch.no_grad(), unittest.mock.patch.object(decoder, "forward", spy):
+                model.generate(
+                    padded_ids,
+                    attention_mask=padded_mask,
+                    generation_config=config,
+                    **inputs,
+                )
+            self.assertTrue(all(mask is not None for mask in masks))
 
     def test_processor_matches_qwen_whitespace_and_frame_boundaries(self):
         self.assertEqual(
