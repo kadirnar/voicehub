@@ -704,10 +704,11 @@ OMNIVOICE_LANGUAGE_NAMES = {
 def resolve_language(language: str | None) -> str | None:
     """Map a language code or name to the checkpoint's language ID.
 
-    Mirrors upstream ``_resolve_language``: ``None``/``"none"`` selects the
-    language-agnostic prompt, known codes pass through, names are matched
-    case-insensitively, and anything else falls back to ``None`` with a
-    warning instead of injecting unseen text into the style prompt.
+    Mirrors upstream ``_resolve_language``: ``None``/``"none"`` selects
+    the language-agnostic prompt, known codes pass through, names are
+    matched case-insensitively, and anything else falls back to ``None``
+    with a warning instead of injecting unseen text into the style
+    prompt.
     """
     if language is None or language.lower() == "none":
         return None

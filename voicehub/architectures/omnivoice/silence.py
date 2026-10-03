@@ -1,11 +1,11 @@
 """Native port of OmniVoice's pydub-based silence trimming.
 
 Upstream OmniVoice converts audio to 16-bit PCM, splits it on long
-silences with ``pydub.silence.split_on_silence`` and trims the edges with
-``detect_leading_silence``. Those steps run on the voice-cloning prompt
-(``preprocess_prompt``) and on the generated waveform
-(``postprocess_output``) by default, so they change both the prompt codes
-and the returned audio length. This module reproduces pydub 0.25.1
+silences with ``pydub.silence.split_on_silence`` and trims the edges
+with ``detect_leading_silence``. Those steps run on the voice-cloning
+prompt (``preprocess_prompt``) and on the generated waveform
+(``postprocess_output``) by default, so they change both the prompt
+codes and the returned audio length. This module reproduces pydub 0.25.1
 exactly (millisecond slicing, zero padding of the final partial
 millisecond, and integer ``audioop.rms``) with only PyTorch and the
 standard library.
@@ -156,8 +156,9 @@ def remove_silence(
 ) -> Tensor:
     """Remove long middle silences and trim edges, as upstream OmniVoice does.
 
-    The returned mono float32 waveform is quantized to 16-bit PCM, exactly
-    like the upstream pydub round trip, even when no silence is removed.
+    The returned mono float32 waveform is quantized to 16-bit PCM,
+    exactly like the upstream pydub round trip, even when no silence is
+    removed.
     """
     if not isinstance(waveform, Tensor) or waveform.ndim != 1:
         raise ValueError("Silence removal expects a mono [sample] waveform.")

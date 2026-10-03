@@ -1,10 +1,11 @@
 """Voice-design instruction validation for OmniVoice.
 
-Port of upstream ``omnivoice.utils.voice_design`` and ``_resolve_instruct``
-(revision 468e927). The checkpoint was trained on lower-case English items
-joined by ``", "`` or Chinese items joined by ``"，"``; upstream normalizes,
-validates, and translates every instruction before tokenization, so an
-unnormalized instruction would reach the model off-distribution.
+Port of upstream ``omnivoice.utils.voice_design`` and
+``_resolve_instruct`` (revision 468e927). The checkpoint was trained on
+lower-case English items joined by ``", "`` or Chinese items joined by
+``"，"``; upstream normalizes, validates, and translates every
+instruction before tokenization, so an unnormalized instruction would
+reach the model off-distribution.
 """
 
 from __future__ import annotations
@@ -84,9 +85,9 @@ def resolve_instruction(instruction: str | None, *, use_chinese: bool = False) -
     """Validate and normalize a voice-design instruction like upstream.
 
     ``use_chinese`` is true when the synthesis text contains Chinese
-    characters; a dialect forces Chinese items and an accent forces English
-    items. Unsupported, misspelled, mixed, or conflicting items raise
-    ``ValueError`` exactly where upstream does.
+    characters; a dialect forces Chinese items and an accent forces
+    English items. Unsupported, misspelled, mixed, or conflicting items
+    raise ``ValueError`` exactly where upstream does.
     """
     if instruction is None:
         return None
