@@ -1,10 +1,10 @@
 """Regression tests: native GPT-SoVITS S1 decodes with a key/value cache.
 
 The released ``Text2SemanticDecoder.infer_panel_naive`` encodes the text
-and prompt once (``T2STransformer.process_prompt``) and then feeds only the
-newest semantic token per step (``decode_next_token``). Re-running the whole
-``nn.TransformerEncoder`` over the growing sequence every step gives the
-same tokens but costs quadratic time in the generated length.
+and prompt once (``T2STransformer.process_prompt``) and then feeds only
+the newest semantic token per step (``decode_next_token``). Re-running
+the whole ``nn.TransformerEncoder`` over the growing sequence every step
+gives the same tokens but costs quadratic time in the generated length.
 """
 
 from __future__ import annotations
@@ -41,7 +41,8 @@ def _inputs(prompt: bool) -> dict:
 
 
 @torch.no_grad()
-def _full_recompute_generate(decoder, *, phoneme_ids, phoneme_lengths, bert_features, prompt_semantic_ids, steps):
+def _full_recompute_generate(
+        decoder, *, phoneme_ids, phoneme_lengths, bert_features, prompt_semantic_ids, steps):
     """Reference: re-encode the full text + semantic sequence every step."""
     del phoneme_lengths
     generated = (

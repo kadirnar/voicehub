@@ -344,11 +344,8 @@ class Text2SemanticDecoder(nn.Module):
         mask = None if attention is None else ~attention
         for index, layer in enumerate(self.h.layers):
             block = layer.self_attn
-            query, key, value = functional.linear(
-                hidden,
-                block.in_proj_weight,
-                block.in_proj_bias,
-            ).chunk(3, dim=-1)
+            projected = functional.linear(hidden, block.in_proj_weight, block.in_proj_bias)
+            query, key, value = projected.chunk(3, dim=-1)
             if index < len(cache):
                 key = torch.cat([cache[index][0], key], dim=1)
                 value = torch.cat([cache[index][1], value], dim=1)
