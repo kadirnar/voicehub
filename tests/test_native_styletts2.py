@@ -24,6 +24,7 @@ from voicehub.architectures.styletts2.frontend import (
     STYLETTS2_SYMBOLS,
     NativeStyleTTS2Frontend,
     StyleTTS2MelSpectrogram,
+    load_style_reference,
     trim_reference_silence,
 )
 from voicehub.architectures.styletts2.modeling import DEPLOYABLE_STYLETTS2_COMPONENTS, build_styletts2_model
@@ -612,6 +613,19 @@ class NativeStyleTTS2Tests(unittest.TestCase):
         expected = torch.hann_window(20, periodic=True, dtype=torch.float64).float()
         self.assertTrue(torch.equal(stft.window, expected))
         self.assertEqual(stft.window[1].item(), 0.024471741169691086)
+
+    def test_style_reference_resampling_suppresses_images(self):
+        # Released compute_style() resamples with librosa/soxr HQ; the style
+        # encoder reads mel bins above the source Nyquist, so imaging matters.
+        noise = torch.randn(16_000, generator=torch.Generator().manual_seed(0)) * 0.1
+        upsampled = load_style_reference({"array": noise, "sampling_rate": 16_000}, sample_rate=24_000)
+        self.assertEqual(upsampled.numel(), 24_000)
+        power = torch.fft.rfft(upsampled).abs().square()
+        frequencies = torch.fft.rfftfreq(upsampled.numel(), 1 / 24_000)
+        self.assertLess(float(power[frequencies >= 8_500].sum() / power.sum()), 1e-5)
+        tone = torch.sin(torch.arange(16_000) * 2 * torch.pi * 1_000 / 16_000) * 0.5
+        resampled = load_style_reference({"array": tone, "sampling_rate": 16_000}, sample_rate=24_000)
+        self.assertAlmostEqual(float(resampled[2_000:-2_000].abs().max()), 0.5, places=3)
 
     def test_architecture_spec_is_truthful(self):
         spec = create_styletts2_architecture_spec()

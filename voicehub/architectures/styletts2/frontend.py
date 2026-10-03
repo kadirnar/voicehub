@@ -13,6 +13,7 @@ from torch.nn import functional
 
 from voicehub.audio import AudioInput, load_audio
 from voicehub.processing.audio import htk_mel_filter_bank
+from voicehub.processing.waveform import resample_waveform_kaiser
 
 _PAD = "$"
 _PUNCTUATION = ';:,.!?¡¿—…"«»“” '
@@ -230,8 +231,25 @@ def load_style_reference(
     *,
     sample_rate: int,
 ) -> Tensor:
-    loaded = load_audio(audio, target_sampling_rate=sample_rate)
-    return trim_reference_silence(loaded.waveform.float())
+    """Load a mono reference like released ``librosa.load(path, sr=24000)``.
+
+    librosa resamples with soxr ``HQ``. The style encoder reads the mel bins
+    above the source Nyquist, so imaging left by a short sinc kernel shifts
+    the style vector noticeably. A 64-zero Kaiser kernel with torchaudio's
+    ``kaiser_best`` rolloff/beta is the closest torch-only match.
+    """
+    loaded = load_audio(audio)
+    waveform = loaded.waveform.float()
+    if int(loaded.sampling_rate) != int(sample_rate):
+        waveform = resample_waveform_kaiser(
+            waveform,
+            int(loaded.sampling_rate),
+            int(sample_rate),
+            lowpass_filter_width=64,
+            rolloff=0.9475937167399596,
+            beta=14.769656459379492,
+        )
+    return trim_reference_silence(waveform)
 
 
 __all__ = [
