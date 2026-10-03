@@ -80,7 +80,8 @@ def edge_fade(
         1.0,
         frames,
         dtype=torch.float64,
-    ).to(device=output.device, dtype=output.dtype)
+    ).to(
+        device=output.device, dtype=output.dtype)
     output[:frames] *= ramp
     output[-frames:] *= ramp.flip(0)
     return output
