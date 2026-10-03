@@ -114,12 +114,13 @@ class HiggsAudioV2Generator:
     ) -> Tensor:
         """Sample one delayed frame before delay-pattern constraints.
 
-        Like the source, every codebook is sampled from the processed logits
-        and repetition-aware sampling compares it with the most recent
-        ``ras_window`` frames of the whole audio stream (reference context,
-        BOS/EOS frames included). Repeated codes are redrawn from the raw
-        distribution. The caller then imposes the BOS/EOS delay pattern, so
-        seeded draws follow the reference sampler.
+        Like the source, every codebook is sampled from the processed
+        logits and repetition-aware sampling compares it with the most
+        recent ``ras_window`` frames of the whole audio stream
+        (reference context, BOS/EOS frames included). Repeated codes are
+        redrawn from the raw distribution. The caller then imposes the
+        BOS/EOS delay pattern, so seeded draws follow the reference
+        sampler.
         """
         next_codes = self._sample(
             logits,
