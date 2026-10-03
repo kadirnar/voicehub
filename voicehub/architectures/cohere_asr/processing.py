@@ -10,7 +10,12 @@ from typing import Any
 import torch
 
 from voicehub.architectures.cohere_asr.configuration import SUPPORTED_LANGUAGES, CohereAsrConfig
-from voicehub.architectures.cohere_asr.modeling import LOG_ZERO_GUARD, NORMALIZATION_EPSILON, FilterbankFeatures
+from voicehub.architectures.cohere_asr.modeling import (
+    LOG_ZERO_GUARD,
+    NORMALIZATION_EPSILON,
+    FilterbankFeatures,
+    frontend_window_and_filters,
+)
 from voicehub.architectures.cohere_asr.tokenization import CohereAsrTokenizer
 
 _NO_SPACE_LANGUAGES = frozenset({"ja", "zh"})
@@ -40,6 +45,9 @@ class CohereAsrFeatureExtractor:
         self.max_audio_clip_s = self.config.max_audio_clip_s
         self.overlap_chunk_second = self.config.overlap_chunk_second
         self.min_energy_window_samples = (self.config.min_energy_window_samples)
+        # The checkpoint's ``preprocessor.featurizer`` buffers are bfloat16
+        # roundings; the reference frontend uses exact float32 tensors.
+        self.window, self.mel_filters = frontend_window_and_filters(self.config)
 
     @staticmethod
     def _waveforms(
@@ -186,16 +194,17 @@ class CohereAsrFeatureExtractor:
             padded[index, :waveform.numel()] = waveform
         sample_mask = (torch.arange(maximum, device=padded.device)[None, :] < lengths[:, None])
         if self.dither > 0.0:
+            # The reference draws the length-seeded noise from a CPU
+            # generator; CUDA generators yield a different sequence.
             padded = padded.clone()
-            generator = torch.Generator(device=padded.device)
+            generator = torch.Generator(device="cpu")
             for index, length in enumerate(lengths.tolist()):
                 generator.manual_seed(int(length))
                 padded[index, :length] += self.dither * torch.randn(
                     length,
-                    device=padded.device,
                     dtype=padded.dtype,
                     generator=generator,
-                )
+                ).to(padded.device)
         emphasized = torch.cat(
             (
                 padded[:, :1],
@@ -209,16 +218,13 @@ class CohereAsrFeatureExtractor:
             n_fft=self.n_fft,
             hop_length=self.hop_length,
             win_length=self.win_length,
-            window=self.featurizer.window.to(
-                device=padded.device,
-                dtype=torch.float32,
-            ),
+            window=self.window.to(padded.device),
             center=True,
             pad_mode="constant",
             return_complex=True,
         )
         power = spectrum.abs().square()
-        filters = self.featurizer.fb.to(
+        filters = self.mel_filters.to(
             device=padded.device,
             dtype=power.dtype,
         )

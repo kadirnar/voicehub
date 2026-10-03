@@ -612,6 +612,47 @@ class CohereAsrTokenizerAndProcessorTests(unittest.TestCase):
                 atol=0,
             )
 
+    def test_frontend_ignores_bfloat16_checkpoint_frontend_buffers(self):
+        # The published checkpoint stores the window and mel bank rounded to
+        # bfloat16; the reference frontend uses exact float32 tensors.
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = _runtime(Path(temporary))
+            extractor = runtime.processor.feature_extractor
+            waveform = torch.linspace(-0.35, 0.25, 64)
+            exact = extractor(waveform, sampling_rate=16_000, chunk_long_audio=False)
+            featurizer = runtime.model.preprocessor.featurizer
+            self.assertTrue(torch.equal(extractor.window, torch.hann_window(8, periodic=False)))
+            with torch.no_grad():
+                featurizer.window.copy_(featurizer.window.to(torch.bfloat16).float())
+                featurizer.fb.copy_(featurizer.fb.to(torch.bfloat16).float())
+            loaded = extractor(waveform, sampling_rate=16_000, chunk_long_audio=False)
+
+            torch.testing.assert_close(loaded["input_features"], exact["input_features"], rtol=0, atol=0)
+
+    def test_frontend_dither_uses_the_cpu_length_seeded_generator(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = _runtime(Path(temporary))
+            extractor = runtime.processor.feature_extractor
+            waveform = 0.3 * torch.randn(64, generator=torch.Generator().manual_seed(7))
+            extractor.dither = 1e-2
+            dithered = extractor(waveform, sampling_rate=16_000, chunk_long_audio=False)
+            generator = torch.Generator(device="cpu").manual_seed(waveform.numel())
+            noisy = waveform + 1e-2 * torch.randn(waveform.numel(), generator=generator)
+            extractor.dither = 0.0
+            manual = extractor(noisy, sampling_rate=16_000, chunk_long_audio=False)
+            torch.testing.assert_close(dithered["input_features"], manual["input_features"], rtol=0, atol=0)
+            if torch.cuda.is_available():
+                extractor.dither = 1e-2
+                on_cuda = extractor(waveform, sampling_rate=16_000, device="cuda", chunk_long_audio=False)
+                # Mel bin 0 of the tiny bank is empty: its normalized value
+                # is rounding noise divided by the epsilon, so skip it.
+                torch.testing.assert_close(
+                    on_cuda["input_features"].cpu()[..., 1:],
+                    dithered["input_features"][..., 1:],
+                    rtol=1e-4,
+                    atol=1e-4,
+                )
+
     def test_optional_transformers_frontend_parity(self):
         try:
             import numpy as np

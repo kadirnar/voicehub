@@ -58,11 +58,15 @@ class CohereGenerateOutput:
     sequences: torch.Tensor
 
 
-class FilterbankFeatures(nn.Module):
-    """Persistent frontend buffers carried by the official checkpoint."""
+def frontend_window_and_filters(config: CohereAsrConfig, ) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return the float32 analysis window and ``[mel, bin]`` Slaney bank.
 
-    def __init__(self, config: CohereAsrConfig) -> None:
-        super().__init__()
+    Built on CPU like the reference feature extractor
+    (``torch.hann_window(periodic=False)`` and librosa's float32 Slaney
+    filters). The checkpoint stores the same tensors rounded to bfloat16;
+    those copies must not drive feature extraction.
+    """
+    with torch.device("cpu"):
         window = torch.hann_window(
             config.win_length,
             periodic=False,
@@ -73,10 +77,18 @@ class FilterbankFeatures(nn.Module):
             n_fft=config.n_fft,
             n_mels=config.encoder_config.num_mel_bins,
             dtype=torch.float64,
-            device=window.device,
         ).to(torch.float32)
-        self.register_buffer("window", window)
-        self.register_buffer("fb", filters.unsqueeze(0))
+    return window, filters
+
+
+class FilterbankFeatures(nn.Module):
+    """Persistent frontend buffers carried by the official checkpoint."""
+
+    def __init__(self, config: CohereAsrConfig) -> None:
+        super().__init__()
+        window, filters = frontend_window_and_filters(config)
+        self.register_buffer("window", window.to(torch.get_default_device()))
+        self.register_buffer("fb", filters.unsqueeze(0).to(torch.get_default_device()))
 
 
 class CoherePreprocessor(nn.Module):
@@ -1099,5 +1111,6 @@ __all__ = [
     "CohereEncoderOutput",
     "CohereGenerateOutput",
     "FilterbankFeatures",
+    "frontend_window_and_filters",
     "shift_tokens_right",
 ]
