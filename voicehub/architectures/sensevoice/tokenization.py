@@ -71,12 +71,13 @@ _LANGUAGE_MARKERS = frozenset(spelling for spelling, _ in LANGUAGE_TOKENS.values
 GARBAGE_TOKEN = ("<|GBG|>", 25_018)
 _ALL_CONTROL_SPELLINGS = frozenset((
     GARBAGE_TOKEN[0],
-    *(spelling for values in (
-        LANGUAGE_TOKENS,
-        EMOTION_TOKENS,
-        EVENT_TOKENS,
-        TEXT_NORMALIZATION_TOKENS,
-    ) for spelling, _ in values.values()),
+    *(
+        spelling for values in (
+            LANGUAGE_TOKENS,
+            EMOTION_TOKENS,
+            EVENT_TOKENS,
+            TEXT_NORMALIZATION_TOKENS,
+        ) for spelling, _ in values.values()),
 ))
 
 

@@ -476,7 +476,8 @@ class NativeSenseVoiceTests(unittest.TestCase):
         log_probabilities = torch.stack(frames).log_softmax(dim=-1)
         words = sensevoice_word_timestamps(
             log_probabilities,
-            tuple(range(1, len(pieces) + 1)),
+            tuple(range(1,
+                        len(pieces) + 1)),
             pieces,
             duration=10.0,
         )
