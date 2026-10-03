@@ -94,6 +94,9 @@ def _normalize_position_ids(
             "beyond the trained context, which may reduce quality.",
             stacklevel=3,
         )
+    # Derived positions are non-negative by construction; only caller-supplied
+    # ones need a (synchronizing) value check.
+    supplied = position_ids is not None
     if position_ids is None:
         if attention_mask is not None and attention_mask.ndim == 2:
             positions = attention_mask.to(device=device, dtype=torch.long)
@@ -119,7 +122,7 @@ def _normalize_position_ids(
     position_ids = position_ids.to(device=device, dtype=torch.long)
     if position_ids.shape[0] == 1 and batch_size != 1:
         position_ids = position_ids.expand(batch_size, -1)
-    if (position_ids < 0).any():
+    if supplied and (position_ids < 0).any():
         raise ValueError("`position_ids` cannot contain negative values.")
     return position_ids
 
@@ -603,7 +606,7 @@ class CausalLMModel(nn.Module):
                 raise TypeError("`input_ids` must use an integer dtype.")
             if input_ids.numel() == 0:
                 raise ValueError("`input_ids` cannot be empty.")
-            if (input_ids < 0).any() or (input_ids >= self.config.vocab_size).any():
+            if ((input_ids < 0) | (input_ids >= self.config.vocab_size)).any():
                 raise ValueError("An input token ID is outside the vocabulary.")
             hidden_states = self.embed_tokens(input_ids)
         else:

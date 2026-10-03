@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import collections
 import unittest
+from unittest import mock
 
 import torch
 
+from voicehub.architectures.causal_lm import LlamaConfig, LlamaForCausalLM
 from voicehub.generation import (
     AutoregressiveGenerator,
     GenerationConfig,
@@ -13,7 +16,43 @@ from voicehub.generation import (
     filter_min_p,
     filter_top_k,
     filter_top_p,
+    process_logits,
+    sample_next_token,
 )
+
+# Tensor methods that copy a device value to the host. On CUDA every call
+# blocks until all queued kernels finish, so a decoding step should use at
+# most one of them.
+_HOST_READS = ("__bool__", "__float__", "__index__", "__int__", "item", "tolist")
+
+
+def _count_host_reads(function):
+    """Run ``function`` and count tensor-to-host reads it performs."""
+    counts = collections.Counter()
+
+    def counting(name):
+        original = getattr(torch.Tensor, name)
+
+        def wrapper(self, *args, **kwargs):
+            counts[name] += 1
+            return original(self, *args, **kwargs)
+
+        return wrapper
+
+    with mock.patch.multiple(torch.Tensor, **{name: counting(name) for name in _HOST_READS}):
+        result = function()
+    return result, sum(counts.values())
+
+
+_SAMPLING_CONFIG = {
+    "do_sample": True,
+    "temperature": 0.8,
+    "top_k": 20,
+    "top_p": 0.9,
+    "min_p": 0.01,
+    "repetition_penalty": 1.1,
+    "seed": 3,
+}
 
 
 class GenerationConfigurationTests(unittest.TestCase):
@@ -276,6 +315,103 @@ class AutoregressiveGeneratorTests(unittest.TestCase):
                 torch.tensor([1]),
                 0,
             )
+
+
+class HostSynchronizationTests(unittest.TestCase):
+
+    def test_engine_reads_the_device_once_per_step(self):
+        vocabulary = torch.linspace(-2.0, 2.0, 41).unsqueeze(0)
+
+        def decoder_step(request):
+            del request
+            return GenerationStepOutput(logits=vocabulary.clone(), cache="cache")
+
+        config = GenerationConfig(
+            max_new_tokens=10,
+            eos_token_id=40,
+            pad_token_id=0,
+            **_SAMPLING_CONFIG,
+        )
+        output, reads = _count_host_reads(lambda: AutoregressiveGenerator().generate(
+            decoder_step,
+            torch.tensor([[1, 5, 6]]),
+            config,
+        ))
+
+        steps = output.sequences.shape[1] - 3
+        self.assertGreater(steps, 0)
+        self.assertLessEqual(reads, steps)
+
+    def test_causal_lm_generation_reads_the_device_at_most_twice_per_step(self):
+        # One read is the engine's combined validity/stop decision; the other
+        # is the decoder's input-ID range guard, which prevents an
+        # out-of-range embedding lookup from becoming a device assertion.
+        torch.manual_seed(0)
+        config = LlamaConfig(
+            vocab_size=41,
+            hidden_size=16,
+            intermediate_size=32,
+            num_hidden_layers=4,
+            num_attention_heads=4,
+            num_key_value_heads=2,
+            head_dim=4,
+            max_position_embeddings=64,
+            pad_token_id=0,
+            bos_token_id=1,
+            eos_token_id=40,
+        )
+        model = LlamaForCausalLM(config).eval()
+        generation = GenerationConfig(
+            max_new_tokens=10,
+            eos_token_id=40,
+            pad_token_id=0,
+            use_cache=True,
+            **_SAMPLING_CONFIG,
+        )
+        prompt = torch.tensor([[1, 5, 6, 7]])
+        with torch.no_grad():
+            output, reads = _count_host_reads(lambda: model.generate(prompt, generation_config=generation))
+
+        steps = output.sequences.shape[1] - prompt.shape[1]
+        self.assertGreater(steps, 0)
+        self.assertLessEqual(reads, 2 * steps)
+
+    def test_deferred_validation_still_raises_the_eager_errors(self):
+        nan_logits = torch.tensor([[0.0, float("nan"), 1.0]])
+        no_candidate = torch.full((1, 3), float("-inf"))
+        cases = (
+            (nan_logits, torch.tensor([[0]]), "NaN or positive infinity"),
+            (no_candidate, torch.tensor([[0]]), "finite candidate"),
+            (torch.zeros(1, 3), torch.tensor([[0, 3]]), "outside the logits vocabulary"),
+        )
+        for do_sample in (False, True):
+            config = GenerationConfig(
+                max_new_tokens=2,
+                do_sample=do_sample,
+                top_k=2,
+                top_p=0.9,
+                repetition_penalty=1.3,
+                seed=0,
+            )
+            for logits, history, message in cases:
+                with self.subTest(do_sample=do_sample, message=message):
+                    with self.assertRaisesRegex(ValueError, message):
+                        process_logits(
+                            logits,
+                            history,
+                            do_sample=do_sample,
+                            top_k=2,
+                            top_p=0.9,
+                            repetition_penalty=1.3,
+                        )
+                    with self.assertRaisesRegex(ValueError, message):
+                        sample_next_token(logits, history, config)
+                    with self.assertRaisesRegex(ValueError, message):
+                        AutoregressiveGenerator().generate(
+                            lambda request, logits=logits: GenerationStepOutput(logits=logits),
+                            history,
+                            config,
+                        )
 
 
 if __name__ == "__main__":

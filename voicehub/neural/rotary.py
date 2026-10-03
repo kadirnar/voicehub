@@ -100,8 +100,9 @@ class RotaryEmbedding(nn.Module):
                 position_ids.dtype == torch.bool or position_ids.is_floating_point() or
                 position_ids.is_complex()):
             raise TypeError("Rotary position IDs must be a rank-one or rank-two integer tensor.")
-        if (position_ids < 0).any():
-            raise ValueError("Rotary position IDs cannot be negative.")
+        # Values are not checked here: every layer calls this on each decode
+        # step, and a device read would synchronize once per layer. Callers
+        # validate positions where they create them.
         if position_ids.ndim == 1:
             position_ids = position_ids.unsqueeze(0)
         angles = position_ids.float().unsqueeze(-1) * self.inverse_frequency
