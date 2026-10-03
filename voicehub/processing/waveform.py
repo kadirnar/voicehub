@@ -627,11 +627,11 @@ def resample_waveform_kaiser_best(
     """Resample mono audio like ``librosa.load(path, sr=target_rate)``.
 
     This reproduces librosa's default ``res_type="kaiser_best"`` path:
-    resampy's interpolated windowed-sinc filter (float64 weights, samples
-    accumulated in the input dtype in resampy's order), followed by
-    librosa's ``fix_length`` to ``ceil(samples * target / source)``.
-    Upstream recipes that load audio with librosa defaults need it to see
-    the same samples; the generic :func:`resample_waveform` uses a
+    resampy's interpolated windowed-sinc filter (float64 weights,
+    samples accumulated in the input dtype in resampy's order), followed
+    by librosa's ``fix_length`` to ``ceil(samples * target / source)``.
+    Upstream recipes that load audio with librosa defaults need it to
+    see the same samples; the generic :func:`resample_waveform` uses a
     different Hann-windowed kernel.
     """
     source_rate = _positive_rate(source_rate, name="source_rate")

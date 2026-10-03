@@ -167,14 +167,16 @@ class OpenVoiceAudioProcessor:
         sampling_rate: int,
         segment_seconds: float = 10.0,
     ) -> tuple[Tensor, ...]:
-        """Split source-rate audio exactly like ``se_extractor.split_audio_vad``.
+        """Split source-rate audio exactly like
+        ``se_extractor.split_audio_vad``.
 
         After its VAD, upstream concatenates the active audio, splits it
         into ``round(duration / segment_seconds)`` equal parts on
         millisecond boundaries (pydub slicing), exports every part and
-        resamples each one separately inside ``extract_se``. Here the whole
-        input is treated as active speech (no external VAD), and audio
-        shorter than half a segment is encoded whole instead of failing.
+        resamples each one separately inside ``extract_se``. Here the
+        whole input is treated as active speech (no external VAD), and
+        audio shorter than half a segment is encoded whole instead of
+        failing.
         """
         waveform = OpenVoiceAudioProcessor.waveforms(waveform)[0]
         if (isinstance(sampling_rate, bool) or not isinstance(sampling_rate, int) or sampling_rate <= 0):

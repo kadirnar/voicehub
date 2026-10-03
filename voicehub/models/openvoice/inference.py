@@ -91,8 +91,9 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
 
         Upstream ``ToneColorConverter.convert`` and ``extract_se`` read
         every waveform with ``librosa.load(path, sr=22050)`` (resampy
-        ``kaiser_best``). The converter is sensitive to the band edge, so
-        the generic VoiceHub resampler changes the converted waveform.
+        ``kaiser_best``). The converter is sensitive to the band edge,
+        so the generic VoiceHub resampler changes the converted
+        waveform.
         """
         audio = load_native_audio(value, sampling_rate=sampling_rate)
         return resample_waveform_kaiser_best(
@@ -110,8 +111,8 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
         """Follow upstream ``se_extractor.get_se`` after its VAD step.
 
         The source-rate audio is split on upstream's millisecond
-        boundaries and every segment is resampled on its own, exactly
-        as ``extract_se`` reloads each exported segment file.
+        boundaries and every segment is resampled on its own, exactly as
+        ``extract_se`` reloads each exported segment file.
         """
         audio = load_native_audio(value, sampling_rate=sampling_rate)
         segments = self.runtime.processor.upstream_reference_segments(
