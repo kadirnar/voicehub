@@ -304,7 +304,11 @@ class SeamlessM4Tv2S2TCheckpointAdapter(CheckpointAdapter):
                     assign=True,
                 )
         model.tie_weights()
-        remaining = tuple(name for name, value in model.state_dict().items() if value.device.type == "meta")
+        # Non-persistent buffers are not in the checkpoint; a meta-device
+        # graph would otherwise keep them as data-less meta tensors.
+        model.materialize_derived_buffers(device)
+        remaining = tuple(name for name, value in (*model.state_dict().items(), *model.named_buffers())
+                          if value.device.type == "meta")
         if remaining:
             raise CheckpointCompatibilityError(
                 "SeamlessM4T-v2 assignment left meta tensors: " + ", ".join(remaining[:5]))

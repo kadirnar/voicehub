@@ -299,6 +299,50 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
                 strict=True,
             )
 
+    def test_meta_initialized_checkpoint_load_materializes_decoder_positions(self):
+        # Regression: the decoder's non-persistent sinusoidal table stayed a
+        # meta tensor after streaming assignment, so every real-checkpoint
+        # transcription failed with "Cannot copy out of meta tensor".
+        config = _custom_config(vocab_size=32)
+        source_model = SeamlessM4Tv2ForSpeechToText(config).eval()
+        source = {
+            name: value.detach().clone()
+            for name, value in source_model.state_dict().items() if name not in {
+                "lm_head.weight",
+                "text_decoder.embed_tokens.weight",
+            }
+        }
+        with torch.device("meta"):
+            target = SeamlessM4Tv2ForSpeechToText(
+                config,
+                initialize=False,
+            )
+
+        SeamlessM4Tv2S2TCheckpointAdapter().load_assign_streaming(
+            target,
+            source,
+            config,
+            device="cpu",
+            dtype=torch.float32,
+            strict=True,
+        )
+        target.eval()
+        features = torch.randn(1, 6, 8)
+        mask = torch.ones(1, 6, dtype=torch.long)
+        decoder_ids = torch.tensor([[3, 5, 6]])
+
+        self.assertFalse(any(buffer.is_meta for buffer in target.buffers()))
+        self.assertTrue(
+            torch.equal(
+                target.text_decoder.embed_positions.weights,
+                source_model.text_decoder.embed_positions.weights,
+            ))
+        self.assertTrue(
+            torch.allclose(
+                target(features, attention_mask=mask, decoder_input_ids=decoder_ids).logits,
+                source_model(features, attention_mask=mask, decoder_input_ids=decoder_ids).logits,
+            ))
+
     def test_local_artifact_resolution_rejects_unsafe_shard_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

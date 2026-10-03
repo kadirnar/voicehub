@@ -572,6 +572,10 @@ class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Module):
         result[self.padding_idx] = 0
         return result
 
+    def materialize(self, device: str | torch.device) -> None:
+        """Rebuild the derived table on ``device`` (e.g. after meta init)."""
+        self.weights = self._weights(self.weights.shape[0]).to(device=device)
+
     def forward(self, input_ids: Tensor) -> Tensor:
         visible = input_ids.ne(self.padding_idx).to(dtype=torch.long)
         positions = torch.cumsum(visible, dim=1) * visible + self.padding_idx
@@ -865,6 +869,10 @@ class SeamlessM4Tv2ForSpeechToText(nn.Module):
     def tie_weights(self) -> None:
         self.text_decoder.embed_tokens.weight = self.shared.weight
         self.lm_head.weight = self.shared.weight
+
+    def materialize_derived_buffers(self, device: str | torch.device) -> None:
+        """Recompute non-persistent buffers that checkpoints never carry."""
+        self.text_decoder.embed_positions.materialize(device)
 
     @torch.no_grad()
     def _initialize_weights(self) -> None:
