@@ -538,6 +538,25 @@ class NativeBarkTests(unittest.TestCase):
         self.assertEqual(special.tokenize("ab[MASK]a"), ["a", "##b", "[MASK]", "a"])
         self.assertEqual(special.tokenize("[ MASK ]"), ["[", "MASK", "]"])
 
+    def test_numpy_prompt_loading_accepts_fortran_order(self):
+        import torch
+
+        from voicehub.architectures.bark.processing import _read_npy_integer
+
+        values = torch.arange(6).reshape(2, 3)
+        header = b"{'descr': '<i8', 'fortran_order': True, 'shape': (2, 3), }"
+        padding = 16 - ((10 + len(header) + 1) % 16)
+        header += b" " * padding + b"\n"
+        column_major = values.T.contiguous().reshape(-1).tolist()
+        payload = (
+            b"\x93NUMPY" + bytes((1, 0)) + struct.pack("<H", len(header)) + header +
+            struct.pack("<6q", *column_major))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "coarse_prompt.npy"
+            path.write_bytes(payload)
+            tensor = _read_npy_integer(path)
+        torch.testing.assert_close(tensor, values)
+
     def test_voice_preset_rejects_path_traversal(self):
         from voicehub.architectures.bark.processing import BarkProcessor, BarkWordPieceTokenizer
 

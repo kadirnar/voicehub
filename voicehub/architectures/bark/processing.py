@@ -452,8 +452,8 @@ def _read_npy_integer(path: str | Path) -> Tensor:
             payload[header_start:header_end].decode("latin-1" if major < 3 else "utf-8"))
     except (SyntaxError, ValueError, UnicodeDecodeError) as error:
         raise ValueError("Invalid Bark speaker prompt header.") from error
-    if not isinstance(header, dict) or header.get("fortran_order") is not False:
-        raise ValueError("Bark speaker prompts must use C-order NPY arrays.")
+    if not isinstance(header, dict) or not isinstance(header.get("fortran_order"), bool):
+        raise ValueError("Invalid Bark speaker prompt header.")
     descriptor = header.get("descr")
     dtype_map = {
         "|u1": (torch.uint8, 1),
@@ -473,11 +473,16 @@ def _read_npy_integer(path: str | Path) -> Tensor:
     data = payload[header_end:]
     if len(data) != count * item_size:
         raise ValueError("Bark speaker prompt payload length is inconsistent.")
-    return torch.frombuffer(
+    values = torch.frombuffer(
         bytearray(data),
         dtype=dtype,
         count=count,
-    ).reshape(shape).clone()
+    )
+    if header["fortran_order"]:
+        # Column-major payload (used by some published presets, e.g.
+        # v2/en_speaker_6_coarse_prompt.npy): read reversed, then transpose.
+        return values.reshape(shape[::-1]).permute(*reversed(range(len(shape)))).contiguous()
+    return values.reshape(shape).clone()
 
 
 def math_prod(values: tuple[int, ...]) -> int:
