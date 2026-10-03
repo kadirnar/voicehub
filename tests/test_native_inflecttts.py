@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 import warnings
 from pathlib import Path
 
@@ -26,7 +27,7 @@ from voicehub.architectures.inflecttts.configuration import (
 from voicehub.architectures.inflecttts.frontend import InflectFrontendError, phonemes_to_ids
 from voicehub.architectures.inflecttts.modeling import build_inflect_model
 from voicehub.architectures.inflecttts.registration import create_inflect_architecture_spec
-from voicehub.architectures.inflecttts.runtime import InflectV2Runtime
+from voicehub.architectures.inflecttts.runtime import InflectV2Runtime, edge_fade
 from voicehub.architectures.inflecttts.training import InflectV2TrainingModel
 from voicehub.models.inflecttts.inference import InflectTTSForTextToSpeech
 
@@ -134,6 +135,51 @@ class NativeInflectArchitectureTests(unittest.TestCase):
                 "outside the published",
         ):
             phonemes_to_ids("🙂")
+
+    def test_edge_fade_matches_release_float32_numpy_ramp(self):
+        # The release computes np.linspace(0, 1, n, dtype=float32), i.e.
+        # i * (1 / (n - 1)) in float64 rounded once, with an exact endpoint.
+        # A float32 torch.linspace differs in the last ulp (parity audit).
+        waveform = torch.ones(1_000)
+        faded = edge_fade(waveform, 24_000)
+        step = 1.0 / 119
+        expected = torch.tensor(
+            [index * step for index in range(119)] + [1.0],
+            dtype=torch.float64,
+        ).float()
+        self.assertFalse(torch.equal(expected, torch.linspace(0.0, 1.0, 120)))
+        self.assertTrue(torch.equal(faded[:120], expected))
+        self.assertTrue(torch.equal(faded[-120:], expected.flip(0)))
+        self.assertTrue(torch.equal(faded[120:-120], waveform[120:-120]))
+        self.assertTrue(torch.equal(waveform, torch.ones(1_000)))
+
+    def test_chunk_seeds_and_clipping_follow_the_release_runtime(self):
+        config = _tiny_config()
+        runtime = InflectV2Runtime(_build(config).eval(), config)
+        seeds = []
+
+        def fake_infer(input_ids, *args, **kwargs):
+            return (torch.full((1, 1, 600), 3.0), )
+
+        original_seed = torch.manual_seed
+
+        def record_seed(value):
+            seeds.append(value)
+            return original_seed(value)
+
+        largest_seed = 2**63 - 1
+        with (
+                unittest.mock.patch.object(runtime.generator, "infer", side_effect=fake_infer),
+                unittest.mock.patch("torch.manual_seed", side_effect=record_seed),
+        ):
+            _, chunked = runtime.synthesize("a. b.", input_is_phonemes=True, seed=largest_seed)
+            _, exact = runtime.synthesize(input_ids=[0, 43, 0], seed=5)
+
+        # Release: chunk `index` uses `seed + index` (no wrap below 2**64).
+        self.assertEqual(seeds, [largest_seed, largest_seed + 1, 5])
+        # Release clips every synthesized waveform to [-1, 1].
+        self.assertEqual(float(chunked.abs().max()), 1.0)
+        self.assertEqual(float(exact.abs().max()), 1.0)
 
     def test_safe_export_strict_load_and_fresh_runtime_reload(self):
         config = _tiny_config()
