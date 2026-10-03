@@ -205,10 +205,12 @@ def load_fish_ae_from_hf(
         "pytorch_model.safetensors",
         token=token,
     )
+    # Upstream casts only for a non-float32 dtype. The default keeps every
+    # tensor as stored, including the bf16 RoPE tables and boolean causal masks.
     state = _load_safetensors(
         w_path,
         device=device,
-        dtype=dtype,
+        dtype=None if dtype in (None, torch.float32) else dtype,
     )
     _assign_validated_state(fish_ae, state)
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import torch
@@ -9,6 +10,8 @@ import torch
 from voicehub.architectures import get_architecture_spec
 from voicehub.models.echo.autoencoder import DecoderBlock, Snake1d
 from voicehub.models.echo.model import EchoDiT, LowRankAdaLN
+from voicehub.checkpointing import save_safetensors
+from voicehub.models.echo import sampling as echo_sampling
 from voicehub.models.echo.sampling import _assign_validated_state, _discard_blockwise_only_modules, load_audio
 from voicehub.processing import save_pcm_wave
 from voicehub.registry import get_model_spec
@@ -156,6 +159,30 @@ class NativeEchoRuntimeTests(unittest.TestCase):
             limited = torchaudio_functional.resample(mono[:, :16_000], 16_000, 44_100)
             limited = limited / torch.maximum(limited.abs().max(), torch.tensor(1.0))
             torch.testing.assert_close(load_audio(str(path), max_duration=1), limited, rtol=0, atol=0)
+
+    def test_float32_codec_load_keeps_stored_buffer_dtypes_like_upstream(self):
+        # Upstream only casts the Fish codec state for a non-float32 dtype; the
+        # default must not inflate boolean causal masks or bf16 RoPE tables.
+        class TinyCodec(torch.nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.proj = torch.nn.Linear(2, 2)
+                self.register_buffer("freqs_cis", torch.ones(3, 2, dtype=torch.bfloat16))
+                self.register_buffer("causal_mask", torch.tril(torch.ones(3, 3, dtype=torch.bool)))
+
+        source = TinyCodec()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "pytorch_model.safetensors"
+            save_safetensors(source.state_dict(), path)
+            with mock.patch.object(echo_sampling, "build_ae", TinyCodec):
+                default = echo_sampling.load_fish_ae_from_hf(directory, device="cpu")
+                half = echo_sampling.load_fish_ae_from_hf(directory, device="cpu", dtype=torch.bfloat16)
+        self.assertEqual(default.causal_mask.dtype, torch.bool)
+        self.assertEqual(default.freqs_cis.dtype, torch.bfloat16)
+        self.assertEqual(default.proj.weight.dtype, torch.float32)
+        torch.testing.assert_close(default.proj.weight, source.proj.weight, rtol=0, atol=0)
+        self.assertEqual(half.proj.weight.dtype, torch.bfloat16)
 
 
 if __name__ == "__main__":
