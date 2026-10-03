@@ -11,7 +11,6 @@ from voicehub.hub import read_json_file, write_json_file
 from voicehub.modeling_outputs import SpeechSegment, VADOutput
 from voicehub.models.native_utils import resolve_native_device
 from voicehub.models.vad_funasr.configuration_vad_funasr import FunASRVADConfig
-from voicehub.vad_utils import merge_speech_segments
 
 
 def _postprocess_segments(
@@ -20,8 +19,14 @@ def _postprocess_segments(
     duration: float,
     min_speech_duration_ms: int,
     speech_pad_ms: int,
-    max_speech_duration_s: float | None,
 ) -> tuple[SpeechSegment, ...]:
+    """Apply VoiceHub's optional filter and padding to FSMN boundaries.
+
+    With ``min_speech_duration_ms=0`` and ``speech_pad_ms=0`` the decoder
+    boundaries are returned unchanged, exactly as FunASR emits them. The
+    decoder already applies the end silence and FunASR's
+    ``max_single_segment_time``, so neither is applied a second time.
+    """
     minimum_speech = min_speech_duration_ms / 1_000.0
     retained = tuple(segment for segment in segments if segment.end - segment.start >= minimum_speech)
     # The FSMN endpoint decoder already applies the silence duration. Its
@@ -34,27 +39,20 @@ def _postprocess_segments(
             end=min(duration, segment.end + padding),
             score=segment.score,
         ) for segment in retained if min(duration, segment.end + padding) > max(0.0, segment.start - padding))
-    merged = merge_speech_segments(padded)
-    if max_speech_duration_s is None:
-        return merged
-    split = []
-    for segment in merged:
-        cursor = segment.start
-        while segment.end - cursor > max_speech_duration_s + 1e-12:
-            end = round(cursor + max_speech_duration_s, 12)
-            split.append(SpeechSegment(
-                start=cursor,
-                end=end,
-                score=segment.score,
-            ), )
-            cursor = end
-        if segment.end - cursor > 1e-12:
-            split.append(SpeechSegment(
-                start=cursor,
-                end=segment.end,
-                score=segment.score,
-            ), )
-    return tuple(split)
+    merged: list[SpeechSegment] = []
+    for segment in padded:
+        # Only padding can make FSMN regions overlap. Regions that merely
+        # touch (e.g. after a maximum-duration cut) are separate upstream
+        # segments and stay separate.
+        if merged and segment.start < merged[-1].end:
+            merged[-1] = SpeechSegment(
+                start=merged[-1].start,
+                end=max(merged[-1].end, segment.end),
+                score=merged[-1].score,
+            )
+        else:
+            merged.append(segment)
+    return tuple(merged)
 
 
 class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
@@ -256,7 +254,6 @@ class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
             duration=materialized.duration,
             min_speech_duration_ms=min_speech_duration_ms,
             speech_pad_ms=speech_pad_ms,
-            max_speech_duration_s=max_speech_duration_s,
         )
         return VADOutput(
             segments=segments,

@@ -192,7 +192,12 @@ class FSMNVADDecoder:
                 self.continuous_silence_frames += 1
                 if self.segment_start_frame is None:
                     if frame >= self.latency_frames:
-                        self.data_start_frame = frame - self.latency_frames
+                        # FunASR PopDataBufTillFrame only advances the data
+                        # buffer; it never rewinds behind a completed segment.
+                        self.data_start_frame = max(
+                            self.data_start_frame,
+                            frame - self.latency_frames,
+                        )
                 else:
                     end_silence_threshold = max(
                         0,
