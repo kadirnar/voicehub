@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from numbers import Integral
 from pathlib import Path
@@ -12,6 +13,9 @@ from voicehub.modeling_outputs import ASROutput, ASRSegment
 from voicehub.models.asr_tiron.configuration_asr_tiron import TironASRConfig
 from voicehub.models.asr_tiron.metadata import TIRON_CHECKPOINT_REVISION, TIRON_HARNESS_REVISION
 from voicehub.models.asr_whisper_native.modeling_asr_whisper_native import WhisperForSpeechRecognition
+
+# The reference harness drops parsed segments without a word character.
+_WORD_CHARACTER = re.compile(r"\w")
 
 
 class _DeclaredTokenSpaceProcessor:
@@ -259,39 +263,44 @@ class TironForSpeechRecognition(WhisperForSpeechRecognition):
         language: str,
         chunk_duration: float,
     ) -> tuple[str, tuple[ASRSegment, ...]]:
+        """Parse one window like the harness's ``parse_concat_segments``.
+
+        A ``<|nospeech|>`` token anywhere marks the whole window silent.
+        Text before any speaker token belongs to speaker 1, a segment
+        without its own opening timestamp starts where the previous one
+        ended, and segments without a word character are dropped.
+        """
         if self.tokenizer is None:
             raise RuntimeError("Tiron tokenizer is not loaded.")
 
         segments: list[ASRSegment] = []
         text_tokens: list[int] = []
-        speaker: str | None = None
         speaker_index: int | None = None
         start: float | None = None
+        last_end = 0.0
 
-        def flush(end: float | None = None) -> None:
-            nonlocal start
-            text = self._decode_text_tokens(text_tokens)
+        def pending_text() -> str:
+            return self._decode_text_tokens(text_tokens)
+
+        def emit(text: str, end: float) -> None:
+            nonlocal start, last_end
             text_tokens.clear()
-            if not text:
-                start = None
-                return
-            normalized_start = (None if start is None else min(max(start, 0.0), chunk_duration))
-            normalized_end = (None if end is None else min(max(end, 0.0), chunk_duration))
-            if (normalized_start is not None and normalized_end is not None and
-                    normalized_end < normalized_start):
-                normalized_end = normalized_start
-            metadata: dict[str, Any] = {"speaker_scope": "window"}
-            if speaker_index is not None:
-                metadata["local_speaker_index"] = speaker_index
-            segments.append(
-                ASRSegment(
-                    text=text,
-                    start=normalized_start,
-                    end=normalized_end,
-                    language=language,
-                    speaker=speaker,
-                    metadata=metadata,
-                ))
+            if _WORD_CHARACTER.search(text) is not None:
+                local_index = 1 if speaker_index is None else speaker_index
+                segment_start = min(max(last_end if start is None else start, 0.0), chunk_duration)
+                segments.append(
+                    ASRSegment(
+                        text=text,
+                        start=segment_start,
+                        end=max(segment_start, min(end, chunk_duration)),
+                        language=language,
+                        speaker=f"SPEAKER_{local_index - 1:02d}",
+                        metadata={
+                            "speaker_scope": "window",
+                            "local_speaker_index": local_index,
+                        },
+                    ))
+                last_end = end
             start = None
 
         for raw_token_id in token_ids:
@@ -304,23 +313,25 @@ class TironForSpeechRecognition(WhisperForSpeechRecognition):
             if token_id == self.tokenizer.eot:
                 break
             if token_id == self.tokenizer.no_speech:
-                if not segments and not text_tokens:
-                    return "", ()
-                text_tokens.clear()
-                start = None
-                continue
+                return "", ()
             local_index = self._speaker_by_id.get(token_id)
             if local_index is not None:
-                flush()
+                text = pending_text()
+                if text:
+                    emit(text, last_end if start is None else start)
+                text_tokens.clear()
                 speaker_index = local_index
-                speaker = f"SPEAKER_{local_index - 1:02d}"
                 continue
             timestamp = self.tokenizer.timestamp_for_token(token_id)
             if timestamp is not None:
-                if text_tokens:
-                    flush(end=timestamp.seconds)
+                # The harness renders timestamps with two decimals.
+                seconds = round(timestamp.seconds, 2)
+                text = pending_text()
+                if text:
+                    emit(text, seconds)
                 else:
-                    start = timestamp.seconds
+                    text_tokens.clear()
+                    start = seconds
                 continue
             if token_id in {
                     self.tokenizer.sot,
@@ -333,9 +344,11 @@ class TironForSpeechRecognition(WhisperForSpeechRecognition):
             if token_id >= self._declared_token_count:
                 raise ValueError(f"Tiron emitted undeclared padded token ID {token_id}.")
             text_tokens.append(token_id)
-        flush(end=chunk_duration if start is not None else None)
+        text = pending_text()
+        if text:
+            emit(text, chunk_duration)
 
-        text = " ".join(segment.text for segment in segments if segment.text).strip()
+        text = " ".join(segment.text for segment in segments).strip()
         return text, tuple(segments)
 
     def _transcribe(
