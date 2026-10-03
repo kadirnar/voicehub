@@ -739,7 +739,8 @@ INFERENCE_PROFILES = {
         "`<|audio|>can you transcribe the speech into a written format?` is used; "
         "`<|audio|>` is prepended when a prompt omits it. Medical or regulated recordings "
         "still require domain review; model output is not a verified record.",
-        arguments=('prompt="transcribe the speech with proper punctuation and capitalization."', "do_sample=False"),
+        arguments=(
+            'prompt="transcribe the speech with proper punctuation and capitalization."', "do_sample=False"),
     ),
     "asr_parakeet_tdt":
     _asr(
