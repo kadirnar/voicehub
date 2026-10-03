@@ -122,17 +122,19 @@ class ESPnetCTCPrefixScorer:
     ) -> tuple[Tensor, Tensor]:
         """Run :meth:`extend` for equal-length prefixes in one recurrence.
 
-        ``prefixes`` is ``[hypotheses, length]`` (SOS first), ``candidates``
-        is ``[hypotheses, count]`` and ``previous_states`` is
-        ``[hypotheses, frames, 2]``.  Returns ``[hypotheses, count]`` scores
-        and ``[hypotheses, count, frames, 2]`` states with the same
-        element-wise arithmetic as :meth:`extend`.
+        ``prefixes`` is ``[hypotheses, length]`` (SOS first),
+        ``candidates`` is ``[hypotheses, count]`` and
+        ``previous_states`` is ``[hypotheses, frames, 2]``.  Returns
+        ``[hypotheses, count]`` scores and ``[hypotheses, count, frames,
+        2]`` states with the same element-wise arithmetic as
+        :meth:`extend`.
         """
         prefixes = torch.as_tensor(prefixes, dtype=torch.long, device=self.values.device)
         candidate_ids = torch.as_tensor(candidates, dtype=torch.long, device=self.values.device)
         if prefixes.ndim != 2 or prefixes.shape[1] == 0:
             raise ValueError("CTC prefixes must have shape [hypotheses, length] and include SOS.")
-        if candidate_ids.ndim != 2 or candidate_ids.shape[0] != prefixes.shape[0] or candidate_ids.shape[1] == 0:
+        if candidate_ids.ndim != 2 or candidate_ids.shape[0] != prefixes.shape[0] or candidate_ids.shape[
+                1] == 0:
             raise ValueError("CTC candidates must have shape [hypotheses, count].")
         frames = self.values.shape[0]
         if previous_states.shape != (prefixes.shape[0], frames, 2):
@@ -161,14 +163,16 @@ class ESPnetCTCPrefixScorer:
             scores = states[start - 1, 0].clone()
             blank = self.values[:, self.blank_token_id]
             for frame in range(start, frames):
-                states[frame, 0] = (torch.logaddexp(
-                    states[frame - 1, 0],
-                    transition[frame - 1],
-                ) + emissions[frame])
-                states[frame, 1] = (torch.logaddexp(
-                    states[frame - 1, 0],
-                    states[frame - 1, 1],
-                ) + blank[frame])
+                states[frame, 0] = (
+                    torch.logaddexp(
+                        states[frame - 1, 0],
+                        transition[frame - 1],
+                    ) + emissions[frame])
+                states[frame,
+                       1] = (torch.logaddexp(
+                           states[frame - 1, 0],
+                           states[frame - 1, 1],
+                       ) + blank[frame])
                 scores = torch.logaddexp(
                     scores,
                     transition[frame - 1] + emissions[frame],
@@ -181,15 +185,16 @@ class ESPnetCTCPrefixScorer:
 
 
 def _end_detect(
-    ended: list[_Hypothesis],
-    step: int,
-    *,
-    window: int = 3,
-    threshold: float = math.log(math.exp(-10.0)),
+        ended: list[_Hypothesis],
+        step: int,
+        *,
+        window: int = 3,
+        threshold: float = math.log(math.exp(-10.0)),
 ) -> bool:
-    """ESPnet ``end_detect`` (Watanabe et al., Eq. 50) over ended hypotheses.
+    """ESPnet ``end_detect`` (Watanabe et al., Eq.
 
-    Lengths count SOS and EOS exactly like ESPnet's ``yseq``.
+    50) over ended hypotheses.     Lengths count SOS and EOS exactly
+    like ESPnet's ``yseq``.
     """
     if not ended:
         return False
@@ -205,14 +210,15 @@ def _end_detect(
 class ESPnetJointBeamSearch:
     """Single-utterance joint scorer matching the published components.
 
-    The search mirrors ``espnet.nets.beam_search.BeamSearch`` at the pinned
-    ESPnet 0.8.0 revision as driven by ``espnet2/bin/asr_inference.py``:
-    every running hypothesis proposes its ``beam_size`` best tokens, the
-    pooled proposals are pruned to ``beam_size`` (ended ones included), an
-    EOS-terminated proposal leaves the beam, and with
-    ``maximum_decode_ratio == 0`` the search runs for at most one step per
-    encoder frame and stops by ESPnet's end detection.  A scorer whose
-    weight is zero is not evaluated at all, exactly like ESPnet.
+    The search mirrors ``espnet.nets.beam_search.BeamSearch`` at the
+    pinned ESPnet 0.8.0 revision as driven by
+    ``espnet2/bin/asr_inference.py``: every running hypothesis proposes
+    its ``beam_size`` best tokens, the pooled proposals are pruned to
+    ``beam_size`` (ended ones included), an EOS-terminated proposal
+    leaves the beam, and with ``maximum_decode_ratio == 0`` the search
+    runs for at most one step per encoder frame and stops by ESPnet's
+    end detection.  A scorer whose weight is zero is not evaluated at
+    all, exactly like ESPnet.
     """
 
     def __init__(
@@ -352,9 +358,11 @@ class ESPnetJointBeamSearch:
                         _Hypothesis(
                             tokens=(*hypothesis.tokens, token),
                             score=top_scores_list[row][column],
-                            ctc_state=(hypothesis.ctc_state
-                                       if ctc_states is None else ctc_states[row, position_list[row][column]].clone()),
-                            ctc_score=(hypothesis.ctc_score if selected_ctc is None else selected_ctc[row][column]),
+                            ctc_state=(
+                                hypothesis.ctc_state if ctc_states is None else
+                                ctc_states[row, position_list[row][column]].clone()),
+                            ctc_score=(
+                                hypothesis.ctc_score if selected_ctc is None else selected_ctc[row][column]),
                             lm_state=next_lm_states[row],
                         ))
                 # ESPnet prunes the pooled proposals after every hypothesis

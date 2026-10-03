@@ -2,8 +2,8 @@
 
 The reference below is a line-by-line transcription of the upstream
 ``espnet.nets.beam_search.BeamSearch`` (``forward``/``search``/``beam``/
-``post_process``), ``espnet.nets.e2e_asr_common.end_detect`` and the numpy
-``espnet.nets.ctc_prefix_score.CTCPrefixScore`` as configured by
+``post_process``), ``espnet.nets.e2e_asr_common.end_detect`` and the
+numpy ``espnet.nets.ctc_prefix_score.CTCPrefixScore`` as configured by
 ``espnet2/bin/asr_inference.py`` (no pre-beam, full-vocabulary CTC). It
 drives the same tiny native graph so search semantics can be compared
 without ESPnet installed.
@@ -195,10 +195,7 @@ def _upstream_beam_search(model, language_model, config, x, *, beam_size, maxlen
         for hyp in best:
             (ended if int(hyp["yseq"][-1]) == eos else running).append(hyp)
         if maxlenratio == 0.0 and _upstream_end_detect(
-            [{
-                "yseq": h["yseq"].tolist(),
-                "score": float(h["score"])
-            } for h in ended],
+            [{"yseq": h["yseq"].tolist(), "score": float(h["score"])} for h in ended],
                 i,
         ):
             break
@@ -238,11 +235,8 @@ class ESPnetUpstreamBeamSearchParityTests(unittest.TestCase):
                 beam_size=beam_size,
                 maxlenratio=config.maximum_decode_ratio,
             )
-            decoded = ESPnetJointBeamSearch(model, config, language_model=language_model)(
-                memory.unsqueeze(0),
-                torch.tensor([frames]),
-                beam_size=beam_size,
-            )
+            search = ESPnetJointBeamSearch(model, config, language_model=language_model)
+            decoded = search(memory.unsqueeze(0), torch.tensor([frames]), beam_size=beam_size)
         tokens = tuple(token for token in decoded.token_ids[0] if token != config.blank_token_id)
         self.assertEqual(tokens, expected_tokens, f"seed={seed}")
         self.assertAlmostEqual(decoded.scores[0], expected_score, places=3, msg=f"seed={seed}")
@@ -323,13 +317,14 @@ class ESPnetUpstreamBeamSearchParityTests(unittest.TestCase):
             ended = []
             for _ in range(int(rng.integers(0, 6))):
                 length = int(rng.integers(2, 9))
-                ended.append(_Hypothesis(
-                    tokens=tuple(range(length)),
-                    score=float(rng.normal(-20.0, 8.0)),
-                    ctc_state=torch.zeros(1, 2),
-                    ctc_score=0.0,
-                    lm_state=None,
-                ))
+                ended.append(
+                    _Hypothesis(
+                        tokens=tuple(range(length)),
+                        score=float(rng.normal(-20.0, 8.0)),
+                        ctc_state=torch.zeros(1, 2),
+                        ctc_score=0.0,
+                        lm_state=None,
+                    ))
             step = int(rng.integers(0, 10))
             expected = _upstream_end_detect([{
                 "yseq": list(value.tokens),
