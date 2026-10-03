@@ -1,4 +1,5 @@
 import hashlib
+import inspect
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,7 +22,7 @@ from voicehub.architectures.mosstts.configuration import MossGPT2Config, MossTTS
 from voicehub.architectures.mosstts.metadata import MOSS_CODEC_CHECKPOINTS
 from voicehub.architectures.mosstts.modeling import build_mosstts_model
 from voicehub.architectures.mosstts.processing import MossTTSProcessor
-from voicehub.architectures.mosstts.runtime import MossTTSRuntime
+from voicehub.architectures.mosstts.runtime import GENERATION_OPTIONS_BY_VARIANT, MossTTSRuntime
 from voicehub.architectures.mosstts.tokenization import MossTextTokenizer
 from voicehub.architectures.mosstts.training import MossTTSDataset
 from voicehub.training.auto import AutoTrainingAdapter
@@ -405,6 +406,72 @@ class NativeMossTrainingTests(unittest.TestCase):
         self.assertEqual(len(generated), 1)
         self.assertEqual(tuple(generated[0].audio_codes.shape), (3, 16))
         self.assertTrue(generated[0].audio_codes.eq(0).all())
+
+    def test_generation_option_allowlist_matches_variant_generate_signatures(self):
+        for variant, allowed in GENERATION_OPTIONS_BY_VARIANT.items():
+            with self.subTest(variant=variant):
+                model = build_mosstts_model(_tiny_tts_config(variant))
+                parameters = set(inspect.signature(model.generate).parameters)
+                parameters -= {"input_ids", "attention_mask", "max_new_tokens", "max_new_frames"}
+                self.assertEqual(parameters, allowed)
+
+    def test_unsupported_generation_options_fail_clearly_per_variant(self):
+        calls = []
+        prompt = SimpleNamespace(input_ids=torch.zeros(1, 1), attention_mask=None)
+
+        def runtime_for(variant):
+            return SimpleNamespace(
+                config=SimpleNamespace(variant=variant),
+                model=SimpleNamespace(generate=lambda *args, **kwargs: calls.append(kwargs)),
+                processor=SimpleNamespace(
+                    build_generation_prompt=lambda *args, **kwargs: prompt,
+                    decode_generated=lambda generated: (),
+                ),
+                device=torch.device("cpu"),
+            )
+
+        for variant, option in (
+            ("delay", "n_vq_for_inference"),
+            ("delay", "use_kv_cache"),
+            ("local", "use_kv_cache"),
+            ("local_v1_5", "temperature"),
+        ):
+            with self.subTest(variant=variant, option=option):
+                with self.assertRaisesRegex(ValueError, f"Unsupported MOSS-TTS {variant} .*{option}"):
+                    MossTTSRuntime.generate_codes(
+                        runtime_for(variant),
+                        "hello",
+                        max_new_tokens=3,
+                        **{option: 1},
+                    )
+        self.assertEqual(calls, [])
+
+        MossTTSRuntime.generate_codes(
+            runtime_for("local"),
+            "hello",
+            max_new_tokens=3,
+            n_vq_for_inference=4,
+        )
+        MossTTSRuntime.generate_codes(
+            runtime_for("local_v1_5"),
+            "hello",
+            max_new_tokens=3,
+            use_kv_cache=False,
+            n_vq_for_inference=16,
+        )
+        self.assertEqual(calls, [
+            {
+                "attention_mask": None,
+                "n_vq_for_inference": 4,
+                "max_new_tokens": 3,
+            },
+            {
+                "attention_mask": None,
+                "use_kv_cache": False,
+                "n_vq_for_inference": 16,
+                "max_new_frames": 3,
+            },
+        ])
 
     def test_raw_audio_dataset_encodes_with_frozen_native_codec(self):
         config = _tiny_tts_config("delay")

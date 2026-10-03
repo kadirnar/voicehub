@@ -41,6 +41,24 @@ from voicehub.processing.waveform import NativeAudio, load_pcm_wave, normalize_w
 # eight seconds are decoded as causal streaming chunks.
 SOURCE_DECODE_CHUNK_SECONDS = 8.0
 
+# Keyword options each non-Realtime ``generate`` accepts besides the prompt
+# tensors and token budget. Delay has a fixed RVQ depth and no KV-cache switch;
+# Local v1 truncates the RVQ depth; Local v1.5 also exposes the KV-cache switch.
+_SAMPLING_OPTIONS = frozenset({
+    "audio_repetition_penalty",
+    "audio_temperature",
+    "audio_top_k",
+    "audio_top_p",
+    "text_temperature",
+    "text_top_k",
+    "text_top_p",
+})
+GENERATION_OPTIONS_BY_VARIANT: Mapping[str, frozenset[str]] = {
+    "delay": _SAMPLING_OPTIONS,
+    "local": _SAMPLING_OPTIONS | {"n_vq_for_inference"},
+    "local_v1_5": _SAMPLING_OPTIONS | {"n_vq_for_inference", "use_kv_cache"},
+}
+
 
 def loudness_normalize(
         waveform: Tensor,
@@ -480,6 +498,10 @@ class MossTTSRuntime(nn.Module):
             device=self.device,
         )
         options = dict(generation_options)
+        unsupported = sorted(set(options) - GENERATION_OPTIONS_BY_VARIANT[self.config.variant])
+        if unsupported:
+            raise ValueError(f"Unsupported MOSS-TTS {self.config.variant} generation options: " +
+                             ", ".join(unsupported) + ".")
         if self.config.variant == "local_v1_5":
             options["max_new_frames"] = max_new_tokens
         else:
