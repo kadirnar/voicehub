@@ -405,6 +405,7 @@ def _validate_preset(values: Mapping[str, Any]) -> dict[str, Tensor]:
             raise ValueError(f"Bark {name} must be a non-empty {dimensions}D tensor.")
         if value.dtype not in {
                 torch.uint8,
+                torch.uint16,
                 torch.int8,
                 torch.int16,
                 torch.int32,
@@ -458,6 +459,7 @@ def _read_npy_integer(path: str | Path) -> Tensor:
     dtype_map = {
         "|u1": (torch.uint8, 1),
         "|i1": (torch.int8, 1),
+        "<u2": (torch.uint16, 2),
         "<i2": (torch.int16, 2),
         "<i4": (torch.int32, 4),
         "<i8": (torch.int64, 8),

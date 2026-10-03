@@ -557,6 +557,28 @@ class NativeBarkTests(unittest.TestCase):
             tensor = _read_npy_integer(path)
         torch.testing.assert_close(tensor, values)
 
+    def test_numpy_prompt_loading_accepts_uint16(self):
+        import torch
+
+        from voicehub.architectures.bark.processing import _read_npy_integer, _validate_preset
+
+        header = b"{'descr': '<u2', 'fortran_order': False, 'shape': (3,), }"
+        padding = 16 - ((10 + len(header) + 1) % 16)
+        header += b" " * padding + b"\n"
+        payload = (b"\x93NUMPY" + bytes((1, 0)) + struct.pack("<H", len(header)) + header +
+                   struct.pack("<3H", 7, 9999, 512))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "semantic_prompt.npy"
+            path.write_bytes(payload)
+            semantic = _read_npy_integer(path)
+        preset = _validate_preset({
+            "semantic_prompt": semantic,
+            "coarse_prompt": torch.zeros(2, 2, dtype=torch.uint16),
+            "fine_prompt": torch.zeros(8, 2, dtype=torch.uint16),
+        })
+        self.assertEqual(preset["semantic_prompt"].tolist(), [7, 9999, 512])
+        self.assertEqual(preset["semantic_prompt"].dtype, torch.long)
+
     def test_voice_preset_rejects_path_traversal(self):
         from voicehub.architectures.bark.processing import BarkProcessor, BarkWordPieceTokenizer
 
