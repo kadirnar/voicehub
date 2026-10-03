@@ -1,17 +1,18 @@
 """Dependency-free SentencePiece unigram model reader and tokenizer.
 
-SentencePiece stores ``.model`` files as a small protobuf document.  Pulling
-in a protobuf runtime and the SentencePiece C++ extension merely to read that
-document would make model architecture code depend on two unrelated
-libraries.  This module implements the bounded wire-format subset and the
-unigram Viterbi decoder needed by published speech checkpoints.
+SentencePiece stores ``.model`` files as a small protobuf document.
+Pulling in a protobuf runtime and the SentencePiece C++ extension merely
+to read that document would make model architecture code depend on two
+unrelated libraries.  This module implements the bounded wire-format
+subset and the unigram Viterbi decoder needed by published speech
+checkpoints.
 
 Models that carry a precompiled normalization table (``nmt_nfkc`` and
 ``nfkc`` models normally do) are normalized with that table exactly as
 SentencePiece's C++ ``Normalizer`` does: longest-prefix matches in the
-Darts-clone trie, whitespace collapsing on the normalized output, and the
-dummy prefix. Models without a table fall back to the Python standard
-library's NFKC implementation.
+Darts-clone trie, whitespace collapsing on the normalized output, and
+the dummy prefix. Models without a table fall back to the Python
+standard library's NFKC implementation.
 """
 
 from __future__ import annotations
@@ -255,9 +256,8 @@ def load_sentencepiece_unigram(
         raise TokenizerAssetError(
             "SentencePiece model declares BPE; use "
             "`load_sentencepiece_model_bpe` instead of the unigram loader.")
-    if model_type == _MODEL_CHAR and any(
-            len(piece.text) != 1 for piece in pieces
-            if piece.piece_type not in {_UNKNOWN, _CONTROL, _UNUSED}):
+    if model_type == _MODEL_CHAR and any(len(piece.text) != 1 for piece in pieces
+                                         if piece.piece_type not in {_UNKNOWN, _CONTROL, _UNUSED}):
         # A CHAR model splits normalized text into code points. With only
         # single-code-point pieces the unigram lattice has exactly that one
         # path, so it reproduces SentencePiece's CHAR segmentation
@@ -312,8 +312,8 @@ def _decode_utf8_length(data: bytes, start: int) -> int:
     if first < 0x80:
         return 1
     remaining = len(data) - start
-    for length, mask, marker, minimum in ((2, 0xE0, 0xC0, 0x80), (3, 0xF0, 0xE0, 0x800),
-                                          (4, 0xF8, 0xF0, 0x10000)):
+    for length, mask, marker, minimum in ((2, 0xE0, 0xC0, 0x80), (3, 0xF0, 0xE0, 0x800), (4, 0xF8, 0xF0,
+                                                                                          0x10000)):
         if first & mask != marker:
             continue
         if remaining < length:
@@ -331,8 +331,9 @@ def _decode_utf8_length(data: bytes, start: int) -> int:
 class _PrecompiledNormalizer:
     """SentencePiece ``Normalizer`` driven by a precompiled charsmap.
 
-    The blob is ``<uint32 trie size><Darts-clone double array><replacement
-    strings>``; each trie value is the offset of a NUL-terminated replacement.
+    The blob is ``<uint32 trie size><Darts-clone double
+    array><replacement strings>``; each trie value is the offset of a
+    NUL-terminated replacement.
     """
 
     _MAX_TRIE_RESULTS = 32

@@ -180,15 +180,14 @@ _TINY_CHARSMAP = base64.b64decode(
     "xAAAAMcAAADGAAAAyQAAAMgAAADLAAAAygAAAM0AAADMAAAAzwAAAM4AAADRAAAA0AAAANMAAADSAAAA1QAAANQAAADXAAAA"
     "1gAAANkAAADYAAAA2wAAANoAAADdAAAA3AAAAN8AAADeAAAA4QAAAOAAAADjAAAA4gAAAOUAAADvCAEA5wAAAOYAAADiuAEA"
     "44ABAOsAAADqAAAA7QAAAOwAAADvAAAA7gAAAPEAAADwAAAA8wAAAPIAAAD1AAAA9AAAAPcAAAD2AAAA+QAAAPgAAAD7AAAA"
-    "+gAAAP0AAAD8AAAA/wAAAP4AAAAAIABmaQDDqQA="
-)
+    "+gAAAP0AAAD8AAAA/wAAAP4AAAAAIABmaQDDqQA=")
 
 
 def _write_sentencepiece_char(
-    path: Path,
-    extra_pieces: tuple[str, ...] = (),
-    *,
-    charsmap: bytes = b"",
+        path: Path,
+        extra_pieces: tuple[str, ...] = (),
+        *,
+        charsmap: bytes = b"",
 ) -> None:
     pieces = (
         ("<s>", 0.0, 3),
@@ -219,12 +218,14 @@ def _write_sentencepiece_char(
         _protobuf_integer(4, 1),
         _protobuf_integer(5, 1),
     ))
-    path.write_bytes(b"".join((
-        *(_protobuf_bytes(1, _sentencepiece_piece(text, score, piece_type))
-          for text, score, piece_type in pieces),
-        _protobuf_bytes(2, trainer),
-        _protobuf_bytes(3, normalizer),
-    )))
+    path.write_bytes(
+        b"".join((
+            *(
+                _protobuf_bytes(1, _sentencepiece_piece(text, score, piece_type))
+                for text, score, piece_type in pieces),
+            _protobuf_bytes(2, trainer),
+            _protobuf_bytes(3, normalizer),
+        )))
 
 
 class EncodingContractTests(unittest.TestCase):
