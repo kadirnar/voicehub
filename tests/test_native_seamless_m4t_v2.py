@@ -23,7 +23,10 @@ from voicehub.architectures.seamless_m4t_v2.checkpoint import (
 from voicehub.architectures.seamless_m4t_v2.configuration import SeamlessM4Tv2S2TConfig
 from voicehub.architectures.seamless_m4t_v2.frontend import SeamlessM4Tv2FeatureExtractor
 from voicehub.architectures.seamless_m4t_v2.metadata import SEAMLESS_M4T_V2_CHECKPOINTS
-from voicehub.architectures.seamless_m4t_v2.modeling import SeamlessM4Tv2ForSpeechToText
+from voicehub.architectures.seamless_m4t_v2.modeling import (
+    SeamlessM4Tv2ForSpeechToText,
+    SeamlessM4Tv2SinusoidalPositionalEmbedding,
+)
 from voicehub.architectures.seamless_m4t_v2.processing import SeamlessM4Tv2Processor
 from voicehub.architectures.seamless_m4t_v2.registration import register_seamless_m4t_v2_architecture
 from voicehub.architectures.seamless_m4t_v2.runtime import (
@@ -369,6 +372,22 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
         self.assertEqual(prompts[0].tolist(), [[3, 7], [3, 7]])
         self.assertEqual(generated[:, :2].tolist(), [[3, 7], [3, 7]])
         self.assertLessEqual(generated.shape[1], 4)
+
+    def test_decoder_positions_follow_fairseq2_legacy_pad_offset(self):
+        # Regression: positions started at sinusoid step 1; the released
+        # fairseq2 NLLB decoder (`_legacy_pad_idx=1`) starts at step 2.
+        embedding = SeamlessM4Tv2SinusoidalPositionalEmbedding(16, 8, padding_idx=0)
+        input_ids = torch.tensor([[3, 7, 9, 0], [3, 7, 0, 0]])
+
+        encoded = embedding(input_ids)
+
+        frequencies = torch.exp(torch.arange(4, dtype=torch.float32) * -math.log(10_000.0) / 3)
+        steps = torch.arange(2, 5, dtype=torch.float32).unsqueeze(1) * frequencies
+        reference = torch.cat((steps.sin(), steps.cos()), dim=1)
+        self.assertTrue(torch.allclose(encoded[0, :3], reference))
+        self.assertTrue(torch.allclose(encoded[1, :2], reference[:2]))
+        self.assertTrue(torch.equal(encoded[0, 3], torch.zeros(8)))
+        self.assertTrue(torch.equal(encoded[1, 2:], torch.zeros(2, 8)))
 
     def test_local_artifact_resolution_rejects_unsafe_shard_paths(self):
         with tempfile.TemporaryDirectory() as directory:

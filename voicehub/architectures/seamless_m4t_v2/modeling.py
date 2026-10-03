@@ -532,6 +532,9 @@ class SeamlessM4Tv2ScaledWordEmbedding(nn.Embedding):
         return super().forward(input_ids) * self.embed_scale
 
 
+_FAIRSEQ_LEGACY_PAD_INDEX = 1
+
+
 class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Module):
     """Non-persistent fairseq-style sinusoidal decoder positions."""
 
@@ -577,8 +580,14 @@ class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Module):
         self.weights = self._weights(self.weights.shape[0]).to(device=device)
 
     def forward(self, input_ids: Tensor) -> Tensor:
-        visible = input_ids.ne(self.padding_idx).to(dtype=torch.long)
-        positions = torch.cumsum(visible, dim=1) * visible + self.padding_idx
+        visible = input_ids.ne(self.padding_idx)
+        # fairseq2 builds the NLLB decoder position encoder with `_legacy_pad_idx=1`
+        # (fairseq's pad index), so the first token uses sinusoid step 2.
+        positions = torch.where(
+            visible,
+            torch.cumsum(visible.to(dtype=torch.long), dim=1) + _FAIRSEQ_LEGACY_PAD_INDEX,
+            self.padding_idx,
+        )
         maximum = int(positions.max().item()) if positions.numel() else 0
         if maximum >= self.weights.shape[0]:
             self.weights = self._weights(maximum + self.offset + 1, ).to(
