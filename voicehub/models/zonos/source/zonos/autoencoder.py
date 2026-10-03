@@ -16,7 +16,7 @@ from voicehub.architectures.dac.configuration import DacConfig
 from voicehub.architectures.dac.modeling import DacModel
 from voicehub.checkpointing import SafeTensorReader
 from voicehub.hub import read_json_file, resolve_pretrained_file
-from voicehub.processing.waveform import resample_waveform
+from voicehub.processing.waveform import resample_waveform_hann
 
 _DEFAULT_DAC_REPOSITORY = "descript/dac_44khz"
 _DEFAULT_DAC_REVISION = DESCRIPT_DAC_44KHZ_REVISION
@@ -115,23 +115,8 @@ class DACAutoencoder:
             or sample_rate <= 0
         ):
             raise ValueError("DAC sample rate must be a positive integer.")
-        flattened = waveform.reshape(-1, waveform.shape[-1])
-        if sample_rate != self.sampling_rate:
-            resampled = torch.stack(
-                tuple(
-                    resample_waveform(
-                        channel,
-                        sample_rate,
-                        self.sampling_rate,
-                    )
-                    for channel in flattened
-                ),
-                dim=0,
-            )
-            waveform = resampled.reshape(
-                *waveform.shape[:-1],
-                resampled.shape[-1],
-            )
+        # Upstream: torchaudio.functional.resample(wav, sr, 44_100).
+        waveform = resample_waveform_hann(waveform, sample_rate, self.sampling_rate)
         right_padding = (
             math.ceil(waveform.shape[-1] / self.hop_length)
             * self.hop_length

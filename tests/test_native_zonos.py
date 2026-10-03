@@ -544,6 +544,42 @@ class NativeZonosRuntimeTests(unittest.TestCase):
         )
 
 
+class NativeZonosResamplingTests(unittest.TestCase):
+
+    def setUp(self):
+        try:
+            import torchaudio
+        except ImportError:  # pragma: no cover - optional reference
+            self.skipTest("torchaudio is not installed")
+        self.torchaudio = torchaudio
+        generator = torch.Generator().manual_seed(0)
+        self.waveform = torch.randn(2, 1, 1_001, generator=generator)
+
+    def test_codec_preprocess_matches_upstream_functional_resample(self):
+        from voicehub.architectures.zonos.codec import ZonosDACCodec
+
+        expected = self.torchaudio.functional.resample(self.waveform, 16_000, 44_100)
+        expected = torch.nn.functional.pad(expected, (0, -expected.shape[-1] % 512))
+        actual = ZonosDACCodec()._preprocess(self.waveform, sample_rate=16_000)
+        self.assertTrue(torch.equal(actual, expected))
+
+    def test_vendored_autoencoder_preprocess_matches_upstream(self):
+        from voicehub.models.zonos.source.zonos.autoencoder import DACAutoencoder
+
+        expected = self.torchaudio.functional.resample(self.waveform, 24_000, 44_100)
+        expected = torch.nn.functional.pad(expected, (0, -expected.shape[-1] % 512))
+        actual = DACAutoencoder.preprocess(DACAutoencoder.__new__(DACAutoencoder), self.waveform, 24_000)
+        self.assertTrue(torch.equal(actual, expected))
+
+    def test_speaker_input_matches_upstream_resample_transform(self):
+        from voicehub.models.zonos.source.zonos.speaker_cloning import SpeakerEmbedding
+
+        stereo = self.waveform[:, 0]
+        expected = self.torchaudio.transforms.Resample(22_050, 16_000)(stereo.mean(0, keepdim=True))
+        actual = SpeakerEmbedding.prepare_input(None, stereo, 22_050)
+        self.assertTrue(torch.equal(actual, expected))
+
+
 class NativeZonosDependencyTests(unittest.TestCase):
 
     def test_native_runtime_has_no_external_architecture_imports(self):

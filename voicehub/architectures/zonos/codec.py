@@ -15,7 +15,7 @@ from voicehub.architectures.dac.modeling import DacModel
 from voicehub.architectures.zonos.metadata import ZONOS_DAC_REPOSITORY, ZONOS_DAC_REVISION
 from voicehub.checkpointing import SafeTensorReader
 from voicehub.hub import read_json_file, resolve_pretrained_file
-from voicehub.processing.waveform import resample_waveform
+from voicehub.processing.waveform import resample_waveform_hann
 
 
 @runtime_checkable
@@ -155,12 +155,9 @@ class ZonosDACCodec:
         if not bool(torch.isfinite(waveform).all()):
             raise ValueError("Zonos DAC waveform must contain finite samples.")
         if sample_rate != self.sample_rate:
-            waveform = torch.stack(
-                [resample_waveform(
-                    row[0],
-                    sample_rate,
-                    self.sample_rate,
-                ) for row in waveform]).unsqueeze(1)
+            # Upstream Zonos ``DACAutoencoder.preprocess`` calls
+            # ``torchaudio.functional.resample`` on the whole batch.
+            waveform = resample_waveform_hann(waveform, sample_rate, self.sample_rate)
         padding = (math.ceil(waveform.shape[-1] / self.hop_length) * self.hop_length - waveform.shape[-1])
         return torch.nn.functional.pad(
             waveform,
