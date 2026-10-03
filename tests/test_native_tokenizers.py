@@ -495,6 +495,44 @@ class ByteBPEBehaviorTests(unittest.TestCase):
             "ab",
         )
 
+    def test_long_special_token_runs_scan_the_text_linearly(self):
+        # Qwen3-ASR prompts hold hundreds of adjacent audio placeholders;
+        # rescanning the remaining text for every token made encoding
+        # quadratic in the audio length (about 120 ms for 30 s of audio).
+        from unittest import mock
+
+        from voicehub.tokenization import byte_bpe
+
+        tokenizer = ByteBPETokenizer(
+            _miniature_vocabulary(),
+            special_tokens={
+                "<|end|>": 300,
+                "<|pad|>": 301
+            },
+            added_tokens={
+                "<add>": 302,
+                "<add>x": 303
+            },
+            pad_token_id=301,
+        )
+        text = "a<add>x<|end|>b" + "<|pad|>" * 200 + "<add>c<|end|><add>"
+        expected = ((ord("a"), 303, 300, ord("b")) + (301, ) * 200 + (302, ord("c"), 300, 302))
+        visited = []
+        original = byte_bpe._first_trie_match
+
+        def counting(value, trie, selected, *, start):
+            visited.append(start)
+            return original(value, trie, selected, start=start)
+
+        with mock.patch.object(byte_bpe, "_first_trie_match", counting):
+            encoded = tokenizer.encode(text, allowed_special="all")
+
+        self.assertEqual(encoded.input_ids, expected)
+        self.assertEqual(encoded.special_tokens_mask, (0, 0, 1, 0) + (1, ) * 200 + (0, 0, 1, 0))
+        self.assertEqual(tokenizer.decode(encoded), text)
+        # One added-token search per added match plus the final miss.
+        self.assertLessEqual(len(visited), 4)
+
     def test_disallowed_none_treats_special_spelling_as_ordinary_bytes(self):
         encoded = self.tokenizer.encode(
             "<|end|>",
