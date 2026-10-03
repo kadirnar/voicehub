@@ -369,6 +369,9 @@ def save_fish_codec_pretrained(
     return destination.resolve()
 
 
+_LEGACY_CODEC_DERIVED_BUFFERS = frozenset({"causal_mask", "freqs_cis"})
+
+
 def _legacy_codec_state(value: Any) -> dict[str, Tensor]:
     if isinstance(value, Mapping) and "state_dict" in value:
         value = value["state_dict"]
@@ -435,6 +438,14 @@ def convert_legacy_fish_codec(
     with torch.device("meta"):
         codec = FishModifiedDAC(resolved_config, initialize=False)
     expected = _expected_shapes(codec)
+    # The official pickle also stores the source transformers' derived
+    # RoPE/causal-mask buffers. The source loads it with ``strict=False``
+    # and recomputes them, so they are not weights.
+    state = {
+        name: tensor
+        for name, tensor in state.items()
+        if name in expected or name.rsplit(".", 1)[-1] not in _LEGACY_CODEC_DERIVED_BUFFERS
+    }
     missing = sorted(set(expected) - set(state))
     unexpected = sorted(set(state) - set(expected))
     mismatched = sorted((name, tuple(state[name].shape), expected[name])
