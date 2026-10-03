@@ -14,10 +14,11 @@
 """Robustness text normalizer applied by the MOSS-TTS-v1.5 processor.
 
 Ported verbatim (rules and order) from
-``tts_robust_normalizer_single_script.py`` shipped with
-``OpenMOSS-Team/MOSS-TTS-v1.5`` (revision
+``tts_robust_normalizer_single_script.py`` shipped with ``OpenMOSS-
+Team/MOSS-TTS-v1.5`` (revision
 ``cdd3b911b1585e3f2dbc7775ef10f9926f58850a``) and ``moss_tts_delay`` in
-https://github.com/OpenMOSS/MOSS-TTS. The official
+https://github.com/OpenMOSS/MOSS-TTS.
+The official
 ``MossTTSDelayProcessor.build_user_message`` normalizes every input text
 with it. It performs robustness cleanup only (whitespace, structural
 punctuation, Markdown/line breaks), not semantic text normalization.
@@ -28,7 +29,6 @@ from __future__ import annotations
 
 import re
 import unicodedata
-
 
 # ---------------------------
 # 基础常量与正则
@@ -57,8 +57,7 @@ _FILELIKE_RE = re.compile(
     r"(?=[A-Za-z0-9._/+:-]*[A-Za-z])"
     r"(?=[A-Za-z0-9._/+:-]*[._/+:-])"
     r"[A-Za-z0-9](?:[A-Za-z0-9._/+:-]*[A-Za-z0-9])?"
-    r"(?![A-Za-z0-9_])"
-)
+    r"(?![A-Za-z0-9_])")
 
 # 参与“中英混排边界补空格”的 token：必须至少含 1 个拉丁字母，或本身就是受保护 token
 _LATINISH = rf"(?:{_PROT}|(?=[A-Za-z0-9._/+:-]*[A-Za-z])[A-Za-z0-9][A-Za-z0-9._/+:-]*)"
@@ -66,10 +65,10 @@ _LATINISH = rf"(?:{_PROT}|(?=[A-Za-z0-9._/+:-]*[A-Za-z])[A-Za-z0-9][A-Za-z0-9._/
 # 零宽字符
 _ZERO_WIDTH_RE = re.compile(r"[\u200b-\u200d\ufeff]")
 
-
 # ---------------------------
 # 主函数
 # ---------------------------
+
 
 def normalize_tts_text(text: str) -> str:
     """对 TTS 输入做鲁棒性正则化。"""
@@ -89,6 +88,7 @@ def normalize_tts_text(text: str) -> str:
 # ---------------------------
 # 具体规则
 # ---------------------------
+
 
 def _base_cleanup(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\u3000", " ")
@@ -112,9 +112,9 @@ def _normalize_markdown_and_lines(text: str) -> str:
         if not line:
             continue
 
-        line = re.sub(r"^#{1,6}\s+", "", line)   # 标题
-        line = re.sub(r"^>\s+", "", line)        # 引用
-        line = re.sub(r"^[-*+]\s+", "", line)    # 无序列表
+        line = re.sub(r"^#{1,6}\s+", "", line)  # 标题
+        line = re.sub(r"^>\s+", "", line)  # 引用
+        line = re.sub(r"^[-*+]\s+", "", line)  # 无序列表
         line = re.sub(r"^\d+[.)]\s+", "", line)  # 有序列表
         lines.append(line)
 
@@ -130,13 +130,13 @@ def _protect_spans(text: str) -> tuple[str, list[str]]:
         return f"___PROT{idx}___"
 
     for pattern in (
-        _URL_RE,
-        _EMAIL_RE,
-        _MENTION_RE,
-        _REDDIT_RE,
-        _HASHTAG_RE,
-        _DOT_TOKEN_RE,
-        _FILELIKE_RE,
+            _URL_RE,
+            _EMAIL_RE,
+            _MENTION_RE,
+            _REDDIT_RE,
+            _HASHTAG_RE,
+            _DOT_TOKEN_RE,
+            _FILELIKE_RE,
     ):
         text = pattern.sub(repl, text)
 

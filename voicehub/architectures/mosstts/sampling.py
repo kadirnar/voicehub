@@ -122,12 +122,12 @@ def sample_delay_token(
 ) -> Tensor:
     """Sample like the official MOSS-TTS delay ``inference_utils``.
 
-    ``scaled_logits`` are already divided by the temperature and keep the
-    model's logits dtype.  Filtering keeps exactly ``top_k`` entries
-    (``torch.topk`` + scatter), nucleus filtering and the final softmax run
-    in that dtype, and every row is drawn with one ``torch.multinomial``
-    call, so a seeded run consumes the CUDA generator exactly like the
-    source implementation.
+    ``scaled_logits`` are already divided by the temperature and keep
+    the model's logits dtype.  Filtering keeps exactly ``top_k`` entries
+    (``torch.topk`` + scatter), nucleus filtering and the final softmax
+    run in that dtype, and every row is drawn with one
+    ``torch.multinomial`` call, so a seeded run consumes the CUDA
+    generator exactly like the source implementation.
     """
     if scaled_logits.ndim != 2:
         raise ValueError("Delay sampling expects logits with shape [rows, vocabulary].")

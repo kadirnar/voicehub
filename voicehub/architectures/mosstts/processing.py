@@ -170,8 +170,9 @@ class MossTTSProcessor:
             raise ValueError("`duration_tokens` must be a positive integer.")
         # The official UserMessage labels each reference with its 1-based
         # speaker slot, e.g. "[S1]:\n<|audio|>".
-        reference = ("None" if reference_count == 0 else "\n".join(
-            f"[S{index + 1}]:\n{AUDIO_PLACEHOLDER}" for index in range(reference_count)))
+        reference = (
+            "None" if reference_count == 0 else "\n".join(
+                f"[S{index + 1}]:\n{AUDIO_PLACEHOLDER}" for index in range(reference_count)))
         return _USER_TEMPLATE.format(
             reference=reference,
             instruction=_template_value(instruction),
@@ -308,8 +309,8 @@ class MossTTSProcessor:
         return torch.cat(rows)
 
     def _reference_audio_block(self, reference: Tensor) -> Tensor:
-        """User reference rows: delay-patterned for Delay, frame-aligned
-        (one user slot per codec frame) for the original Local release."""
+        """User reference rows: delay-patterned for Delay, frame-aligned (one
+        user slot per codec frame) for the original Local release."""
         if self.config.variant == "local":
             if self.config.audio_user_slot_token_id is None:
                 raise ValueError("Local config has no user audio-slot token.")
@@ -547,7 +548,8 @@ class MossTTSProcessor:
                 self._audio_rows(
                     audio_codes,
                     text_token_id=self.config.audio_assistant_slot_token_id,
-                ) if self.config.variant == "local" else self._delay_audio_block(audio_codes, role="assistant"))
+                ) if self.config.variant == "local" else self._delay_audio_block(
+                    audio_codes, role="assistant"))
             return torch.cat([
                 self._text_rows(
                     [self.config.audio_start_token_id],

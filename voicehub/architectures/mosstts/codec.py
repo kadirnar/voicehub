@@ -399,7 +399,8 @@ class NativeMossAudioCodec(nn.Module):
         """Decode codes, optionally as causal streaming chunks.
 
         ``chunk_duration`` (seconds) selects the checkpoint's streaming
-        decoder used by the official processors; it requires batch size 1.
+        decoder used by the official processors; it requires batch size
+        1.
         """
         codes, _, padding_mask = self._code_batch(audio_codes, lengths)
         context = torch.no_grad() if self.frozen else torch.enable_grad()

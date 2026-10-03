@@ -43,10 +43,10 @@ SOURCE_DECODE_CHUNK_SECONDS = 8.0
 
 
 def loudness_normalize(
-    waveform: Tensor,
-    *,
-    target_dbfs: float = -20.0,
-    gain_range: tuple[float, float] = (-3.0, 3.0),
+        waveform: Tensor,
+        *,
+        target_dbfs: float = -20.0,
+        gain_range: tuple[float, float] = (-3.0, 3.0),
 ) -> Tensor:
     """Apply the official MOSS reference-audio gain before codec encoding.
 
@@ -570,8 +570,9 @@ class MossTTSRuntime(nn.Module):
 def uses_source_text_normalizer(artifacts: MossTTSArtifacts) -> bool:
     """Whether the official processor of this snapshot normalizes text.
 
-    MOSS-TTS-v1.5 ships ``tts_robust_normalizer_single_script.py`` and its
-    processor applies it to every user text; earlier releases do not.
+    MOSS-TTS-v1.5 ships ``tts_robust_normalizer_single_script.py`` and
+    its processor applies it to every user text; earlier releases do
+    not.
     """
     if artifacts.source in MOSS_TTS_TEXT_NORMALIZED_REPOSITORIES:
         return True

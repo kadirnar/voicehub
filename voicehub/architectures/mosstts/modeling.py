@@ -112,8 +112,9 @@ def _channelwise_cross_entropy(
 def _find_last_equal(input_ids: Tensor, value: int, *, required: bool = True) -> Tensor:
     """Return the last index of ``value`` per row, or ``-1`` when absent.
 
-    ``required=False`` mirrors the source ``find_last_equal_C`` helper, whose
-    missing-token sentinel is legitimate for prompts without audio.
+    ``required=False`` mirrors the source ``find_last_equal_C`` helper,
+    whose missing-token sentinel is legitimate for prompts without
+    audio.
     """
     matches = input_ids.eq(value)
     if required and not bool(matches.any(dim=1).all()):

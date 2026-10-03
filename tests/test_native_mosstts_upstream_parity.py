@@ -1,5 +1,5 @@
-"""Regression tests for MOSS-TTS behavior audited against the official
-OpenMOSS processors and ``MossTTSDelayModel.generate``."""
+"""Regression tests for MOSS-TTS behavior audited against the official OpenMOSS
+processors and ``MossTTSDelayModel.generate``."""
 
 import dataclasses
 import importlib.util
@@ -13,7 +13,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from test_native_mosstts import _TinySemanticModel, _TinyTokenizer, _tiny_tts_config  # noqa: E402
+from test_native_mosstts import _tiny_tts_config, _TinySemanticModel, _TinyTokenizer  # noqa: E402
 
 from voicehub.architectures.mosstts.codec import MossCodecDecodeOutput, MossCodecEncodeOutput  # noqa: E402
 from voicehub.architectures.mosstts.modeling import _find_last_equal, build_mosstts_model  # noqa: E402
@@ -300,7 +300,9 @@ class ReferenceAudioTests(unittest.TestCase):
 
 
 def _vendored_source_sampling():
-    path = (Path(__file__).resolve().parents[1] / "voicehub/models/mosstts/source/moss_tts_delay/inference_utils.py")
+    path = (
+        Path(__file__).resolve().parents[1] /
+        "voicehub/models/mosstts/source/moss_tts_delay/inference_utils.py")
     spec = importlib.util.spec_from_file_location("_moss_source_inference_utils", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -367,11 +369,16 @@ class HubSnapshotLayoutTests(unittest.TestCase):
             blobs.mkdir(parents=True)
             snapshot.mkdir(parents=True)
             payloads = {
-                "config.json": b"{}",
-                "vocab.json": b"{}",
-                "merges.txt": b"#version: 0.2\n",
-                "tokenizer_config.json": b"{}",
-                "model.safetensors.index.json": json.dumps({
+                "config.json":
+                b"{}",
+                "vocab.json":
+                b"{}",
+                "merges.txt":
+                b"#version: 0.2\n",
+                "tokenizer_config.json":
+                b"{}",
+                "model.safetensors.index.json":
+                json.dumps({
                     "weight_map": {
                         "a": "model-00001-of-00002.safetensors",
                         "b": "model-00002-of-00002.safetensors",
@@ -402,8 +409,8 @@ class HannResamplerTests(unittest.TestCase):
         import torchaudio
 
         generator = torch.Generator().manual_seed(0)
-        for source, target, length in ((16_000, 24_000, 7_704), (44_100, 24_000, 4_321), (48_000, 16_000, 999),
-                                       (22_050, 48_000, 1_000)):
+        for source, target, length in ((16_000, 24_000, 7_704), (44_100, 24_000, 4_321),
+                                       (48_000, 16_000, 999), (22_050, 48_000, 1_000)):
             with self.subTest(source=source, target=target):
                 waveform = torch.randn(2, length, generator=generator) * 0.3
                 expected = torchaudio.functional.resample(waveform, source, target)
