@@ -4,11 +4,11 @@ The published TTS checkpoints already use the same parameter namespace
 as the native VoiceHub modules.  The published ASR-HF checkpoint stores
 its top-level modules unprefixed (``language_model.model.*``,
 ``language_model.lm_head.*``, ``acoustic_tokenizer_encoder.*``, ...),
-which transformers renames on load; this adapter applies the same
-prefix renames and otherwise performs an identity mapping.  Checkpoint
-headers are still treated as untrusted input: every shard is reconciled
-with its index and every name, shape, and dtype is validated before any
-model parameter is assigned.
+which transformers renames on load; this adapter applies the same prefix
+renames and otherwise performs an identity mapping.  Checkpoint headers
+are still treated as untrusted input: every shard is reconciled with its
+index and every name, shape, and dtype is validated before any model
+parameter is assigned.
 """
 
 from __future__ import annotations

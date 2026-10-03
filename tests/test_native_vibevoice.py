@@ -12,6 +12,7 @@ from unittest import mock
 import torch
 
 from voicehub.architectures.causal_lm import Qwen2Config
+from voicehub.architectures.vibevoice.asr_codec import VibeVoiceASREncoderOutput
 from voicehub.architectures.vibevoice.checkpoint import (
     VibeVoiceCheckpointAdapter,
     _materialize_runtime_buffers,
@@ -31,7 +32,6 @@ from voicehub.architectures.vibevoice.metadata import (
     VIBEVOICE_REALTIME_REPOSITORY,
     VIBEVOICE_TTS_REPOSITORY,
 )
-from voicehub.architectures.vibevoice.asr_codec import VibeVoiceASREncoderOutput
 from voicehub.architectures.vibevoice.modeling import (
     VibeVoiceASRForConditionalGeneration,
     VibeVoiceASRModel,
@@ -83,7 +83,8 @@ def _text_config(
     )
 
 
-def _asr_config(*, text_eos_token_id: int | None = VIBEVOICE_TOKEN_IDS["<|endoftext|>"]) -> VibeVoiceASRConfig:
+def _asr_config(
+        *, text_eos_token_id: int | None = VIBEVOICE_TOKEN_IDS["<|endoftext|>"]) -> VibeVoiceASRConfig:
     acoustic = VibeVoiceASRTokenizerConfig(
         hidden_size=4,
         num_filters=2,
@@ -213,6 +214,19 @@ def _write_tokenizer(root: Path) -> None:
     )
 
 
+def _published_asr_name(name: str) -> str:
+    """Rename a native tensor to the unprefixed microsoft/VibeVoice-ASR-HF
+    layout."""
+    for native, published in (
+        ("model.language_model.", "language_model.model."),
+        ("lm_head.", "language_model.lm_head."),
+        ("model.", ""),
+    ):
+        if name.startswith(native):
+            return published + name[len(native):]
+    return name
+
+
 def _write_asr_artifact(
     root: Path,
     *,
@@ -253,12 +267,7 @@ def _write_asr_artifact(
     )
     state = model.state_dict()
     if published_layout:
-        # microsoft/VibeVoice-ASR-HF stores unprefixed top-level modules.
-        state = {
-            name.replace("model.language_model.", "language_model.model.", 1).replace(
-                "lm_head.", "language_model.lm_head.", 1).removeprefix("model."): value
-            for name, value in state.items()
-        }
+        state = {_published_asr_name(name): value for name, value in state.items()}
     save_safetensors(
         state,
         root / "model.safetensors",
@@ -396,8 +405,9 @@ class NativeVibeVoiceTests(unittest.TestCase):
         extract = VibeVoiceASRProcessor.extract_segments
         self.assertEqual(extract("assistant\nplain words\n"), "plain words")
         self.assertEqual(extract("assistant\n[{\"Start\":0"), '[{"Start":0')
-        self.assertEqual(extract('assistant\n[{"Start":"x","End":1,"Content":"a"}]'),
-                         '[{"Start":"x","End":1,"Content":"a"}]')
+        self.assertEqual(
+            extract('assistant\n[{"Start":"x","End":1,"Content":"a"}]'),
+            '[{"Start":"x","End":1,"Content":"a"}]')
         self.assertEqual(
             extract('assistant\n[{"Start":0,"End":1.5,"Speaker":0,"Content":"a"}]\n'),
             [{
