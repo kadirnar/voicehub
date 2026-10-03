@@ -153,6 +153,8 @@ class OrpheusTTSForTextToSpeech(PreTrainedTTSModel):
 
         local_codec = artifacts.root / "snac"
         codec_source = (str(local_codec) if local_codec.is_dir() else self.config.codec_name_or_path)
+        # The upstream orpheus_tts package decodes SNAC on the accelerator
+        # (``SNAC_DEVICE`` defaults to CUDA); keep the codec with the model.
         codec = SNAC.from_pretrained(
             codec_source,
             checkpoint_filename=self.config.codec_checkpoint_filename,
@@ -160,7 +162,7 @@ class OrpheusTTSForTextToSpeech(PreTrainedTTSModel):
             revision=self.config.codec_revision,
             token=self._hub_token,
             local_files_only=self.config.local_files_only,
-        ).eval().to("cpu")
+        ).eval().to(self.device)
         sample_rate = int(getattr(codec, "sampling_rate", 0))
         if sample_rate <= 0:
             raise RuntimeError("Orpheus SNAC codec reported an invalid sample rate: "
