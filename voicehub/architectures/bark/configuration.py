@@ -100,9 +100,11 @@ class BarkSemanticGenerationConfig:
     eos_token_id: int = 10_000
     do_sample: bool = True
     temperature: float = 0.7
-    top_k: int = 50
+    # Upstream `generate_text_semantic` defaults: no top-k/top-p filtering
+    # and an early stop once EOS reaches 20% of the sampling distribution.
+    top_k: int = 0
     top_p: float = 1.0
-    min_eos_p: float | None = None
+    min_eos_p: float | None = 0.2
 
     def __post_init__(self) -> None:
         _validate_sampling(
@@ -140,7 +142,7 @@ class BarkCoarseGenerationConfig:
     sliding_window_len: int = 60
     do_sample: bool = True
     temperature: float = 0.7
-    top_k: int = 50
+    top_k: int = 0
     top_p: float = 1.0
 
     def __post_init__(self) -> None:
@@ -307,13 +309,20 @@ class BarkArchitectureConfig:
         }
 
 
+# Sampling fields every serialized Transformers ``GenerationConfig`` carries
+# with library-wide defaults (``top_k=50``, ``top_p=1.0``).  The published
+# Bark configs never chose them: upstream Bark samples without top-k/top-p.
+_TRANSFORMERS_GENERIC_SAMPLING = frozenset({"top_k", "top_p"})
+
+
 def _known(values: Any, target: type) -> dict[str, Any]:
     if values is None:
         return {}
     if not isinstance(values, dict):
         raise TypeError(f"{target.__name__} configuration must be an object.")
     names = target.__dataclass_fields__
-    return {name: value for name, value in values.items() if name in names}
+    ignored = (_TRANSFORMERS_GENERIC_SAMPLING if "transformers_version" in values else frozenset())
+    return {name: value for name, value in values.items() if name in names and name not in ignored}
 
 
 def _nonnegative_integer(value: Any, *, name: str) -> None:

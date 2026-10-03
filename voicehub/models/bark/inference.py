@@ -380,7 +380,10 @@ class BarkForTextToSpeech(PreTrainedTTSModel):
         )
         self._torch = torch
         self.model = model
-        self.processor = processor
+        # Keep the wrapper-level text processor: the shared ``generate()``
+        # contract calls ``self.processor(text, **options)`` and forwards the
+        # result to ``_generate``.  Bark's tensor processor is used only by
+        # ``_processor_inputs`` and training.
         self.transformers_processor = processor
         self._resolved_artifacts = artifacts
 
@@ -439,8 +442,7 @@ class BarkForTextToSpeech(PreTrainedTTSModel):
         return prepared
 
     def _processor_inputs(self, text: str, **kwargs: Any) -> dict[str, Any]:
-        processor = self.transformers_processor or self.processor
-        encoded = processor(
+        encoded = self.transformers_processor(
             text=text,
             return_tensors="pt",
             **kwargs,
@@ -587,7 +589,7 @@ class BarkForTextToSpeech(PreTrainedTTSModel):
             save_directory / "generation_config.json",
             self.native_generation_config.to_dict(),
         )
-        self.processor.save_pretrained(save_directory)
+        self.transformers_processor.save_pretrained(save_directory)
         artifacts = self._resolved_artifacts
         if artifacts is not None:
             shutil.copy2(artifacts.tokenizer, save_directory / "tokenizer.json")

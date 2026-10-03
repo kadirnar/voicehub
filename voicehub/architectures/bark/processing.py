@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import struct
 import unicodedata
 from collections.abc import Mapping, Sequence
@@ -55,6 +56,17 @@ class BarkWordPieceTokenizer:
         self.do_lower_case = do_lower_case
         self.tokenize_chinese_chars = tokenize_chinese_chars
         self.max_input_chars_per_word = max_input_chars_per_word
+        # BertTokenizer never splits its special tokens: literal "[MASK]" in
+        # the text maps to the special ID, as in upstream Bark.
+        special = sorted(
+            {
+                token
+                for token in (unk_token, pad_token, "[CLS]", "[SEP]", "[MASK]") if token in self.token_to_id
+            },
+            key=len,
+            reverse=True,
+        )
+        self._special_pattern = re.compile("(" + "|".join(map(re.escape, special)) + ")")
 
     @classmethod
     def from_vocab_file(
@@ -78,9 +90,21 @@ class BarkWordPieceTokenizer:
     def tokenize(self, text: str) -> list[str]:
         if not isinstance(text, str):
             raise TypeError("Bark text must be a string.")
+        pieces: list[str] = []
+        for index, part in enumerate(self._special_pattern.split(text)):
+            if index % 2:
+                pieces.append(part)
+            elif part:
+                pieces.extend(self._tokenize_plain(part))
+        return pieces
+
+    def _tokenize_plain(self, text: str) -> list[str]:
         cleaned = self._clean_text(text)
         if self.tokenize_chinese_chars:
             cleaned = self._tokenize_chinese(cleaned)
+        # Like BERT's BasicTokenizer, compose canonically equivalent
+        # spellings (e.g. "e" + U+0301 and "é") before vocabulary lookup.
+        cleaned = unicodedata.normalize("NFC", cleaned)
         basic_tokens: list[str] = []
         for token in cleaned.strip().split():
             if self.do_lower_case:
@@ -112,9 +136,12 @@ class BarkWordPieceTokenizer:
         for character in text:
             codepoint = ord(character)
             category = unicodedata.category(character)
-            if codepoint in {0, 0xFFFD} or category.startswith("C"):
+            # BERT counts tab, newline and carriage return as whitespace even
+            # though Unicode classifies them as control characters.
+            whitespace = character in " \t\n\r" or category == "Zs"
+            if codepoint in {0, 0xFFFD} or (category.startswith("C") and not whitespace):
                 continue
-            output.append(" " if character.isspace() else character)
+            output.append(" " if whitespace else character)
         return "".join(output)
 
     @staticmethod
@@ -380,6 +407,7 @@ def _validate_preset(values: Mapping[str, Any]) -> dict[str, Tensor]:
             raise ValueError(f"Bark {name} must be a non-empty {dimensions}D tensor.")
         if value.dtype not in {
                 torch.uint8,
+                torch.uint16,
                 torch.int8,
                 torch.int16,
                 torch.int32,
@@ -427,12 +455,13 @@ def _read_npy_integer(path: str | Path) -> Tensor:
             payload[header_start:header_end].decode("latin-1" if major < 3 else "utf-8"))
     except (SyntaxError, ValueError, UnicodeDecodeError) as error:
         raise ValueError("Invalid Bark speaker prompt header.") from error
-    if not isinstance(header, dict) or header.get("fortran_order") is not False:
-        raise ValueError("Bark speaker prompts must use C-order NPY arrays.")
+    if not isinstance(header, dict) or not isinstance(header.get("fortran_order"), bool):
+        raise ValueError("Invalid Bark speaker prompt header.")
     descriptor = header.get("descr")
     dtype_map = {
         "|u1": (torch.uint8, 1),
         "|i1": (torch.int8, 1),
+        "<u2": (torch.uint16, 2),
         "<i2": (torch.int16, 2),
         "<i4": (torch.int32, 4),
         "<i8": (torch.int64, 8),
@@ -448,11 +477,16 @@ def _read_npy_integer(path: str | Path) -> Tensor:
     data = payload[header_end:]
     if len(data) != count * item_size:
         raise ValueError("Bark speaker prompt payload length is inconsistent.")
-    return torch.frombuffer(
+    values = torch.frombuffer(
         bytearray(data),
         dtype=dtype,
         count=count,
-    ).reshape(shape).clone()
+    )
+    if header["fortran_order"]:
+        # Column-major payload (used by some published presets, e.g.
+        # v2/en_speaker_6_coarse_prompt.npy): read reversed, then transpose.
+        return values.reshape(shape[::-1]).permute(*reversed(range(len(shape)))).contiguous()
+    return values.reshape(shape).clone()
 
 
 def math_prod(values: tuple[int, ...]) -> int:

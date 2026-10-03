@@ -398,24 +398,45 @@ class BarkCausalModel(nn.Module):
                 )
             cache = output.past_key_values
             logits = output.logits[:, -1, :].float()
-            if allowed_token_range is not None:
-                logits = _mask_outside(logits, *allowed_token_range)
+            start, end = 0, logits.shape[-1]
+            ranges = [allowed_token_range]
             if alternating_ranges is not None:
-                selected = alternating_ranges[step % len(alternating_ranges)]
-                logits = _mask_outside(logits, *selected)
-            if eos_token_id is not None and min_eos_p is not None:
-                eos_probability = F.softmax(logits, dim=-1)[:, eos_token_id]
+                ranges.append(alternating_ranges[step % len(alternating_ranges)])
+            for selected in ranges:
+                if selected is not None:
+                    start, end = max(start, selected[0]), min(end, selected[1])
+            if not 0 <= start < end <= logits.shape[-1]:
+                raise ValueError("Bark generation token range is outside the vocabulary.")
+            # Sample within the permitted slice, as upstream Bark does. This is
+            # the same distribution as masking the full vocabulary, but draws
+            # the same random numbers as upstream for a given seed.
+            logits = logits[:, start:end]
+            relative_eos = (
+                None if eos_token_id is None or not start <= eos_token_id < end else eos_token_id - start)
+            if relative_eos is not None and min_eos_p is not None:
+                # Upstream Bark stops once EOS reaches `min_eos_p` in the
+                # distribution it samples from (after top-p/top-k/temperature).
+                eos_probability = F.softmax(
+                    _filter_logits(
+                        logits,
+                        temperature=temperature,
+                        top_k=top_k,
+                        top_p=top_p,
+                    ),
+                    dim=-1,
+                )[:, relative_eos]
                 prioritize = eos_probability >= min_eos_p
                 if bool(prioritize.any()):
+                    logits = logits.clone()
                     logits[prioritize] = torch.finfo(logits.dtype).min
-                    logits[prioritize, eos_token_id] = 0
+                    logits[prioritize, relative_eos] = 0
             next_token = _sample_token(
                 logits,
                 do_sample=do_sample,
                 temperature=temperature,
                 top_k=top_k,
                 top_p=top_p,
-            )
+            ) + start
             if eos_token_id is not None:
                 next_token = torch.where(
                     finished,
@@ -429,36 +450,18 @@ class BarkCausalModel(nn.Module):
         return result
 
 
-def _mask_outside(logits: Tensor, start: int, end: int) -> Tensor:
-    if not 0 <= start < end <= logits.shape[-1]:
-        raise ValueError("Bark generation token range is outside the vocabulary.")
-    masked = torch.full_like(logits, torch.finfo(logits.dtype).min)
-    masked[:, start:end] = logits[:, start:end]
-    return masked
-
-
-def _sample_token(
+def _filter_logits(
     logits: Tensor,
     *,
-    do_sample: bool,
     temperature: float,
     top_k: int,
     top_p: float,
 ) -> Tensor:
-    scaled = logits / temperature
-    if top_k:
-        threshold = torch.topk(
-            scaled,
-            k=min(top_k, scaled.shape[-1]),
-            dim=-1,
-        ).values[:, -1:]
-        scaled = scaled.masked_fill(
-            scaled < threshold,
-            torch.finfo(scaled.dtype).min,
-        )
+    """Apply upstream Bark's filters: top-p and top-k on the unscaled logits,
+    then temperature."""
     if top_p < 1:
         sorted_logits, sorted_indices = torch.sort(
-            scaled,
+            logits,
             descending=True,
             dim=-1,
         )
@@ -470,9 +473,35 @@ def _sample_token(
             remove,
             torch.finfo(sorted_logits.dtype).min,
         )
-        filtered = torch.full_like(scaled, torch.finfo(scaled.dtype).min)
-        filtered.scatter_(1, sorted_indices, sorted_logits)
-        scaled = filtered
+        filtered = torch.full_like(logits, torch.finfo(logits.dtype).min)
+        logits = filtered.scatter(1, sorted_indices, sorted_logits)
+    if top_k:
+        threshold = torch.topk(
+            logits,
+            k=min(top_k, logits.shape[-1]),
+            dim=-1,
+        ).values[:, -1:]
+        logits = logits.masked_fill(
+            logits < threshold,
+            torch.finfo(logits.dtype).min,
+        )
+    return logits / temperature
+
+
+def _sample_token(
+    logits: Tensor,
+    *,
+    do_sample: bool,
+    temperature: float,
+    top_k: int,
+    top_p: float,
+) -> Tensor:
+    scaled = _filter_logits(
+        logits,
+        temperature=temperature,
+        top_k=top_k,
+        top_p=top_p,
+    )
     if do_sample:
         probabilities = F.softmax(scaled, dim=-1)
         return torch.multinomial(probabilities, num_samples=1).squeeze(1)
@@ -924,7 +953,7 @@ class BarkFineModel(nn.Module):
                     codebook_idx=codebook,
                 ).logits
                 relevant = logits[:, relative_fill:, :codebook_size]
-                if temperature is None or temperature == 1:
+                if temperature is None:
                     prediction = relevant.argmax(dim=-1)
                 else:
                     if temperature <= 0:
@@ -1102,6 +1131,12 @@ def _split_options(options: dict[str, Any], ) -> tuple[dict[str, Any], dict[str,
     }
     semantic_only = {"max_new_tokens", "min_eos_p"}
     fine_allowed = {"temperature"}
+    # Like upstream `generate_audio(text_temp, waveform_temp)`, unprefixed
+    # options drive the semantic and coarse samplers only; the fine stage
+    # keeps its own temperature unless `fine_temperature` is given.
+    if "min_eos_p" in options:
+        options = dict(options)
+        semantic["min_eos_p"] = options.pop("min_eos_p")
     for name, value in options.items():
         if name.startswith("semantic_"):
             key = name[len("semantic_"):]
@@ -1121,8 +1156,6 @@ def _split_options(options: dict[str, Any], ) -> tuple[dict[str, Any], dict[str,
         elif name in allowed:
             semantic.setdefault(name, value)
             coarse.setdefault(name, value)
-            if name in fine_allowed:
-                fine.setdefault(name, value)
         else:
             raise ValueError(f"Unsupported Bark generation option {name!r}.")
     return semantic, coarse, fine
