@@ -372,6 +372,38 @@ print(json.dumps({name: name in sys.modules for name in names}))
             [(0.0, 0.04, "hello"), (0.04, 0.08, "hello")],
         )
 
+    def test_documented_openai_whisper_example_arguments_are_accepted(self):
+        import ast
+        import runpy
+
+        profile = runpy.run_path(str(PROJECT_ROOT / "scripts" /
+                                     "model_documentation.py"))["INFERENCE_PROFILES"]["asr_openai_whisper"]
+        arguments = {}
+        for argument in profile.arguments:
+            name, _, value = argument.partition("=")
+            arguments[name] = ast.literal_eval(value)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = OpenAIWhisperForSpeechRecognition(
+                OpenAIWhisperConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+            )
+            wrapper.load()
+            token_set = wrapper.generation_adapter.token_set
+            wrapper.generation_adapter = SimpleNamespace(
+                token_set=token_set,
+                generate=lambda features, *, config: SimpleNamespace(
+                    generated_sequences=torch.tensor([[272, 259, 274, 261]]),
+                    language_token_ids=None,
+                ),
+            )
+            # The page once documented ``num_beams=5``, which the greedy
+            # native decoder rejects.
+            result = wrapper.transcribe(torch.zeros(800), sampling_rate=16_000, **arguments)
+
+        self.assertEqual(result.text, "hello")
+
     def test_untimestamped_transcription_keeps_fixed_windows(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
