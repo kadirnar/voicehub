@@ -17,7 +17,7 @@ from voicehub.architectures.fishtts.prompting import (
 )
 from voicehub.architectures.fishtts.sampling import generate_fish_codes
 from voicehub.architectures.fishtts.tokenization import FishTokenizer
-from voicehub.processing.waveform import load_native_audio
+from voicehub.processing.waveform import load_native_audio, resample_waveform_hann
 
 
 class FishS2Runtime(nn.Module):
@@ -68,16 +68,15 @@ class FishS2Runtime(nn.Module):
         *,
         sampling_rate: int | None = None,
     ) -> Tensor:
-        loaded = load_native_audio(
-            audio,
-            sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
-        )
+        loaded = load_native_audio(audio, sampling_rate=sampling_rate)
         parameter = next(self.codec.parameters())
-        waveform = loaded.waveform.to(
-            device=parameter.device,
-            dtype=parameter.dtype,
-        ).view(1, 1, -1)
+        # The source resamples the float32 reference with torchaudio's
+        # functional resampler on the codec device before the dtype cast.
+        waveform = resample_waveform_hann(
+            loaded.waveform.to(device=parameter.device, dtype=torch.float32),
+            loaded.sampling_rate,
+            self.sample_rate,
+        ).to(dtype=parameter.dtype).view(1, 1, -1)
         lengths = torch.tensor(
             [waveform.shape[-1]],
             device=waveform.device,

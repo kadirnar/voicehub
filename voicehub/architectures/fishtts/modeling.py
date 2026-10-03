@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any
 
 import torch
@@ -42,26 +43,37 @@ def _causal_attention_mask(
     )
 
 
+@lru_cache(maxsize=16)
+def _rotary_table(
+    length: int,
+    dimension: int,
+    base: float,
+    device: torch.device,
+) -> Tensor:
+    """Return the source's ``[length, dimension // 2, 2]`` RoPE table.
+
+    The source precomputes ``torch.polar`` on the CPU and stores it in
+    bfloat16 for every model dtype, so the rounded table is reproduced
+    here.
+    """
+    inverse = 1.0 / (base**(torch.arange(0, dimension, 2)[:dimension // 2].float() / dimension))
+    angles = torch.outer(torch.arange(length), inverse)
+    table = torch.polar(torch.ones_like(angles), angles)
+    return torch.stack((table.real, table.imag), dim=-1).to(
+        device=device,
+        dtype=torch.bfloat16,
+    )
+
+
 def _rotary_frequencies(
     positions: Tensor,
     dimension: int,
     *,
     base: float,
-    dtype: torch.dtype,
+    length: int,
 ) -> tuple[Tensor, Tensor]:
-    inverse = 1.0 / (
-        base**(torch.arange(
-            0,
-            dimension,
-            2,
-            device=positions.device,
-            dtype=torch.float32,
-        ) / dimension))
-    angles = positions.to(torch.float32).unsqueeze(-1) * inverse
-    return (
-        angles.cos().to(dtype=dtype),
-        angles.sin().to(dtype=dtype),
-    )
+    table = _rotary_table(length, dimension, float(base), positions.device)[positions]
+    return table[..., 0], table[..., 1]
 
 
 def _apply_rotary(
@@ -97,6 +109,21 @@ class FishRMSNorm(nn.Module):
         normalized = hidden_states.float()
         normalized = normalized * torch.rsqrt(normalized.square().mean(dim=-1, keepdim=True) + self.epsilon)
         return normalized.to(dtype=hidden_states.dtype) * self.weight
+
+
+class FishQKRMSNorm(FishRMSNorm):
+    """Per-head query/key norm, applying the weight before downcasting.
+
+    The source uses ``torch.nn.RMSNorm`` here, unlike its block norms.
+    """
+
+    def forward(self, hidden_states: Tensor) -> Tensor:
+        return F.rms_norm(
+            hidden_states,
+            (hidden_states.shape[-1], ),
+            self.weight,
+            self.epsilon,
+        )
 
 
 class FishKVCache(nn.Module):
@@ -176,11 +203,11 @@ class FishAttention(nn.Module):
             bias=config.attention_o_bias,
         )
         if config.attention_qk_norm:
-            self.q_norm = FishRMSNorm(
+            self.q_norm = FishQKRMSNorm(
                 config.head_dim,
                 epsilon=config.rms_norm_eps,
             )
-            self.k_norm = FishRMSNorm(
+            self.k_norm = FishQKRMSNorm(
                 config.head_dim,
                 epsilon=config.rms_norm_eps,
             )
@@ -193,14 +220,17 @@ class FishAttention(nn.Module):
         value: Tensor,
         mask: Tensor | None,
     ) -> Tensor:
-        scores = torch.matmul(query, key.transpose(-2, -1))
-        scores = scores / math.sqrt(query.shape[-1])
+        # Same operation order and dtype as the source's
+        # ``eq_scaled_dot_product_attention``.
+        scores = torch.matmul(query, key.transpose(-2, -1)) * (1 / math.sqrt(query.shape[-1]))
         if mask is not None:
-            scores = scores.masked_fill(
-                ~mask,
-                torch.finfo(scores.dtype).min,
+            bias = torch.zeros(
+                (1, 1, query.shape[-2], key.shape[-2]),
+                device=scores.device,
+                dtype=scores.dtype,
             )
-        weights = torch.softmax(scores.float(), dim=-1).to(scores.dtype)
+            scores = scores + torch.where(mask.logical_not(), float("-inf"), bias)
+        weights = torch.softmax(scores, dim=-1)
         if self.config.dropout and self.training:
             weights = F.dropout(
                 weights,
@@ -248,7 +278,7 @@ class FishAttention(nn.Module):
             positions,
             self.config.head_dim,
             base=self.config.rope_theta,
-            dtype=query.dtype,
+            length=self.config.max_position_embeddings,
         )
         query = _apply_rotary(query, cosine, sine).transpose(1, 2)
         key = _apply_rotary(key, cosine, sine).transpose(1, 2)
@@ -573,6 +603,7 @@ class FishS2ForConditionalGeneration(nn.Module):
         *,
         positions: Tensor,
         attention_mask: Tensor | None,
+        last_only: bool = False,
     ) -> FishSlowOutput:
         for layer in self.layers:
             if (self.config.text.gradient_checkpointing and self.training and
@@ -590,6 +621,8 @@ class FishS2ForConditionalGeneration(nn.Module):
                     positions,
                     attention_mask,
                 )
+        if last_only:
+            hidden_states = hidden_states[:, -1:]
         normalized = self.norm(hidden_states)
         logits = (
             F.linear(normalized, self.embeddings.weight)
@@ -740,16 +773,13 @@ class FishS2ForConditionalGeneration(nn.Module):
             self.max_sequence_length,
             device=input_ids.device,
         )
-        slow = self._run_slow(
+        # Like the source, keep only the last position before the final
+        # norm and vocabulary projection.
+        return self._run_slow(
             hidden_states,
             positions=positions,
             attention_mask=mask,
-        )
-        if return_all or slow.logits.shape[1] == 1:
-            return slow
-        return FishSlowOutput(
-            logits=slow.logits[:, -1:],
-            hidden_states=slow.hidden_states[:, -1:],
+            last_only=not return_all,
         )
 
     def forward_generate_fast(
@@ -781,6 +811,7 @@ __all__ = [
     "DualARTransformer",
     "FishAttention",
     "FishKVCache",
+    "FishQKRMSNorm",
     "FishRMSNorm",
     "FishS2ForConditionalGeneration",
     "FishSemanticOutput",

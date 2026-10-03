@@ -19,6 +19,7 @@ from torch.nn import functional as F
 from torch.nn.utils.parametrizations import weight_norm
 
 from voicehub.architectures.fishtts.configuration import FishCodecConfig
+from voicehub.architectures.fishtts.modeling import _rotary_table
 from voicehub.components.audio.codecs.dac.model.base import CodecMixin
 from voicehub.components.audio.codecs.dac.nn.layers import Snake1d
 from voicehub.components.audio.codecs.dac.nn.quantize import ResidualVectorQuantize
@@ -184,6 +185,11 @@ class FishCodecLayerScale(nn.Module):
         return values * self.gamma
 
 
+# Like the semantic model, the source codec applies a bfloat16 RoPE table
+# computed on the CPU with ``torch.polar``.
+_ROTARY_BUCKET = 4_096
+
+
 def _codec_rotary(
     values: Tensor,
     positions: Tensor,
@@ -191,17 +197,11 @@ def _codec_rotary(
     base: float,
 ) -> Tensor:
     dimension = values.shape[-1]
-    inverse = 1.0 / (
-        base**(torch.arange(
-            0,
-            dimension,
-            2,
-            dtype=torch.float32,
-            device=values.device,
-        ) / dimension))
-    angles = positions.float().unsqueeze(-1) * inverse
-    cosine = angles.cos().view(1, positions.numel(), 1, -1)
-    sine = angles.sin().view(1, positions.numel(), 1, -1)
+    # Rows are independent of the table length; bucket it for caching.
+    length = _ROTARY_BUCKET * math.ceil(positions.numel() / _ROTARY_BUCKET)
+    table = _rotary_table(length, dimension, float(base), positions.device)[positions].float()
+    cosine = table[..., 0].view(1, positions.numel(), 1, -1)
+    sine = table[..., 1].view(1, positions.numel(), 1, -1)
     pairs = values.float().reshape(*values.shape[:-1], -1, 2)
     output = torch.stack(
         (
