@@ -306,7 +306,8 @@ print(json.dumps({name: name in sys.modules for name in names}))
         # The generated model page once passed language="en", which the
         # single-vocabulary default checkpoint rejects at runtime.
         profiles = runpy.run_path(
-            str(Path(__file__).resolve().parents[1] / "scripts" / "model_documentation.py"))["INFERENCE_PROFILES"]
+            str(Path(__file__).resolve().parents[1] / "scripts" /
+                "model_documentation.py"))["INFERENCE_PROFILES"]
         arguments = {}
         for argument in profiles["asr_wav2vec2"].arguments:
             name, _, value = argument.partition("=")
