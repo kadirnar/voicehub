@@ -641,17 +641,25 @@ class CohereAsrTokenizerAndProcessorTests(unittest.TestCase):
             extractor.dither = 0.0
             manual = extractor(noisy, sampling_rate=16_000, chunk_long_audio=False)
             torch.testing.assert_close(dithered["input_features"], manual["input_features"], rtol=0, atol=0)
+
+    def test_frontend_extracts_on_cpu_for_every_target_device(self):
+        # The reference processor computes features on CPU; the target
+        # device only receives the finished tensors.
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = _runtime(Path(temporary))
+            extractor = runtime.processor.feature_extractor
+            extractor.dither = 1e-2
+            waveform = 0.3 * torch.randn(64, generator=torch.Generator().manual_seed(7))
+            on_cpu = extractor(waveform, sampling_rate=16_000, chunk_long_audio=False)
+            meta = extractor(waveform, sampling_rate=16_000, device="meta", chunk_long_audio=False)
+            self.assertEqual(meta["input_features"].device.type, "meta")
+            self.assertEqual(meta["attention_mask"].device.type, "meta")
             if torch.cuda.is_available():
-                extractor.dither = 1e-2
-                on_cuda = extractor(waveform, sampling_rate=16_000, device="cuda", chunk_long_audio=False)
-                # Mel bin 0 of the tiny bank is empty: its normalized value
-                # is rounding noise divided by the epsilon, so skip it.
+                on_cuda = extractor(
+                    waveform.cuda(), sampling_rate=16_000, device="cuda", chunk_long_audio=False)
+                self.assertEqual(on_cuda["input_features"].device.type, "cuda")
                 torch.testing.assert_close(
-                    on_cuda["input_features"].cpu()[..., 1:],
-                    dithered["input_features"][..., 1:],
-                    rtol=1e-4,
-                    atol=1e-4,
-                )
+                    on_cuda["input_features"].cpu(), on_cpu["input_features"], rtol=0, atol=0)
 
     def test_optional_transformers_frontend_parity(self):
         try:

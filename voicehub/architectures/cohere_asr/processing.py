@@ -260,7 +260,10 @@ class CohereAsrFeatureExtractor:
             raise ValueError(
                 f"Cohere ASR expects {self.sampling_rate} Hz audio; received "
                 f"{sampling_rate} Hz.")
-        waveforms = self._waveforms(audio, device=device)
+        # Like the reference processor, extract on CPU and only then move
+        # the features: CUDA FFTs round differently (up to ~3e-4 after
+        # normalization), which flips near-tied bfloat16 decoder steps.
+        waveforms = self._waveforms(audio, device="cpu")
         if chunk_long_audio:
             waveforms, chunk_index = self._chunk(waveforms)
         else:
@@ -269,7 +272,7 @@ class CohereAsrFeatureExtractor:
                 raise ValueError("Cohere ASR waveform exceeds the verified single-clip "
                                  "duration.")
             chunk_index = tuple((index, None) for index in range(len(waveforms)))
-        result: dict[str, Any] = self._features(waveforms)
+        result: dict[str, Any] = {name: value.to(device) for name, value in self._features(waveforms).items()}
         result["audio_chunk_index"] = chunk_index
         return result
 
