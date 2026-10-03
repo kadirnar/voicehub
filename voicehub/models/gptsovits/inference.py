@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import secrets
 from collections.abc import Mapping
+from inspect import signature
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,17 @@ class GPTSoVITSForTextToSpeech(PreTrainedTTSModel):
         "v4lora",
         "LoRA",
     })
+    # Raw-text frontend options. Prepared tensors already fix the text,
+    # reference, and segmentation, so these cannot affect prepared synthesis.
+    _RAW_FRONTEND_OPTIONS = (
+        "text_language",
+        "speaker_audio_path",
+        "prompt_language",
+        "prompt_text",
+        "text_split_method",
+        "batch_size",
+        "parallel_inference",
+    )
 
     def __init__(
         self,
@@ -244,6 +256,16 @@ class GPTSoVITSForTextToSpeech(PreTrainedTTSModel):
             ]
             if missing:
                 raise ValueError("Prepared GPT-SoVITS inference requires: " + ", ".join(missing))
+            parameters = signature(self._generate).parameters
+            ignored = [
+                name for name in self._RAW_FRONTEND_OPTIONS
+                if model_inputs.get(name) not in (None, parameters[name].default)
+            ]
+            if ignored:
+                raise ValueError(
+                    "Prepared GPT-SoVITS inference cannot apply raw-text "
+                    "frontend options; the prepared tensors already fix the "
+                    "text, reference, and segmentation. Remove: " + ", ".join(ignored))
         else:
             for name, description in (
                 ("text_language", "the synthesis-text language"),
