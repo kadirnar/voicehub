@@ -294,6 +294,14 @@ class NativeWhisperXProviderTests(unittest.TestCase):
         self.assertEqual(slices[0][0].item(), 1600.0)
         self.assertEqual(slices[0][-1].item(), 14399.0)
 
+    def test_alignment_model_defaults_to_float32_like_whisperx(self):
+        # WhisperX always runs its alignment models in float32, also on CUDA.
+        self.assertEqual(WhisperXConfig().alignment_torch_dtype, "float32")
+        self.assertEqual(
+            WhisperXConfig(alignment_torch_dtype="float16").alignment_torch_dtype,
+            "float16",
+        )
+
     def test_alignment_is_not_loaded_for_plain_transcription(self):
         model = WhisperXForSpeechRecognition(
             WhisperXConfig(name_or_path="small"),
