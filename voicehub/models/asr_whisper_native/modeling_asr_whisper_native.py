@@ -296,6 +296,34 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
                     ))
         return tuple(segments)
 
+    def _timestamp_resume(
+        self,
+        token_ids: Sequence[int],
+    ) -> tuple[list[int], int | None]:
+        """Apply OpenAI ``transcribe``'s seek rule to one timestamped window.
+
+        When the window does not end with a single closing timestamp,
+        OpenAI Whisper keeps the segments up to the last consecutive
+        timestamp pair and decodes the audio again from that timestamp.
+        Returns the tokens to keep and the resume offset in samples, or
+        ``None`` when the next window starts after this one.
+        """
+        if self.tokenizer is None:
+            raise RuntimeError("Whisper tokenizer is not loaded.")
+        tokens = list(token_ids)
+        if self.tokenizer.eot in tokens:
+            tokens = tokens[:tokens.index(self.tokenizer.eot)]
+        timestamps = [self.tokenizer.timestamp_for_token(token) for token in tokens]
+        is_timestamp = [timestamp is not None for timestamp in timestamps]
+        if is_timestamp[-2:] == [False, True]:
+            return tokens, None
+        pairs = [index + 1 for index in range(len(tokens) - 1) if is_timestamp[index] and is_timestamp[index + 1]]
+        if not pairs:
+            return tokens, None
+        last_slice = pairs[-1]
+        resume = round(timestamps[last_slice - 1].seconds * 16_000)
+        return tokens[:last_slice], resume
+
     @staticmethod
     def _join_chunk_text(chunks: Sequence[str]) -> str:
         combined = ""
@@ -374,11 +402,10 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
             for code, token_id in (self.generation_adapter.token_set.language_tokens.items())
         }
 
-        for start in range(0, materialized.waveform.numel(), chunk_samples):
-            stop = min(
-                start + chunk_samples,
-                materialized.waveform.numel(),
-            )
+        total_samples = materialized.waveform.numel()
+        start = 0
+        while start < total_samples:
+            stop = min(start + chunk_samples, total_samples)
             chunk = materialized.waveform[start:stop]
             features = self._chunk_features(chunk)
             decoding = WhisperDecodingConfig(
@@ -390,7 +417,9 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
                     use_cache=True,
                 ),
                 task=task,
-                language=(requested_language if self.generation_adapter.token_set.is_multilingual else None),
+                # Like OpenAI ``transcribe``, every window after the first
+                # reuses the language detected in the first one.
+                language=(detected_language if self.generation_adapter.token_set.is_multilingual else None),
                 return_timestamps=bool(return_timestamps),
                 suppress_tokens=tuple(self._generation_values.get("suppress_tokens", ())),
             )
@@ -399,6 +428,11 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
                 config=decoding,
             )
             tokens = generated.generated_sequences[0].tolist()
+            advance = stop - start
+            if return_timestamps:
+                tokens, resume = self._timestamp_resume(tokens)
+                if resume is not None and 0 < resume < advance:
+                    advance = resume
             raw_text = self.tokenizer.decode(
                 tokens,
                 skip_special_tokens=True,
@@ -414,6 +448,7 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
                         chunk_duration=(stop - start) / 16_000,
                         language=detected_language,
                     ))
+            start += advance
 
         return ASROutput(
             text=self._join_chunk_text(chunk_texts),
