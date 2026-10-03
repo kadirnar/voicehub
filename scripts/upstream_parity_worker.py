@@ -28,8 +28,8 @@ from pathlib import Path
 def json_safe(value):
     """Return ``value`` as strict-JSON data for the report.
 
-    Model metadata may carry tensors or arrays; scalar ones become Python
-    numbers and larger ones are summarized by shape and dtype.
+    Model metadata may carry tensors or arrays; scalar ones become
+    Python numbers and larger ones are summarized by shape and dtype.
     """
     if isinstance(value, dict):
         return {str(key): json_safe(item) for key, item in value.items()}
@@ -59,9 +59,10 @@ def _tensor_input_arrays(path):
 def load_tensor_inputs(path):
     """Load a pickle-free ``.npz`` archive as ``{keyword: torch.Tensor}``.
 
-    Each array becomes one keyword argument named after its archive entry
-    (e.g. ``np.savez(path, speaker_embedding=...)``). Arrays are read once
-    and copied per call, so a model cannot alter later repeats in place.
+    Each array becomes one keyword argument named after its archive
+    entry (e.g. ``np.savez(path, speaker_embedding=...)``). Arrays are
+    read once and copied per call, so a model cannot alter later repeats
+    in place.
     """
     import torch
 
