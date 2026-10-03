@@ -398,12 +398,22 @@ class BarkCausalModel(nn.Module):
                 )
             cache = output.past_key_values
             logits = output.logits[:, -1, :].float()
-            if allowed_token_range is not None:
-                logits = _mask_outside(logits, *allowed_token_range)
-            if alternating_ranges is not None:
-                selected = alternating_ranges[step % len(alternating_ranges)]
-                logits = _mask_outside(logits, *selected)
-            if eos_token_id is not None and min_eos_p is not None:
+            start, end = 0, logits.shape[-1]
+            for selected in (
+                    allowed_token_range,
+                    None if alternating_ranges is None else alternating_ranges[step % len(alternating_ranges)],
+            ):
+                if selected is not None:
+                    start, end = max(start, selected[0]), min(end, selected[1])
+            if not 0 <= start < end <= logits.shape[-1]:
+                raise ValueError("Bark generation token range is outside the vocabulary.")
+            # Sample within the permitted slice, as upstream Bark does. This is
+            # the same distribution as masking the full vocabulary, but draws
+            # the same random numbers as upstream for a given seed.
+            logits = logits[:, start:end]
+            relative_eos = (
+                None if eos_token_id is None or not start <= eos_token_id < end else eos_token_id - start)
+            if relative_eos is not None and min_eos_p is not None:
                 # Upstream Bark stops once EOS reaches `min_eos_p` in the
                 # distribution it samples from (after top-p/top-k/temperature).
                 eos_probability = F.softmax(
@@ -414,18 +424,19 @@ class BarkCausalModel(nn.Module):
                         top_p=top_p,
                     ),
                     dim=-1,
-                )[:, eos_token_id]
+                )[:, relative_eos]
                 prioritize = eos_probability >= min_eos_p
                 if bool(prioritize.any()):
+                    logits = logits.clone()
                     logits[prioritize] = torch.finfo(logits.dtype).min
-                    logits[prioritize, eos_token_id] = 0
+                    logits[prioritize, relative_eos] = 0
             next_token = _sample_token(
                 logits,
                 do_sample=do_sample,
                 temperature=temperature,
                 top_k=top_k,
                 top_p=top_p,
-            )
+            ) + start
             if eos_token_id is not None:
                 next_token = torch.where(
                     finished,
@@ -437,14 +448,6 @@ class BarkCausalModel(nn.Module):
             if eos_token_id is not None and bool(finished.all()):
                 break
         return result
-
-
-def _mask_outside(logits: Tensor, start: int, end: int) -> Tensor:
-    if not 0 <= start < end <= logits.shape[-1]:
-        raise ValueError("Bark generation token range is outside the vocabulary.")
-    masked = torch.full_like(logits, torch.finfo(logits.dtype).min)
-    masked[:, start:end] = logits[:, start:end]
-    return masked
 
 
 def _filter_logits(

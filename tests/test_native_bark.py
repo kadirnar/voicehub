@@ -263,6 +263,34 @@ class NativeBarkTests(unittest.TestCase):
             self.assertEqual(run(0.5), [3, 3, 3])
             self.assertEqual(run(1.0), [10])
 
+    def test_sampling_draws_within_the_permitted_slice_like_upstream(self):
+        import torch
+
+        from voicehub.architectures.bark.modeling import BarkModel
+
+        architecture, generation = self._tiny_config()
+        torch.manual_seed(5)
+        model = BarkModel(architecture, generation_config=generation).eval()
+        coarse = model.coarse_acoustics
+        prefix = torch.tensor([[1, 2, 3]])
+        with torch.no_grad():
+            logits = coarse(prefix).logits[:, -1, 12:16].float()
+            torch.manual_seed(11)
+            expected = torch.multinomial(torch.softmax(logits / 0.7, dim=-1), 1)[0, 0] + 12
+            torch.manual_seed(11)
+            generated = coarse._autoregressive_generate(
+                prefix,
+                max_new_tokens=1,
+                do_sample=True,
+                temperature=0.7,
+                top_k=0,
+                top_p=1.0,
+                alternating_ranges=((12, 16), (16, 20)),
+            )
+        # Upstream samples from the codebook's logit slice; drawing from the
+        # masked full vocabulary would consume different random numbers.
+        self.assertEqual(generated[0, -1].item(), expected.item())
+
     def test_fine_temperature_one_samples_instead_of_argmax(self):
         import torch
 
