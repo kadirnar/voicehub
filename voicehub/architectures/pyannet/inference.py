@@ -21,6 +21,8 @@ class PyanNetFrameOutput:
     frame_length_samples: int
     frame_start_samples: int
     valid_samples: int
+    frame_step_s: float | None = None
+    frame_duration_s: float | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.scores, Tensor) or self.scores.ndim != 2:
@@ -36,9 +38,25 @@ def _repeat_pad(values: Tensor, target_samples: int) -> Tensor:
     return values.repeat(repeats)[:target_samples]
 
 
-def _closest_frame(sample: int, *, frame_hop: float) -> int:
-    """Mirror pyannote.core's nearest frame-center rule."""
-    return max(0, round((sample - 0.5 * frame_hop) / frame_hop))
+def _closest_frame(time_s: float, *, frame_step_s: float) -> int:
+    """Mirror ``pyannote.core.SlidingWindow.closest_frame`` (start 0).
+
+    pyannote evaluates the rule in seconds with ``np.rint`` (round half to
+    even, like Python's ``round``).  Evaluating it in samples instead
+    rounds ties such as the 30 s chunk start on the segmentation-3.0 grid
+    differently and shifts that chunk by one frame.
+    """
+    return max(0, round((time_s - 0.0 - 0.5 * frame_step_s) / frame_step_s))
+
+
+def _numpy_hamming(size: int) -> Tensor:
+    """Return ``np.hamming(size)`` as float64 using NumPy's formula."""
+    if size == 1:
+        return torch.ones(1, dtype=torch.float64)
+    return torch.tensor(
+        [0.54 + 0.46 * math.cos(math.pi * index / (size - 1)) for index in range(1 - size, size, 2)],
+        dtype=torch.float64,
+    )
 
 
 class PyanNetFrameInference:
@@ -128,39 +146,42 @@ class PyanNetFrameInference:
         chunk_samples = round(self.duration_s * config.sampling_rate)
         frame_hop = (
             self.model.config.sinc_stride * 27 if config.is_brouhaha else chunk_samples / frames_per_chunk)
-        starts_in_frames = tuple(_closest_frame(start, frame_hop=frame_hop) for start in starts)
+        # pyannote.audio builds its frame grid in seconds:
+        # SlidingWindow(start=0, duration=step=chunk duration / frames).
+        frame_step_s = (frame_hop / config.sampling_rate if config.is_brouhaha else self.duration_s / frames_per_chunk)
+        starts_in_frames = tuple(
+            _closest_frame(0.0 + index * self.step_s, frame_step_s=frame_step_s) for index in range(len(starts)))
         required_frames = _closest_frame(
-            starts[-1] + chunk_samples,
-            frame_hop=frame_hop,
+            0.0 + self.duration_s + (len(starts) - 1) * self.step_s,
+            frame_step_s=frame_step_s,
         ) + 1
         final_stop = starts_in_frames[-1] + frames_per_chunk
         if final_stop > required_frames:
             raise RuntimeError("PyanNet frame geometry produced an invalid aggregation "
                                "extent.")
+        # pyannote.audio.core.inference.Inference.aggregate multiplies the
+        # float32 scores by a float64 ``np.hamming`` window and accumulates
+        # into float32 buffers; repeat that rounding order.
         summed = torch.zeros(
             required_frames,
             output_size,
-            dtype=scores.dtype,
+            dtype=torch.float32,
             device=scores.device,
         )
         weights = torch.zeros_like(summed)
-        window = torch.hamming_window(
-            frames_per_chunk,
-            periodic=False,
-            dtype=scores.dtype,
-            device=scores.device,
-        ).unsqueeze(-1)
+        window = _numpy_hamming(frames_per_chunk).to(device=scores.device).unsqueeze(-1)
         for index, start in enumerate(starts_in_frames):
             stop = start + frames_per_chunk
-            summed[start:stop] += scores[index] * window
-            weights[start:stop] += window
-        aggregated = summed / weights.clamp_min(torch.finfo(weights.dtype).eps)
+            summed[start:stop] = (summed[start:stop].double() + scores[index].double() * window).float()
+            weights[start:stop] = (weights[start:stop].double() + window).float()
+        aggregated = (summed / weights.clamp_min(1e-12)).to(dtype=scores.dtype)
         if has_last:
+            # Segment(0, duration) "loose" crop of the frame grid.
             valid_frames = max(
                 1,
                 min(
                     aggregated.shape[0],
-                    math.floor(waveform.numel() / frame_hop) + 1,
+                    math.floor((waveform.numel() / config.sampling_rate - 0.0) / frame_step_s) + 1,
                 ),
             )
             aggregated = aggregated[:valid_frames]
@@ -171,6 +192,8 @@ class PyanNetFrameInference:
             frame_length_samples=rounded_hop,
             frame_start_samples=0,
             valid_samples=waveform.numel(),
+            frame_step_s=frame_step_s,
+            frame_duration_s=frame_step_s,
         )
 
 

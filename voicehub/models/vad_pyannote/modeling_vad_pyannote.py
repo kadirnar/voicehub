@@ -72,6 +72,61 @@ def _finalize_segments(
     return tuple(split)
 
 
+def _pyannote_segments(
+    scores: list[float],
+    *,
+    frame_step_s: float,
+    frame_duration_s: float,
+    duration: float,
+    config: VADInferenceConfig,
+) -> tuple[SpeechSegment, ...]:
+    """Binarize like pyannote's ``VoiceActivityDetection`` pipeline.
+
+    ``min_speech_duration_ms``/``min_silence_duration_ms`` map to the
+    pipeline's ``min_duration_on``/``min_duration_off`` and
+    ``speech_pad_ms`` to ``Binarize``'s symmetric onset/offset padding.
+    Regions are clipped to the recording, as ``VADOutput`` requires.
+    """
+    from voicehub.architectures.pyannet.binarize import binarize_frame_scores, frame_middles
+
+    config.validate()
+    onset = getattr(config, "onset", None)
+    offset = getattr(config, "offset", None)
+    onset = config.threshold if onset is None else onset
+    offset = config.threshold if offset is None else offset
+    padding = config.speech_pad_ms / 1000.0
+    regions = binarize_frame_scores(
+        scores,
+        frame_step_s=frame_step_s,
+        frame_duration_s=frame_duration_s,
+        onset=onset,
+        offset=offset,
+        min_duration_on=config.min_speech_duration_ms / 1000.0,
+        min_duration_off=config.min_silence_duration_ms / 1000.0,
+        pad_onset=padding,
+        pad_offset=padding,
+    )
+    middles = frame_middles(
+        len(scores),
+        frame_step_s=frame_step_s,
+        frame_duration_s=frame_duration_s,
+    )
+    maximum = getattr(config, "max_speech_duration_s", None)
+    segments = []
+    for start, end in regions:
+        start = max(0.0, start)
+        end = min(duration, end)
+        if end <= start:
+            continue
+        inside = [score for middle, score in zip(middles, scores) if start <= middle <= end]
+        score = None if not inside else sum(inside) / len(inside)
+        while maximum is not None and end - start > maximum + 1e-12:
+            segments.append(SpeechSegment(start=start, end=start + maximum, score=score))
+            start = start + maximum
+        segments.append(SpeechSegment(start=start, end=end, score=score))
+    return tuple(segments)
+
+
 class PyannoteVADForVoiceActivityDetection(PreTrainedVADModel):
     """Run and fine-tune the published PyanNet graph without pyannote.audio."""
 
@@ -206,14 +261,23 @@ class PyannoteVADForVoiceActivityDetection(PreTrainedVADModel):
             speech_pad_ms=speech_pad_ms,
             max_speech_duration_s=max_speech_duration_s,
         )
-        segments = frame_probabilities_to_segments(
-            scores.tolist(),
-            sampling_rate=self.sample_rate,
-            frame_hop_samples=output.frame_hop_samples,
-            frame_length_samples=output.frame_length_samples,
-            duration_samples=materialized.waveform.numel(),
-            config=postprocessing,
-        )
+        if self.native_config.is_brouhaha or output.frame_step_s is None:
+            segments = frame_probabilities_to_segments(
+                scores.tolist(),
+                sampling_rate=self.sample_rate,
+                frame_hop_samples=output.frame_hop_samples,
+                frame_length_samples=output.frame_length_samples,
+                duration_samples=materialized.waveform.numel(),
+                config=postprocessing,
+            )
+        else:
+            segments = _pyannote_segments(
+                scores.tolist(),
+                frame_step_s=output.frame_step_s,
+                frame_duration_s=output.frame_duration_s,
+                duration=materialized.waveform.numel() / self.sample_rate,
+                config=postprocessing,
+            )
         return VADOutput(
             segments=segments,
             duration=materialized.duration,
@@ -237,6 +301,8 @@ class PyannoteVADForVoiceActivityDetection(PreTrainedVADModel):
                 output.frame_hop_samples,
                 "frame_length_samples":
                 output.frame_length_samples,
+                "frame_step_seconds":
+                output.frame_step_s,
                 "frame_scores_available":
                 True,
             },
