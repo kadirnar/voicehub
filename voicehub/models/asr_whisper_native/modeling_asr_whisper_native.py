@@ -217,6 +217,46 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
             dtype=next(self.model.parameters()).dtype,
         )
 
+    def _sequence_features(self, waveform: Any) -> Any:
+        """Compute one log-mel spectrogram over a complete recording.
+
+        Transformers Whisper ``generate`` (and OpenAI ``transcribe``)
+        extract and normalize log-mel features once for the whole input and
+        decode frame slices of it. Inputs shorter than one window are padded
+        to it with silence first, exactly like the 30-second feature
+        extractor; longer inputs keep their own length.
+        """
+        import torch
+
+        if self.native_config is None:
+            raise RuntimeError("Whisper must be loaded before preprocessing.")
+        window_samples = self.native_config.expected_input_frames * 160
+        padding = max(window_samples - waveform.numel(), 0)
+        padded = torch.nn.functional.pad(waveform, (0, padding))
+        return self._feature_operation().process({"waveform": padded})["input_features"]
+
+    def _window_features(
+        self,
+        sequence_features: Any,
+        *,
+        start_frame: int,
+        frame_count: int,
+    ) -> Any:
+        """Slice one decoder window and zero-pad it like upstream Whisper."""
+        import torch
+
+        if self.native_config is None:
+            raise RuntimeError("Whisper must be loaded before preprocessing.")
+        window = sequence_features[:, start_frame:start_frame + frame_count]
+        window = torch.nn.functional.pad(
+            window,
+            (0, self.native_config.expected_input_frames - window.shape[-1]),
+        )
+        return window.unsqueeze(0).to(
+            device=self.model.device,
+            dtype=next(self.model.parameters()).dtype,
+        )
+
     def _normalized_language(self, language: str | None) -> str | None:
         if self.generation_adapter is not None and not self.generation_adapter.token_set.is_multilingual:
             # English-only releases have no language-control tokens. They
@@ -402,12 +442,29 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
             for code, token_id in (self.generation_adapter.token_set.language_tokens.items())
         }
 
-        total_samples = materialized.waveform.numel()
+        # Positions are 10 ms feature frames when the input is decoded as
+        # upstream does (one log-mel over the whole input, sliced into
+        # 30-second windows) and samples for explicit shorter chunks, which
+        # are featurized independently.
+        sequence_features = None
+        unit = 1
+        limit = materialized.waveform.numel()
+        if chunk_length_s is None:
+            sequence_features = self._sequence_features(materialized.waveform)
+            unit = 160
+            limit = sequence_features.shape[-1]
+            chunk_samples = self.native_config.expected_input_frames * unit
         start = 0
-        while start < total_samples:
-            stop = min(start + chunk_samples, total_samples)
-            chunk = materialized.waveform[start:stop]
-            features = self._chunk_features(chunk)
+        while start < limit:
+            stop = min(start + chunk_samples // unit, limit)
+            if sequence_features is None:
+                features = self._chunk_features(materialized.waveform[start:stop])
+            else:
+                features = self._window_features(
+                    sequence_features,
+                    start_frame=start,
+                    frame_count=stop - start,
+                )
             decoding = WhisperDecodingConfig(
                 generation=GenerationConfig(
                     max_new_tokens=generated_limit,
@@ -431,8 +488,8 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
             advance = stop - start
             if return_timestamps:
                 tokens, resume = self._timestamp_resume(tokens)
-                if resume is not None and 0 < resume < advance:
-                    advance = resume
+                if resume is not None and 0 < resume // unit < advance:
+                    advance = resume // unit
             raw_text = self.tokenizer.decode(
                 tokens,
                 skip_special_tokens=True,
@@ -444,8 +501,8 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
                 segments.extend(
                     self._decode_segments(
                         tokens,
-                        chunk_offset=start / 16_000,
-                        chunk_duration=(stop - start) / 16_000,
+                        chunk_offset=start * unit / 16_000,
+                        chunk_duration=(stop - start) * unit / 16_000,
                         language=detected_language,
                     ))
             start += advance
