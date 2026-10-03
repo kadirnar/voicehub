@@ -15,7 +15,12 @@ from voicehub.vad_utils import frame_probabilities_to_segments
 
 
 def _pcm16_tensor(waveform: Any) -> Any:
-    """Convert normalized audio with the reference scalar rounding rules."""
+    """Convert normalized audio to the 16-bit PCM the reference consumes.
+
+    Scaling by 32768 inverts the PCM16 decoding (``x / 32768``), so a
+    16-bit source reaches the detector with its original samples, exactly
+    as the reference feeds WAVE frames to ``webrtcvad.Vad.is_speech``.
+    """
     import torch
 
     values = waveform.detach().to(
@@ -28,7 +33,7 @@ def _pcm16_tensor(waveform: Any) -> Any:
         posinf=0.0,
         neginf=0.0,
     )
-    return values.clamp(-1.0, 1.0).mul(32767.0).round().to(torch.int16).contiguous()
+    return values.mul(32768.0).round().clamp(-32768.0, 32767.0).to(torch.int16).contiguous()
 
 
 def _pcm16_samples(waveform: Any) -> list[int]:
