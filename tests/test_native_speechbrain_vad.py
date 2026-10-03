@@ -183,6 +183,41 @@ print(json.dumps({
             (),
         )
 
+    def test_frontend_clips_top_db_per_sequence_independent_of_batch(self):
+        frontend = SpeechBrainCRDNNVADModel(SpeechBrainCRDNNVADConfig()).frontend
+        generator = torch.Generator().manual_seed(5)
+        quiet = 1e-2 * torch.randn(16_000, generator=generator)
+        quiet[:8_000] = 0.0
+        loud = torch.randn(16_000, generator=generator)
+        alone = frontend._features(quiet.unsqueeze(0))
+        batched = frontend._features(torch.stack((quiet, loud)))
+        torch.testing.assert_close(batched[0], alone[0], rtol=0, atol=0)
+        self.assertAlmostEqual(
+            float(alone.amax() - alone.amin()),
+            SpeechBrainCRDNNVADConfig().top_db,
+            places=3,
+        )
+        normalized, _ = frontend(quiet.unsqueeze(0))
+        alone_normalized, _ = frontend(torch.stack((quiet, loud)))
+        torch.testing.assert_close(alone_normalized[0], normalized[0], rtol=0, atol=0)
+
+    def test_sentence_normalization_uses_population_statistics_and_padding_mask(self):
+        frontend = SpeechBrainCRDNNVADModel(SpeechBrainCRDNNVADConfig()).frontend
+        waveforms = torch.randn(2, 3_200, generator=torch.Generator().manual_seed(3))
+        normalized, frame_lengths = frontend(waveforms, torch.tensor([3_200, 1_700]))
+        # 1700 / 3200 * 21 frames = 11.16; make_padding_mask keeps index < 11.16.
+        self.assertEqual(frame_lengths.tolist(), [21, 12])
+        features = frontend._features(waveforms)
+        valid = features[1, :12]
+        expected = (features[1] - valid.mean(dim=0)) / valid.std(dim=0, correction=0)
+        torch.testing.assert_close(normalized[1], expected, rtol=1e-5, atol=1e-5)
+        torch.testing.assert_close(
+            normalized[0].std(dim=0, correction=0),
+            torch.ones(40),
+            rtol=1e-4,
+            atol=1e-4,
+        )
+
     def test_provenance_and_registry_are_explicit(self):
         self.assertEqual(len(SPEECHBRAIN_TRAINING_SOURCE_REVISION), 40)
         self.assertEqual(len(SPEECHBRAIN_VAD_REVISION), 40)

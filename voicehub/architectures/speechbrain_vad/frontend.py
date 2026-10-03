@@ -77,7 +77,10 @@ class SpeechBrainVADFrontend(nn.Module):
             dtype=power.dtype,
         )
         decibels = 10.0 * torch.log10(mel.clamp_min(1e-10))
-        return torch.maximum(decibels, decibels.max() - self.config.top_db)
+        # SpeechBrain clips each sequence to its own maximum minus top_db, so
+        # one chunk's features never depend on the other chunks in its batch.
+        floor = decibels.amax(dim=(-2, -1), keepdim=True) - self.config.top_db
+        return torch.maximum(decibels, floor)
 
     def forward(
         self,
@@ -114,17 +117,22 @@ class SpeechBrainVADFrontend(nn.Module):
         # that boundary avoids implying trainable waveform/filter parameters.
         with torch.no_grad():
             features = self._features(waveforms)
+            # SpeechBrain's make_padding_mask keeps frames with index
+            # < relative_length * frames - 1e-6.
             relative = lengths.to(dtype=features.dtype) / waveforms.shape[-1]
-            frame_lengths = torch.round(relative * features.shape[1]).long()
-            normalized = features.clone()
-            for index, frame_length in enumerate(frame_lengths.tolist()):
-                if frame_length < 2:
-                    raise ValueError("Sentence normalization needs at least two valid feature frames.")
-                valid = features[index, :frame_length]
-                mean = valid.mean(dim=0)
-                std = valid.std(dim=0, correction=1)
-                std = std.clamp_min(self.config.normalization_epsilon)
-                normalized[index] = (features[index] - mean) / std
+            frame_lengths = torch.ceil(relative * features.shape[1] - 1e-6).long()
+            if torch.any(frame_lengths < 2):
+                raise ValueError("Sentence normalization needs at least two valid feature frames.")
+            # SpeechBrain's sentence InputNormalization: masked population
+            # (biased) statistics, with the standard deviation clamped only
+            # at the division.  The reduction order is kept identical.
+            positions = torch.arange(features.shape[1], device=features.device)
+            mask = (positions.unsqueeze(0) < frame_lengths.unsqueeze(1)).unsqueeze(-1)
+            count = mask.sum(dim=1, keepdim=True)
+            mean = (features * mask).sum(dim=1, keepdim=True) / count
+            variance = ((features - mean) * mask).square().sum(dim=1, keepdim=True) / count
+            std = variance.sqrt()
+            normalized = (features - mean) / std.clamp(min=self.config.normalization_epsilon)
         return normalized.detach(), frame_lengths
 
 
