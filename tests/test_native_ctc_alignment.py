@@ -100,6 +100,27 @@ class NativeCTCAlignmentTests(unittest.TestCase):
         self.assertEqual(tuple(word.text for word in result.words), ("h?", ))
         self.assertEqual(len(result.characters), 2)
 
+    def test_characters_are_lower_cased_not_case_folded_like_whisperx(self):
+        # "ς".casefold() is "σ" but "ς".lower() stays "ς": WhisperX aligns a
+        # final sigma missing from the vocabulary against the wildcard column.
+        emission = _emission((0, 2, 0), vocabulary_size=3)
+
+        result = align_ctc_transcript(
+            emission,
+            "ς",
+            {
+                "<pad>": 0,
+                "σ": 1,
+                "|": 2,
+            },
+            blank_id=0,
+            segment_start=0.0,
+            segment_end=1.0,
+        )
+
+        self.assertEqual(tuple(word.text for word in result.words), ("ς", ))
+        self.assertGreater(result.words[0].confidence, 0.99)
+
     def test_transcript_longer_than_emission_fails_closed(self):
         result = align_ctc_transcript(
             _emission((1, ), vocabulary_size=3),
