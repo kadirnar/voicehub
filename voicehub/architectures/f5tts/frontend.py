@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+import math
+import re
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 
 import torch
@@ -21,7 +23,92 @@ _PUNCTUATION_TRANSLATION = str.maketrans({
 
 
 def _contains_chinese(text: str) -> bool:
-    return any("\u3100" <= character <= "\u9fff" for character in text)
+    # The released frontend converts \u3100-\u9fff with pypinyin, and its
+    # word segmenter also treats CJK compatibility and supplementary
+    # ideographs as Chinese. None of these can be reproduced character-wise.
+    return any(
+        "\u3100" <= character <= "\u9fff" or "\uf900" <= character <= "\ufaff" or
+        "\U00020000" <= character <= "\U0002fa1f" for character in text)
+
+
+# Word segmentation used by the released F5-TTS frontend (``rjieba.cut``,
+# i.e. jieba-rs with its default dictionary) restricted to text without
+# Chinese characters. The released frontend inserts a space before every
+# multi-character, single-byte segment unless the previous character is one
+# of `` :'"``; the checkpoint was trained on, and is evaluated with, those
+# spaces (``"well-known"`` becomes ``"well- known"``).
+_SEGMENT_BLOCK = re.compile(r"([a-zA-Z0-9+#&._%\-]+)")
+_SEGMENT_WHITESPACE = re.compile(r"(\r\n|\s)")
+# jieba-rs' HMM fallback pattern; its unescaped ``.`` is intentional.
+_SEGMENT_ALPHANUMERIC = re.compile(r"([a-zA-Z0-9]+(?:.\d+)?%?)")
+# The only pure-ASCII entries of the default jieba dictionary, with their
+# frequencies, and the dictionary's total frequency.
+_SEGMENT_DICTIONARY = {"AT&T": 3, "c#": 3, "C#": 3, "c++": 3, "C++": 3}
+_SEGMENT_LOG_TOTAL = math.log(60_101_967)
+_NO_SPACE_BEFORE_SEGMENT = frozenset(" :'\"")
+
+
+def _segment_block(block: str) -> Iterator[str]:
+    """Cut one ``[a-zA-Z0-9+#&._%-]`` run like jieba's DAG + HMM path."""
+    length = len(block)
+    route: list[tuple[float, int]] = [(0.0, 0)] * (length + 1)
+    for start in range(length - 1, -1, -1):
+        ends = [start + len(word) - 1
+                for word in _SEGMENT_DICTIONARY if block.startswith(word, start)] or [start]
+        route[start] = max((
+            math.log(_SEGMENT_DICTIONARY.get(block[start:end + 1], 1)) - _SEGMENT_LOG_TOTAL +
+            route[end + 1][0],
+            end,
+        ) for end in ends)
+
+    def flush(buffer: str) -> Iterator[str]:
+        if len(buffer) == 1:
+            yield buffer
+        elif buffer in _SEGMENT_DICTIONARY:
+            yield from buffer
+        else:
+            yield from (piece for piece in _SEGMENT_ALPHANUMERIC.split(buffer) if piece)
+
+    buffer = ""
+    start = 0
+    while start < length:
+        end = route[start][1] + 1
+        if end - start == 1:
+            buffer += block[start]
+        else:
+            if buffer:
+                yield from flush(buffer)
+                buffer = ""
+            yield block[start:end]
+        start = end
+    if buffer:
+        yield from flush(buffer)
+
+
+def segment_text(text: str) -> Iterator[str]:
+    """Yield the released frontend's word segments for non-Chinese text."""
+    for block in _SEGMENT_BLOCK.split(text):
+        if not block:
+            continue
+        if _SEGMENT_BLOCK.fullmatch(block):
+            yield from _segment_block(block)
+            continue
+        for piece in _SEGMENT_WHITESPACE.split(block):
+            if _SEGMENT_WHITESPACE.fullmatch(piece):
+                yield piece
+            else:
+                yield from piece
+
+
+def character_tokens(text: str) -> tuple[str, ...]:
+    """Tokenize non-Chinese text exactly like ``convert_char_to_pinyin``."""
+    tokens: list[str] = []
+    for segment in segment_text(text):
+        if (len(segment) > 1 and len(segment.encode("utf-8")) == len(segment) and tokens and
+                tokens[-1] not in _NO_SPACE_BEFORE_SEGMENT):
+            tokens.append(" ")
+        tokens.extend(segment)
+    return tuple(tokens)
 
 
 class F5Vocabulary:
@@ -70,8 +157,9 @@ class NativeF5TextFrontend:
     a hidden optional dependency would make the native runtime
     inaccurate and non-reproducible. Callers may therefore inject a
     VoiceHub-owned normalizer or pass already-normalized token
-    sequences. Non-Chinese character input is handled directly and
-    matches the released character path.
+    sequences. Non-Chinese text follows the released character path,
+    including the word-boundary spaces it inserts (see
+    :func:`character_tokens`).
     """
 
     def __init__(
@@ -101,7 +189,7 @@ class NativeF5TextFrontend:
                         "Chinese F5-TTS input requires pinyin-with-tone tokens "
                         "or an explicit native text normalizer. VoiceHub does "
                         "not silently substitute a non-equivalent G2P.")
-                tokens = tuple(translated)
+                tokens = character_tokens(translated)
         elif isinstance(text, Sequence) and not isinstance(text, (bytes, bytearray)):
             tokens = tuple(text)
         else:
@@ -140,4 +228,6 @@ __all__ = [
     "NativeF5TextFrontend",
     "TextNormalizer",
     "TokenSequence",
+    "character_tokens",
+    "segment_text",
 ]
