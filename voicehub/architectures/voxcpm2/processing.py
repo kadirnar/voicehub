@@ -71,7 +71,8 @@ class VoxCPM2Tokenizer:
         for spelling, token_id in vocabulary.items():
             clean = spelling.replace("\u2581", "")
             if clean in multichar:
-                split_map[token_id] = tuple(vocabulary.get(character, assets.unk_token_id) for character in clean)
+                split_map[token_id] = tuple(
+                    vocabulary.get(character, assets.unk_token_id) for character in clean)
         return cls(
             tokenizer,
             split_map=split_map,

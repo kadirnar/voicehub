@@ -116,8 +116,8 @@ class VoxCPM2Runtime:
         """Encode mono audio into AudioVAE latent patches.
 
         Like the source, isolated reference audio is padded on the right
-        while continuation prompts are padded on the left so that the prompt
-        ends exactly where generation continues.
+        while continuation prompts are padded on the left so that the
+        prompt ends exactly where generation continues.
         """
         if padding not in ("left", "right"):
             raise ValueError("VoxCPM audio padding must be 'left' or 'right'.")

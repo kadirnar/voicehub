@@ -59,9 +59,10 @@ def _apply_rotary(
 class MiniCPMLongRoPE(nn.Module):
     """Source-compatible MiniCPM long-context rotary embedding.
 
-    The cosine/sine tables are computed in float32 and then stored in the
-    module dtype, exactly like the source, whose ``model.to(dtype)`` also
-    casts these floating-point buffers before low-precision inference.
+    The cosine/sine tables are computed in float32 and then stored in
+    the module dtype, exactly like the source, whose ``model.to(dtype)``
+    also casts these floating-point buffers before low-precision
+    inference.
     """
 
     def __init__(
@@ -625,8 +626,9 @@ def local_transformer_config(
     """Create source-equivalent local encoder/DiT/RALM configs.
 
     The source builds these with ``lm_config.model_copy()`` and only
-    overrides the sizes, so the local transformers inherit the backbone's
-    LongRoPE ``rope_scaling`` (including its per-dimension factors).
+    overrides the sizes, so the local transformers inherit the
+    backbone's LongRoPE ``rope_scaling`` (including its per-dimension
+    factors).
     """
     return replace(
         base,
