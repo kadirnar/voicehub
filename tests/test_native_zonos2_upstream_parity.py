@@ -1,4 +1,5 @@
-"""Regression tests for ZONOS2 behaviors verified against upstream Zyphra/ZONOS2.
+"""Regression tests for ZONOS2 behaviors verified against upstream
+Zyphra/ZONOS2.
 
 Each case pins a difference found by the upstream parity audit (upstream
 commit 194c0a3, ``TTSLLM`` offline path). No network or GPU is needed.
@@ -25,10 +26,16 @@ from voicehub.architectures.zonos2.sampling import (
     generate_zonos2_codes,
 )
 from voicehub.architectures.zonos2.speaker import (
+    ZONOS2_SPEAKER_SAMPLE_RATE,
     extract_zonos2_speaker_embedding,
-    resample_zonos2_speaker_audio,
     zonos2_speaker_mel,
 )
+from voicehub.processing import resample_waveform_hann
+
+
+def _upstream_speaker_resample(waveform, source_rate):
+    """VoiceHub's equivalent of upstream ``transforms.Resample(sr, 24000)``."""
+    return resample_waveform_hann(waveform, source_rate, ZONOS2_SPEAKER_SAMPLE_RATE, match="transform")
 
 
 def _reference_hann_resample(waveform, source_rate, target_rate, width=6, rolloff=0.99):
@@ -60,7 +67,7 @@ class Zonos2SpeakerResamplingParityTests(unittest.TestCase):
         for source_rate in (16_000, 22_050, 48_000):
             with self.subTest(source_rate=source_rate):
                 expected = _reference_hann_resample(waveform, source_rate, 24_000)
-                actual = resample_zonos2_speaker_audio(waveform, source_rate)
+                actual = _upstream_speaker_resample(waveform, source_rate)
                 self.assertEqual(actual.shape, expected.shape)
                 torch.testing.assert_close(actual, expected, atol=2e-5, rtol=0)
 
@@ -72,9 +79,10 @@ class Zonos2SpeakerResamplingParityTests(unittest.TestCase):
         waveform = torch.randn(9_000, generator=torch.Generator().manual_seed(5))
         for source_rate in (8_000, 16_000, 44_100, 48_000):
             with self.subTest(source_rate=source_rate):
-                expected = torchaudio.transforms.Resample(source_rate, 24_000)(waveform)
-                actual = resample_zonos2_speaker_audio(waveform, source_rate)
-                torch.testing.assert_close(actual, expected, atol=1e-4, rtol=0)
+                # Upstream calls the transform on a ``[1, T]`` CPU float32 tensor.
+                expected = torchaudio.transforms.Resample(source_rate, 24_000)(waveform[None])[0]
+                actual = _upstream_speaker_resample(waveform, source_rate)
+                self.assertTrue(torch.equal(actual, expected))
 
     def test_speaker_embedding_uses_upstream_resampler(self):
         waveform = torch.randn(8_000, generator=torch.Generator().manual_seed(7)) * 0.1
@@ -94,7 +102,7 @@ class Zonos2SpeakerResamplingParityTests(unittest.TestCase):
                 "sampling_rate": 16_000
             },
         )
-        expected = zonos2_speaker_mel(resample_zonos2_speaker_audio(waveform, 16_000))
+        expected = zonos2_speaker_mel(_upstream_speaker_resample(waveform, 16_000))
         torch.testing.assert_close(seen[0], expected)
 
 
