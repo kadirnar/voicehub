@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import torch
@@ -359,6 +360,88 @@ class OpenVoiceArchitectureTests(unittest.TestCase):
         self.assertTrue(torch.equal(model.runtime.sources[0], expected_base))
         self.assertEqual(len(model.runtime.references[0]), 1)
         self.assertTrue(torch.equal(model.runtime.references[0][0], expected_reference))
+
+    def test_native_base_model_receives_loading_options(self):
+        from voicehub.models.melotts import MeloTTSForTextToSpeech
+
+        class Loaded(Exception):
+            pass
+
+        class RecordingRuntime:
+
+            def __init__(self):
+                self.processor = OpenVoiceAudioProcessor(OpenVoiceConverterConfig())
+
+            def convert(self, waveform, *, source_embedding, target_embedding, tau):
+                del source_embedding, target_embedding, tau
+                return waveform
+
+        resolved = []
+        loaded = []
+
+        def resolve_model_directory(name_or_path, **kwargs):
+            resolved.append((name_or_path, kwargs))
+            return Path(directory)
+
+        def runtime(source, **kwargs):
+            loaded.append((source, kwargs))
+            raise Loaded
+
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ("config.json", "model.safetensors"):
+                (Path(directory) / name).touch()
+            model = OpenVoiceForTextToSpeech(
+                device="cpu",
+                lazy_load=True,
+                token="hf_secret",
+                base_model_name_or_path="example/melotts",
+                base_model_revision="0123abcd",
+                cache_dir=directory,
+                local_files_only=True,
+                trust_pickle_checkpoint=True,
+                dtype="float64",
+            )
+            model.runtime = RecordingRuntime()
+            generated = mock.Mock(audio=torch.zeros(441), sample_rate=44_100)
+            with mock.patch.object(MeloTTSForTextToSpeech, "generate", return_value=generated) as generate:
+                for language in ("EN", "ZH"):
+                    model._generate(
+                        "unused",
+                        language=language,
+                        source_embedding=torch.zeros(1, 256, 1),
+                        target_embedding=torch.zeros(1, 256, 1),
+                        seed=0,
+                    )
+            self.assertEqual(generate.call_count, 2)
+            with (
+                    mock.patch(
+                        "voicehub.models.melotts.inference.resolve_model_directory",
+                        side_effect=resolve_model_directory,
+                    ),
+                    mock.patch(
+                        "voicehub.architectures.melotts.runtime.MeloTTSRuntime",
+                        side_effect=runtime,
+                    ),
+                    self.assertRaises(Loaded),
+            ):
+                model._base_model.load()
+
+        hub_options = {
+            "revision": "0123abcd",
+            "cache_dir": directory,
+            "token": "hf_secret",
+            "local_files_only": True,
+        }
+        self.assertEqual(resolved, [("example/melotts", {"model_type": "melotts", **hub_options})])
+        ((source, options), ) = loaded
+        self.assertEqual(source, "example/melotts")
+        self.assertEqual(
+            {name: options[name]
+             for name in hub_options},
+            hub_options,
+        )
+        self.assertIs(options["dtype"], torch.float64)
+        self.assertTrue(options["trust_pickle_checkpoint"])
 
     def test_reference_segments_follow_upstream_millisecond_splitting(self):
         # Golden (start, length) pairs from upstream ``split_audio_vad`` on
