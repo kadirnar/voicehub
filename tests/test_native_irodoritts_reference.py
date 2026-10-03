@@ -1,8 +1,8 @@
 """Reference-audio frontend parity checks for native Irodori-TTS.
 
 The expected loudness values were measured with the original runtime's
-``audiotools`` 0.7.2 ``AudioSignal.loudness()`` (pyloudnorm K-weighting) on
-the analytic signals built below.
+``audiotools`` 0.7.2 ``AudioSignal.loudness()`` (pyloudnorm K-weighting)
+on the analytic signals built below.
 """
 
 from __future__ import annotations
@@ -35,7 +35,8 @@ def _reference_signals() -> dict[str, tuple[torch.Tensor, float]]:
     chirp_time = torch.arange(int(1.37 * RATE), dtype=torch.float64) / RATE
     return {
         "sine_then_silence": (
-            torch.cat([_sine(1000.0, 1.0, 0.3), torch.zeros(2 * RATE, dtype=torch.float64)]).float(),
+            torch.cat([_sine(1000.0, 1.0, 0.3),
+                       torch.zeros(2 * RATE, dtype=torch.float64)]).float(),
             -14.208349227905273,
         ),
         # The last 400 ms gating block is partial and must be zero-padded.
@@ -79,8 +80,9 @@ def _recording_codec() -> tuple[IrodoriDACVAECodec, _RecordingCodecGraph]:
 def _write_float_wave(path: Path, samples: torch.Tensor, sample_rate: int) -> None:
     payload = samples.to(torch.float32).numpy().tobytes()
     fmt = struct.pack("<HHIIHH", 3, 1, sample_rate, sample_rate * 4, 4, 32)
-    path.write_bytes(b"RIFF" + struct.pack("<I", 4 + 8 + len(fmt) + 8 + len(payload)) + b"WAVE" + b"fmt " +
-                     struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(payload)) + payload)
+    path.write_bytes(
+        b"RIFF" + struct.pack("<I", 4 + 8 + len(fmt) + 8 + len(payload)) + b"WAVE" + b"fmt " +
+        struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(payload)) + payload)
 
 
 class IrodoriReferenceFrontendTests(unittest.TestCase):

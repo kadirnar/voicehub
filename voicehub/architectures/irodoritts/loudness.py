@@ -3,17 +3,17 @@
 The original Irodori-TTS runtime normalizes reference and training audio
 with ``audiotools.AudioSignal.normalize(-16)`` followed by
 ``ensure_max_of_audio()``. This module reproduces that computation with
-PyTorch only: the pyloudnorm K-weighting biquads (coefficients rounded to
-float32 as audiotools does), 400 ms gating blocks with 75 % overlap whose
-final block is zero-padded like ``julius.core.unfold``, zero padding of
-signals shorter than 0.5 s, the -70 LUFS absolute and -10 LU relative
-gates, and the exponential gain formula.
+PyTorch only: the pyloudnorm K-weighting biquads (coefficients rounded
+to float32 as audiotools does), 400 ms gating blocks with 75 % overlap
+whose final block is zero-padded like ``julius.core.unfold``, zero
+padding of signals shorter than 0.5 s, the -70 LUFS absolute and -10 LU
+relative gates, and the exponential gain formula.
 
 The only intentional difference is the IIR evaluation: audiotools runs a
-sequential float32 ``torchaudio.functional.lfilter``; here the same filters
-are applied as a float64 FFT convolution with their impulse response,
-truncated far below float32 resolution. Measured loudness agrees to a few
-float32 ulps.
+sequential float32 ``torchaudio.functional.lfilter``; here the same
+filters are applied as a float64 FFT convolution with their impulse
+response, truncated far below float32 resolution. Measured loudness
+agrees to a few float32 ulps.
 """
 
 from __future__ import annotations
@@ -101,7 +101,8 @@ def integrated_loudness(audio: torch.Tensor, sample_rate: int) -> torch.Tensor:
     """Gated BS.1770 loudness of ``(batch, channels, time)`` float audio.
 
     Mirrors ``audiotools.AudioSignal.loudness()`` (including its 0.5 s
-    zero padding and -70 LUFS floor) and returns one float32 value per item.
+    zero padding and -70 LUFS floor) and returns one float32 value per
+    item.
     """
     if audio.ndim != 3:
         raise ValueError("Loudness input must have shape (batch, channels, time).")

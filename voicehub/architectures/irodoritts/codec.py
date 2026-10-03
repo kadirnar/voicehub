@@ -139,11 +139,12 @@ class IrodoriDACVAECodec:
     ) -> torch.Tensor:
         """Encode ``(B, C, T)`` audio like the released ``DACVAECodec``.
 
-        Channels are averaged, audio at another ``sample_rate`` is resampled
-        as ``torchaudio.functional.resample`` does, and each item is
-        loudness-normalized to ``normalize_db`` LUFS (the codec default when
-        omitted; ``None`` disables it). ``ensure_max`` peak-limits to 1.0
-        only when normalization is disabled, as in the original runtime.
+        Channels are averaged, audio at another ``sample_rate`` is
+        resampled as ``torchaudio.functional.resample`` does, and each
+        item is loudness-normalized to ``normalize_db`` LUFS (the codec
+        default when omitted; ``None`` disables it). ``ensure_max``
+        peak-limits to 1.0 only when normalization is disabled, as in
+        the original runtime.
         """
         if not isinstance(waveform, torch.Tensor):
             raise TypeError("Irodori codec waveform must be a torch.Tensor.")

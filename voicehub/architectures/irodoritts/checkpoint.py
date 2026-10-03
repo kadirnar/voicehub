@@ -88,10 +88,10 @@ def read_irodori_config(reader: SafeTensorReader) -> IrodoriModelConfig:
 def read_irodori_inference_lengths(path: str | Path) -> dict[str, int]:
     """Return the padded text/caption lengths recorded in ``config_json``.
 
-    The original runtime keeps ``max_text_len``/``max_caption_len`` from the
-    flat checkpoint config as inference padding widths (they also scale the
-    duration predictor's token-count feature), so custom checkpoints trained
-    with other widths need them.
+    The original runtime keeps ``max_text_len``/``max_caption_len`` from
+    the flat checkpoint config as inference padding widths (they also
+    scale the duration predictor's token-count feature), so custom
+    checkpoints trained with other widths need them.
     """
     with SafeTensorReader(Path(path).expanduser().resolve()) as reader:
         raw = reader.metadata.get(_CONFIG_METADATA_KEY)
