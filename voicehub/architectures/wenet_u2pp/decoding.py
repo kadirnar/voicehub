@@ -200,6 +200,10 @@ def attention_rescore(
         encoder_output,
         reverse_weight,
     )
+    # Score on the host like WeNet (``decoder_out.cpu().numpy()``): one copy
+    # instead of a device synchronization per scored token.
+    forward = forward.cpu()
+    reverse = reverse.cpu()
     best_index = 0
     best_score = -float("inf")
     confidences: list[float] = []
