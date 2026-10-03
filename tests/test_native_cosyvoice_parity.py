@@ -279,7 +279,6 @@ class CosyVoiceFlowParityTests(unittest.TestCase):
                 prompt_features=features,
             )
 
-
     def test_synthesis_requires_prompt_tokens_and_features_together(self):
         torch.manual_seed(0)
         model = CosyVoiceNativeModel(CosyVoiceArchitectureConfig.tiny()).eval()
@@ -299,16 +298,16 @@ class CosyVoiceFlowParityTests(unittest.TestCase):
                     model.synthesize(text, instruction, speaker, flow_steps=2, **inputs)
                 llm.assert_not_called()
         flow_generate = model.flow.generate
-        with mock.patch.object(model.llm, "generate", return_value=generated) as llm, \
-                mock.patch.object(model.flow, "generate", side_effect=flow_generate) as flow:
-            model.synthesize(
-                text,
-                instruction,
-                speaker,
-                prompt_speech_tokens=prompt,
-                prompt_features=features,
-                flow_steps=2,
-            )
+        with mock.patch.object(model.llm, "generate", return_value=generated) as llm:
+            with mock.patch.object(model.flow, "generate", side_effect=flow_generate) as flow:
+                model.synthesize(
+                    text,
+                    instruction,
+                    speaker,
+                    prompt_speech_tokens=prompt,
+                    prompt_features=features,
+                    flow_steps=2,
+                )
         self.assertIs(llm.call_args.kwargs["prompt_speech_tokens"], prompt)
         self.assertIs(flow.call_args.kwargs["prompt_speech_tokens"], prompt)
         self.assertIs(flow.call_args.kwargs["prompt_features"], features)
