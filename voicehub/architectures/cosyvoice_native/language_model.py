@@ -70,6 +70,25 @@ def _validate_token_batch(
         raise ValueError(f"`{name}` contains an out-of-vocabulary token.")
 
 
+def nucleus_keep_count(ordered_probabilities: Tensor, *, top_p: float, top_k: int) -> int:
+    """Length of the source nucleus prefix for descending probabilities.
+
+    The source keeps the next candidate while the float32 running sum of
+    the already-kept full-vocabulary probabilities is below ``top_p``
+    and fewer than ``top_k`` are kept. It is not top-p over a top-k-
+    renormalized distribution.
+    """
+    head = ordered_probabilities.detach().to(device="cpu", dtype=torch.float32).flatten()
+    cumulative = 0.0
+    kept = 0
+    for value in head:
+        if not (cumulative < top_p and kept < top_k):
+            break
+        cumulative = cumulative + value
+        kept += 1
+    return kept
+
+
 class CosyVoiceLanguageModel(nn.Module):
     """CosyVoice 3's Qwen2 backbone with a dedicated speech vocabulary.
 
@@ -260,6 +279,64 @@ class CosyVoiceLanguageModel(nn.Module):
             attention_mask=attention_mask,
         )
 
+    @staticmethod
+    def _nucleus_sample(
+        scores: Tensor,
+        *,
+        top_k: int,
+        top_p: float,
+        generator: torch.Generator | None,
+    ) -> int:
+        """Source ``nucleus_sampling`` over one row of log-probabilities.
+
+        The kept prefix is chosen on the *full-vocabulary* distribution
+        (not after top-k renormalization) with the source's sequential
+        float32 accumulation, and the draw uses ``multinomial`` on the
+        kept probabilities in descending stable order so a generator
+        seeded like the source consumes randomness identically.
+        """
+        probabilities = scores.softmax(dim=0)
+        ordered, order = probabilities.sort(descending=True, stable=True)
+        kept = nucleus_keep_count(ordered[:top_k], top_p=top_p, top_k=top_k)
+        sampled = ordered[:kept].multinomial(
+            1,
+            replacement=True,
+            generator=generator,
+        )
+        return int(order[sampled].item())
+
+    def _sample_token(
+        self,
+        scores: Tensor,
+        decoded: list[int],
+        *,
+        top_k: int,
+        top_p: float,
+        repetition_window: int,
+        repetition_threshold: float,
+        generator: torch.Generator | None,
+    ) -> int:
+        """Source repetition-aware sampling (RAS) for one decoding step."""
+        token_id = self._nucleus_sample(
+            scores,
+            top_k=top_k,
+            top_p=top_p,
+            generator=generator,
+        )
+        if repetition_window > 0:
+            window = decoded[-repetition_window:]
+            repeats = sum(1 for value in window if value == token_id)
+            if repeats >= repetition_window * repetition_threshold:
+                scores = scores.clone()
+                scores[token_id] = -torch.inf
+                token_id = int(
+                    scores.softmax(dim=0).multinomial(
+                        1,
+                        replacement=True,
+                        generator=generator,
+                    ).item())
+        return token_id
+
     @torch.inference_mode()
     def generate(
         self,
@@ -268,22 +345,36 @@ class CosyVoiceLanguageModel(nn.Module):
         instruction_tokens: Tensor | None = None,
         prompt_speech_tokens: Tensor | None = None,
         min_new_tokens: int = 0,
-        max_new_tokens: int = 1_024,
+        max_new_tokens: int | None = None,
         top_k: int = 25,
         top_p: float = 0.8,
         temperature: float = 1.0,
+        repetition_window: int = 10,
+        repetition_threshold: float = 0.1,
+        max_token_text_ratio: float = 20.0,
         generator: torch.Generator | None = None,
     ) -> Tensor:
-        """Autoregressively generate speech IDs through VoiceHub's Qwen
-        graph."""
+        """Autoregressively generate speech IDs through VoiceHub's Qwen graph.
+
+        Decoding follows the source ``CosyVoice3LM.inference`` recipe:
+        ``SOS, instruction/prompt text, text, TASK, prompt speech`` is
+        the prefix, every step samples from the full speech/control
+        vocabulary with repetition-aware nucleus sampling (top-p 0.8,
+        top-k 25, window 10, tau 0.1), and the default length cap is
+        ``20 x`` the number of synthesis text tokens.
+        """
         if not isinstance(text_tokens, Tensor) or text_tokens.ndim != 2:
             raise ValueError("`text_tokens` must have shape [batch, sequence].")
         if text_tokens.shape[0] != 1 or text_tokens.shape[1] == 0:
             raise ValueError("CosyVoice generation currently requires one non-empty prompt.")
+        if max_new_tokens is None:
+            max_new_tokens = max(1, int(text_tokens.shape[1] * max_token_text_ratio))
         if max_new_tokens <= 0 or min_new_tokens < 0 or min_new_tokens > max_new_tokens:
             raise ValueError("Invalid generation length bounds.")
         if top_k <= 0 or not 0 < top_p <= 1 or temperature <= 0:
             raise ValueError("Sampling controls must be positive and `top_p` at most one.")
+        if repetition_window < 0 or repetition_threshold < 0:
+            raise ValueError("Repetition-aware sampling controls must be non-negative.")
         pieces = [
             self.speech_embedding.weight[self.config.sos_token_id].reshape(1, 1, -1),
         ]
@@ -297,7 +388,7 @@ class CosyVoiceLanguageModel(nn.Module):
             pieces.append(self.speech_embedding(prompt_speech_tokens))
         step_input = torch.cat(pieces, dim=1)
         cache: DynamicKVCache | None = None
-        generated: list[Tensor] = []
+        generated: list[int] = []
         for step in range(max_new_tokens):
             hidden_output = self.llm.model.model(
                 inputs_embeds=step_input,
@@ -307,45 +398,36 @@ class CosyVoiceLanguageModel(nn.Module):
             )
             cache = hidden_output.past_key_values
             logits = self.llm_decoder(hidden_output.last_hidden_state[:, -1]).float()
-            logits = logits / temperature
+            if temperature != 1.0:
+                logits = logits / temperature
+            scores = logits.log_softmax(dim=-1)[0]
             if step < min_new_tokens:
-                logits[:, self.config.speech_vocab_size:] = -torch.inf
-            top_count = min(top_k, logits.shape[-1])
-            top_values, top_indices = torch.topk(logits, top_count, dim=-1)
-            probabilities = functional.softmax(top_values, dim=-1)
-            ordered_probabilities, order = torch.sort(
-                probabilities,
-                dim=-1,
-                descending=True,
-            )
-            cumulative = ordered_probabilities.cumsum(dim=-1)
-            remove = cumulative - ordered_probabilities >= top_p
-            ordered_probabilities = ordered_probabilities.masked_fill(remove, 0)
-            ordered_probabilities = ordered_probabilities / ordered_probabilities.sum(
-                dim=-1,
-                keepdim=True,
-            )
-            sampled_order = torch.multinomial(
-                ordered_probabilities,
-                1,
+                scores[self.config.speech_vocab_size:] = -torch.inf
+            token_id = self._sample_token(
+                scores,
+                generated,
+                top_k=top_k,
+                top_p=top_p,
+                repetition_window=repetition_window,
+                repetition_threshold=repetition_threshold,
                 generator=generator,
             )
-            sampled = top_indices.gather(
-                1,
-                order.gather(1, sampled_order),
-            )
-            token_id = int(sampled.item())
             if token_id >= self.config.speech_vocab_size:
                 break
-            generated.append(sampled.squeeze(0))
-            step_input = self.speech_embedding(sampled)
+            generated.append(token_id)
+            step_input = self.speech_embedding.weight[token_id].reshape(1, 1, -1)
         if not generated:
             return text_tokens.new_empty((1, 0))
-        return torch.stack(generated, dim=1)
+        return torch.tensor(
+            [generated],
+            dtype=torch.long,
+            device=text_tokens.device,
+        )
 
 
 __all__ = [
     "CosyVoiceLanguageModel",
     "CosyVoiceLanguageOutput",
     "IGNORE_INDEX",
+    "nucleus_keep_count",
 ]

@@ -140,8 +140,8 @@ def _materialize_runtime_buffers(
                 hasattr(config, "istft_n_fft")):
             module.stft_window = torch.hann_window(
                 int(config.istft_n_fft),
-                device=target_device,
-            )
+                dtype=torch.float64,
+            ).float().to(target_device)
 
 
 def validate_cosyvoice_checkpoint(

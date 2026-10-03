@@ -171,6 +171,22 @@ def _apply_rotary(values: Tensor, rotary: tuple[Tensor, Tensor]) -> Tensor:
     return torch.stack((rotated_even, rotated_odd), dim=-1).flatten(-2)
 
 
+def _apply_leading_rotary(values: Tensor, rotary: tuple[Tensor, Tensor]) -> Tensor:
+    """Rotate only the leading ``2 * frequencies`` channels.
+
+    The source DiT uses ``x_transformers.apply_rotary_pos_emb`` on the
+    projected ``[batch, sequence, heads * head_dim]`` tensor *before*
+    the head split. Its frequency table spans one head, so only the
+    first head's channels are rotated and every other head stays
+    position-agnostic.
+    """
+    width = rotary[0].shape[-1] * 2
+    return torch.cat(
+        (_apply_rotary(values[..., :width], rotary), values[..., width:]),
+        dim=-1,
+    )
+
+
 class AdaLayerNormZero(DiffusionModulationKernelOptimizable, nn.Module):
 
     def __init__(self, dimension: int) -> None:
@@ -247,19 +263,19 @@ class Attention(nn.Module):
     ) -> Tensor:
         batch_size, sequence_length, _ = values.shape
 
-        def project(layer: nn.Linear) -> Tensor:
-            result = layer(values).view(
+        def heads(projected: Tensor) -> Tensor:
+            return projected.view(
                 batch_size,
                 sequence_length,
                 self.heads,
                 self.head_dimension,
             ).transpose(1, 2)
-            return result
 
-        query, key, value = project(self.to_q), project(self.to_k), project(self.to_v)
+        query, key = self.to_q(values), self.to_k(values)
         if rotary is not None:
-            query = _apply_rotary(query, rotary)
-            key = _apply_rotary(key, rotary)
+            query = _apply_leading_rotary(query, rotary)
+            key = _apply_leading_rotary(key, rotary)
+        query, key, value = heads(query), heads(key), heads(self.to_v(values))
         attention_mask = mask
         if attention_mask is not None and attention_mask.ndim == 3:
             attention_mask = attention_mask[:, None]
@@ -440,6 +456,36 @@ class DiTEstimator(DiffusionCacheMixin, DiffusionSamplingMixin, nn.Module):
         return self.proj_out(values).transpose(1, 2)
 
 
+#: The source ``CausalConditionalCFM`` draws one fixed noise tensor at
+#: construction (``set_all_random_seed(0)``; CPU ``randn([1, 80, 50 * 300])``)
+#: and slices it for every inference call, so the flow stage is
+#: deterministic and streaming chunks agree. VoiceHub reproduces it lazily.
+FIXED_NOISE_SEED = 0
+FIXED_NOISE_FRAMES = 50 * 300
+
+
+def fixed_flow_noise(
+    channels: int,
+    frames: int,
+    *,
+    device: torch.device | str | None = None,
+    dtype: torch.dtype | None = None,
+) -> Tensor:
+    """Return the source's fixed ``[1, channels, frames]`` CFM noise."""
+    if frames > FIXED_NOISE_FRAMES:
+        raise ValueError(
+            f"CosyVoice flow supports at most {FIXED_NOISE_FRAMES} mel frames "
+            "(300 seconds) per call.")
+    generator = torch.Generator(device="cpu")
+    generator.manual_seed(FIXED_NOISE_SEED)
+    noise = torch.randn(
+        (1, channels, FIXED_NOISE_FRAMES),
+        generator=generator,
+        dtype=torch.float32,
+    )
+    return noise[:, :, :frames].to(device=device, dtype=dtype)
+
+
 class CausalConditionalFlowMatcher(nn.Module):
     """Rectified conditional-flow objective and Euler sampler."""
 
@@ -447,6 +493,21 @@ class CausalConditionalFlowMatcher(nn.Module):
         super().__init__()
         self.config = config
         self.estimator = DiTEstimator(config)
+        self._fixed_noise: Tensor | None = None
+
+    def fixed_noise(self, frames: int, *, like: Tensor) -> Tensor:
+        """Cached slice of the source's fixed inference noise."""
+        if frames > FIXED_NOISE_FRAMES:
+            raise ValueError(
+                f"CosyVoice flow supports at most {FIXED_NOISE_FRAMES} mel "
+                "frames (300 seconds) per call.")
+        if self._fixed_noise is None or self._fixed_noise.device != like.device:
+            self._fixed_noise = fixed_flow_noise(
+                self.config.mel_channels,
+                FIXED_NOISE_FRAMES,
+                device=like.device,
+            )
+        return self._fixed_noise[:, :, :frames].to(dtype=like.dtype)
 
     def compute_loss(
         self,
@@ -513,12 +574,16 @@ class CausalConditionalFlowMatcher(nn.Module):
             raise ValueError("Flow steps and temperature must be positive.")
         self.estimator.reset_diffusion_cache()
         self.estimator.reset_diffusion_sampling()
-        values = torch.randn(
-            means.shape,
-            device=means.device,
-            dtype=means.dtype,
-            generator=generator,
-        ) * temperature
+        if generator is None and means.shape[0] == 1:
+            # Source inference: deterministic fixed noise, not a fresh draw.
+            values = self.fixed_noise(means.shape[-1], like=means) * temperature
+        else:
+            values = torch.randn(
+                means.shape,
+                device=means.device,
+                dtype=means.dtype,
+                generator=generator,
+            ) * temperature
         times = 1 - torch.cos(
             torch.linspace(
                 0,
@@ -526,12 +591,19 @@ class CausalConditionalFlowMatcher(nn.Module):
                 steps + 1,
                 device=means.device,
                 dtype=means.dtype,
-            ) * (math.pi / 2))
+            ) * 0.5 * math.pi)
         controller = self.estimator.diffusion_sampling_controller
         if controller is not None:
             times = controller.prepare_schedule(times)
         total_steps = times.numel() - 1
-        for index, (start, end) in enumerate(zip(times[:-1], times[1:])):
+        # Mirror the source Euler bookkeeping exactly: ``t`` accumulates
+        # ``t + dt`` and the next ``dt`` is measured from that accumulated
+        # value, which differs from the schedule entries by rounding.
+        current = times[0]
+        delta = times[1] - times[0]
+        for index in range(total_steps):
+            start = current
+            end = current + delta
             timestep = start.expand(means.shape[0])
             guidance_context = DiffusionStepContext(
                 index=index,
@@ -556,6 +628,23 @@ class CausalConditionalFlowMatcher(nn.Module):
             )
 
             def evaluate_velocity() -> Tensor:
+                if (use_guidance and controller is None and self.estimator.diffusion_cache_config is None):
+                    # Source CFG: one batched estimator call over
+                    # [conditional, unconditional] (batching changes GEMM
+                    # kernels, so this also keeps the source numerics).
+                    batch = values.shape[0]
+                    both = self.estimator(
+                        torch.cat((values, values)),
+                        torch.cat((mask, mask)),
+                        torch.cat((means, torch.zeros_like(means))),
+                        torch.cat((timestep, timestep)),
+                        torch.cat((speakers, torch.zeros_like(speakers))),
+                        torch.cat((conditioning, torch.zeros_like(conditioning))),
+                        streaming=streaming,
+                    )
+                    conditioned, unconditioned = both[:batch], both[batch:]
+                    return ((1 + self.config.inference_cfg_rate) * conditioned -
+                            self.config.inference_cfg_rate * unconditioned)
                 conditioned = self.estimator(
                     values,
                     mask,
@@ -594,11 +683,14 @@ class CausalConditionalFlowMatcher(nn.Module):
                     evaluate_velocity,
                 ))
             values = (
-                values + (end - start) * velocity if controller is None else controller.advance(
+                values + delta * velocity if controller is None else controller.advance(
                     evaluation_context,
                     values,
                     velocity,
                 ))
+            current = end
+            if index + 1 < total_steps:
+                delta = times[index + 2] - current
         return values.float()
 
 
@@ -736,24 +828,45 @@ class CosyVoiceFlowMatchingModel(nn.Module):
         speech_lengths: Tensor,
         speaker_embeddings: Tensor,
         *,
+        prompt_speech_tokens: Tensor | None = None,
         prompt_features: Tensor | None = None,
         steps: int = 10,
         temperature: float = 1.0,
         generator: torch.Generator | None = None,
     ) -> Tensor:
-        means, valid = self.encode_tokens(speech_tokens, speech_lengths)
+        """Generate mel frames for ``speech_tokens`` only.
+
+        Like the source ``CausalMaskedDiffWithDiT.inference``, prompt
+        speech tokens are prepended to the generated tokens, the prompt
+        mel occupies the matching leading conditioning frames, and the
+        prompt region is removed from the returned features.
+        """
+        if speech_tokens.shape[0] != 1:
+            raise ValueError("CosyVoice flow inference supports one utterance.")
+        prompt_frames = 0
+        if prompt_features is not None:
+            if prompt_speech_tokens is None or prompt_speech_tokens.numel() == 0:
+                raise ValueError("`prompt_features` require the matching `prompt_speech_tokens`.")
+            if prompt_features.ndim != 3 or (prompt_features.shape[0] != 1 or
+                                             prompt_features.shape[2] != self.config.mel_channels):
+                raise ValueError("`prompt_features` must have shape [1, frames, mel].")
+            prompt_frames = prompt_features.shape[1]
+            if prompt_frames != prompt_speech_tokens.shape[-1] * self.config.token_mel_ratio:
+                raise ValueError(
+                    "Prompt mel frames must equal prompt speech tokens times "
+                    f"{self.config.token_mel_ratio}.")
+        tokens = speech_tokens[:, :int(speech_lengths[0])]
+        if prompt_speech_tokens is not None and prompt_speech_tokens.numel():
+            prompt = prompt_speech_tokens.reshape(1, -1).to(device=tokens.device, dtype=tokens.dtype)
+            tokens = torch.cat((prompt, tokens), dim=1)
+        lengths = tokens.new_tensor([tokens.shape[1]])
+        means, valid = self.encode_tokens(tokens, lengths)
         mask = valid[:, None].to(means.dtype)
-        speakers = self.spk_embed_affine_layer(functional.normalize(speaker_embeddings, dim=-1))
+        speakers = self.spk_embed_affine_layer(functional.normalize(speaker_embeddings, dim=1))
         conditioning = torch.zeros_like(means)
         if prompt_features is not None:
-            if prompt_features.ndim != 3 or (prompt_features.shape[0] != means.shape[0] or
-                                             prompt_features.shape[2] != means.shape[1]):
-                raise ValueError("`prompt_features` must have shape [batch, frames, mel].")
-            prompt = prompt_features.transpose(1, 2)
-            if prompt.shape[-1] > means.shape[-1]:
-                raise ValueError("Prompt features exceed the generated mel extent.")
-            conditioning[..., :prompt.shape[-1]] = prompt
-        return self.decoder.sample(
+            conditioning[..., :prompt_frames] = prompt_features.transpose(1, 2).to(conditioning.dtype)
+        features = self.decoder.sample(
             means,
             mask,
             speakers,
@@ -762,6 +875,7 @@ class CosyVoiceFlowMatchingModel(nn.Module):
             temperature=temperature,
             generator=generator,
         )
+        return features[..., prompt_frames:]
 
 
 __all__ = [

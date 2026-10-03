@@ -19,6 +19,35 @@ from voicehub.architectures.cosyvoice_native.vocoder import (
 )
 from voicehub.optimization.protocols import OptimizationCompileTarget
 
+#: FSQ silence/breath speech tokens of the CosyVoice 3 tokenizer. The
+#: source ``CosyVoice3Model.llm_job`` forwards at most this many consecutive
+#: ones to the flow decoder (the LM itself still conditions on all of them).
+SILENT_SPEECH_TOKENS = frozenset({1, 2, 28, 29, 55, 248, 494, 2241, 2242, 2322, 2323})
+MAX_CONSECUTIVE_SILENT_TOKENS = 5
+
+
+def suppress_long_silences(
+    speech_tokens: Tensor,
+    *,
+    silent_tokens: frozenset[int] = SILENT_SPEECH_TOKENS,
+    max_consecutive: int = MAX_CONSECUTIVE_SILENT_TOKENS,
+) -> Tensor:
+    """Drop silent tokens beyond ``max_consecutive`` in a run, as the source
+    does."""
+    if speech_tokens.ndim != 2 or speech_tokens.shape[0] != 1:
+        raise ValueError("`speech_tokens` must have shape [1, sequence].")
+    kept: list[int] = []
+    run = 0
+    for token in speech_tokens[0].tolist():
+        if token in silent_tokens:
+            run += 1
+            if run > max_consecutive:
+                continue
+        else:
+            run = 0
+        kept.append(token)
+    return speech_tokens.new_tensor([kept])
+
 
 @dataclass(frozen=True)
 class CosyVoiceSynthesisOutput:
@@ -64,6 +93,10 @@ class CosyVoiceNativeModel(nn.Module):
             dtype=dtype,
         )
         self.hift = CosyVoiceHiFTGenerator(config.hift)
+        self.hift.configure_source_noise(
+            speech_vocab_size=config.flow.speech_vocab_size,
+            speaker_embedding_dim=config.flow.speaker_embedding_dim,
+        )
         self.hifigan: CosyVoiceHiFTTrainingModel | None = None
         if build_discriminator:
             self.attach_discriminator(tiny=(config.hift.base_channels < 64), )
@@ -174,7 +207,7 @@ class CosyVoiceNativeModel(nn.Module):
         prompt_speech_tokens: Tensor | None = None,
         prompt_features: Tensor | None = None,
         min_new_tokens: int = 0,
-        max_new_tokens: int = 1_024,
+        max_new_tokens: int | None = None,
         top_k: int = 25,
         top_p: float = 0.8,
         temperature: float = 1.0,
@@ -194,15 +227,17 @@ class CosyVoiceNativeModel(nn.Module):
         )
         if speech_tokens.shape[1] == 0:
             raise RuntimeError("CosyVoice language model emitted no speech tokens.")
+        speech_tokens = suppress_long_silences(speech_tokens)
         speech_lengths = speech_tokens.new_tensor([speech_tokens.shape[1]])
+        # The source flow stage always uses its fixed noise at temperature
+        # one; the LM sampling temperature and seed do not reach it.
         features = self.flow.generate(
             speech_tokens,
             speech_lengths,
             speaker_embedding,
+            prompt_speech_tokens=(prompt_speech_tokens if prompt_features is not None else None),
             prompt_features=prompt_features,
             steps=flow_steps,
-            temperature=temperature,
-            generator=generator,
         )
         waveform, _ = self.hift(features)
         return CosyVoiceSynthesisOutput(
@@ -216,4 +251,7 @@ class CosyVoiceNativeModel(nn.Module):
 __all__ = [
     "CosyVoiceNativeModel",
     "CosyVoiceSynthesisOutput",
+    "MAX_CONSECUTIVE_SILENT_TOKENS",
+    "SILENT_SPEECH_TOKENS",
+    "suppress_long_silences",
 ]
