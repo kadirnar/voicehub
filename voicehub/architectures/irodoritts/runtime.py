@@ -15,7 +15,7 @@ from voicehub.checkpointing import SafeTensorReader
 from voicehub.optimization.protocols import OptimizationCompileTarget, OptimizationModuleRoot
 from voicehub.processing.waveform import load_pcm_wave
 
-from .checkpoint import load_irodori_safetensors
+from .checkpoint import load_irodori_safetensors, read_irodori_inference_lengths
 from .codec import IrodoriDACVAECodec
 from .conditioning import (
     load_speaker_inversion_payload,
@@ -190,6 +190,7 @@ class InferenceRuntime:
         tokenizer: IrodoriTokenizer,
         codec: IrodoriDACVAECodec,
         model_device: str | torch.device,
+        inference_lengths: dict[str, int] | None = None,
     ) -> None:
         self.model = model
         self.model_cfg = model_cfg
@@ -198,8 +199,16 @@ class InferenceRuntime:
         self.codec = codec
         self.model_device = resolve_runtime_device(model_device)
         self.codec_device = codec.device
-        self.default_text_max_len = 256
-        self.default_caption_max_len = 512 if model_cfg.use_caption_condition else 256
+        # Like the released runtime: checkpoint widths when recorded, else the
+        # 256-token default for text and the text width for captions.
+        lengths = dict(inference_lengths or {})
+        text_max_len = lengths.get("max_text_len")
+        self.default_text_max_len = (
+            int(text_max_len) if isinstance(text_max_len, int) and text_max_len > 0 else 256)
+        caption_max_len = lengths.get("max_caption_len")
+        self.default_caption_max_len = (
+            int(caption_max_len)
+            if isinstance(caption_max_len, int) and caption_max_len > 0 else self.default_text_max_len)
 
     def optimization_compile_targets(
         self,
@@ -282,6 +291,7 @@ class InferenceRuntime:
             tokenizer=tokenizer,
             codec=codec,
             model_device=model_device,
+            inference_lengths=read_irodori_inference_lengths(key.checkpoint),
         )
 
     def _batch_tokens(
@@ -544,8 +554,9 @@ class InferenceRuntime:
             speaker_scale = 0.0
         speaker_kv_scale = request.speaker_kv_scale if use_speaker else None
         # The released runtime only scales speaker K/V while t >= 0.9 by default.
-        speaker_kv_min_t = (None if speaker_kv_scale is None else
-                            0.9 if request.speaker_kv_min_t is None else float(request.speaker_kv_min_t))
+        speaker_kv_min_t = (
+            None if speaker_kv_scale is None else
+            0.9 if request.speaker_kv_min_t is None else float(request.speaker_kv_min_t))
         sampled = sample_euler_rf_cfg(
             model=self.model,
             text_input_ids=text_ids,

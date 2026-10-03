@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,8 +12,11 @@ from unittest.mock import patch
 import torch
 
 from tests.test_native_irodoritts import _tiny_config, _write_tokenizer
+from voicehub.architectures.irodoritts.checkpoint import read_irodori_inference_lengths
 from voicehub.architectures.irodoritts.modeling import TextToLatentRFDiT
 from voicehub.architectures.irodoritts.runtime import InferenceRuntime, SamplingRequest
+from voicehub.checkpointing import save_safetensors
+from voicehub.checkpointing.errors import CheckpointCompatibilityError
 
 HOP = 1920
 
@@ -80,6 +84,47 @@ class IrodoriSamplingOptionTests(unittest.TestCase):
         self.assertEqual(self.decode_batches, [2])
         with self.assertRaisesRegex(ValueError, "decode_mode"):
             self.runtime.synthesize(self._request(no_ref=True, decode_mode="parallel"))
+
+    def test_checkpoint_text_and_caption_widths_drive_padding(self):
+        path = Path(self.directory.name) / "custom.safetensors"
+
+        def write(**lengths):
+            values = dict(self.config.to_dict(), **lengths)
+            save_safetensors({"w": torch.zeros(1)}, path, metadata={"config_json": json.dumps(values)})
+            return read_irodori_inference_lengths(path)
+
+        self.assertEqual(write(), {})
+        self.assertEqual(write(max_text_len=64), {"max_text_len": 64})
+        self.assertEqual(
+            write(max_text_len=64, max_caption_len=96), {
+                "max_text_len": 64,
+                "max_caption_len": 96
+            })
+        with self.assertRaises(CheckpointCompatibilityError):
+            write(max_text_len="64")
+
+        # The released runtime falls back to the text width for captions.
+        runtime = InferenceRuntime(
+            model=self.runtime.model,
+            model_cfg=self.config,
+            tokenizer=self.runtime.tokenizer,
+            codec=self.codec,
+            model_device="cpu",
+            inference_lengths={"max_text_len": 64},
+        )
+        self.assertEqual((runtime.default_text_max_len, runtime.default_caption_max_len), (64, 64))
+        self.assertEqual((self.runtime.default_text_max_len, self.runtime.default_caption_max_len),
+                         (256, 256))
+        captured = []
+
+        def sampler(**kwargs):
+            captured.append(kwargs["text_input_ids"].shape[1])
+            return torch.zeros(1, kwargs["sequence_length"], self.config.patched_latent_dim)
+
+        with patch("voicehub.architectures.irodoritts.runtime.sample_euler_rf_cfg", side_effect=sampler):
+            runtime.synthesize(self._request(no_ref=True))
+            runtime.synthesize(self._request(no_ref=True, max_text_len=32))
+        self.assertEqual(captured, [64, 32])
 
 
 if __name__ == "__main__":
