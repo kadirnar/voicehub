@@ -220,7 +220,8 @@ print(json.dumps({name: name in sys.modules for name in names}))
             self.assertTrue(operation.librosa_filters)
             waveform = torch.sin(torch.linspace(0.0, 800.0, 4_000)) * 0.1
             features = wrapper._chunk_features(waveform)[0]
-            padded = torch.nn.functional.pad(waveform, (0, wrapper.native_config.expected_input_frames * 160 - 4_000))
+            padded = torch.nn.functional.pad(
+                waveform, (0, wrapper.native_config.expected_input_frames * 160 - 4_000))
             power = torch.stft(
                 padded,
                 n_fft=400,
