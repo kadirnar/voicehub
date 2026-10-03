@@ -14,6 +14,34 @@ def _integer(value: Any, *, name: str, minimum: int = 1) -> int:
     return value
 
 
+_MOE_BALANCING_ALIASES = {
+    "current": "quantile",
+    "quantile": "quantile",
+    "qbalancing": "quantile",
+    "old": "legacy",
+    "legacy": "legacy",
+    "aux": "legacy",
+    "aux_loss": "legacy",
+}
+
+
+def normalize_moe_balancing_strategy(strategy: Any) -> str:
+    """Resolve upstream's balancing-strategy aliases to legacy/quantile.
+
+    ``legacy`` routers add their balancing biases to the expert
+    probabilities before top-k; ``quantile`` routers subtract them.
+    """
+    if not isinstance(strategy, str):
+        raise TypeError("`moe_balancing_strategy` must be a string.")
+    normalized = strategy.strip().lower().replace("-", "_")
+    try:
+        return _MOE_BALANCING_ALIASES[normalized]
+    except KeyError as error:
+        raise ValueError(
+            f"Unsupported ZONOS2 moe_balancing_strategy {strategy!r}; expected one of "
+            f"{sorted(_MOE_BALANCING_ALIASES)!r}.") from error
+
+
 def _finite_positive(value: Any, *, name: str) -> float:
     if (isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value) or value <= 0):
         raise ValueError(f"`{name}` must be a finite positive number.")
@@ -163,6 +191,7 @@ class Zonos2ArchitectureConfig:
     moe_router_dim: int = 128
     moe_start_from_layer: int = 3
     moe_end_from_layer: int = 1
+    moe_balancing_strategy: str = "legacy"
     extra: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -177,6 +206,7 @@ class Zonos2ArchitectureConfig:
             int(layer): int(value)
             for layer, value in self.special_topk_layers.items()
         }
+        self.moe_balancing_strategy = normalize_moe_balancing_strategy(self.moe_balancing_strategy)
         self.validate()
 
     @property
@@ -308,4 +338,4 @@ class Zonos2ArchitectureConfig:
         return values
 
 
-__all__ = ["Zonos2ArchitectureConfig"]
+__all__ = ["Zonos2ArchitectureConfig", "normalize_moe_balancing_strategy"]

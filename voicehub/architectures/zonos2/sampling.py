@@ -54,10 +54,18 @@ def apply_repetition_penalty(
     logits: Tensor,
     generated: list[Tensor],
     options: Zonos2SamplingOptions,
+    *,
+    codebook_size: int | None = None,
 ) -> Tensor:
-    """Apply repetition penalties independently to each audio codebook."""
-    if (not generated or options.repetition_window == 0 or options.repetition_penalty == 1.0):
+    """Apply repetition penalties independently to each audio codebook.
+
+    Like upstream, only real codec ids (``< codebook_size``) count as
+    history, so end-of-audio and padding ids are never penalized, and a
+    penalty at or below 1.0 disables the penalty.
+    """
+    if (not generated or options.repetition_window == 0 or options.repetition_penalty <= 1.0):
         return logits
+    valid_limit = (logits.shape[-1] if codebook_size is None else min(logits.shape[-1], int(codebook_size)))
     result = logits.clone()
     codebook_count = (
         result.shape[1] if options.repetition_codebooks < 0 else min(
@@ -68,7 +76,7 @@ def apply_repetition_penalty(
     ).to(device=result.device)
     for codebook in range(codebook_count):
         token_ids = recent[:, codebook].long().unique()
-        token_ids = token_ids[(token_ids >= 0) & (token_ids < result.shape[-1])]
+        token_ids = token_ids[(token_ids >= 0) & (token_ids < valid_limit)]
         if token_ids.numel() == 0:
             continue
         selected = result[:, codebook, token_ids]
@@ -86,6 +94,7 @@ def sample_zonos2_codes(
     generated: list[Tensor],
     options: Zonos2SamplingOptions,
     generator: torch.Generator | None,
+    codebook_size: int | None = None,
 ) -> Tensor:
     """Sample one ``[codebooks]`` frame from batch-size-one logits."""
     if logits.ndim != 3 or logits.shape[0] != 1:
@@ -94,6 +103,7 @@ def sample_zonos2_codes(
         logits.float(),
         generated,
         options,
+        codebook_size=codebook_size,
     )
     if options.temperature <= 1e-5:
         return filtered.argmax(dim=-1)[0].long()
@@ -193,6 +203,7 @@ def generate_zonos2_codes(
             generated=generated,
             options=options,
             generator=generator,
+            codebook_size=model.config.codebook_size,
         )
         generated.append(codes)
         if eos_frame is None:

@@ -14,7 +14,9 @@ from voicehub.architectures.zonos2.artifacts import Zonos2SpeakerArtifacts, reso
 from voicehub.checkpointing import SafeTensorReader
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
 from voicehub.hub import read_json_file
-from voicehub.processing import load_native_audio, mel_filter_bank
+from voicehub.processing import load_native_audio, mel_filter_bank, resample_waveform_hann
+
+ZONOS2_SPEAKER_SAMPLE_RATE = 24_000
 
 
 def zonos2_speaker_mel(waveform: Tensor) -> Tensor:
@@ -152,12 +154,22 @@ def extract_zonos2_speaker_embedding(
     model_device = next(model.parameters()).device
     target_device = model_device if device is None else torch.device(device)
     target_dtype = next(model.parameters()).dtype if dtype is None else dtype
-    loaded = load_native_audio(audio, target_sampling_rate=24_000)
-    features = zonos2_speaker_mel(loaded.waveform.to(device=target_device)).to(dtype=target_dtype)
+    # Decode at the native rate, then resample like upstream's
+    # ``torchaudio.transforms.Resample(sr, 24000)``: the generic VoiceHub
+    # resampler uses a different windowed-sinc kernel.
+    loaded = load_native_audio(audio)
+    waveform = resample_waveform_hann(
+        loaded.waveform.to(device=target_device, dtype=torch.float32),
+        loaded.sampling_rate,
+        ZONOS2_SPEAKER_SAMPLE_RATE,
+        match="transform",
+    )
+    features = zonos2_speaker_mel(waveform).to(dtype=target_dtype)
     return model(features)
 
 
 __all__ = [
+    "ZONOS2_SPEAKER_SAMPLE_RATE",
     "extract_zonos2_speaker_embedding",
     "load_zonos2_speaker_encoder",
     "zonos2_speaker_mel",
