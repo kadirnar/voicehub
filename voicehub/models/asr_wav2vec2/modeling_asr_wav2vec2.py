@@ -380,7 +380,7 @@ class Wav2Vec2ForSpeechRecognition(PreTrainedASRModel):
     ) -> ASROutput:
         import torch
 
-        from voicehub.processing.waveform import load_native_audio
+        from voicehub.processing.waveform import load_native_audio, resample_waveform_hann
 
         if self.model is None or self.native_config is None:
             raise RuntimeError(f"{self.runtime_name} runtime is not loaded.")
@@ -400,9 +400,16 @@ class Wav2Vec2ForSpeechRecognition(PreTrainedASRModel):
         materialized = load_native_audio(
             audio,
             sampling_rate=sampling_rate,
-            target_sampling_rate=self.native_config.sampling_rate,
         )
         waveform = materialized.waveform
+        if materialized.sampling_rate != self.native_config.sampling_rate:
+            # Transformers' ASR pipeline, the upstream path for audio at
+            # other rates, resamples with torchaudio.functional.resample.
+            waveform = resample_waveform_hann(
+                waveform,
+                materialized.sampling_rate,
+                self.native_config.sampling_rate,
+            )
         minimum = self.native_config.minimum_input_samples
         if waveform.numel() < minimum:
             waveform = torch.nn.functional.pad(

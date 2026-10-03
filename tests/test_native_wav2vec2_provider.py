@@ -15,6 +15,7 @@ from voicehub.architectures.wav2vec2 import Wav2Vec2Config, Wav2Vec2ForCTC
 from voicehub.architectures.wav2vec2.tokenization import Wav2Vec2CTCTokenizer
 from voicehub.checkpointing import save_safetensors
 from voicehub.models.asr_wav2vec2 import NativeWav2Vec2TrainingAdapter, Wav2Vec2ASRConfig, Wav2Vec2ForSpeechRecognition
+from voicehub.processing import resample_waveform_hann
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.specs import get_training_spec
 
@@ -270,6 +271,34 @@ print(json.dumps({name: name in sys.modules for name in names}))
         self.assertAlmostEqual(words[1].start, 0.001)
         self.assertAlmostEqual(words[1].end, 0.0015)
         self.assertGreater(words[0].confidence, 0.99)
+
+    def test_inference_resamples_like_the_transformers_asr_pipeline(self):
+        # Transformers' ASR pipeline resamples non-16 kHz audio with
+        # torchaudio.functional.resample before the feature extractor. The
+        # generic windowed-sinc resampler differed by up to 0.07 and changed
+        # real LibriSpeech transcripts at 8 kHz and 24 kHz.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = Wav2Vec2ForSpeechRecognition(
+                Wav2Vec2ASRConfig(name_or_path=root),
+                device="cpu",
+            )
+            wrapper.load_for_training()
+            model = _DeterministicCTCModel((5, 4, 6), vocab_size=8)
+            captured = []
+            model.register_forward_pre_hook(lambda module, args: captured.append(args[0].clone()))
+            wrapper.model = model
+            audio = 0.1 * torch.randn(4_412, generator=torch.Generator().manual_seed(0))
+
+            result = wrapper.transcribe(audio, sampling_rate=22_050)
+
+        self.assertEqual(result.text, "a b")
+        resampled = resample_waveform_hann(audio, 22_050, 16_000)
+        self.assertEqual(resampled.numel(), 3_202)
+        expected = ((resampled - resampled.mean()) / torch.sqrt(resampled.var(unbiased=False) + 1e-7))
+        self.assertEqual(len(captured), 1)
+        torch.testing.assert_close(captured[0], expected.unsqueeze(0), rtol=0, atol=0)
 
     def test_training_adapter_exports_reloadable_native_artifact(self):
         with tempfile.TemporaryDirectory() as directory:
