@@ -10,12 +10,19 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from voicehub.architectures.f5tts.audio import cross_fade, normalize_reference_rms, trim_silence
+from voicehub.architectures.f5tts.audio import (
+    cross_fade,
+    normalize_reference_rms,
+    preprocess_reference_audio,
+    pydub_sample_width,
+    remove_generated_silence,
+    resample_hann_sinc,
+)
 from voicehub.architectures.f5tts.frontend import NativeF5TextFrontend, TokenSequence
 from voicehub.architectures.f5tts.modeling import F5ConditionalFlowMatcher
 from voicehub.architectures.f5tts.vocoder import NativeVocos
 from voicehub.optimization.protocols import OptimizationCompileTarget, OptimizationModuleRoot
-from voicehub.processing.waveform import load_native_audio
+from voicehub.processing.waveform import load_pcm_wave
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[;:,.!?])\s+|(?<=[；：，。！？])")
 
@@ -29,13 +36,14 @@ def chunk_text(text: str, *, maximum_bytes: int) -> tuple[str, ...]:
     for sentence in _SENTENCE_BOUNDARY.split(text):
         if not sentence:
             continue
-        suffix = (" " if sentence and len(sentence[-1].encode("utf-8")) == 1 else "")
-        candidate = current + sentence + suffix
-        if not current or len(candidate.encode("utf-8")) <= maximum_bytes:
-            current = candidate
+        suffixed = sentence + " " if len(sentence[-1].encode("utf-8")) == 1 else sentence
+        # The released budget compares the sentence without its joining space.
+        if len(current.encode("utf-8")) + len(sentence.encode("utf-8")) <= maximum_bytes:
+            current += suffixed
             continue
-        chunks.append(current.strip())
-        current = sentence + suffix
+        if current.strip():
+            chunks.append(current.strip())
+        current = suffixed
     if current.strip():
         chunks.append(current.strip())
     if not chunks and text.strip():
@@ -43,18 +51,29 @@ def chunk_text(text: str, *, maximum_bytes: int) -> tuple[str, ...]:
     return tuple(chunks)
 
 
-def normalize_reference_text(text: str) -> str:
-    normalized = text.strip()
-    if not normalized:
+def prompt_reference_text(text: str) -> str:
+    """Terminate the reference transcript like ``preprocess_ref_audio_text``."""
+    if not text.strip():
         raise ValueError(
             "`reference_text` is required by the native F5-TTS runtime. "
             "Automatic ASR is a separate VoiceHub task and is not hidden "
             "inside synthesis.")
-    if normalized.endswith("."):
-        return normalized + " "
-    if normalized.endswith("。"):
-        return normalized
-    return normalized + ". "
+    if text.endswith(". ") or text.endswith("。"):
+        return text
+    return text + (" " if text.endswith(".") else ". ")
+
+
+def normalize_reference_text(text: str) -> str:
+    """Return the reference transcript exactly as the released model sees it.
+
+    ``infer_batch_process`` appends one more space after a single-byte final
+    character, so an English transcript ends with ``".  "``. That text is
+    both prepended to the generated text and used for duration estimation.
+    """
+    normalized = prompt_reference_text(text)
+    if len(normalized[-1].encode("utf-8")) == 1:
+        normalized += " "
+    return normalized
 
 
 class NativeF5TTSRuntime(nn.Module):
@@ -166,30 +185,31 @@ class NativeF5TTSRuntime(nn.Module):
     def _prepare_reference(
         self,
         path: str | Path,
-    ) -> tuple[torch.Tensor, float]:
-        audio = load_native_audio(
-            path,
-            target_sampling_rate=self.target_sample_rate,
+    ) -> tuple[torch.Tensor, float, float]:
+        """Return the 24 kHz prompt, its original RMS, and its source duration.
+
+        Clipping, silence trimming, and RMS normalization run at the file's
+        own sampling rate before resampling, in the released order.
+        """
+        # Keep channels: pydub measures loudness over all of them, and the
+        # released recipe only downmixes after clipping and trimming.
+        channels, sampling_rate = load_pcm_wave(path, preserve_channels=True)
+        prepared = preprocess_reference_audio(
+            channels,
+            sampling_rate,
+            sample_width=pydub_sample_width(path),
         )
-        waveform = audio.waveform
-        maximum_samples = 12 * self.target_sample_rate
-        waveform = waveform[:maximum_samples]
-        trimmed = trim_silence(
-            waveform,
-            threshold=10**(-50 / 20),
-            padding=self.target_sample_rate // 20,
-        )
-        if trimmed.numel() == 0:
+        prepared = prepared[0] if prepared.shape[0] == 1 else prepared.mean(dim=0)
+        if prepared.numel() == 0 or not bool(prepared.abs().amax() > 0):
             raise ValueError("F5-TTS reference audio contains no audible speech.")
-        waveform = torch.cat((
-            trimmed,
-            torch.zeros(
-                self.target_sample_rate // 20,
-                dtype=trimmed.dtype,
-                device=trimmed.device,
-            ),
-        ))
-        return normalize_reference_rms(waveform)
+        source_seconds = prepared.numel() / sampling_rate
+        normalized, original_rms = normalize_reference_rms(prepared)
+        resampled = resample_hann_sinc(
+            normalized.float().unsqueeze(0),
+            sampling_rate,
+            self.target_sample_rate,
+        ).squeeze(0)
+        return resampled, original_rms, source_seconds
 
     @torch.no_grad()
     def infer(
@@ -210,6 +230,7 @@ class NativeF5TTSRuntime(nn.Module):
             raise RuntimeError("F5-TTS waveform inference requires a loaded native Vocos "
                                "decoder.")
         self._validate_inference_precision()
+        prompt_text = (prompt_reference_text(ref_text) if isinstance(ref_text, str) else None)
         reference_text = (
             normalize_reference_text(ref_text) if isinstance(ref_text, str) else tuple(ref_text))
         if isinstance(gen_text, str):
@@ -223,18 +244,17 @@ class NativeF5TTSRuntime(nn.Module):
         else:
             raise TypeError("F5-TTS generation text must be text or tokens.")
 
-        reference, original_rms = self._prepare_reference(ref_file)
-        reference = reference.to(
-            device=self.device,
-            dtype=next(self.ema_model.parameters()).dtype,
-        )
+        reference, original_rms, reference_seconds = self._prepare_reference(ref_file)
+        # Keep the prompt waveform in float32: the released recipe extracts
+        # the conditioning mel in float32 and only then casts it to the DiT
+        # dtype (``F5ConditionalFlowMatcher.sample`` does the same).
+        reference = reference.to(device=self.device)
         reference_frames = reference.numel() // self.hop_length
-        reference_seconds = reference.numel() / self.target_sample_rate
-        if isinstance(reference_text, str) and isinstance(generated_text, str):
+        if prompt_text is not None and isinstance(generated_text, str):
             maximum_bytes = max(
                 1,
                 int(
-                    len(reference_text.encode("utf-8")) / reference_seconds *
+                    len(prompt_text.encode("utf-8")) / reference_seconds *
                     max(1.0, 22.0 - reference_seconds) * speed),
             )
             chunks: tuple[str | TokenSequence, ...] = chunk_text(
@@ -266,15 +286,13 @@ class NativeF5TTSRuntime(nn.Module):
                 (combined, ),
                 device=self.device,
             )
+            # Like the released recipe, condition on every mel frame of the
+            # prompt (``samples // hop + 1`` with a centred STFT) but cut the
+            # output at ``samples // hop``.
             sampled, _ = self.ema_model.sample(
                 reference.unsqueeze(0),
                 token_ids,
                 duration,
-                lengths=torch.tensor(
-                    (reference_frames, ),
-                    device=self.device,
-                    dtype=torch.long,
-                ),
                 steps=nfe_step,
                 cfg_strength=cfg_strength,
                 sway_sampling_coef=sway_sampling_coef,
@@ -282,11 +300,11 @@ class NativeF5TTSRuntime(nn.Module):
             )
             generated = sampled[:, reference_frames:, :]
             vocoder_dtype = next(self.vocoder.parameters()).dtype
-            waveform = self.vocoder.decode(generated.transpose(
-                1, 2).to(dtype=vocoder_dtype), ).squeeze(0).float()
             generated = generated.float()
+            waveform = self.vocoder.decode(generated.transpose(1,
+                                                               2).to(dtype=vocoder_dtype)).squeeze(0).float()
             if original_rms < 0.1:
-                waveform = waveform * (original_rms / 0.1)
+                waveform = waveform * original_rms / 0.1
             generated_waves.append(waveform)
             generated_mels.append(generated.squeeze(0).transpose(0, 1))
 
@@ -295,11 +313,7 @@ class NativeF5TTSRuntime(nn.Module):
         for waveform in generated_waves[1:]:
             output = cross_fade(output, waveform, overlap)
         if remove_silence:
-            trimmed = trim_silence(
-                output,
-                threshold=10**(-50 / 20),
-                padding=self.target_sample_rate // 2,
-            )
+            trimmed = remove_generated_silence(output, self.target_sample_rate)
             if trimmed.numel():
                 output = trimmed
         spectrogram = torch.cat(generated_mels, dim=1)
@@ -314,4 +328,5 @@ __all__ = [
     "NativeF5TTSRuntime",
     "chunk_text",
     "normalize_reference_text",
+    "prompt_reference_text",
 ]

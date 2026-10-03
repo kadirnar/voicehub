@@ -101,6 +101,9 @@ class F5TTSForTextToSpeech(PreTrainedTTSModel):
             )
         if dtype != torch.float32:
             flow_model.to(dtype=dtype)
+            # The released recipe extracts the conditioning mel with a
+            # float32 frontend that is not part of the cast checkpoint graph.
+            flow_model.mel_spec.float()
         load_f5tts_checkpoint(
             flow_model,
             artifacts.checkpoint,
@@ -110,10 +113,10 @@ class F5TTSForTextToSpeech(PreTrainedTTSModel):
         )
         if artifacts.vocoder is None:
             raise RuntimeError("Native F5-TTS did not resolve a Vocos checkpoint.")
+        # The released recipe always decodes with a float32 Vocos, also when
+        # the DiT runs in half precision.
         with torch.device(self.device):
             vocoder = NativeVocos()
-        if dtype != torch.float32:
-            vocoder.to(dtype=dtype)
         load_vocos_checkpoint(
             vocoder,
             artifacts.vocoder,
