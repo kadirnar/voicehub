@@ -881,9 +881,9 @@ print(json.dumps({
 
         self.assertEqual(asr.config.model_type, "asr_transformers")
         self.assertEqual(vad.config.model_type, "vad_transformers")
-        resolved_directory = str(Path(directory).resolve())
-        self.assertEqual(asr.config.name_or_path, resolved_directory)
-        self.assertEqual(vad.config.name_or_path, resolved_directory)
+        absolute_directory = str(Path(directory).absolute())
+        self.assertEqual(asr.config.name_or_path, absolute_directory)
+        self.assertEqual(vad.config.name_or_path, absolute_directory)
 
     def test_factory_config_overrides_cannot_bypass_provider_validation(self):
         invalid_factories = (

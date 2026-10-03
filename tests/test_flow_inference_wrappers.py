@@ -346,11 +346,11 @@ class FlowInferenceLoaderTests(unittest.TestCase):
 
         self.assertEqual(
             module.load_model_from_hf.call_args.kwargs["repo_id"],
-            str(model_path.resolve()),
+            str(model_path.absolute()),
         )
         self.assertEqual(
             module.load_pca_state_from_hf.call_args.kwargs["repo_id"],
-            model_directory.resolve(),
+            model_directory.absolute(),
         )
 
     def test_chatterbox_inference_transition_evaluates_nested_modules(self):
@@ -494,7 +494,7 @@ class FlowInferenceLoaderTests(unittest.TestCase):
             )
             self.assertEqual(
                 model.config.name_or_path,
-                str(checkpoint.resolve()),
+                str(checkpoint.absolute()),
             )
 
     def test_dia_legacy_backend_is_rejected_with_native_migration(self):
