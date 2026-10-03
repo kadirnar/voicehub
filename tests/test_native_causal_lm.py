@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 from unittest import mock
 
@@ -278,6 +279,31 @@ class CausalLMGraphTests(unittest.TestCase):
                     cache.sequence_length(),
                     token_ids.shape[1],
                 )
+
+    def test_positions_beyond_the_trained_context_are_extrapolated(self):
+        # Transformers does not cap RoPE positions at max_position_embeddings
+        # (Higgs Audio v2 publishes 2048 yet decodes longer sequences).
+        torch.manual_seed(13)
+        model = LlamaForCausalLM(_tiny_config(LlamaConfig, max_position_embeddings=4)).eval()
+        token_ids = torch.tensor([[1, 5, 6, 7, 8, 9, 10]])
+        # `warnings.catch_warnings` instead of `assertWarns`, which touches
+        # every loaded module and trips lazy third-party imports.
+        with torch.no_grad(), warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            full = model(token_ids, use_cache=False).logits
+            explicit = model(
+                token_ids,
+                position_ids=torch.arange(token_ids.shape[1]),
+                use_cache=False,
+            ).logits
+
+        messages = [str(warning.message) for warning in caught]
+        self.assertEqual(sum("max_position_embeddings" in message for message in messages), 2)
+        self.assertTrue(torch.isfinite(full).all())
+        torch.testing.assert_close(explicit, full, atol=0.0, rtol=0.0)
+        with torch.no_grad():
+            within = model(token_ids[:, :4], use_cache=False).logits
+        torch.testing.assert_close(within, full[:, :4], atol=1e-6, rtol=1e-5)
 
     def test_chunked_cache_uses_bottom_right_causal_alignment(self):
         token_ids = torch.tensor(

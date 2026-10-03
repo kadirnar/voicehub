@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import math
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -82,6 +83,17 @@ def _normalize_position_ids(
     max_position_embeddings: int,
     device: torch.device,
 ) -> Tensor:
+    # Only default, linear and Llama-3 RoPE are supported; their angles are
+    # defined for every position, so (like Transformers) longer sequences are
+    # extrapolated instead of rejected.  The check uses host-side lengths so
+    # it never synchronizes with the device.
+    if past_length + query_length > max_position_embeddings:
+        warnings.warn(
+            "The decoder sequence is longer than `max_position_embeddings` "
+            f"({max_position_embeddings}); rotary positions are extrapolated "
+            "beyond the trained context, which may reduce quality.",
+            stacklevel=3,
+        )
     if position_ids is None:
         if attention_mask is not None and attention_mask.ndim == 2:
             positions = attention_mask.to(device=device, dtype=torch.long)
@@ -109,10 +121,6 @@ def _normalize_position_ids(
         position_ids = position_ids.expand(batch_size, -1)
     if (position_ids < 0).any():
         raise ValueError("`position_ids` cannot contain negative values.")
-    if (position_ids.numel() and int(position_ids.max().item()) >= max_position_embeddings):
-        raise ValueError(
-            "`position_ids` exceed `max_position_embeddings`; scaled or "
-            "dynamic RoPE must be represented by a future compatible config.")
     return position_ids
 
 
