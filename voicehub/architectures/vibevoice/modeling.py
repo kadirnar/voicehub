@@ -268,7 +268,9 @@ class VibeVoiceASRModel(nn.Module):
                     padding_mask.shape[0] != input_values.shape[0] or
                     padding_mask.shape[1] != input_values.shape[-1]):
                 raise ValueError("ASR padding mask must align with waveform samples.")
-            token_counts = torch.ceil(padding_mask.sum(dim=-1) / hop_length).to(torch.long)
+            # Exact integer ceiling, like the processor's placeholder count:
+            # float32 division undercounts past 2**24 samples (~11.65 min).
+            token_counts = (padding_mask.sum(dim=-1, dtype=torch.long) + hop_length - 1) // hop_length
             valid = torch.arange(
                 projected.shape[1],
                 device=projected.device,
@@ -432,7 +434,13 @@ class VibeVoiceASRForConditionalGeneration(nn.Module):
         current_ids = input_ids
         current_audio: Tensor | None = input_values
         current_padding: Tensor | None = padding_mask
-        mask = attention_mask
+        mask: Tensor | None = attention_mask
+        if bool(attention_mask.all()):
+            # An unpadded prompt needs no explicit mask: the decoder then takes
+            # its fused causal SDPA path, as transformers' sdpa attention does,
+            # instead of materializing float32 [heads, query, key] scores,
+            # which grow quadratically with hour-long audio prompts.
+            mask = None
         for _ in range(max_new_tokens):
             output = self(
                 current_ids,
@@ -452,10 +460,11 @@ class VibeVoiceASRForConditionalGeneration(nn.Module):
             current_ids = token
             current_audio = None
             current_padding = None
-            mask = torch.cat(
-                (mask, mask.new_ones(mask.shape[0], 1)),
-                dim=-1,
-            )
+            if mask is not None:
+                mask = torch.cat(
+                    (mask, mask.new_ones(mask.shape[0], 1)),
+                    dim=-1,
+                )
         return sequences
 
 

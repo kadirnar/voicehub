@@ -31,11 +31,14 @@ from voicehub.architectures.vibevoice.metadata import (
     VIBEVOICE_REALTIME_REPOSITORY,
     VIBEVOICE_TTS_REPOSITORY,
 )
+from voicehub.architectures.vibevoice.asr_codec import VibeVoiceASREncoderOutput
 from voicehub.architectures.vibevoice.modeling import (
     VibeVoiceASRForConditionalGeneration,
+    VibeVoiceASRModel,
     VibeVoiceForConditionalGeneration,
     VibeVoiceRealtimeForConditionalGeneration,
 )
+from voicehub.architectures.vibevoice.processing import VibeVoiceASRProcessor
 from voicehub.architectures.vibevoice.registration import (
     create_vibevoice_asr_architecture_spec,
     create_vibevoice_tts_architecture_spec,
@@ -388,6 +391,99 @@ class NativeVibeVoiceTests(unittest.TestCase):
             self.assertEqual(set(loaded), set(expected))
             for name, value in expected.items():
                 torch.testing.assert_close(loaded[name], value, rtol=0, atol=0, msg=name)
+
+    def test_asr_unparsable_output_drops_the_assistant_header(self):
+        extract = VibeVoiceASRProcessor.extract_segments
+        self.assertEqual(extract("assistant\nplain words\n"), "plain words")
+        self.assertEqual(extract("assistant\n[{\"Start\":0"), '[{"Start":0')
+        self.assertEqual(extract('assistant\n[{"Start":"x","End":1,"Content":"a"}]'),
+                         '[{"Start":"x","End":1,"Content":"a"}]')
+        self.assertEqual(
+            extract('assistant\n[{"Start":0,"End":1.5,"Speaker":0,"Content":"a"}]\n'),
+            [{
+                "Start": 0.0,
+                "End": 1.5,
+                "Speaker": 0,
+                "Content": "a",
+            }],
+        )
+
+    def test_asr_audio_token_count_is_exact_past_float32_precision(self):
+        # 16,777,601 samples (~11.65 min): float32 ``ceil(n / 3200)`` gives
+        # 5243 while the processor expands ceil(n / 3200) = 5244 placeholders.
+        model = VibeVoiceASRModel(_asr_config()).eval()
+        hop_length = model.config.acoustic_tokenizer_encoder_config.hop_length
+        samples = 16_777_601
+        frames = -(-samples // hop_length)
+        width = frames * hop_length
+
+        def encoder_stub(hidden_size):
+
+            def forward(chunk, *, padding_cache=None, use_cache=False):
+                del use_cache
+                return VibeVoiceASREncoderOutput(
+                    latents=torch.zeros(chunk.shape[0], chunk.shape[-1] // hop_length, hidden_size),
+                    padding_cache=padding_cache,
+                )
+
+            return forward
+
+        model.acoustic_tokenizer_encoder.forward = encoder_stub(4)
+        model.semantic_tokenizer_encoder.forward = encoder_stub(6)
+        padding_mask = torch.zeros(1, width, dtype=torch.bool)
+        padding_mask[:, :samples] = True
+        _, features = model.get_audio_features(
+            torch.zeros(1, 1, width),
+            padding_mask=padding_mask,
+            chunk_size=width,
+        )
+        self.assertEqual(features.shape[0], frames)
+        self.assertEqual(frames, 5_244)
+
+    def test_asr_generate_uses_fused_attention_for_unpadded_prompts(self):
+        torch.manual_seed(0)
+        model = VibeVoiceASRForConditionalGeneration(_asr_config()).eval()
+        input_values = torch.randn(1, 1, 6_400)
+        padding_mask = torch.ones(1, 6_400, dtype=torch.long)
+        audio_id = model.config.audio_token_id
+        input_ids = torch.tensor([[11, 12, audio_id, audio_id, 13]])
+        attention_mask = torch.ones_like(input_ids)
+        language_model = model.model.language_model
+        masks = []
+        original_forward = language_model.forward
+
+        def spy(*args, **kwargs):
+            masks.append(kwargs.get("attention_mask"))
+            return original_forward(*args, **kwargs)
+
+        language_model.forward = spy
+        generated = model.generate(
+            input_ids,
+            attention_mask=attention_mask,
+            input_values=input_values,
+            padding_mask=padding_mask,
+            max_new_tokens=4,
+            eos_token_id=-1,
+            generator=torch.Generator().manual_seed(3),
+        )
+        language_model.forward = original_forward
+        self.assertEqual(len(masks), 4)
+        self.assertTrue(all(mask is None for mask in masks))
+
+        # Uncached greedy reference through the explicit masked path.
+        reference = input_ids
+        with torch.no_grad():
+            for _ in range(4):
+                logits = model(
+                    reference,
+                    attention_mask=torch.ones_like(reference),
+                    input_values=input_values,
+                    padding_mask=padding_mask,
+                    use_cache=False,
+                    generator=torch.Generator().manual_seed(3),
+                ).logits
+                reference = torch.cat((reference, logits[:, -1:].argmax(dim=-1)), dim=-1)
+        torch.testing.assert_close(generated, reference, rtol=0, atol=0)
 
     def test_asr_raw_training_and_portable_reload(self):
         with tempfile.TemporaryDirectory() as temporary:
