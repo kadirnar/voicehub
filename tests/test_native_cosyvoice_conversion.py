@@ -77,7 +77,8 @@ class CosyVoiceConversionEntryPointTests(unittest.TestCase):
             with (
                     mock.patch(f"{_CONVERTER}.resolve_pretrained_file", side_effect=resolve),
                     mock.patch(f"{_CONVERTER}.find_spec", return_value=object()),
-                    mock.patch(f"{_CONVERTER}.convert_audited_cosyvoice_legacy_checkpoint", _fake_legacy(calls)),
+                    mock.patch(f"{_CONVERTER}.convert_audited_cosyvoice_legacy_checkpoint",
+                               _fake_legacy(calls)),
                     mock.patch(
                         f"{_CONVERTER}.convert_audited_cosyvoice_speech_tokenizer",
                         _fake_speech_tokenizer(calls),
@@ -113,7 +114,8 @@ class CosyVoiceConversionEntryPointTests(unittest.TestCase):
             output = root / "native"
             with (
                     mock.patch(f"{_CONVERTER}.find_spec", return_value=None),
-                    mock.patch(f"{_CONVERTER}.convert_audited_cosyvoice_legacy_checkpoint", _fake_legacy(calls)),
+                    mock.patch(f"{_CONVERTER}.convert_audited_cosyvoice_legacy_checkpoint",
+                               _fake_legacy(calls)),
                     mock.patch("builtins.print"),
             ):
                 with self.assertRaisesRegex(RuntimeError, r"voicehub\[conversion\]"):
@@ -122,7 +124,8 @@ class CosyVoiceConversionEntryPointTests(unittest.TestCase):
                 self.assertFalse(output.exists())
 
                 self.assertEqual(
-                    main([str(output), "--source", str(snapshot), "--skip-speech-tokenizer"]),
+                    main([str(output), "--source",
+                          str(snapshot), "--skip-speech-tokenizer"]),
                     0,
                 )
 
