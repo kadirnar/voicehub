@@ -191,10 +191,10 @@ def _end_detect(
         window: int = 3,
         threshold: float = math.log(math.exp(-10.0)),
 ) -> bool:
-    """ESPnet ``end_detect`` (Watanabe et al., Eq.
+    """Return whether ESPnet's ``end_detect`` stops the search.
 
-    50) over ended hypotheses.     Lengths count SOS and EOS exactly
-    like ESPnet's ``yseq``.
+    This is Eq. 50 of Watanabe et al. over the ended hypotheses. Lengths
+    count SOS and EOS exactly like ESPnet's ``yseq``.
     """
     if not ended:
         return False
