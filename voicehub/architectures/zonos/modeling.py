@@ -197,9 +197,11 @@ class ZonosFourierConditioner(ZonosConditioner):
             raise ValueError(
                 f"Zonos `{self.name}` expects {self.input_dim} features, "
                 f"received {value.shape[-1]}.")
-        normalized = (value.to(device=self.weight.device, dtype=self.weight.dtype) -
-                      self.min_val) / (self.max_val - self.min_val)
-        frequencies = 2 * torch.pi * normalized @ self.weight.T
+        # Normalize in the input precision before casting, as the released
+        # conditioner does. Casting first rounds raw values such as
+        # ``pitch_std=333`` to bfloat16 and changes the conditioning.
+        normalized = (value.to(device=self.weight.device) - self.min_val) / (self.max_val - self.min_val)
+        frequencies = 2 * torch.pi * normalized.to(dtype=self.weight.dtype) @ self.weight.T
         return torch.cat((frequencies.cos(), frequencies.sin()), dim=-1)
 
 
@@ -812,6 +814,11 @@ class ZonosForCausalLM(nn.Module):
         if cfg_scale != 1.0:
             conditional, unconditional = logits.chunk(2)
             logits = (unconditional + (conditional - unconditional) * cfg_scale)
+        padding = self.config.generation_logits_width - logits.shape[-1]
+        if padding > 0:
+            # Keep the released sampler's masked logit layout so seeded
+            # sampling draws the same per-token noise as the reference.
+            logits = F.pad(logits, (0, padding), value=-torch.inf)
         return logits
 
     def prefill(

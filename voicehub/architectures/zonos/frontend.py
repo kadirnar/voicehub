@@ -224,11 +224,15 @@ def validate_phonemes(phonemes: str) -> str:
     normalized = phonemes.strip()
     if not normalized:
         raise ValueError("Zonos phonemes cannot be empty.")
-    unsupported = sorted(set(normalized) - set(PHONEME_SYMBOL_TO_ID))
-    if unsupported:
+    # The released tokenizer maps symbols outside its vocabulary to UNK.
+    # eSpeak emits such symbols for supported languages (French nasal
+    # vowels, Japanese diacritics, Mandarin tone digits), so they must be
+    # accepted. A sequence without any known non-space symbol cannot be
+    # eSpeak output for this checkpoint (e.g. raw CJK text) and is rejected.
+    if not any(symbol in PHONEME_SYMBOL_TO_ID for symbol in normalized if symbol != " "):
         raise ValueError(
-            "Zonos phonemes contain symbols outside the published "
-            f"vocabulary: {unsupported!r}.")
+            "Zonos phonemes contain no symbol from the published "
+            "vocabulary; pass eSpeak-compatible phonemes.")
     return normalized
 
 
@@ -267,7 +271,7 @@ def tokenize_phonemes(
     value = validate_phonemes(phonemes)
     ids = [
         BOS_ID,
-        *(PHONEME_SYMBOL_TO_ID[symbol] for symbol in value),
+        *(PHONEME_SYMBOL_TO_ID.get(symbol, UNK_ID) for symbol in value),
         EOS_ID,
     ]
     return torch.tensor(ids, dtype=torch.long, device=device)
