@@ -328,8 +328,9 @@ class OuteTTSForTextToSpeech(PreTrainedTTSModel):
     def _auto_dtype(self, torch):
         """Match the author ``ModelConfig.auto_config`` precision policy.
 
-        CUDA uses BF16 when supported and FP16 otherwise; every other device
-        runs in FP32 instead of the checkpoint's BF16 storage dtype.
+        CUDA uses BF16 when supported and FP16 otherwise; every other
+        device runs in FP32 instead of the checkpoint's BF16 storage
+        dtype.
         """
         if torch.device(self.device).type != "cuda":
             return torch.float32

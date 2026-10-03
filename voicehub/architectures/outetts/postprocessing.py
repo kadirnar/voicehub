@@ -38,8 +38,7 @@ def has_cjk(text: str | Sequence[str]) -> bool:
 
     Like upstream, a token list is checked token by token.
     """
-    return any("぀" <= item <= "ゟ" or "゠" <= item <= "ヿ" or "一" <= item <= "鿿"
-               for item in text)
+    return any("぀" <= item <= "ゟ" or "゠" <= item <= "ヿ" or "一" <= item <= "鿿" for item in text)
 
 
 def _join(tokens: Sequence[str], *, cjk: bool) -> str:
@@ -131,7 +130,8 @@ def _biquad(
 
 
 def _second_order_responses(a1: float, a2: float, length: int) -> tuple[list[float], ...]:
-    """Impulse and unit-initial-state responses of ``1 / (1 + a1 z^-1 + a2 z^-2)``."""
+    """Impulse and unit-initial-state responses of ``1 / (1 + a1 z^-1 + a2
+    z^-2)``."""
     impulse = [1.0, -a1]
     previous = [-a1, a1 * a1 - a2]  # y[-1] = 1
     before_previous = [-a2, a1 * a2]  # y[-2] = 1
@@ -150,9 +150,10 @@ def _lfilter(
 ) -> Tensor:
     """Zero-initial-state biquad filter of a one-dimensional float64 tensor.
 
-    Equivalent to ``scipy.signal.lfilter``: each block's zero-state response
-    is an exact Toeplitz product and only the two-sample recursion state is
-    carried between blocks, so no impulse response is truncated.
+    Equivalent to ``scipy.signal.lfilter``: each block's zero-state
+    response is an exact Toeplitz product and only the two-sample
+    recursion state is carried between blocks, so no impulse response is
+    truncated.
     """
     length = signal.shape[-1]
     padded = torch.nn.functional.pad(signal, (2, 0))
@@ -174,8 +175,9 @@ def _lfilter(
             block_penultimate + previous[-2] * last + before_previous[-2] * penultimate,
         )
     state = torch.tensor(states, **options)
-    output = (zero_state + state[:, :1] * torch.tensor(previous, **options) +
-              state[:, 1:] * torch.tensor(before_previous, **options))
+    output = (
+        zero_state + state[:, :1] * torch.tensor(previous, **options) +
+        state[:, 1:] * torch.tensor(before_previous, **options))
     return output.reshape(-1)[:length]
 
 
@@ -201,7 +203,8 @@ def integrated_loudness(
     cumulative = torch.nn.functional.pad(signal.square().cumsum(0), (1, 0))
     lower = [int(block_size * (index * step) * sample_rate) for index in range(block_count)]
     upper = [
-        min(int(block_size * (index * step + 1) * sample_rate), signal.shape[0]) for index in range(block_count)
+        min(int(block_size * (index * step + 1) * sample_rate), signal.shape[0])
+        for index in range(block_count)
     ]
     energy = ((cumulative[upper] - cumulative[lower]) * (1.0 / (block_size * sample_rate))).clamp_min(0.0)
     block_loudness = -0.691 + 10.0 * torch.log10(energy)
@@ -225,9 +228,9 @@ def normalize_loudness(
 ) -> Tensor:
     """Upstream ``process_audio_tensor`` for one mono waveform.
 
-    Audio shorter than one block is measured zero-padded, as upstream does.
-    Unlike upstream (which divides by an infinite gain and returns NaN), a
-    silent waveform is returned unchanged.
+    Audio shorter than one block is measured zero-padded, as upstream
+    does. Unlike upstream (which divides by an infinite gain and returns
+    NaN), a silent waveform is returned unchanged.
     """
     flat = audio.reshape(-1)
     minimum = int(block_size * sample_rate)
@@ -246,7 +249,8 @@ def normalize_loudness(
 
 
 def apply_fade(audio: Tensor, sample_rate: int, *, seconds: float = FADE_SECONDS) -> Tensor:
-    """Linear fade-in/out on the last axis, as in ``DacInterface.apply_fade``."""
+    """Linear fade-in/out on the last axis, as in
+    ``DacInterface.apply_fade``."""
     length = min(int(sample_rate * seconds), audio.shape[-1] // 2)
     if not length:
         return audio

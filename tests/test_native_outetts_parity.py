@@ -1,7 +1,8 @@
 """Regressions found by the edwko/OuteTTS upstream parity audit.
 
 Reference values were produced with the author package (outetts 0.4.4 at
-f5eac6e70d792844c6a6959d900a47af2c061a5b, pyloudnorm 0.2.0, NumPy 2.4.6).
+f5eac6e70d792844c6a6959d900a47af2c061a5b, pyloudnorm 0.2.0, NumPy
+2.4.6).
 """
 
 from __future__ import annotations
@@ -128,7 +129,8 @@ class OuteTTSPostprocessingTests(unittest.TestCase):
                     output += numerator[2] * values[index - 2] - denominator[2] * expected[index - 2]
                 expected.append(output)
             observed = _lfilter(signal, numerator, denominator, block=64)
-            torch.testing.assert_close(observed, torch.tensor(expected, dtype=torch.float64), rtol=0, atol=1e-10)
+            torch.testing.assert_close(
+                observed, torch.tensor(expected, dtype=torch.float64), rtol=0, atol=1e-10)
 
     def test_integrated_loudness_matches_pyloudnorm_reference(self):
         self.assertAlmostEqual(integrated_loudness(_reference_sine(), 24_000), -9.53387507039484, places=5)
@@ -212,9 +214,10 @@ class OuteTTSChunkedDecodingTests(unittest.TestCase):
             return next(chunk_codes)
 
         runtime._generate_one = generate_one
-        text = ("One two three four five six seven eight nine ten eleven twelve thirteen. "
-                "Fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree "
-                "twentyfour twentyfive twentysix twentyseven twentyeight twentynine thirty thirtyone thirtytwo.")
+        text = (
+            "One two three four five six seven eight nine ten eleven twelve thirteen. "
+            "Fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree "
+            "twentyfour twentyfive twentysix twentyseven twentyeight twentynine thirty thirtyone thirtytwo.")
 
         audio = runtime.generate(
             text,

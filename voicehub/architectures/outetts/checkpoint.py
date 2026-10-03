@@ -190,7 +190,8 @@ def load_outetts_language_model(
         model.tie_weights()
     _materialize_rotary_buffers(model, config, device=device)
     remaining = [
-        name for name, value in (*model.state_dict().items(), *model.named_buffers()) if value.device.type == "meta"
+        name for name, value in (*model.state_dict().items(), *model.named_buffers())
+        if value.device.type == "meta"
     ]
     if remaining:
         raise CheckpointCompatibilityError(

@@ -146,8 +146,8 @@ class OuteTTSRuntime(nn.Module):
         """Decode like the author ``DacInterface.decode``.
 
         Codes are decoded in 2048-frame windows, each window is faded,
-        and the waveform is loudness-normalized to -18 LUFS with a -1 dBFS
-        peak limit.
+        and the waveform is loudness-normalized to -18 LUFS with a -1
+        dBFS peak limit.
         """
         if not first or len(first) != len(second):
             raise RuntimeError("OuteTTS returned no complete two-codebook DAC frames.")
