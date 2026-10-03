@@ -32,7 +32,10 @@
         }
       },
       "v2Pro": {
-        "s1": "same as v2",
+        "s1": {
+          "path": "s1v3.ckpt",
+          "sha256": "87133414860ea14ff6620c483a3db5ed07b44be42e2c3fcdad65523a729a745a"
+        },
         "s2_discriminator": {
           "path": "v2Pro/s2Dv2Pro.pth",
           "sha256": "257a7f36ae49e9ff08790d2cd3d398592530852caba810197f8606e884a52c54"
@@ -43,7 +46,10 @@
         }
       },
       "v2ProPlus": {
-        "s1": "same as v2",
+        "s1": {
+          "path": "s1v3.ckpt",
+          "sha256": "87133414860ea14ff6620c483a3db5ed07b44be42e2c3fcdad65523a729a745a"
+        },
         "s2_discriminator": {
           "path": "v2Pro/s2Dv2ProPlus.pth",
           "sha256": "635cd84bf6f7f9b8d41c88c7106f81d782c794c61f931845214ea037b0c5bef2"

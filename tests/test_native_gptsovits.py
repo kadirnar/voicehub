@@ -215,6 +215,30 @@ class NativeGPTSoVITSTests(unittest.TestCase):
                     variant,
                 )
 
+    def test_release_defaults_match_pinned_upstream_inference_defaults(self):
+        source = (PROJECT_ROOT / "voicehub" / "models" / "gptsovits" / "source" / "GPT_SoVITS" /
+                  "TTS_infer_pack" / "TTS.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        defaults = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == "TTS_Config":
+                for statement in node.body:
+                    if (isinstance(statement, ast.Assign) and
+                            any(getattr(target, "id", None) == "default_configs" for target in statement.targets)):
+                        defaults = ast.literal_eval(statement.value)
+        self.assertIsNotNone(defaults)
+        prefix = "GPT_SoVITS/pretrained_models/"
+        for variant in SUPPORTED_GPT_SOVITS_VARIANTS:
+            release = GPT_SOVITS_VARIANTS[variant]
+            with self.subTest(variant=variant):
+                for key, component in (
+                    ("t2s_weights_path", release.s1),
+                    ("vits_weights_path", release.s2_generator),
+                ):
+                    expected = defaults[variant][key].removeprefix(prefix)
+                    actual = "/".join(part for part in (component.subfolder, component.filename) if part)
+                    self.assertEqual(actual, expected)
+
     def test_frontend_accepts_exact_prepared_tensors_and_rejects_raw_text(self):
         with self.assertRaisesRegex(GPTSoVITSFrontendError, "does not guess"):
             reject_raw_text("raw text")
