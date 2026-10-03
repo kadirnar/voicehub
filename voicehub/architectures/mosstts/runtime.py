@@ -500,8 +500,9 @@ class MossTTSRuntime(nn.Module):
         options = dict(generation_options)
         unsupported = sorted(set(options) - GENERATION_OPTIONS_BY_VARIANT[self.config.variant])
         if unsupported:
-            raise ValueError(f"Unsupported MOSS-TTS {self.config.variant} generation options: " +
-                             ", ".join(unsupported) + ".")
+            raise ValueError(
+                f"Unsupported MOSS-TTS {self.config.variant} generation options: " + ", ".join(unsupported) +
+                ".")
         if self.config.variant == "local_v1_5":
             options["max_new_frames"] = max_new_tokens
         else:

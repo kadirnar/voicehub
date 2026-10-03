@@ -459,19 +459,20 @@ class NativeMossTrainingTests(unittest.TestCase):
             use_kv_cache=False,
             n_vq_for_inference=16,
         )
-        self.assertEqual(calls, [
-            {
-                "attention_mask": None,
-                "n_vq_for_inference": 4,
-                "max_new_tokens": 3,
-            },
-            {
-                "attention_mask": None,
-                "use_kv_cache": False,
-                "n_vq_for_inference": 16,
-                "max_new_frames": 3,
-            },
-        ])
+        self.assertEqual(
+            calls, [
+                {
+                    "attention_mask": None,
+                    "n_vq_for_inference": 4,
+                    "max_new_tokens": 3,
+                },
+                {
+                    "attention_mask": None,
+                    "use_kv_cache": False,
+                    "n_vq_for_inference": 16,
+                    "max_new_frames": 3,
+                },
+            ])
 
     def test_raw_audio_dataset_encodes_with_frozen_native_codec(self):
         config = _tiny_tts_config("delay")
