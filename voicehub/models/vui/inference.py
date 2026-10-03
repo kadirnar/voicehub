@@ -38,8 +38,13 @@ class VuiConfig(VoiceHubConfig):
         cache_dir: str | None = None,
         local_files_only: bool = False,
         verify_official_integrity: bool = True,
+        vad_backend: str = "pyannote",
         **kwargs,
     ):
+        from voicehub.models.vui.vad import VAD_BACKENDS
+
+        if vad_backend not in VAD_BACKENDS:
+            raise ValueError(f"`vad_backend` must be one of {VAD_BACKENDS}, received {vad_backend!r}.")
         super().__init__(
             sample_rate=sample_rate,
             checkpoint_filename=checkpoint_filename,
@@ -52,6 +57,7 @@ class VuiConfig(VoiceHubConfig):
             cache_dir=cache_dir,
             local_files_only=local_files_only,
             verify_official_integrity=verify_official_integrity,
+            vad_backend=vad_backend,
             **kwargs,
         )
 
@@ -87,6 +93,7 @@ class VuiForTextToSpeech(PreTrainedTTSModel):
         )
         self._hub_token = token
         self.artifacts: VuiArtifacts | None = None
+        self.vad_pipeline = None
         super().__init__(config, device=device, lazy_load=lazy_load)
 
     def _load_pretrained_model(self) -> None:
@@ -110,6 +117,22 @@ class VuiForTextToSpeech(PreTrainedTTSModel):
         ).to(self.device)
         self.model.eval()
         self.config.sample_rate = int(self.model.codec.config.sample_rate)
+        self.vad_pipeline = self._load_vad_pipeline()
+
+    def _load_vad_pipeline(self):
+        """Create the trimming detector; upstream uses pyannote VAD.
+
+        Its (gated) segmentation checkpoint is resolved on first use,
+        as in upstream's ``render``.
+        """
+        from voicehub.models.vui.vad import create_vad_pipeline
+
+        return create_vad_pipeline(
+            getattr(self.config, "vad_backend", "pyannote"),
+            device=str(self.device),
+            token=self._hub_token,
+            local_files_only=self.config.local_files_only,
+        )
 
     def _prepare_for_training(self) -> None:
         """Restore the uncached autoregressive graph used for token
@@ -174,6 +197,7 @@ class VuiForTextToSpeech(PreTrainedTTSModel):
                 waveform = render(
                     self.model,
                     text,
+                    vad_pipeline=self.vad_pipeline,
                     **generation_options,
                 )
         if waveform is None or waveform.numel() == 0:

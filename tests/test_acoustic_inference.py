@@ -826,7 +826,7 @@ class InferenceHelperTests(unittest.TestCase):
                     wraps=vui_tts.simple_clean,
                 ) as clean,
                 patch.object(vui_tts, "generate", side_effect=fake_generate),
-                patch.object(vui_tts, "resample_waveform", resample),
+                patch.object(vui_tts, "resample_waveform_hann", resample),
                 patch.object(
                     vui_tts,
                     "vad",

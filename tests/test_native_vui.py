@@ -412,6 +412,16 @@ class NativeVuiTests(unittest.TestCase):
         regions = detect_voice_activity(torch.zeros(84_707), pipe=pipeline)
         self.assertEqual(regions, [(0.03096875, 0.03096875 + 313 * 270 / 16_000)])
 
+    def test_vad_backend_is_validated(self):
+        from voicehub.models.vui.inference import VuiConfig
+        from voicehub.models.vui.vad import EnergyVADPipeline, PyannoteVADPipeline, create_vad_pipeline
+
+        self.assertEqual(VuiConfig().vad_backend, "pyannote")
+        self.assertIsInstance(create_vad_pipeline("pyannote"), PyannoteVADPipeline)
+        self.assertIsInstance(create_vad_pipeline("energy"), EnergyVADPipeline)
+        with self.assertRaises(ValueError):
+            VuiConfig(vad_backend="silero")
+
     def test_number_normalization_matches_pinned_inflect_examples(self):
         expected = {
             "0": "zero",
