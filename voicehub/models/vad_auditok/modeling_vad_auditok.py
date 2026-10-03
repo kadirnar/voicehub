@@ -8,7 +8,6 @@ from typing import Any
 from voicehub.audio_modeling_utils import PreTrainedVADModel
 from voicehub.modeling_outputs import SpeechSegment, VADOutput
 from voicehub.models.vad_auditok.configuration_vad_auditok import AuditokVADConfig
-from voicehub.vad_utils import merge_speech_segments
 
 
 class AuditokVADForVoiceActivityDetection(PreTrainedVADModel):
@@ -136,7 +135,9 @@ class AuditokVADForVoiceActivityDetection(PreTrainedVADModel):
                 ))
 
         return VADOutput(
-            segments=merge_speech_segments(segments),
+            # Regions are ordered and disjoint; pieces of a token truncated
+            # at `max_speech_duration_s` touch and must stay separate.
+            segments=tuple(segments),
             duration=materialized.duration,
             sample_rate=materialized.sampling_rate,
             probabilities=None,

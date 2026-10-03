@@ -35,6 +35,11 @@ class AuditokVADConfig(VoiceHubConfig):
     ``energy_threshold_db`` controls fixed-threshold detection. Set
     ``threshold_method`` to ``"otsu"``, ``"percentile"``, or ``"pXX"``
     to calibrate the threshold from the input energy distribution.
+
+    Calibration uses the whole input, as Auditok does for offline audio,
+    so no floor is applied by default. Auditok's ``min_energy_threshold``
+    (40 dB) only guards live-stream calibration; set
+    ``minimum_energy_threshold_db`` to clamp the estimate explicitly.
     """
 
     model_type = "vad_auditok"
@@ -47,7 +52,7 @@ class AuditokVADConfig(VoiceHubConfig):
         threshold_method: str = "fixed",
         analysis_window_s: float = 0.05,
         calibration_duration_s: float = 3.0,
-        minimum_energy_threshold_db: float = 40.0,
+        minimum_energy_threshold_db: float | None = None,
         strict_min_duration: bool = False,
         drop_trailing_silence: bool = False,
         inference_config=None,
@@ -66,10 +71,11 @@ class AuditokVADConfig(VoiceHubConfig):
             energy_threshold_db,
             name="energy_threshold_db",
         )
-        minimum_energy_threshold_db = _finite_number(
-            minimum_energy_threshold_db,
-            name="minimum_energy_threshold_db",
-        )
+        if minimum_energy_threshold_db is not None:
+            minimum_energy_threshold_db = _finite_number(
+                minimum_energy_threshold_db,
+                name="minimum_energy_threshold_db",
+            )
         analysis_window_s = _finite_number(
             analysis_window_s,
             name="analysis_window_s",

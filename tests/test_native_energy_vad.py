@@ -6,6 +6,7 @@ import unittest
 import torch
 
 from voicehub.architectures.energy_vad import (
+    EnergyRegion,
     EnergyVoiceActivityDetector,
     create_energy_vad_architecture_spec,
     estimate_energy_threshold,
@@ -69,13 +70,15 @@ class NativeEnergyVADTests(unittest.TestCase):
             strict_min_duration=True,
         )
 
+        # Auditok 833ae72 tokens (no padding): (160, 480), (800, 1120),
+        # (1120, 1440); the strict remainder (480, 640) is dropped. The
+        # 160-sample pads then meet halfway between overlapping tokens.
         self.assertEqual(
             tuple((region.start_sample, region.end_sample) for region in result.regions),
             (
-                (0, 400),
-                (400, 800),
-                (640, 1_040),
-                (1_040, 1_440),
+                (0, 640),
+                (640, 1_120),
+                (1_120, 1_600),
             ),
         )
 
@@ -98,7 +101,8 @@ class NativeEnergyVADTests(unittest.TestCase):
             float(result.frame_energies_db[0].item()),
             90,
         )
-        self.assertEqual(result.regions, ())
+        # Auditok counts the partial final window as one analysis window.
+        self.assertEqual(result.regions, (EnergyRegion(0, 50), ))
 
     def test_architecture_declares_algorithmic_non_trainable_contract(self):
         spec = create_energy_vad_architecture_spec()
@@ -106,6 +110,153 @@ class NativeEnergyVADTests(unittest.TestCase):
         self.assertEqual(spec.architecture_id, "energy-vad")
         self.assertFalse(spec.capabilities.training)
         self.assertTrue(spec.capabilities.has_feature("algorithmic"))
+
+
+def _auditok_regions(waveform, *, sampling_rate=16_000, **overrides):
+    options = {
+        "energy_threshold_db": 50,
+        "threshold_method": "fixed",
+        "analysis_window_s": 0.05,
+        "minimum_energy_threshold_db": None,
+        "min_speech_duration_ms": 200,
+        "min_silence_duration_ms": 0,
+        "speech_pad_ms": 0,
+        "max_speech_duration_s": None,
+        "strict_min_duration": False,
+        "drop_trailing_silence": False,
+    }
+    options.update(overrides)
+    result = EnergyVoiceActivityDetector().detect(
+        torch.as_tensor(waveform, dtype=torch.float32),
+        sampling_rate=sampling_rate,
+        **options,
+    )
+    return [(region.start_sample, region.end_sample) for region in result.regions]
+
+
+class AuditokParityRegressionTests(unittest.TestCase):
+    """Expected regions come from ``auditok.split`` at the pinned revision."""
+
+    def test_maximum_duration_truncates_tokens_like_auditok(self):
+        waveform = torch.zeros(16_000)
+        waveform[1_600:8_000] = 0.2
+        for strict, expected in (
+            (False, [(1_600, 6_400), (6_400, 8_000)]),
+            (True, [(1_600, 6_400)]),
+        ):
+            with self.subTest(strict_min_duration=strict):
+                self.assertEqual(
+                    _auditok_regions(waveform, max_speech_duration_s=0.3, strict_min_duration=strict),
+                    expected,
+                )
+        waveform[8_000:9_600] = 0.2
+        self.assertEqual(
+            _auditok_regions(waveform, max_speech_duration_s=0.3, min_silence_duration_ms=100),
+            [(1_600, 6_400), (6_400, 11_200)],
+        )
+
+    def test_wrapper_keeps_truncated_pieces_separate(self):
+        from voicehub.models.vad_auditok import AuditokVADConfig, AuditokVADForVoiceActivityDetection
+
+        waveform = torch.zeros(16_000)
+        waveform[1_600:8_000] = 0.2
+        model = AuditokVADForVoiceActivityDetection(AuditokVADConfig(), device="cpu")
+        output = model.detect(
+            waveform,
+            sampling_rate=16_000,
+            min_speech_duration_ms=200,
+            min_silence_duration_ms=0,
+            speech_pad_ms=0,
+            max_speech_duration_s=0.3,
+        )
+
+        self.assertEqual([(s.start, s.end) for s in output.segments], [(0.1, 0.4), (0.4, 0.5)])
+
+    def test_durations_convert_to_windows_with_auditok_float_rules(self):
+        waveform = torch.zeros(16_000)
+        waveform[1_600:2_720] = 0.2  # seven 10 ms windows
+        # Auditok: ceil(0.07 / 0.01) == 8 windows, ceil(0.06 / 0.01) == 6.
+        self.assertEqual(_auditok_regions(waveform, analysis_window_s=0.01, min_speech_duration_ms=70), [])
+        self.assertEqual(
+            _auditok_regions(waveform, analysis_window_s=0.01, min_speech_duration_ms=60),
+            [(1_600, 2_720)],
+        )
+
+    def test_analysis_window_truncates_to_whole_samples(self):
+        waveform = torch.zeros(16_000)
+        waveform[5_320:10_640] = 0.2
+        # int(0.0333 * 16000) == 532, not round(...) == 533.
+        self.assertEqual(
+            _auditok_regions(waveform, analysis_window_s=0.0333, min_speech_duration_ms=100),
+            [(5_320, 10_640)],
+        )
+
+    def test_offline_calibration_has_no_energy_floor_by_default(self):
+        from voicehub.models.vad_auditok import AuditokVADConfig
+
+        generator = torch.Generator().manual_seed(0)
+        waveform = torch.randn(16_000, generator=generator, dtype=torch.float64) * 10 / 32_768
+        waveform[4_000:12_000] *= 300
+        result = EnergyVoiceActivityDetector().detect(
+            waveform.float(),
+            sampling_rate=16_000,
+            energy_threshold_db=50,
+            threshold_method="percentile",
+            analysis_window_s=0.05,
+            minimum_energy_threshold_db=None,
+            min_speech_duration_ms=100,
+            min_silence_duration_ms=100,
+            speech_pad_ms=0,
+            max_speech_duration_s=None,
+            strict_min_duration=False,
+            drop_trailing_silence=False,
+        )
+
+        self.assertLess(result.threshold_db, 40)
+        self.assertEqual([(r.start_sample, r.end_sample) for r in result.regions], [(4_000, 13_600)])
+        self.assertIsNone(AuditokVADConfig().minimum_energy_threshold_db)
+        clamped = EnergyVoiceActivityDetector().detect(
+            waveform.float(),
+            sampling_rate=16_000,
+            energy_threshold_db=50,
+            threshold_method="percentile",
+            analysis_window_s=0.05,
+            minimum_energy_threshold_db=40,
+            min_speech_duration_ms=100,
+            min_silence_duration_ms=100,
+            speech_pad_ms=0,
+            max_speech_duration_s=None,
+            strict_min_duration=False,
+        )
+        self.assertEqual(clamped.threshold_db, 40)
+
+    def test_constant_energy_threshold_has_no_percentile_margin(self):
+        self.assertEqual(
+            estimate_energy_threshold(torch.full((5, ), 42.0, dtype=torch.float64), method="percentile"),
+            42.0,
+        )
+
+    def test_frame_energies_use_float64_on_the_int16_scale(self):
+        waveform = torch.linspace(-0.5, 0.5, 1_000, dtype=torch.float32)
+        reference = waveform.double().reshape(10, 100) * 32_768.0
+        expected = 20 * torch.log10(reference.square().mean(dim=-1).sqrt())
+        energies = EnergyVoiceActivityDetector().detect(
+            waveform,
+            sampling_rate=1_000,
+            energy_threshold_db=50,
+            threshold_method="fixed",
+            analysis_window_s=0.1,
+            minimum_energy_threshold_db=None,
+            min_speech_duration_ms=0,
+            min_silence_duration_ms=0,
+            speech_pad_ms=0,
+            max_speech_duration_s=None,
+            strict_min_duration=False,
+        ).frame_energies_db
+
+        self.assertEqual(energies.dtype, torch.float64)
+        torch.testing.assert_close(energies, expected, rtol=0, atol=1e-12)
+
 
 
 if __name__ == "__main__":
