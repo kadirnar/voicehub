@@ -242,6 +242,52 @@ class NativeSupertonicRuntimeTests(unittest.TestCase):
         ):
             SupertonicConfig(language="xx")
 
+    def test_inference_defaults_match_the_released_recipe(self):
+        # Upstream py/example_onnx.py, the supertonic PyPI pipeline and the
+        # Supertonic 3 model card all default to 8 denoising steps at 1.05x.
+        import inspect
+
+        for function in (
+                SupertonicForTextToSpeech._generate,
+                NativeSupertonicRuntime.synthesize,
+                NativeSupertonicRuntime.infer_batch,
+        ):
+            parameters = inspect.signature(function).parameters
+            self.assertEqual(parameters["total_steps"].default, 8, function)
+            self.assertEqual(parameters["speed"].default, 1.05, function)
+        model = SupertonicForTextToSpeech()
+        model._validate_generation_inputs({})
+        with self.assertRaisesRegex(ValueError, "total_steps"):
+            model._validate_generation_inputs({"total_steps": 0})
+
+    def test_synthesis_trims_each_chunk_like_the_released_example(self):
+        # py/example_onnx.py keeps ``wav[:int(sample_rate * duration)]``;
+        # rounding kept one extra sample whenever the fraction was >= 0.5.
+        runtime = _runtime()
+        runtime.infer_batch = lambda *args, **kwargs: (
+            torch.arange(200.0).unsqueeze(0),
+            torch.tensor([0.5175]),
+        )
+
+        single, _ = runtime.synthesize("Hello.", "en", None)
+        joined, duration = runtime.synthesize(
+            "One.\n\nTwo.",
+            "en",
+            None,
+            silence_duration=0.3,
+        )
+
+        self.assertEqual(single.shape, (1, 51))
+        torch.testing.assert_close(single[0], torch.arange(51.0))
+        self.assertEqual(joined.shape, (1, 51 + 30 + 51))
+        torch.testing.assert_close(joined[0, 51:81], torch.zeros(30))
+        torch.testing.assert_close(duration, torch.tensor([0.5175 * 2 + 0.3]))
+        trimmed = SupertonicForTextToSpeech()._trim_waveform(
+            torch.arange(10.0),
+            torch.tensor([3.6 / SUPERTONIC_SAMPLE_RATE]),
+        )
+        self.assertEqual(trimmed.numel(), 3)
+
     def test_latent_mask_preserves_the_released_sample_truncation(self):
         runtime = _runtime()
 

@@ -334,7 +334,7 @@ class NativeSupertonicRuntime(
         languages: tuple[str, ...] | list[str],
         style: SupertonicStyle,
         *,
-        total_steps: int = 5,
+        total_steps: int = 8,
         speed: float = 1.05,
         generator: torch.Generator | None = None,
     ) -> tuple[Tensor, Tensor]:
@@ -405,7 +405,7 @@ class NativeSupertonicRuntime(
         language: str,
         style: SupertonicStyle,
         *,
-        total_steps: int = 5,
+        total_steps: int = 8,
         speed: float = 1.05,
         silence_duration: float = 0.3,
         generator: torch.Generator | None = None,
@@ -432,9 +432,11 @@ class NativeSupertonicRuntime(
                 speed=speed,
                 generator=generator,
             )
+            # py/example_onnx.py trims with ``int(sample_rate * duration)``,
+            # the same truncation its latent mask applies.
             sample_count = min(
                 waveform.shape[-1],
-                max(1, round(float(duration[0].item()) * self.sample_rate)),
+                max(1, int(self.sample_rate * float(duration[0].item()))),
             )
             if index and silence.numel():
                 pieces.append(silence)

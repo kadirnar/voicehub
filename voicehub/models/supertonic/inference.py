@@ -164,7 +164,7 @@ class SupertonicForTextToSpeech(PreTrainedTTSModel):
             supported = ", ".join(sorted(SUPPORTED_LANGUAGES))
             raise ValueError(f"Unsupported Supertonic language {language!r}. "
                              f"Supported: {supported}.")
-        total_steps = model_inputs.get("total_steps", 5)
+        total_steps = model_inputs.get("total_steps", 8)
         if (isinstance(total_steps, bool) or not isinstance(total_steps, int) or total_steps <= 0):
             raise ValueError("`total_steps` must be a positive integer.")
         for name, default, allow_zero in (
@@ -189,7 +189,7 @@ class SupertonicForTextToSpeech(PreTrainedTTSModel):
             raise RuntimeError(f"Supertonic returned an invalid audio duration: {seconds}.")
         sample_count = min(
             len(waveform),
-            max(0, round(self.sample_rate * seconds)),
+            max(0, int(self.sample_rate * seconds)),
         )
         if sample_count == 0:
             raise RuntimeError("Supertonic returned an empty audio waveform.")
@@ -202,7 +202,7 @@ class SupertonicForTextToSpeech(PreTrainedTTSModel):
         output_file: str | None = None,
         voice: str | Path | None = None,
         language: str | None = None,
-        total_steps: int = 5,
+        total_steps: int = 8,
         speed: float = 1.05,
         silence_duration: float = 0.3,
         seed: int | None = None,
