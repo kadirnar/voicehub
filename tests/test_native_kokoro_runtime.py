@@ -329,7 +329,13 @@ class NativeKokoroRuntimeTests(unittest.TestCase):
 
     def test_reduced_precision_decoder_runs_without_dtype_mismatch(self):
         config = {
-            "vocab": {" ": 1, "h": 2, "ə": 3, "l": 4, "o": 5},
+            "vocab": {
+                " ": 1,
+                "h": 2,
+                "ə": 3,
+                "l": 4,
+                "o": 5
+            },
             "n_token": 8,
             # The released decoder hard-codes 512 text channels.
             "hidden_dim": 512,

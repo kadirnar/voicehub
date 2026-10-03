@@ -229,8 +229,8 @@ def _waterfall_chunks(phonemes: str, limit: int) -> list[str]:
     """Chunk long phoneme strings like upstream ``KPipeline.en_tokenize``.
 
     Upstream cuts at the last sentence punctuation (then ``:;``, then
-    ``,—``) that keeps the remainder within the model context, instead of
-    packing words greedily and splitting sentences mid-phrase.
+    ``,—``) that keeps the remainder within the model context, instead
+    of packing words greedily and splitting sentences mid-phrase.
     """
     chunks: list[str] = []
     pending: list[tuple[str, str]] = []
