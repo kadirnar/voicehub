@@ -203,7 +203,8 @@ class NemotronASRProcessor:
         self._processor_config_path = processor_config_path
         self._tokenizer_config_path = tokenizer_config_path
         self._language_tag_ids = frozenset(
-            token_id for token, token_id in tokenizer.special_tokens.items() if _LANGUAGE_TAG.fullmatch(token))
+            token_id for token, token_id in tokenizer.special_tokens.items()
+            if _LANGUAGE_TAG.fullmatch(token))
         self._space_before_punctuation = _space_before_punctuation(
             tuple(tokenizer.token_for_id(token_id) for token_id in tokenizer.vocabulary_ids))
 
@@ -534,14 +535,14 @@ class NemotronASRProcessor:
     def _transcript(self, token_ids: Sequence[int]) -> str:
         """Render a clean transcript like NeMo with ``strip_lang_tags``.
 
-        Language tags are removed together with the whitespace before them
-        (rather than leaving a double space mid-sentence), one space before
-        a vocabulary punctuation mark is dropped, and other special tokens
-        are skipped.
+        Language tags are removed together with the whitespace before
+        them (rather than leaving a double space mid-sentence), one
+        space before a vocabulary punctuation mark is dropped, and other
+        special tokens are skipped.
         """
         kept = (
-            token_id for token_id in token_ids if token_id != self.model_blank_token_id and (
-                token_id not in self.tokenizer.special_token_ids or token_id in self._language_tag_ids))
+            token_id for token_id in token_ids if token_id != self.model_blank_token_id and
+            (token_id not in self.tokenizer.special_token_ids or token_id in self._language_tag_ids))
         text = self.tokenizer.decode(kept, skip_special_tokens=False)
         if self._space_before_punctuation is not None:
             text = self._space_before_punctuation.sub(r"\2", text)

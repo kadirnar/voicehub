@@ -88,9 +88,9 @@ def resolve_nemotron_asr_generation_config(
     """Complete and validate a checkpoint's generation settings.
 
     The published ``generation_config.json`` is the Transformers one and
-    only declares ``decoder_start_token_id``/``pad_token_id``; the native
-    RNN-T settings default to the model graph and are validated whenever a
-    file (such as a VoiceHub export) declares them.
+    only declares ``decoder_start_token_id``/``pad_token_id``; the
+    native RNN-T settings default to the model graph and are validated
+    whenever a file (such as a VoiceHub export) declares them.
     """
     if values is not None and not isinstance(values, Mapping):
         raise TypeError("Nemotron generation configuration must be a mapping.")
