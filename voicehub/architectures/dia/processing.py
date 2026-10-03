@@ -14,7 +14,7 @@ from torch.nn import functional as F
 
 from voicehub.architectures.dac.modeling import DacModel
 from voicehub.architectures.dia.configuration import DiaArchitectureConfig
-from voicehub.processing.waveform import load_native_audio
+from voicehub.processing.waveform import load_native_audio, resample_waveform_hann
 
 
 class DiaBatch(dict[str, Tensor]):
@@ -292,12 +292,16 @@ class DiaProcessor:
         for value in values:
             native = load_native_audio(
                 value,
-                target_sampling_rate=self.sampling_rate,
                 sampling_rate=(
                     value.get("sampling_rate") if isinstance(value, Mapping) else
                     self.sampling_rate if not isinstance(value, (str, Path)) else None),
             )
-            waveforms.append(native.waveform)
+            # The released runtime (Dia.load_audio) resamples prompts with
+            # torchaudio.functional.resample before DAC encoding; the default
+            # match="functional" reproduces it bit-exactly. The DAC codes are
+            # sensitive to the resampler, so the generic one is not a substitute.
+            waveforms.append(
+                resample_waveform_hann(native.waveform, native.sampling_rate, self.sampling_rate))
         return tuple(waveforms)
 
     def _encode_audio(

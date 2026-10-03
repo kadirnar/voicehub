@@ -59,7 +59,7 @@ class DiaConfig(VoiceHubConfig):
         defaults = {
             "do_sample": True,
             "guidance_scale": 3.0,
-            "max_new_tokens": 256,
+            "max_new_tokens": 3_072,
             "temperature": 1.8,
             "top_k": 50,
             "top_p": 0.9,

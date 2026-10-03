@@ -422,10 +422,13 @@ def load_dia_runtime(
             strict=True,
         )
     codec_source, codec_revision = _audio_tokenizer_source(artifacts)
+    # Both released runtimes keep the DAC codec in float32 whatever the Dia
+    # compute dtype; half-precision DAC encode/decode changes prompt codes
+    # and output audio.
     codec = _load_native_dac(
         codec_source,
         device=device,
-        dtype=dtype,
+        dtype=torch.float32,
         revision=codec_revision,
         cache_dir=cache_dir,
         token=token,
