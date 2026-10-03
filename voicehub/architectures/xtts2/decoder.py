@@ -98,11 +98,10 @@ class HifiganGenerator(nn.Module):
             value = upsample(F.leaky_relu(value, 0.1))
             if g is not None and self.cond_in_each_up_layer:
                 value = value + self.conds[index](g)
-            blocks = [
-                self.resblocks[index * self.num_kernels + offset](value)
-                for offset in range(self.num_kernels)
-            ]
-            value = torch.stack(blocks).mean(dim=0)
+            total = self.resblocks[index * self.num_kernels](value)
+            for offset in range(1, self.num_kernels):
+                total = total + self.resblocks[index * self.num_kernels + offset](value)
+            value = total / self.num_kernels
         return torch.tanh(self.conv_post(F.leaky_relu(value)))
 
 

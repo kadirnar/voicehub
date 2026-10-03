@@ -294,6 +294,10 @@ class XTTS2GPT(nn.Module):
             dtype=torch.long,
             device=text.device,
         )
+        # The source drives Hugging Face ``generate`` with placeholder id 1 at
+        # every prefix position, so its repetition penalty always covers
+        # acoustic code 1 as well as the generated codes.
+        penalized = torch.cat((torch.ones_like(generated), generated), dim=1)
         unfinished = torch.ones(
             text.shape[0],
             dtype=torch.bool,
@@ -303,43 +307,59 @@ class XTTS2GPT(nn.Module):
             self.max_gen_mel_tokens,
             self.max_gen_mel_tokens if max_new_tokens is None else max_new_tokens,
         )
+        inputs = torch.cat((prefix, self.mel_embedding(generated) + self.mel_pos_embedding(generated)), dim=1)
+        past_key_values = None
         for _index in range(limit):
-            logits = self.autoregressive_step(prefix, generated) / temperature
+            output = self.gpt(inputs, past_key_values=past_key_values, use_cache=True)
+            past_key_values = output.past_key_values
+            # Like the source LM head, project every position of the first
+            # (prefix) step; slicing first changes the GEMM shape and rounding.
+            logits = self.mel_head(self.final_norm(output.last_hidden_state))[:, -1]
+            # Hugging Face order: repetition penalty, then temperature,
+            # top-k and top-p warpers (warpers only when sampling).
             if repetition_penalty != 1.0:
-                repeated_scores = logits.gather(1, generated)
+                repeated_scores = logits.gather(1, penalized)
                 repeated_scores = torch.where(
                     repeated_scores < 0,
                     repeated_scores * repetition_penalty,
                     repeated_scores / repetition_penalty,
                 )
-                logits.scatter_(1, generated, repeated_scores)
-            logits = _filter_logits(logits, top_k=top_k, top_p=top_p)
-            token = (
-                torch.multinomial(F.softmax(logits, dim=-1), 1) if do_sample else logits.argmax(
-                    dim=-1, keepdim=True))
+                logits.scatter_(1, penalized, repeated_scores)
+            if do_sample:
+                if temperature != 1.0:
+                    logits = logits / temperature
+                logits = _filter_logits(logits, top_k=top_k, top_p=top_p)
+                token = torch.multinomial(F.softmax(logits, dim=-1), 1)
+            else:
+                token = logits.argmax(dim=-1, keepdim=True)
             token = torch.where(
                 unfinished[:, None],
                 token,
                 torch.full_like(token, self.stop_audio_token),
             )
             generated = torch.cat((generated, token), dim=1)
+            penalized = torch.cat((penalized, token), dim=1)
             unfinished &= token.squeeze(1) != self.stop_audio_token
             if not bool(unfinished.any()):
                 break
+            inputs = self.mel_embedding(token) + self.mel_pos_embedding.get_fixed_embedding(
+                generated.shape[1] - 1,
+                token.device,
+            )
         return generated[:, 1:]
 
 
 def _filter_logits(logits: Tensor, *, top_k: int, top_p: float) -> Tensor:
-    if 0 < top_k < logits.shape[-1]:
-        threshold = logits.topk(top_k).values[:, -1:]
+    """Hugging Face ``TopKLogitsWarper`` then ``TopPLogitsWarper``."""
+    if top_k > 0:
+        threshold = logits.topk(min(top_k, logits.shape[-1])).values[..., -1, None]
         logits = logits.masked_fill(logits < threshold, -torch.inf)
-    if 0.0 < top_p < 1.0:
-        sorted_logits, indices = logits.sort(descending=True)
-        cumulative = F.softmax(sorted_logits, dim=-1).cumsum(dim=-1)
-        remove = cumulative > top_p
-        remove[:, 1:] = remove[:, :-1].clone()
-        remove[:, 0] = False
-        mask = torch.zeros_like(remove).scatter(1, indices, remove)
+    if top_p < 1.0:
+        sorted_logits, indices = logits.sort(descending=False)
+        cumulative = sorted_logits.softmax(dim=-1).cumsum(dim=-1)
+        remove = cumulative <= (1 - top_p)
+        remove[..., -1:] = False
+        mask = remove.scatter(1, indices, remove)
         logits = logits.masked_fill(mask, -torch.inf)
     return logits
 

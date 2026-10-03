@@ -18,6 +18,32 @@ _IGNORED_TRAINER_PREFIXES = (
     "torch_mel_spectrogram_dvae.",
     "torch_mel_spectrogram_style_encoder.",
 )
+# BatchNorm step counters are the only integer tensors in the published graph.
+_INTEGER_BUFFER_SUFFIX = ".num_batches_tracked"
+# Coqui pickles its trainer configuration next to the weights. These classes
+# are materialized as inert placeholders whose state is discarded, so the
+# restricted unpickler can read the tensors without importing Coqui TTS.
+_LEGACY_CONFIG_GLOBALS = (
+    "TTS.config.shared_configs.BaseDatasetConfig",
+    "TTS.tts.configs.xtts_config.XttsConfig",
+    "TTS.tts.models.xtts.XttsArgs",
+    "TTS.tts.models.xtts.XttsAudioConfig",
+)
+
+
+class _DiscardedLegacyConfig:
+    """Inert stand-in for a pickled Coqui configuration object."""
+
+    def __setstate__(self, state) -> None:
+        del state
+
+
+def _is_portable_tensor(name: str, value: torch.Tensor) -> bool:
+    if value.is_quantized or value.is_complex():
+        return False
+    if value.is_floating_point():
+        return True
+    return name.endswith(_INTEGER_BUFFER_SUFFIX) and value.dtype == torch.int64
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,7 +99,7 @@ def load_xtts2_checkpoint(
         with torch.no_grad():
             for name in sorted(expected):
                 value = reader.get_tensor(name)
-                if not value.is_floating_point():
+                if not _is_portable_tensor(name, value):
                     raise CheckpointCompatibilityError(f"XTTS v2 tensor {name!r} is not floating-point.")
                 target_dtype = dtype if dtype is not None and value.is_floating_point() else value.dtype
                 model.load_state_dict(
@@ -107,12 +133,14 @@ def convert_trusted_legacy_xtts2_checkpoint(
             "set `trust_legacy_pickle=True` only for a reviewed one-time conversion.", )
     legacy_path = Path(source).expanduser().resolve()
     try:
-        payload = torch.load(
-            legacy_path,
-            map_location="cpu",
-            weights_only=True,
-        )
-    except TypeError as error:
+        with torch.serialization.safe_globals([(_DiscardedLegacyConfig, name)
+                                               for name in _LEGACY_CONFIG_GLOBALS]):
+            payload = torch.load(
+                legacy_path,
+                map_location="cpu",
+                weights_only=True,
+            )
+    except (TypeError, AttributeError) as error:
         raise RuntimeError("This PyTorch version cannot restrict legacy XTTS deserialization.", ) from error
     state = payload.get("model") if isinstance(payload, dict) else None
     if not isinstance(state, dict):
@@ -134,7 +162,7 @@ def convert_trusted_legacy_xtts2_checkpoint(
             raise TypeError(f"Legacy XTTS v2 state item {name!r} is not a tensor.")
         if name in normalized:
             raise ValueError(f"Legacy XTTS v2 conversion produced duplicate tensor {name!r}.")
-        if (not value.is_floating_point() or value.is_quantized or value.is_complex()):
+        if not _is_portable_tensor(name, value):
             raise TypeError(f"Legacy XTTS v2 tensor {name!r} is not a portable "
                             "floating-point weight.")
         if not torch.isfinite(value.detach()).all().item():
@@ -155,7 +183,7 @@ def save_xtts2_checkpoint(model: nn.Module, path: str | Path) -> Path:
     for name, value in model.state_dict().items():
         if value.device.type == "meta":
             raise CheckpointCompatibilityError(f"XTTS v2 tensor {name!r} is not materialized.")
-        if not value.is_floating_point() or value.is_quantized or value.is_complex():
+        if not _is_portable_tensor(name, value):
             raise CheckpointCompatibilityError(f"XTTS v2 tensor {name!r} is not a portable floating tensor.")
         if not torch.isfinite(value.detach()).all().item():
             raise CheckpointCompatibilityError(f"XTTS v2 tensor {name!r} contains non-finite values.")

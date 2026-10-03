@@ -276,6 +276,9 @@ class XTTSForTextToSpeech(PreTrainedTTSModel):
             if value is not None and (isinstance(value, bool) or not isinstance(value, Real) or
                                       not math.isfinite(value) or value <= 0):
                 raise ValueError(f"XTTS `{name}` must be finite and greater than zero.")
+        speed = model_inputs.get("speed", 1.0)
+        if (isinstance(speed, bool) or not isinstance(speed, Real) or not math.isfinite(speed)):
+            raise ValueError("XTTS `speed` must be a finite number.")
         top_p = model_inputs.get("top_p")
         if top_p is not None and (isinstance(top_p, bool) or not isinstance(top_p, Real) or
                                   not math.isfinite(top_p) or not 0 < top_p <= 1):
