@@ -1,10 +1,10 @@
 """Regression tests for Qwen3-TTS numerics that must follow upstream exactly.
 
-The official runtime decodes through Transformers with SDPA attention. Its
-bf16 results depend on which SDPA kernel runs, the GEMM shapes, where
-reductions happen, and where RoPE frequencies are computed. Each test pins
-one of those choices so autoregressive generation stays bit-identical to the
-upstream recipe on real checkpoints.
+The official runtime decodes through Transformers with SDPA attention.
+Its bf16 results depend on which SDPA kernel runs, the GEMM shapes,
+where reductions happen, and where RoPE frequencies are computed. Each
+test pins one of those choices so autoregressive generation stays bit-
+identical to the upstream recipe on real checkpoints.
 """
 
 from __future__ import annotations

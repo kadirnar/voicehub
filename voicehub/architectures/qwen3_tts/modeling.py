@@ -1431,9 +1431,10 @@ def qwen3_tts_rope_inverse_frequency(
 ) -> Tensor:
     """RoPE inverse frequencies computed exactly like upstream.
 
-    Transformers evaluates ``base ** (arange / dim)`` on the CPU before the
-    buffer is moved; the CUDA ``pow`` differs from it by one ulp for some
-    frequencies, which changes bf16 rotary tables and therefore outputs.
+    Transformers evaluates ``base ** (arange / dim)`` on the CPU before
+    the buffer is moved; the CUDA ``pow`` differs from it by one ulp for
+    some frequencies, which changes bf16 rotary tables and therefore
+    outputs.
     """
     exponent = torch.arange(0, dimension, 2, dtype=torch.int64).float() / dimension
     return (1.0 / (base**exponent)).to(device=device)

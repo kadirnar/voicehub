@@ -258,10 +258,11 @@ class _SpeechTokenizerExportFacade:
 
 
 def _qwen3_tts_speaker_mel_filters() -> Tensor:
-    """librosa's Slaney mel bank (24 kHz, 1024-point FFT, 128 bins, 0-12 kHz).
+    """Librosa's Slaney mel bank (24 kHz, 1024-point FFT, 128 bins, 0-12 kHz).
 
-    Mirrors ``librosa.filters.mel`` rounding exactly: float64 triangles stored
-    as float32, then scaled by the float64 Slaney norm and stored as float32.
+    Mirrors ``librosa.filters.mel`` rounding exactly: float64 triangles
+    stored as float32, then scaled by the float64 Slaney norm and stored
+    as float32.
     """
     sample_rate, n_fft, n_mels = 24_000, 1024, 128
     frequencies = torch.arange(n_fft // 2 + 1, dtype=torch.float64) * (sample_rate / n_fft)
@@ -287,7 +288,8 @@ def qwen3_tts_speaker_mel(waveform: Tensor) -> Tensor:
 
     Upstream evaluates this float32 frontend on the CPU (from a NumPy
     waveform) before moving the features to the model, so it is computed
-    on the CPU here as well; the result is returned on the input's device.
+    on the CPU here as well; the result is returned on the input's
+    device.
     """
     if not isinstance(waveform, Tensor) or waveform.ndim != 1:
         raise ValueError("Speaker waveform must be a rank-one tensor.")
@@ -532,7 +534,8 @@ class NativeQwen3TTSRuntime:
         return text_embeddings + codec_embeddings, tts_pad
 
     def _control_embeddings(self) -> tuple[Tensor, Tensor, Tensor]:
-        """Project TTS bos/eos/pad together, exactly as upstream batches them."""
+        """Project TTS bos/eos/pad together, exactly as upstream batches
+        them."""
         talker = self.model.talker
         controls = torch.tensor(
             [[
