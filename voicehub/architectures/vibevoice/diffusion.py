@@ -521,7 +521,8 @@ class VibeVoiceDPMSolver:
         lambda_target = torch.log(alpha_target) - torch.log(sigma_target)
         lambda_source = torch.log(alpha_source) - torch.log(sigma_source)
         step = lambda_target - lambda_source
-        return ((sigma_target / sigma_source) * sample - (alpha_target * (torch.exp(-step) - 1.0)) * model_output)
+        return ((sigma_target / sigma_source) * sample - (alpha_target *
+                                                          (torch.exp(-step) - 1.0)) * model_output)
 
     def _second_order(self, sample: Tensor) -> Tensor:
         assert self._step_index is not None
