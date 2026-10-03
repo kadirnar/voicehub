@@ -44,8 +44,9 @@ def _batch_values(
 def _resample_like_wenet(waveform: Any, source_rate: int, target_rate: int) -> Any:
     """Resample like WeNet's ``processor.resample`` stage.
 
-    WeNet resamples with ``torchaudio.transforms.Resample`` (Hann-windowed
-    sinc) before Kaldi fbank, so non-16 kHz input must use that kernel.
+    WeNet resamples with ``torchaudio.transforms.Resample`` (Hann-
+    windowed sinc) before Kaldi fbank, so non-16 kHz input must use that
+    kernel.
     """
     from voicehub.processing.waveform import resample_waveform_hann
 

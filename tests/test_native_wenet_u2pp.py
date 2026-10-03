@@ -317,7 +317,8 @@ class NativeWeNetArchitectureTests(unittest.TestCase):
                                 old_blank,
                                 log_add([old_nonblank, blank + probability, nonblank + probability]),
                             )
-                current = sorted(following.items(), key=lambda item: log_add(list(item[1])), reverse=True)[:beam_size]
+                current = sorted(
+                    following.items(), key=lambda item: log_add(list(item[1])), reverse=True)[:beam_size]
             return [(prefix, log_add(list(scores))) for prefix, scores in current]
 
         for seed in range(40):
