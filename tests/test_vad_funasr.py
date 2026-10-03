@@ -324,8 +324,10 @@ class NativeFSMNVADProviderTests(unittest.TestCase):
             min_speech_duration_ms=0,
             speech_pad_ms=30,
         )
-        self.assertEqual(len(padded), 2)
-        for segment, (start, end) in zip(padded, ((0.16, 10.24), (11.21, 18.81))):
+        # Padding must not join the maximum-duration pieces again.
+        expected = ((0.16, 5.2), (5.2, 10.24), (11.21, 16.25), (16.25, 18.81))
+        self.assertEqual(len(padded), len(expected))
+        for segment, (start, end) in zip(padded, expected):
             self.assertAlmostEqual(segment.start, start, places=9)
             self.assertAlmostEqual(segment.end, end, places=9)
 

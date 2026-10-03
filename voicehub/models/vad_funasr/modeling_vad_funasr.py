@@ -33,18 +33,34 @@ def _postprocess_segments(
     # lookback/lookahead can leave a shorter gap between completed regions;
     # applying the duration again would erase valid upstream boundaries.
     padding = speech_pad_ms / 1_000.0
-    padded = tuple(
-        SpeechSegment(
-            start=max(0.0, segment.start - padding),
-            end=min(duration, segment.end + padding),
-            score=segment.score,
-        ) for segment in retained if min(duration, segment.end + padding) > max(0.0, segment.start - padding))
     merged: list[SpeechSegment] = []
-    for segment in padded:
-        # Only padding can make FSMN regions overlap. Regions that merely
-        # touch (e.g. after a maximum-duration cut) are separate upstream
-        # segments and stay separate.
-        if merged and segment.start < merged[-1].end:
+    previous_end = None
+    for region in retained:
+        segment = SpeechSegment(
+            start=max(0.0, region.start - padding),
+            end=min(duration, region.end + padding),
+            score=region.score,
+        )
+        touching = previous_end is not None and region.start <= previous_end
+        previous_end = region.end
+        if segment.end <= segment.start:
+            continue
+        # Regions that touch before padding (e.g. after a maximum-duration
+        # cut) are separate upstream segments; padding must not join them,
+        # so they keep their shared decoder boundary.
+        if merged and touching:
+            merged[-1] = SpeechSegment(
+                start=merged[-1].start,
+                end=region.start,
+                score=merged[-1].score,
+            )
+            merged.append(SpeechSegment(
+                start=region.start,
+                end=segment.end,
+                score=segment.score,
+            ))
+        # Otherwise only padding can make FSMN regions overlap.
+        elif merged and segment.start < merged[-1].end:
             merged[-1] = SpeechSegment(
                 start=merged[-1].start,
                 end=max(merged[-1].end, segment.end),
