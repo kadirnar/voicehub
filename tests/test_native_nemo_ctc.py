@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 
@@ -222,6 +223,42 @@ class NativeNeMoProviderTests(unittest.TestCase):
         )
         adapter = NeMoASRForSpeechRecognition(NeMoASRConfig(), ).get_training_adapter()
         self.assertIsInstance(adapter, NativeNeMoCTCTrainingAdapter)
+
+    def test_auto_dtype_matches_nemo_float32_inference(self):
+        for device in ("cpu", "cuda"):
+            runtime = SimpleNamespace(config=NeMoASRConfig(), device=device)
+            with self.subTest(device=device):
+                self.assertEqual(
+                    NeMoASRForSpeechRecognition._model_dtype(runtime),
+                    torch.float32,
+                )
+
+    def test_reduced_precision_keeps_float32_frontend(self):
+        torch.manual_seed(5)
+        config = _tiny_config()
+        source_model = NeMoQuartzNetForCTC(config).eval()
+        waveform = torch.randn(4_000) * 0.1
+
+        with tempfile.TemporaryDirectory() as source_directory:
+            source = Path(source_directory)
+            _write_native_artifact(source, config, source_model)
+            wrapper = NeMoASRForSpeechRecognition(
+                NeMoASRConfig(name_or_path=source, torch_dtype="bfloat16"),
+                device="cpu",
+                lazy_load=False,
+            )
+            output = wrapper.transcribe(
+                waveform,
+                sampling_rate=16_000,
+                return_timestamps="word",
+            )
+
+        model = wrapper.model
+        self.assertIsInstance(output.text, str)
+        self.assertEqual(model.preprocessor.featurizer.fb.dtype, torch.float32)
+        self.assertEqual(model.preprocessor.featurizer.window.dtype, torch.float32)
+        self.assertEqual(next(model.encoder.parameters()).dtype, torch.bfloat16)
+        self.assertEqual(next(model.decoder.parameters()).dtype, torch.bfloat16)
 
     def test_unverified_neural_families_fail_before_network_access(self):
         model = NeMoASRForSpeechRecognition(NeMoASRConfig(name_or_path="nvidia/parakeet-tdt-0.6b-v2", ))

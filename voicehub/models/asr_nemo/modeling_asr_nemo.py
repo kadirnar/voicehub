@@ -106,7 +106,9 @@ class NeMoASRForSpeechRecognition(PreTrainedASRModel):
 
         configured = self.config.torch_dtype
         if configured == "auto":
-            return (torch.float16 if torch.device(self.device).type == "cuda" else torch.float32)
+            # NeMo restores and transcribes the FP32 QuartzNet release in
+            # float32 on every device; half precision is opt-in.
+            return torch.float32
         dtype = {
             "bfloat16": torch.bfloat16,
             "float16": torch.float16,
@@ -176,10 +178,13 @@ class NeMoASRForSpeechRecognition(PreTrainedASRModel):
                 values,
                 strict=True,
             )
-        model.to(
-            device=self.device,
-            dtype=self._model_dtype(),
-        )
+        # The log-mel frontend runs in float32 like NeMo's (STFT and mel
+        # projection under disabled autocast), so only the encoder and
+        # decoder take a reduced-precision dtype.
+        model.to(device=self.device)
+        dtype = self._model_dtype()
+        model.encoder.to(dtype=dtype)
+        model.decoder.to(dtype=dtype)
         self.artifacts = artifacts
         self.native_config = native_config
         self.ctc_tokenizer = NeMoCharacterTokenizer(native_config.vocabulary, )
@@ -320,7 +325,7 @@ class NeMoASRForSpeechRecognition(PreTrainedASRModel):
         parameter = next(self.model.parameters())
         input_signal = waveform.unsqueeze(0).to(
             device=parameter.device,
-            dtype=parameter.dtype,
+            dtype=torch.float32,
         )
         input_length = torch.tensor(
             [waveform.numel()],
