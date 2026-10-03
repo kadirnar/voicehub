@@ -221,10 +221,10 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
         """Compute one log-mel spectrogram over a complete recording.
 
         Transformers Whisper ``generate`` (and OpenAI ``transcribe``)
-        extract and normalize log-mel features once for the whole input and
-        decode frame slices of it. Inputs shorter than one window are padded
-        to it with silence first, exactly like the 30-second feature
-        extractor; longer inputs keep their own length.
+        extract and normalize log-mel features once for the whole input
+        and decode frame slices of it. Inputs shorter than one window
+        are padded to it with silence first, exactly like the 30-second
+        feature extractor; longer inputs keep their own length.
         """
         import torch
 
@@ -357,7 +357,9 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
         is_timestamp = [timestamp is not None for timestamp in timestamps]
         if is_timestamp[-2:] == [False, True]:
             return tokens, None
-        pairs = [index + 1 for index in range(len(tokens) - 1) if is_timestamp[index] and is_timestamp[index + 1]]
+        pairs = [
+            index + 1 for index in range(len(tokens) - 1) if is_timestamp[index] and is_timestamp[index + 1]
+        ]
         if not pairs:
             return tokens, None
         last_slice = pairs[-1]
