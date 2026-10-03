@@ -353,6 +353,57 @@ class NativeVuiTests(unittest.TestCase):
         self.assertAlmostEqual(segment.start, 0.15)
         self.assertAlmostEqual(segment.end, 0.35)
 
+    def test_text_is_cleaned_twice_like_upstream_render(self):
+        # Upstream render() cleans the text and generate() cleans it again;
+        # its final-punctuation check appends "." to "?"/"!" endings too.
+        from voicehub.models.vui import tts
+
+        captured = []
+
+        def fake_generate(model, text, *args, **kwargs):
+            captured.append(tts.simple_clean(text))
+            return torch.zeros(1, 9, 30, dtype=torch.long)
+
+        class Codec:
+            hz = 21.533203125
+
+            class config:
+                sample_rate = 22_050
+
+            def from_indices(self, codes):
+                return torch.linspace(-0.5, 0.5, 22_050).reshape(1, 1, -1)
+
+        class Model:
+            codec = Codec()
+
+        seen = []
+
+        def detector(value):
+            seen.append(value["waveform"])
+            return [(0.25, 0.5)]
+
+        with patch.object(tts, "generate", fake_generate):
+            audio = tts.render(Model(), "Is it 5pm?", vad_pipeline=detector)
+        self.assertEqual(captured, ["Is it five PM?. [pause]. [pause]"])
+        self.assertEqual(
+            tts.simple_clean("The quick brown fox jumps over the lazy dog."),
+            "The quick brown fox jumps over the lazy dog. [pause]",
+        )
+        from voicehub.processing import resample_waveform_hann
+
+        source = Codec().from_indices(None)[0].float()
+        torch.testing.assert_close(seen[0], resample_waveform_hann(source, 22_050, 16_000), rtol=0, atol=0)
+        torch.testing.assert_close(audio, source[None, :, int(0.25 * 22_050):int(0.7 * 22_050)])
+
+    def test_number_words_cover_the_inflect_scales(self):
+        # Expected strings from inflect 7.5.0 (pinned by upstream).
+        self.assertEqual(number_to_words("1" + "0" * 21), "one sextillion")
+        self.assertEqual(number_to_words("1" + "0" * 33), "one decillion")
+        self.assertEqual(
+            number_to_words("2000000000000000000000005"),
+            "two septillion and five",
+        )
+
     def test_binarize_compares_thresholds_in_float32_like_pyannote(self):
         # pyannote.audio 3.3.2 reference: [(0.25, 0.45)]. A float32 score equal
         # to float32(0.8) is not above the onset.

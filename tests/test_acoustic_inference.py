@@ -760,7 +760,8 @@ class InferenceHelperTests(unittest.TestCase):
 
         self.assertIsInstance(context, type(nullcontext()))
         self.assertEqual(cache_dtype, torch.float32)
-        self.assertNotIn("?.", vui_tts.simple_clean("Really?"))
+        # Upstream's final-punctuation check also appends "." after "?".
+        self.assertEqual(vui_tts.simple_clean("Really?"), "Really?. [pause]")
 
         prepared = vui_tts._prepare_prompt_codes(
             torch.ones((4, 3), dtype=torch.float32),
@@ -781,7 +782,7 @@ class InferenceHelperTests(unittest.TestCase):
             )
 
     @unittest.skipUnless(TORCH_AVAILABLE, "PyTorch is an optional Vui extra")
-    def test_vui_render_cleans_once_and_uses_codec_rate_and_final_vad_endpoint(self):
+    def test_vui_render_cleans_like_upstream_and_uses_codec_rate_and_final_vad_endpoint(self):
         import torch
 
         fake_model_module = ModuleType("voicehub.models.vui.model")
@@ -835,7 +836,8 @@ class InferenceHelperTests(unittest.TestCase):
         ):
             waveform = vui_tts.render(fake_model, "x" * 1000)
 
-        self.assertEqual(clean.call_count, 1)
+        # Like upstream: render() cleans the text, generate() cleans again.
+        self.assertEqual(clean.call_count, 2)
         self.assertEqual(resample.call_args.args[1:], (100, 16_000))
         self.assertEqual(waveform.shape[-1], 50)
 

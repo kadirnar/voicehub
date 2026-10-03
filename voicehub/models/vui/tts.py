@@ -82,6 +82,11 @@ _NUMBER_SCALES = (
     "trillion",
     "quadrillion",
     "quintillion",
+    "sextillion",
+    "septillion",
+    "octillion",
+    "nonillion",
+    "decillion",
 )
 
 
@@ -230,9 +235,11 @@ def simple_clean(text):
     text = re.sub(r"\n+", "\n", text)
     ntxt = re.sub(r" +", " ", text)
 
-    # Add sentence-final punctuation only when none is present.
+    # Ensure that ntxt ends with . or ? -- upstream's condition, kept verbatim
+    # so prompts match the official inference path: it appends "." to every
+    # text not ending in "." (including "?" and "!" endings).
     ntxt = ntxt.strip()
-    if not ntxt.endswith((".", "?", "!")):
+    if not ntxt.endswith(".") or ntxt.endswith("?"):
         ntxt += "."
     ntxt += " [pause]"
     return ntxt
@@ -455,11 +462,14 @@ def render(
     Uses generate for text < 1000 characters, otherwise breaks text into
     sections and uses chunking with context.
 
+    Like upstream, the text is cleaned here and again inside
+    :func:`generate`; the second pass appends another ``". [pause]"``.
     ``vad_pipeline`` selects the trimming detector (see
     :func:`voicehub.models.vui.vad.detect_voice_activity`); ``None`` keeps
     the module default, upstream's pyannote VAD.
     """
-    text = text.strip()
+    text = remove_all_invalid_non_speech(text)
+    text = simple_clean(text)
     SR = self.codec.config.sample_rate
     HZ = self.codec.hz
     max_gen_len = int(HZ * max_secs)
@@ -494,6 +504,7 @@ def render(
             current_text = prev_text + "\n" + line if prev_text else line
             current_text = current_text.strip()
             current_text = current_text.replace("...", "")
+            current_text = current_text + " [pause]"
 
             # Calculate max length based on text length
             estimated_seconds = max(1.0, 60 * len(current_text) / 500)
