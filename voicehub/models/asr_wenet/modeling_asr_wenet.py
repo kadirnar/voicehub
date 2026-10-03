@@ -41,6 +41,24 @@ def _batch_values(
     return values
 
 
+def _resample_like_wenet(waveform: Any, source_rate: int, target_rate: int) -> Any:
+    """Resample like WeNet's ``processor.resample`` stage.
+
+    WeNet resamples with ``torchaudio.transforms.Resample`` (Hann-windowed
+    sinc) before Kaldi fbank, so non-16 kHz input must use that kernel.
+    """
+    from voicehub.processing.waveform import resample_waveform_hann
+
+    if source_rate == target_rate:
+        return waveform
+    return resample_waveform_hann(
+        waveform,
+        source_rate,
+        target_rate,
+        match="transform",
+    )
+
+
 class WeNetASRForSpeechRecognition(PreTrainedASRModel):
     """Run the exact trainable U2++ graph without importing WeNet."""
 
@@ -307,12 +325,12 @@ class WeNetASRForSpeechRecognition(PreTrainedASRModel):
         beam_size = self.config.beam_size if num_beams is None else num_beams
         if (isinstance(beam_size, bool) or not isinstance(beam_size, Integral) or beam_size <= 0):
             raise ValueError("`num_beams` must be a positive integer or None.")
-        materialized = load_native_audio(
-            audio,
-            sampling_rate=sampling_rate,
-            target_sampling_rate=self.native_config.sampling_rate,
+        materialized = load_native_audio(audio, sampling_rate=sampling_rate)
+        waveform = _resample_like_wenet(
+            materialized.waveform,
+            materialized.sampling_rate,
+            self.native_config.sampling_rate,
         )
-        waveform = materialized.waveform
         minimum = int(self.native_config.sampling_rate * self.native_config.frame_length_ms / 1000.0)
         if waveform.numel() < minimum:
             waveform = torch.nn.functional.pad(
@@ -451,8 +469,6 @@ class WeNetASRForSpeechRecognition(PreTrainedASRModel):
             batch_size=len(audio_values),
             name="audio_lengths",
         )
-        from voicehub.processing.waveform import NativeAudio
-
         waveforms = []
         for value, rate, raw_length in zip(
                 audio_values,
@@ -470,15 +486,12 @@ class WeNetASRForSpeechRecognition(PreTrainedASRModel):
                 if int(raw_length) > waveform.numel():
                     raise ValueError("`audio_lengths` exceeds a waveform's sample count.")
                 waveform = waveform[:int(raw_length)]
-            resampled = load_native_audio(
-                NativeAudio(
-                    waveform=waveform,
-                    sampling_rate=materialized.sampling_rate,
-                    path=materialized.path,
-                ),
-                target_sampling_rate=self.native_config.sampling_rate,
-            )
-            waveforms.append(resampled.waveform)
+            waveforms.append(
+                _resample_like_wenet(
+                    waveform,
+                    materialized.sampling_rate,
+                    self.native_config.sampling_rate,
+                ))
         waveforms = tuple(waveforms)
         lengths = torch.tensor(
             [waveform.numel() for waveform in waveforms],
