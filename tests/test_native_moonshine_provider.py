@@ -193,10 +193,22 @@ print(json.dumps({name: name in sys.modules for name in names}))
             self.assertEqual(
                 wrapper.model.calls,
                 [
-                    {"num_beams": 1, "max_length": 2},
-                    {"num_beams": 1, "max_length": 6},
-                    {"num_beams": 1, "max_length": 12},
-                    {"num_beams": 1, "max_new_tokens": 3},
+                    {
+                        "num_beams": 1,
+                        "max_length": 2
+                    },
+                    {
+                        "num_beams": 1,
+                        "max_length": 6
+                    },
+                    {
+                        "num_beams": 1,
+                        "max_length": 12
+                    },
+                    {
+                        "num_beams": 1,
+                        "max_new_tokens": 3
+                    },
                 ],
             )
 
