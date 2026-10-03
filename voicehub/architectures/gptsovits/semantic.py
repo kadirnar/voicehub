@@ -75,25 +75,45 @@ class SinePositionalEmbedding(nn.Module):
         return self.dropout(hidden_states * self.x_scale + self.alpha * positions)
 
 
-def _top_k_top_p(
+def _sample_next_token(
     logits: Tensor,
+    previous_tokens: Tensor,
     *,
     top_k: int,
     top_p: float,
+    temperature: float,
+    repetition_penalty: float,
 ) -> Tensor:
-    filtered = logits.clone()
-    if top_k > 0:
-        threshold = torch.topk(filtered, min(top_k, filtered.shape[-1])).values[..., -1, None]
-        filtered.masked_fill_(filtered < threshold, -torch.inf)
+    """Sample one semantic token exactly like upstream ``AR.models.utils.sample``.
+
+    The repetition penalty is written into ``logits`` in place because the
+    upstream EOS check takes the greedy argmax of the penalized scores. Then
+    top-p is applied to the untempered scores, followed by temperature and
+    top-k, and the token is drawn with the exponential-race sampler, which
+    consumes the random generator exactly as the released inference does.
+    """
+    if previous_tokens.numel() and repetition_penalty != 1.0:
+        score = torch.gather(logits, 1, previous_tokens)
+        score = torch.where(
+            score < 0,
+            score * repetition_penalty,
+            score / repetition_penalty,
+        )
+        logits.scatter_(1, previous_tokens, score)
+    filtered = logits
     if top_p < 1.0:
         sorted_logits, sorted_indices = torch.sort(filtered, descending=True)
         cumulative = torch.cumsum(functional.softmax(sorted_logits, dim=-1), dim=-1)
         remove = cumulative > top_p
-        remove[..., 1:] = remove[..., :-1].clone()
-        remove[..., 0] = False
+        remove[:, 0] = False
         remove = remove.scatter(1, sorted_indices, remove)
-        filtered.masked_fill_(remove, -torch.inf)
-    return filtered
+        filtered = filtered.masked_fill(remove, -torch.inf)
+    filtered = filtered / max(temperature, 1e-5)
+    pivot = torch.topk(filtered, min(top_k, filtered.shape[-1])).values[:, -1:]
+    filtered = torch.where(filtered < pivot, -torch.inf, filtered)
+    probabilities = functional.softmax(filtered, dim=-1)
+    noise = torch.empty_like(probabilities).exponential_(1)
+    return torch.argmax(probabilities / noise, dim=-1, keepdim=True).to(torch.long)
 
 
 class Text2SemanticDecoder(nn.Module):
@@ -365,10 +385,10 @@ class Text2SemanticDecoder(nn.Module):
             raise ValueError("`maximum_new_tokens` must be a positive integer.")
         if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k <= 0:
             raise ValueError("`top_k` must be a positive integer.")
-        if not 0 < top_p <= 1:
-            raise ValueError("`top_p` must be in (0, 1].")
-        if temperature <= 0 or repetition_penalty <= 0:
-            raise ValueError("Temperature and repetition penalty must be positive.")
+        if not 0 <= top_p <= 1:
+            raise ValueError("`top_p` must be in [0, 1].")
+        if temperature < 0 or repetition_penalty <= 0:
+            raise ValueError("Temperature must be non-negative and repetition penalty positive.")
         for step in range(limit):
             semantic_hidden = self.ar_audio_position(self.ar_audio_embedding(generated), )
             hidden = torch.cat([text, semantic_hidden], dim=1)
@@ -401,21 +421,14 @@ class Text2SemanticDecoder(nn.Module):
             logits = self.ar_predict_layer(decoded[:, -1])
             if step < 11:
                 logits = logits[:, :-1]
-            if generated.numel() and repetition_penalty != 1:
-                previous = generated.unique()
-                selected = logits[:, previous]
-                selected = torch.where(
-                    selected < 0,
-                    selected * repetition_penalty,
-                    selected / repetition_penalty,
-                )
-                logits[:, previous] = selected
-            filtered = _top_k_top_p(
-                logits / temperature,
+            sample = _sample_next_token(
+                logits,
+                generated,
                 top_k=top_k,
                 top_p=top_p,
+                temperature=temperature,
+                repetition_penalty=repetition_penalty,
             )
-            sample = torch.multinomial(functional.softmax(filtered, dim=-1), 1)
             greedy = logits.argmax(dim=-1, keepdim=True)
             if (sample == self.config.eos_token_id).any() or (greedy == self.config.eos_token_id).any():
                 break
