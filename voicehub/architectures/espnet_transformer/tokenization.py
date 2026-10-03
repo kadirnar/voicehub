@@ -8,8 +8,6 @@ from pathlib import Path
 from voicehub.tokenization import SentencePieceUnigramTokenizer
 from voicehub.tokenization.assets import read_bounded_asset
 
-_WHITESPACE = "\u2581"
-_UNKNOWN_SURFACE = "\u2047"
 
 
 def load_espnet_token_list(
@@ -123,15 +121,25 @@ class ESPnetLibriSpeechTokenizer:
             self._piece_to_id.get(piece, self.unknown_token_id) for piece in self.encode_as_pieces(text))
 
     def decode_ids(self, token_ids: Iterable[int]) -> str:
-        pieces = []
+        """Detokenize like ESPnet's ``SentencepiecesTokenizer.tokens2text``.
+
+        ESPnet passes the recipe's pieces to SentencePiece ``DecodePieces``.
+        Blank and SOS/EOS IDs are skipped; every other recipe piece is a
+        SentencePiece piece, so the native SentencePiece decoder reproduces
+        ``DecodePieces``: the UNKNOWN piece becomes the model's unk surface
+        (``" \u2047 "`` for the release), which keeps it a separate word, and
+        leading word-boundary markers are dropped as SentencePiece does.
+        Surrounding whitespace is stripped from the transcript.
+        """
+        sentencepiece_ids = []
         for raw_id in token_ids:
             if isinstance(raw_id, bool) or not isinstance(raw_id, int):
                 raise TypeError("ESPnet token IDs must be integers.")
             piece = self.id_to_piece(raw_id)
             if raw_id in {self.blank_token_id, self.sos_eos_token_id}:
                 continue
-            pieces.append(_UNKNOWN_SURFACE if raw_id == self.unknown_token_id else piece)
-        return "".join(pieces).replace(_WHITESPACE, " ").strip()
+            sentencepiece_ids.append(self.sentencepiece.piece_to_id(piece))
+        return self.sentencepiece.decode(sentencepiece_ids).strip()
 
     def save_pretrained(
         self,
