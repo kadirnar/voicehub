@@ -495,6 +495,109 @@ class NativeVoxCPMProviderTests(unittest.TestCase):
         self.assertEqual(output.metadata["backend"], "voicehub-native")
         self.assertEqual(generate.call_args.kwargs["seed"], 7)
 
+    def test_continuation_prompt_is_left_padded_and_decoded_as_codec_context(self):
+        # Source: prompt audio uses padding_mode="left", and the non-streaming
+        # decode prepends the last (streaming_prefix_len - 1) = 3 prefix audio
+        # patches, then trims their samples from the waveform.
+        torch.manual_seed(0)
+        waveform = torch.randn(29)
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            codec = runtime.codec
+            patch_size = runtime.model.patch_size
+            patch_samples = codec.hop_length * patch_size
+            pad = -waveform.numel() % patch_samples
+            with torch.no_grad():
+                expected_prompt = codec.encode(
+                    torch.nn.functional.pad(waveform, (pad, 0))[None, None],
+                    codec.sample_rate,
+                )
+            generated = torch.randn(1, runtime.model.feat_dim, 2 * patch_size)
+            with patch.object(
+                    runtime.model,
+                    "generate_features",
+                    return_value=generated,
+            ) as generate, patch.object(
+                    codec,
+                    "decode",
+                    wraps=codec.decode,
+            ) as decode:
+                audio = runtime.generate(
+                    "a",
+                    prompt_audio=waveform.numpy(),
+                    prompt_sampling_rate=codec.sample_rate,
+                    prompt_text="a",
+                )
+            prefix_features = generate.call_args.kwargs["audio_feats"][0]
+            prompt_patches = expected_prompt.shape[-1] // patch_size
+            context = min(3, prompt_patches)
+            torch.testing.assert_close(
+                prefix_features[-prompt_patches:].permute(2, 0, 1).flatten(1),
+                expected_prompt[0],
+            )
+            decoded_latents = decode.call_args.args[0]
+            torch.testing.assert_close(
+                decoded_latents,
+                torch.cat((expected_prompt[..., -context * patch_size:], generated), dim=-1),
+            )
+            with torch.no_grad():
+                full = codec.decode(decoded_latents).squeeze(1)
+        self.assertEqual(context, 3)
+        torch.testing.assert_close(audio, full[..., context * patch_size * codec.decode_chunk_size:])
+        self.assertEqual(audio.shape[-1], 2 * patch_size * codec.decode_chunk_size)
+
+    def test_reference_audio_keeps_right_padding_and_no_codec_context(self):
+        waveform = torch.randn(29)
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            codec = runtime.codec
+            pad = -waveform.numel() % (codec.hop_length * runtime.model.patch_size)
+            with torch.no_grad():
+                expected = codec.encode(
+                    torch.nn.functional.pad(waveform, (0, pad))[None, None],
+                    codec.sample_rate,
+                )
+            generated = torch.randn(1, runtime.model.feat_dim, 4)
+            with patch.object(
+                    runtime.model,
+                    "generate_features",
+                    return_value=generated,
+            ) as generate, patch.object(codec, "decode", wraps=codec.decode) as decode:
+                runtime.generate(
+                    "a",
+                    reference_audio=waveform.numpy(),
+                    reference_sampling_rate=codec.sample_rate,
+                )
+            features = generate.call_args.kwargs["audio_feats"][0]
+            reference = features[1:1 + expected.shape[-1] // runtime.model.patch_size]
+            torch.testing.assert_close(reference.permute(2, 0, 1).flatten(1), expected[0])
+            torch.testing.assert_close(decode.call_args.args[0], generated)
+
+    def test_generation_length_is_bounded_by_target_text_tokens(self):
+        # Source `_generate_with_prompt_cache` always uses
+        # max_len=min(int(len(target_tokens) * 6.0 + 10), max_len).
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            tokens = len(runtime.processor.tokenizer.encode("a a"))
+            generated = torch.randn(1, runtime.model.feat_dim, 4)
+            for requested, expected in ((2_000, int(tokens * 6.0 + 10)), (12, 12)):
+                with patch.object(
+                        runtime.model,
+                        "generate_features",
+                        return_value=generated,
+                ) as generate:
+                    runtime.generate("a a", max_length=requested)
+                self.assertEqual(generate.call_args.kwargs["max_length"], expected)
+
+    def test_generation_folds_target_text_whitespace_like_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            wrapper = VoxCPMForTextToSpeech(VoxCPMConfig(), device="cpu")
+            wrapper._runtime = runtime
+            with patch.object(runtime, "generate", return_value=torch.zeros(1, 32)) as generate:
+                wrapper.generate("a\n  a\t a")
+        self.assertEqual(generate.call_args.args[0], "a a a")
+
     def test_external_postprocessing_options_fail_closed(self):
         wrapper = VoxCPMForTextToSpeech(
             VoxCPMConfig(),

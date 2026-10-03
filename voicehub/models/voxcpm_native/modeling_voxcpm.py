@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -231,6 +232,8 @@ class VoxCPMForTextToSpeech(PreTrainedTTSModel):
         del normalize, denoise, retry_badcase
         if self._runtime is None:
             raise RuntimeError("VoxCPM native runtime was not loaded.")
+        # Same target-text whitespace folding as the source ``VoxCPM.generate``.
+        text = re.sub(r"\s+", " ", text.replace("\n", " "))
         audio = self._runtime.generate(
             text,
             prompt_audio=prompt_audio_path,
