@@ -9,7 +9,7 @@ from torch.nn.attention import SDPBackend, sdpa_kernel
 from voicehub.models.vui.model import Vui
 from voicehub.models.vui.sampling import multinomial, sample_top_k, sample_top_p, sample_top_p_top_k
 from voicehub.models.vui.vad import detect_voice_activity as vad
-from voicehub.processing.waveform import resample_waveform
+from voicehub.processing import resample_waveform_hann
 
 
 def ensure_spaces_around_tags(text: str):
@@ -82,6 +82,11 @@ _NUMBER_SCALES = (
     "trillion",
     "quadrillion",
     "quintillion",
+    "sextillion",
+    "septillion",
+    "octillion",
+    "nonillion",
+    "decillion",
 )
 
 
@@ -230,9 +235,11 @@ def simple_clean(text):
     text = re.sub(r"\n+", "\n", text)
     ntxt = re.sub(r" +", " ", text)
 
-    # Add sentence-final punctuation only when none is present.
+    # Ensure that ntxt ends with . or ? -- upstream's condition, kept verbatim
+    # so prompts match the official inference path: it appends "." to every
+    # text not ending in "." (including "?" and "!" endings).
     ntxt = ntxt.strip()
-    if not ntxt.endswith((".", "?", "!")):
+    if not ntxt.endswith(".") or ntxt.endswith("?"):
         ntxt += "."
     ntxt += " [pause]"
     return ntxt
@@ -448,13 +455,21 @@ def render(
     top_p: float | None = None,
     max_secs: int = 100,
     max_chunk_retries: int = 3,
+    vad_pipeline=None,
 ):
     """Render audio from text.
 
     Uses generate for text < 1000 characters, otherwise breaks text into
     sections and uses chunking with context.
+
+    Like upstream, the text is cleaned here and again inside
+    :func:`generate`; the second pass appends another ``". [pause]"``.
+    ``vad_pipeline`` selects the trimming detector (see
+    :func:`voicehub.models.vui.vad.detect_voice_activity`); ``None`` keeps
+    the module default, upstream's pyannote VAD.
     """
-    text = text.strip()
+    text = remove_all_invalid_non_speech(text)
+    text = simple_clean(text)
     SR = self.codec.config.sample_rate
     HZ = self.codec.hz
     max_gen_len = int(HZ * max_secs)
@@ -463,12 +478,9 @@ def render(
         codes = generate(self, text, prompt_codes, temperature, top_k, top_p, max_gen_len)
         codes = codes[..., :-10]
         audio = self.codec.from_indices(codes)
-        paudio = resample_waveform(
-            audio[0].reshape(-1).float(),
-            SR,
-            16_000,
-        )
-        results = vad(paudio)
+        # torchaudio.functional.resample(audio[0], 22050, 16000) upstream.
+        paudio = resample_waveform_hann(audio[0].float(), SR, 16_000)
+        results = vad(paudio, vad_pipeline)
 
         if len(results):
             # Cut the audio based on VAD results, add 200ms silence at end
@@ -492,6 +504,7 @@ def render(
             current_text = prev_text + "\n" + line if prev_text else line
             current_text = current_text.strip()
             current_text = current_text.replace("...", "")
+            current_text = current_text + " [pause]"
 
             # Calculate max length based on text length
             estimated_seconds = max(1.0, 60 * len(current_text) / 500)
@@ -519,13 +532,9 @@ def render(
                 codes = codes[..., :-10]
                 audio = self.codec.from_indices(codes)
                 # Resample for VAD
-                paudio = resample_waveform(
-                    audio[0].reshape(-1).float(),
-                    SR,
-                    16_000,
-                )
+                paudio = resample_waveform_hann(audio[0].float(), SR, 16_000)
 
-                results = vad(paudio)
+                results = vad(paudio, vad_pipeline)
 
                 if len(results):
                     prev_text = line

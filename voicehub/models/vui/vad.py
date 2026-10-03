@@ -3,9 +3,13 @@
 The upstream Vui release delegated trimming to Pyannote and WhisperX.
 This module preserves its hysteresis and chunk-merging semantics with
 small native data structures, and accepts any VoiceHub VAD provider as
-an injected detector. The default is a deterministic short-term-energy
-detector so Vui does not download or import a second framework during
-synthesis.
+an injected detector. The default, :class:`PyannoteVADPipeline`, runs
+the same ``pyannote/voice-activity-detection`` pipeline as upstream (the
+pinned ``pyannote/segmentation`` checkpoint with pyannote.audio 3.3.2
+sliding-window aggregation and Vui's hysteresis thresholds) on
+VoiceHub's native PyanNet graph, so no second framework is imported.
+:class:`EnergyVADPipeline` is a download-free short-term-energy
+alternative that does not reproduce upstream trimming.
 """
 
 from __future__ import annotations
@@ -16,12 +20,15 @@ import os
 import tempfile
 import urllib.request
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import torch
 from torch import Tensor
+
+from voicehub.models.vui.inference import VAD_BACKENDS
 
 VAD_SEGMENTATION_URL = (
     "https://whisperx.s3.eu-west-2.amazonaws.com/model_weights/segmentation/"
@@ -184,6 +191,224 @@ def _segments_from_result(value: Any) -> list[tuple[float, float]]:
     return segments
 
 
+def _float32(value: float) -> float:
+    return float(torch.tensor(float(value), dtype=torch.float32))
+
+
+@contextmanager
+def _strict_float32():
+    """Run like pyannote, which disables TF32 before inference."""
+    matmul = torch.backends.cuda.matmul.allow_tf32
+    cudnn = torch.backends.cudnn.allow_tf32
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    try:
+        yield
+    finally:
+        torch.backends.cuda.matmul.allow_tf32 = matmul
+        torch.backends.cudnn.allow_tf32 = cudnn
+
+
+def _closest_frame(frames: SlidingWindow, time: float) -> int:
+    """``pyannote.core.SlidingWindow.closest_frame`` (round half to even)."""
+    return int(round((time - frames.start - 0.5 * frames.duration) / frames.step))
+
+
+def _numpy_hamming(size: int) -> Tensor:
+    """``numpy.hamming(size)`` evaluated with the same float64 formula."""
+    if size == 1:
+        return torch.ones(1, dtype=torch.float64)
+    return torch.tensor(
+        [0.54 + 0.46 * math.cos(math.pi * n / (size - 1)) for n in range(1 - size, size, 2)],
+        dtype=torch.float64,
+    )
+
+
+def aggregate_chunk_scores(
+    scores: Tensor,
+    *,
+    chunk_duration: float,
+    chunk_step: float,
+    frames: SlidingWindow,
+) -> Tensor:
+    """Hamming overlap-add of ``[chunks, frames, classes]`` float32 scores.
+
+    Mirrors ``pyannote.audio.core.inference.Inference.aggregate``
+    (3.3.2, ``hamming=True``, no warm-up, ``missing=0``) including its
+    NumPy precision: float64 window products accumulated into float32
+    buffers, then a float32 average.
+    """
+    if scores.ndim != 3 or scores.shape[0] < 1:
+        raise ValueError("Chunk scores must have shape [chunks, frames, classes].")
+    scores = scores.detach().to(device="cpu", dtype=torch.float32)
+    num_chunks, frames_per_chunk, num_classes = scores.shape
+    window = _numpy_hamming(frames_per_chunk).unsqueeze(-1)
+    num_frames = _closest_frame(
+        frames,
+        0.0 + chunk_duration + (num_chunks - 1) * chunk_step + 0.5 * frames.duration,
+    ) + 1
+    summed = torch.zeros(num_frames, num_classes, dtype=torch.float32)
+    counts = torch.zeros_like(summed)
+    covered = torch.zeros(num_frames, num_classes, dtype=torch.bool)
+    for index in range(num_chunks):
+        chunk_start = 0.0 + index * chunk_step
+        first = _closest_frame(frames, chunk_start + 0.5 * frames.duration)
+        last = first + frames_per_chunk
+        summed[first:last] = (summed[first:last].double() + scores[index].double() * window).float()
+        counts[first:last] = (counts[first:last].double() + window).float()
+        covered[first:last] = True
+    average = summed / counts.clamp_min(_float32(1e-12))
+    average[~covered] = 0.0
+    return average
+
+
+class PyannoteVADPipeline:
+    """Upstream Vui's ``pyannote/voice-activity-detection`` on native PyanNet.
+
+    Reproduces ``Pipeline.from_pretrained("pyannote/voice-activity-detection")``
+    instantiated with Vui's ``onset=0.8, offset=0.5, min_duration_on=0,
+    min_duration_off=0`` under pyannote.audio 3.3.2: 5 s chunks every 0.5 s
+    (zero-padded final chunk), batches of 32, per-frame maximum over speakers,
+    receptive-field frame geometry, Hamming aggregation, loose cropping and
+    hysteresis at frame centres. The pinned ``pyannote/segmentation``
+    revision is gated on the Hub, exactly as for upstream.
+    """
+
+    chunk_duration = 5.0
+    chunk_step = 0.5
+    batch_size = 32
+
+    def __init__(
+        self,
+        *,
+        onset: float = 0.8,
+        offset: float = 0.5,
+        min_duration_on: float = 0.0,
+        min_duration_off: float = 0.0,
+        model: Any | None = None,
+        device: str = "auto",
+        token: str | bool | None = None,
+        cache_dir: str | None = None,
+        local_files_only: bool = False,
+    ) -> None:
+        self.model = model
+        self.device = device
+        self.token = token
+        self.cache_dir = cache_dir
+        self.local_files_only = local_files_only
+        self.instantiate({
+            "onset": onset,
+            "offset": offset,
+            "min_duration_on": min_duration_on,
+            "min_duration_off": min_duration_off,
+        })
+
+    def instantiate(self, parameters: Mapping[str, float]) -> PyannoteVADPipeline:
+        self.onset = float(parameters.get("onset", 0.8))
+        self.offset = float(parameters.get("offset", self.onset))
+        self.min_duration_on = float(parameters.get("min_duration_on", 0.0))
+        self.min_duration_off = float(parameters.get("min_duration_off", 0.0))
+        return self
+
+    def to(self, device: Any) -> PyannoteVADPipeline:
+        self.device = str(device)
+        if self.model is not None:
+            self.model.to(device)
+        return self
+
+    def load(self) -> PyannoteVADPipeline:
+        """Resolve, convert once, and load the pinned segmentation graph."""
+        if self.model is None:
+            from voicehub.models.vad_pyannote import PyannoteVADForVoiceActivityDetection
+
+            provider = PyannoteVADForVoiceActivityDetection(
+                "pyannote/voice-activity-detection",
+                device=self.device,
+                lazy_load=False,
+                token=self.token,
+                cache_dir=self.cache_dir,
+                local_files_only=self.local_files_only,
+                trust_pickle_checkpoint=True,
+            )
+            self.model = provider.model
+        self.model.eval()
+        return self
+
+    @staticmethod
+    def receptive_field(sample_rate: int = 16_000) -> SlidingWindow:
+        """PyanNet SincNet receptive field (991 samples every 270)."""
+        layers = ((251, 10), (3, 3), (5, 1), (3, 3), (5, 1), (3, 3))
+
+        def size(frames: int) -> int:
+            for kernel, stride in reversed(layers):
+                frames = (frames - 1) * stride + kernel
+            return frames
+
+        center = 0.0
+        for kernel, stride in reversed(layers):
+            center = center * stride + (kernel - 1) / 2
+        receptive_size = size(1)
+        return SlidingWindow(
+            start=(center - (receptive_size - 1) / 2) / sample_rate,
+            duration=receptive_size / sample_rate,
+            step=(size(2) - receptive_size) / sample_rate,
+        )
+
+    def frame_scores(self, waveform: Any, sample_rate: int = 16_000) -> SlidingWindowFeature:
+        """Aggregated per-frame speech scores, as pyannote's ``Inference``."""
+        if int(sample_rate) != 16_000:
+            raise ValueError("The pyannote segmentation model expects 16 kHz audio.")
+        self.load()
+        parameter = next(self.model.parameters())
+        waveform = torch.as_tensor(waveform).detach().float().reshape(-1)
+        num_samples = waveform.numel()
+        window_size = math.floor(self.chunk_duration * sample_rate)
+        step_size = round(self.chunk_step * sample_rate)
+        if num_samples >= window_size:
+            chunks = waveform.unfold(0, window_size, step_size)
+        else:
+            chunks = waveform.new_zeros((0, window_size))
+        has_last_chunk = (num_samples < window_size or (num_samples - window_size) % step_size > 0)
+        outputs = []
+        with torch.inference_mode(), _strict_float32():
+            batches = [
+                chunks[index:index + self.batch_size] for index in range(0, chunks.shape[0], self.batch_size)
+            ]
+            if has_last_chunk:
+                last = waveform[chunks.shape[0] * step_size:]
+                batches.append(torch.nn.functional.pad(last, (0, window_size - last.numel()))[None])
+            for batch in batches:
+                probabilities = self.model(batch.to(device=parameter.device, dtype=parameter.dtype))
+                outputs.append(probabilities.float().cpu().amax(dim=-1, keepdim=True))
+        frames = self.receptive_field(sample_rate)
+        aggregated = aggregate_chunk_scores(
+            torch.cat(outputs),
+            chunk_duration=self.chunk_duration,
+            chunk_step=self.chunk_step,
+            frames=frames,
+        )
+        if has_last_chunk:
+            # SlidingWindowFeature.crop(Segment(0, duration), mode="loose").
+            last_frame = math.floor((num_samples / sample_rate - frames.start) / frames.step)
+            aggregated = aggregated[:max(0, min(last_frame + 1, aggregated.shape[0]))]
+        return SlidingWindowFeature(aggregated, frames)
+
+    def __call__(self, value: Any) -> Annotation:
+        if isinstance(value, Mapping):
+            waveform = value["waveform"]
+            sample_rate = int(value.get("sample_rate", 16_000))
+        else:
+            waveform = value
+            sample_rate = 16_000
+        scores = self.frame_scores(waveform, sample_rate)
+        return Binarize(
+            onset=self.onset,
+            offset=self.offset,
+            min_duration_on=self.min_duration_on,
+            min_duration_off=self.min_duration_off,
+        )(scores)
+
+
 class _EnergyPipeline:
     """Callable native fallback with the provider shape expected by Vui."""
 
@@ -247,8 +472,31 @@ class _EnergyPipeline:
         return annotation
 
 
+EnergyVADPipeline = _EnergyPipeline
+
 pipeline: Any | None = None
-pipeline_name = "voicehub/native-energy-vad"
+pipeline_name = "pyannote/voice-activity-detection"
+
+
+def create_vad_pipeline(
+    backend: str = "pyannote",
+    *,
+    device: str = "auto",
+    token: str | bool | None = None,
+    cache_dir: str | None = None,
+    local_files_only: bool = False,
+) -> PyannoteVADPipeline | EnergyVADPipeline:
+    """Build Vui's trimming detector: upstream ``pyannote`` or ``energy``."""
+    if backend == "pyannote":
+        return PyannoteVADPipeline(
+            device=device,
+            token=token,
+            cache_dir=cache_dir,
+            local_files_only=local_files_only,
+        )
+    if backend == "energy":
+        return EnergyVADPipeline()
+    raise ValueError(f"Unknown Vui VAD backend {backend!r}; expected one of {VAD_BACKENDS}.")
 
 
 @torch.autocast("cuda", enabled=False)
@@ -265,7 +513,7 @@ def detect_voice_activity(waveform: Any, pipe: Any | None = None):
     if pipe is not None:
         pipeline = pipe
     elif pipeline is None:
-        pipeline = _EnergyPipeline()
+        pipeline = create_vad_pipeline("pyannote")
 
     if hasattr(pipeline, "detect"):
         result = pipeline.detect(values, sampling_rate=16_000)
@@ -440,11 +688,15 @@ class Binarize:
         frames = scores.sliding_window
         timestamps = [frames[index].middle for index in range(values.shape[0])]
         labels = getattr(scores, "labels", None)
+        # Pyannote compares float32 NumPy scores with Python thresholds, which
+        # NumPy evaluates in float32 (e.g. 0.8 -> 0.800000011920929).
+        onset = _float32(self.onset)
+        offset = _float32(self.offset)
         active = Annotation()
         for class_index, class_scores in enumerate(values.transpose(0, 1)):
             label = class_index if labels is None else labels[class_index]
             start = timestamps[0]
-            is_active = bool(class_scores[0] > self.onset)
+            is_active = bool(class_scores[0] > onset)
             region_scores = [float(class_scores[0])]
             region_times = [start]
             timestamp = start
@@ -469,7 +721,7 @@ class Binarize:
                         start = split_time
                         region_scores = region_scores[split + 1:]
                         region_times = region_times[split + 1:]
-                    elif score < self.offset:
+                    elif score < offset:
                         active[
                             Segment(
                                 max(0.0, start - self.pad_onset),
@@ -483,7 +735,7 @@ class Binarize:
                         region_times = []
                     region_scores.append(score)
                     region_times.append(timestamp)
-                elif score > self.onset:
+                elif score > onset:
                     start = timestamp
                     is_active = True
                     region_scores = [score]
@@ -590,12 +842,17 @@ def merge_chunks(
 __all__ = [
     "Annotation",
     "Binarize",
+    "EnergyVADPipeline",
+    "PyannoteVADPipeline",
+    "VAD_BACKENDS",
     "Segment",
     "SlidingWindow",
     "SlidingWindowFeature",
     "VAD_SEGMENTATION_SHA256",
     "VAD_SEGMENTATION_URL",
     "VoiceActivitySegmentation",
+    "aggregate_chunk_scores",
+    "create_vad_pipeline",
     "detect_voice_activity",
     "load_vad_model",
     "merge_chunks",
