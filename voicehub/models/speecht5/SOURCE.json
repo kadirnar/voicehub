@@ -40,9 +40,10 @@
   },
   "verification": {
     "graph": "The native graph has the complete published 398-tensor namespace, including the two persistent sinusoidal position buffers stored by the released checkpoint.",
-    "processor": "Native SentencePiece token IDs and all deterministic log-mel values are compared with the pinned reference implementation.",
+    "processor": "Native SentencePiece token IDs and all deterministic log-mel values are compared with the reference implementation. Text is EOS-terminated like Transformers >= 4.29 (huggingface/transformers#21824); the pinned v4.28.0 tokenizer does not append EOS.",
     "runtime_dependencies": "PyTorch, the Python standard library, and VoiceHub only.",
-    "checkpoint_boundary": "Released .bin files are accepted only through torch.load(weights_only=True), pinned SHA-256, and complete namespace/shape/dtype/inventory validation. Portable exports use VoiceHub's native Safetensors implementation."
+    "checkpoint_boundary": "Released .bin files are accepted only through torch.load(weights_only=True), pinned SHA-256, and complete namespace/shape/dtype/inventory validation. Portable exports use VoiceHub's native Safetensors implementation.",
+    "generation": "Prenet dropout shares one mask across the batch, and batched generation stops when the summed stop probability of a step reaches the threshold, as in Transformers >= 4.29 (v4.28.0 draws an independent dropout mask for every position and stops when any reduction frame reaches it). The sinusoidal position buffers come from the released checkpoint as in v4.28.0; they differ from the recomputed table that Transformers >= 4.29 uses by up to 1.2e-4."
   },
   "training": {
     "objective": [
