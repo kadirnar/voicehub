@@ -266,6 +266,31 @@ class LocalPromptTests(unittest.TestCase):
         self.assertTrue(torch.equal(decoded[0].audio_codes, speech))
 
 
+class TrainingTargetTests(unittest.TestCase):
+    """The official finetuning datasets render the assistant turn with the
+    checkpoint chat template, which ends ``<|im_end|>\\n``."""
+
+    def test_assistant_turn_ends_with_im_end_newline(self):
+        for variant in ("delay", "local", "local_v1_5"):
+            with self.subTest(variant=variant):
+                config = _tiny_tts_config(variant)
+                tokenizer = _TinyTokenizer()
+                processor = MossTTSProcessor(config, tokenizer)
+                speech = torch.arange(4 * config.n_vq).remainder(8).view(4, config.n_vq)
+
+                record = processor.build_training_record(text="hi", speech_tokens=speech)
+
+                newline = tokenizer.encode_ids("\n")
+                tail = [config.audio_end_token_id, config.im_end_token_id, *newline]
+                text_labels = record.labels[0, :, 0]
+                self.assertEqual(text_labels[-len(tail):].tolist(), tail)
+                self.assertEqual(
+                    record.input_ids[0, -(len(tail) - 1):, 0].tolist(),
+                    tail[:-1],
+                )
+                self.assertTrue(record.labels[0, -len(newline):, 1:].eq(-100).all())
+
+
 class ReferenceAudioTests(unittest.TestCase):
 
     def test_loudness_normalize_matches_source_formula(self):
