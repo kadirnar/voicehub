@@ -228,7 +228,38 @@ class VitsFrontendTests(unittest.TestCase):
         self.assertEqual(tokenizer.pad_token_id, 0)
         self.assertIsNone(tokenizer.unk_token_id)
         self.assertEqual(tokenizer.encode("").input_ids, ())
-        self.assertEqual(tokenizer.encode("ka").input_ids, (0, 0, 1, 0))
+        # Original VITS/MMS intersperses blanks over the whole sequence, so
+        # the real-character pad token "k" keeps its surrounding blanks.
+        self.assertEqual(tokenizer.encode("ka").input_ids, (0, 0, 0, 1, 0))
+
+    def test_mms_blank_interspersion_matches_original_recipe_around_pad_character(self):
+        # facebook/mms-tts-eng uses the real vocabulary character "k" (id 0)
+        # as pad token. Upstream fairseq examples/mms/tts/infer.py encodes
+        # text with commons.intersperse(ids, 0) over the full sequence.
+        vocabulary = {"k": 0, "b": 1, "o": 2, " ": 3, "a": 4}
+        tokenizer = VitsTokenizer(
+            vocabulary,
+            config=VitsFrontendConfig(
+                language="eng",
+                add_blank=True,
+                normalize=True,
+                phonemize=False,
+                pad_token="k",
+            ),
+        )
+
+        def original_mms(text):
+            ids = [vocabulary[c] for c in text.lower() if c in vocabulary]
+            blanked = [0] * (len(ids) * 2 + 1)
+            blanked[1::2] = ids
+            return tuple(blanked)
+
+        for text in ("book", "Kk", "kab ok", "a book k", "Book."):
+            with self.subTest(text=text):
+                encoded = tokenizer.encode(text)
+                self.assertEqual(encoded.input_ids, original_mms(text))
+                self.assertEqual(len(encoded.input_ids), 2 * len(text.rstrip(".")) + 1)
+                self.assertEqual(tokenizer.decode(encoded), text.lower().rstrip("."))
 
     def test_required_language_provider_is_never_imported_implicitly(self):
         tokenizer = VitsTokenizer(
@@ -560,6 +591,60 @@ class VitsRuntimeTests(unittest.TestCase):
             first.sequence_lengths.item(),
             int(first.durations.sum().item()) * 2,
         )
+
+    def test_blank_pad_token_embedding_is_trainable(self):
+        # Token 0 is both pad and the interspersed blank (and "k" for MMS
+        # eng); original VITS trains its embedding (no padding_idx).
+        from voicehub.architectures.vits.modeling import VitsModel
+
+        model = VitsModel(_tiny_config()).train()
+        embedding = model.text_encoder.embed_tokens
+        self.assertIsNone(embedding.padding_idx)
+        self.assertGreater(float(embedding.weight[0].abs().sum()), 0.0)
+        input_ids = torch.tensor([[0, 1, 0, 2, 0]])
+        output = model.text_encoder(
+            input_ids,
+            padding_mask=torch.ones(1, 5, 1),
+            attention_mask=torch.ones(1, 5),
+        )
+        output.prior_means.square().sum().backward()
+        self.assertGreater(float(embedding.weight.grad[0].abs().sum()), 0.0)
+
+    def test_stochastic_duration_training_flows_follow_original_flip_order(self):
+        # Original VITS StochasticDurationPredictor builds both flow stacks as
+        # [ElementwiseAffine, (ConvFlow, Flip) x N]: no flip follows the
+        # affine transform, so the first ConvFlow sees its unflipped output.
+        from voicehub.architectures.vits.modeling import VitsModel
+
+        predictor = VitsModel(_tiny_config(stochastic=True)).eval().duration_predictor
+
+        class Recorder(torch.nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.seen = None
+
+            def forward(self, inputs, padding_mask, global_conditioning=None, *, reverse=False):
+                self.seen = inputs.detach().clone()
+                return inputs, inputs.new_zeros(inputs.shape[0])
+
+        for name in ("flows", "post_flows"):
+            count = len(getattr(predictor, name))
+            setattr(predictor, name, torch.nn.ModuleList(Recorder() for _ in range(count)))
+        hidden = torch.randn(1, 8, 4)
+        mask = torch.ones(1, 1, 4)
+        durations = torch.tensor([[[1.0, 2.0, 3.0, 1.0]]])
+        with torch.no_grad():
+            predictor(hidden, mask, durations=durations)
+        for name in ("flows", "post_flows"):
+            recorders = list(getattr(predictor, name))
+            initial = recorders[0].seen
+            self.assertFalse(torch.equal(initial, torch.flip(initial, (1, ))))
+            for index, recorder in enumerate(recorders):
+                flips_before = max(index - 1, 0)
+                expected = initial if flips_before % 2 == 0 else torch.flip(initial, (1, ))
+                with self.subTest(stack=name, index=index):
+                    self.assertTrue(torch.equal(recorder.seen, expected))
 
     def test_supervised_generator_graph_runs_mas_and_backward(self):
         from voicehub.architectures.vits.losses import vits_kl_loss

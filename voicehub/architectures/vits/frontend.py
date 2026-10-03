@@ -292,6 +292,14 @@ class VitsTokenizer:
             token_ids.extend(self._encode_text_segment(prepared[position:special_position]))
             token_ids.append(self.pad_token_id)
             position = special_position + len(self.config.pad_token)
+        if self.config.add_blank and token_ids:
+            # Intersperse blanks once over the whole sequence, like the
+            # original VITS/MMS ``commons.intersperse(text_norm, 0)``. MMS
+            # checkpoints use a real character (e.g. "k" for eng) as the pad
+            # token, so per-segment blanking would drop blanks around it.
+            blanked = [0] * (len(token_ids) * 2 + 1)
+            blanked[1::2] = token_ids
+            token_ids = blanked
         encoding = Encoding(tuple(token_ids))
         return _truncate(encoding, max_length=max_length, truncation=truncation)
 
@@ -306,11 +314,7 @@ class VitsTokenizer:
                     f"Token {token!r} is absent and this vocabulary has no "
                     "unknown token.")
             token_ids.append(token_id)
-        if not self.config.add_blank:
-            return token_ids
-        blanked = [0] * (len(token_ids) * 2 + 1)
-        blanked[1::2] = token_ids
-        return blanked
+        return token_ids
 
     def encode_batch(
         self,
