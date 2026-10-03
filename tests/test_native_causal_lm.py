@@ -558,7 +558,8 @@ class CausalLMGraphTests(unittest.TestCase):
     def test_generation_projects_only_the_last_prompt_position(self):
         model = LlamaForCausalLM(_tiny_config(LlamaConfig)).eval()
         projected_lengths = []
-        model.lm_head.register_forward_hook(lambda _, inputs, __: projected_lengths.append(inputs[0].shape[1]))
+        model.lm_head.register_forward_hook(
+            lambda _, inputs, __: projected_lengths.append(inputs[0].shape[1]))
         prompt = torch.tensor([[1, 5, 6, 7]])
 
         with torch.no_grad():

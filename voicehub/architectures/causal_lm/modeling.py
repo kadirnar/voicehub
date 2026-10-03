@@ -666,7 +666,8 @@ class CausalLMModel(nn.Module):
         # Every layer shares one RoPE table; compute it once per forward like
         # the reference models do instead of once per layer.
         rotary_embeddings = (
-            self.layers[0].self_attn.rotary(position_ids, dtype=hidden_states.dtype) if len(self.layers) else None)
+            self.layers[0].self_attn.rotary(position_ids, dtype=hidden_states.dtype)
+            if len(self.layers) else None)
 
         hidden_history: list[Tensor] | None = ([] if output_hidden_states else None)
         attention_history: list[Tensor] | None = ([] if output_attentions else None)

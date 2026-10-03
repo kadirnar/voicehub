@@ -371,7 +371,8 @@ class HiggsAudioV2Model(nn.Module):
         )
         # Every layer shares one RoPE table; compute it once per forward.
         rotary_embeddings = (
-            self.layers[0].self_attn.rotary(position_ids, dtype=hidden_states.dtype) if len(self.layers) else None)
+            self.layers[0].self_attn.rotary(position_ids, dtype=hidden_states.dtype)
+            if len(self.layers) else None)
         hidden_history = [] if output_hidden_states else None
         attention_history = [] if output_attentions else None
         for layer in self.layers:
