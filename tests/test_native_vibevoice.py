@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 import torch
@@ -703,6 +704,55 @@ class NativeVibeVoiceTests(unittest.TestCase):
             solver.training_sigmas[torch.tensor([9, 6])],
         )
         self.assertEqual(solver._step_index, 2)
+
+    def test_realtime_sampling_defaults_to_configured_ddpm_steps(self):
+        # Upstream `set_ddpm_inference_steps` sets the default DPM step count
+        # used when a request does not pass one explicitly.
+        model = VibeVoiceRealtimeForConditionalGeneration(_realtime_config()).eval()
+        solver = model.model.noise_scheduler
+
+        def sample() -> None:
+            model.sample_speech_latents(
+                torch.randn(1, 8),
+                torch.randn(1, 8),
+                generator=torch.Generator().manual_seed(3),
+            )
+
+        self.assertEqual(model.ddpm_inference_steps, 2)
+        model.set_ddpm_inference_steps(3)
+        sample()
+        self.assertEqual(solver.timesteps.tolist(), [9, 6, 3])
+        model.set_ddpm_inference_steps(None)
+        sample()
+        self.assertEqual(solver.timesteps.tolist(), [9, 4])
+        with self.assertRaisesRegex(ValueError, "positive integer"):
+            model.set_ddpm_inference_steps(0)
+        self.assertEqual(model.ddpm_inference_steps, 2)
+
+    def test_tts_wrapper_threads_diffusion_steps_into_realtime_sampler(self):
+        config = _realtime_config()
+        runtime = SimpleNamespace(
+            model=VibeVoiceRealtimeForConditionalGeneration(config).eval(),
+            config=config,
+            processor=SimpleNamespace(audio_processor=SimpleNamespace(sample_rate=24_000)),
+        )
+        wrapper = VibeVoiceForTextToSpeech(
+            lazy_load=True,
+            device="cpu",
+            diffusion_steps=3,
+        )
+        with mock.patch(
+                "voicehub.architectures.vibevoice.runtime.load_vibevoice_runtime",
+                return_value=runtime,
+        ):
+            wrapper._load_pretrained_model()
+        wrapper.model.sample_speech_latents(
+            torch.randn(1, 8),
+            torch.randn(1, 8),
+            generator=torch.Generator().manual_seed(3),
+        )
+        self.assertEqual(wrapper.model.model.noise_scheduler.timesteps.tolist(), [9, 6, 3])
+        self.assertEqual(wrapper.model.ddpm_inference_steps, 3)
 
     def test_meta_built_realtime_graph_samples_after_streaming_load(self):
         # `load_vibevoice_runtime` builds the graph under torch.device("meta");
