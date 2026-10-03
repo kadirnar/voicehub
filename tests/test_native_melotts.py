@@ -497,6 +497,44 @@ class NativeMeloTTSTests(unittest.TestCase):
 
         self.assertIsNone(generate.call_args.kwargs["max_frames"])
 
+    def test_default_generation_does_not_cap_decoded_frames(self):
+        config = _tiny_config()
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = save_melotts_pretrained(
+                build_melotts_model(config).eval(),
+                config,
+                directory,
+            )
+            model = MeloTTSForTextToSpeech(model_path=artifact, device="cpu")
+            model.load()
+            graph = model.model.model
+            with mock.patch.object(graph, "infer", wraps=graph.infer) as infer:
+                model.generate(
+                    "ab",
+                    input_ids=[1, 2, 1],
+                    tone_ids=[0, 1, 0],
+                    language_ids=[0, 0, 0],
+                    bert_features=torch.zeros(1024, 3),
+                    ja_bert_features=torch.zeros(768, 3),
+                    noise_scale=0.0,
+                    noise_scale_w=0.0,
+                    sdp_ratio=0.0,
+                    seed=0,
+                )
+                model.model.generate(
+                    input_ids=[1, 2, 1],
+                    tone_ids=[0, 1, 0],
+                    language_ids=[0, 0, 0],
+                    bert_features=torch.zeros(1024, 3),
+                    ja_bert_features=torch.zeros(768, 3),
+                )
+
+        # Upstream MeloTTS decodes every predicted frame; a default cap would
+        # silently cut long utterances (4096 frames is ~47.6 s at 44.1 kHz).
+        self.assertEqual(infer.call_count, 2)
+        for call in infer.call_args_list:
+            self.assertIsNone(call.kwargs["max_len"])
+
     @staticmethod
     def _hub_cache_snapshot(root: Path, files: dict[str, Path]) -> Path:
         """Mirror the Hugging Face cache: named symlinks to suffix-less
