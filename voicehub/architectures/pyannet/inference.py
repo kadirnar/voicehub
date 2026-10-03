@@ -38,7 +38,12 @@ def _repeat_pad(values: Tensor, target_samples: int) -> Tensor:
     return values.repeat(repeats)[:target_samples]
 
 
-def _closest_frame(time_s: float, *, frame_step_s: float) -> int:
+def _closest_frame(
+    time_s: float,
+    *,
+    frame_step_s: float,
+    frame_duration_s: float | None = None,
+) -> int:
     """Mirror ``pyannote.core.SlidingWindow.closest_frame`` (start 0).
 
     pyannote evaluates the rule in seconds with ``np.rint`` (round half
@@ -46,7 +51,9 @@ def _closest_frame(time_s: float, *, frame_step_s: float) -> int:
     rounds ties such as the 30 s chunk start on the segmentation-3.0
     grid differently and shifts that chunk by one frame.
     """
-    return max(0, round((time_s - 0.0 - 0.5 * frame_step_s) / frame_step_s))
+    if frame_duration_s is None:
+        frame_duration_s = frame_step_s
+    return max(0, round((time_s - 0.0 - 0.5 * frame_duration_s) / frame_step_s))
 
 
 def _numpy_hamming(size: int) -> Tensor:
@@ -144,18 +151,35 @@ class PyanNetFrameInference:
         _, frames_per_chunk, output_size = scores.shape
         config = self.model.config
         chunk_samples = round(self.duration_s * config.sampling_rate)
-        frame_hop = (
-            self.model.config.sinc_stride * 27 if config.is_brouhaha else chunk_samples / frames_per_chunk)
-        # pyannote.audio builds its frame grid in seconds:
-        # SlidingWindow(start=0, duration=step=chunk duration / frames).
-        frame_step_s = (
-            frame_hop / config.sampling_rate if config.is_brouhaha else self.duration_s / frames_per_chunk)
+        if config.is_brouhaha:
+            # Brouhaha requires pyannote.audio >= 3.1, whose frame grid is
+            # the model receptive field SlidingWindow(start=0,
+            # duration=991 / sr, step=270 / sr) and whose aggregate places
+            # chunk c at closest_frame(chunk.start + duration / 2), i.e.
+            # rint(chunk.start / step).
+            receptive_field = self.model.sincnet.receptive_field_size(1, stride=config.sinc_stride)
+            frame_hop = (
+                self.model.sincnet.receptive_field_size(2, stride=config.sinc_stride) - receptive_field)
+            frame_step_s = frame_hop / config.sampling_rate
+            frame_duration_s = receptive_field / config.sampling_rate
+            center_shift_s = 0.5 * frame_duration_s
+        else:
+            # pyannote.audio 3.0 builds its frame grid in seconds:
+            # SlidingWindow(start=0, duration=step=chunk duration / frames).
+            frame_hop = chunk_samples / frames_per_chunk
+            frame_step_s = self.duration_s / frames_per_chunk
+            frame_duration_s = frame_step_s
+            center_shift_s = 0.0
         starts_in_frames = tuple(
-            _closest_frame(0.0 + index * self.step_s, frame_step_s=frame_step_s)
-            for index in range(len(starts)))
+            _closest_frame(
+                0.0 + index * self.step_s + center_shift_s,
+                frame_step_s=frame_step_s,
+                frame_duration_s=frame_duration_s,
+            ) for index in range(len(starts)))
         required_frames = _closest_frame(
-            0.0 + self.duration_s + (len(starts) - 1) * self.step_s,
+            0.0 + self.duration_s + (len(starts) - 1) * self.step_s + center_shift_s,
             frame_step_s=frame_step_s,
+            frame_duration_s=frame_duration_s,
         ) + 1
         final_stop = starts_in_frames[-1] + frames_per_chunk
         if final_stop > required_frames:
@@ -195,7 +219,7 @@ class PyanNetFrameInference:
             frame_start_samples=0,
             valid_samples=waveform.numel(),
             frame_step_s=frame_step_s,
-            frame_duration_s=frame_step_s,
+            frame_duration_s=frame_duration_s,
         )
 
 
