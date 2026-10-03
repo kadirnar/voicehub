@@ -325,6 +325,17 @@ class OuteTTSForTextToSpeech(PreTrainedTTSModel):
             raise ValueError("OuteTTS fine-tuning supports the audited V3 objective only.")
         self._validate_native_configuration()
 
+    def _auto_dtype(self, torch):
+        """Match the author ``ModelConfig.auto_config`` precision policy.
+
+        CUDA uses BF16 when supported and FP16 otherwise; every other
+        device runs in FP32 instead of the checkpoint's BF16 storage
+        dtype.
+        """
+        if torch.device(self.device).type != "cuda":
+            return torch.float32
+        return torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+
     def _load_pretrained_model(self) -> None:
         self._validate_native_configuration()
         torch = import_optional(
@@ -334,8 +345,9 @@ class OuteTTSForTextToSpeech(PreTrainedTTSModel):
         )
         from voicehub.architectures.outetts.runtime import load_outetts_runtime
 
-        dtype = None
-        if self.config.torch_dtype != "auto":
+        if self.config.torch_dtype == "auto":
+            dtype = self._auto_dtype(torch)
+        else:
             dtype = resolve_torch_dtype(
                 torch,
                 self.config.torch_dtype,

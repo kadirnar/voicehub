@@ -180,7 +180,7 @@ def normalize_outetts_text(text: str) -> str:
         normalized,
     )
     normalized = re.sub(
-        r"(\w)\s*'\s*([tsdmre])\b",
+        r"(\w)\s*'\s*([tsdmren])\b",
         r"\1'\2",
         normalized,
         flags=re.IGNORECASE,
