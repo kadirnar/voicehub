@@ -424,6 +424,52 @@ class NemotronTokenizerAndProviderTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "reserved token"):
                 tokenizer.encode("<en-US>hi")
 
+    def test_transcript_rendering_matches_nemo_strip_lang_tags(self):
+        from voicehub.architectures.nemotron_asr.processing import NemotronASRProcessor
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = _write_tokenizer(Path(directory) / "tokenizer.json")
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["model"]["vocab"].update({",": 8, "▁,": 9, ".": 10, "?": 11})
+            path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+            tokenizer = NemotronASRTokenizer.from_tokenizer_json(path)
+        config = _tiny_config(vocab_size=13088, blank_token_id=13087)
+        processor = NemotronASRProcessor(
+            config,
+            tokenizer,
+            processor_config={
+                "processor_class": "Nemotron3_5AsrProcessor",
+                "blank_token": "<blank>",
+                "num_prompts": 4,
+                "prompt_dictionary": {
+                    "en-US": 0,
+                    "auto": 1,
+                },
+                "supported_num_lookahead_tokens": [0],
+                "default_num_lookahead_tokens": 0,
+                "feature_extractor": {
+                    "feature_size": 8
+                },
+            },
+        )
+        blank = config.blank_token_id
+        # Golden strings from NeMo `decode_tokens_to_str_with_strip_punctuation`
+        # with strip_lang_tags=True, which removes one space before a
+        # vocabulary punctuation mark and `\s*<xx-XX>` (no double spaces).
+        cases = {
+            (5, 10, 1, 7, 5): "hi. hi",  # NeMo: "Mr. <en-US> Quilter" -> "Mr. Quilter"
+            (5, 9, 5, 1, 11, 1, 7): "hi, hi?",
+            (5, 1, 1, 11, 7): "hi ?",  # only one space is removed
+            (1, 7, 5, 0, 13087): "hi",
+        }
+        for token_ids, expected in cases.items():
+            with self.subTest(token_ids=token_ids):
+                self.assertEqual(processor.decode((blank, ) + token_ids), expected)
+        self.assertEqual(
+            processor.decode((5, 10, 1, 7, 5), skip_special_tokens=False),
+            "hi. <en-US> hi",
+        )
+
     def test_provider_configuration_rejects_external_runtime_options(self):
         config = NemotronASRConfig(
             target_language=" de-DE ",

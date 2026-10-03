@@ -313,6 +313,11 @@ class NemotronASRTokenizer:
         return len(set(self._id_to_token))
 
     @property
+    def vocabulary_ids(self) -> tuple[int, ...]:
+        """IDs of the ordinary (non-special) vocabulary entries."""
+        return tuple(sorted(self._assets.vocabulary.values()))
+
+    @property
     def token_id_space_size(self) -> int:
         return max(self._id_to_token) + 1
 

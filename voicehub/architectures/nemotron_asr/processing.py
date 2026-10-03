@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import copy
+import re
 import shutil
+import unicodedata
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -21,6 +23,24 @@ from voicehub.architectures.nemotron_asr.tokenization import (
     NemotronASRTokenizer,
 )
 from voicehub.hub import read_json_file, write_json_file
+
+# NeMo's RNN-T transcript rendering (rnnt_decoding.py): one space before a
+# vocabulary punctuation mark is removed, and with ``strip_lang_tags`` the
+# emitted language tags are removed with this default pattern.
+_LANGUAGE_TAG = re.compile(r"\s*<[a-z]{2}-[A-Z]{2}>")
+_NON_PUNCTUATION_TOKEN = re.compile(r"^\[.*\]$|^<.*>$|^##|^" + METASPACE + r"|^\s*$")
+
+
+def _space_before_punctuation(tokens: Sequence[str]) -> re.Pattern[str] | None:
+    """Mirror NeMo ``extract_punctuation_from_vocab`` and its space fix."""
+    marks = sorted({
+        character
+        for token in tokens if not _NON_PUNCTUATION_TOKEN.match(token) for character in token
+        if unicodedata.category(character).startswith("P")
+    })
+    if not marks:
+        return None
+    return re.compile(r"(\s)(" + "|".join(re.escape(mark) for mark in marks) + ")")
 
 
 def _validate_prompt_dictionary(
@@ -182,6 +202,10 @@ class NemotronASRProcessor:
         self._processor_config = values
         self._processor_config_path = processor_config_path
         self._tokenizer_config_path = tokenizer_config_path
+        self._language_tag_ids = frozenset(
+            token_id for token, token_id in tokenizer.special_tokens.items() if _LANGUAGE_TAG.fullmatch(token))
+        self._space_before_punctuation = _space_before_punctuation(
+            tuple(tokenizer.token_for_id(token_id) for token_id in tokenizer.vocabulary_ids))
 
     @classmethod
     def from_artifacts(
@@ -507,6 +531,22 @@ class NemotronASRProcessor:
         flush_bytes()
         return offsets
 
+    def _transcript(self, token_ids: Sequence[int]) -> str:
+        """Render a clean transcript like NeMo with ``strip_lang_tags``.
+
+        Language tags are removed together with the whitespace before them
+        (rather than leaving a double space mid-sentence), one space before
+        a vocabulary punctuation mark is dropped, and other special tokens
+        are skipped.
+        """
+        kept = (
+            token_id for token_id in token_ids if token_id != self.model_blank_token_id and (
+                token_id not in self.tokenizer.special_token_ids or token_id in self._language_tag_ids))
+        text = self.tokenizer.decode(kept, skip_special_tokens=False)
+        if self._space_before_punctuation is not None:
+            text = self._space_before_punctuation.sub(r"\2", text)
+        return _LANGUAGE_TAG.sub("", text).strip()
+
     def batch_decode(
         self,
         sequences: Any,
@@ -515,12 +555,11 @@ class NemotronASRProcessor:
         skip_special_tokens: bool = True,
     ) -> list[str] | tuple[list[str], list[list[dict[str, float | str]]]]:
         rows = self._sequence_rows(sequences)
-        decoded = [
-            self.tokenizer.decode(
+        decoded = [(
+            self._transcript(row) if skip_special_tokens else self.tokenizer.decode(
                 (token_id for token_id in row if token_id != self.model_blank_token_id),
-                skip_special_tokens=skip_special_tokens,
-            ) for row in rows
-        ]
+                skip_special_tokens=False,
+            )) for row in rows]
         if durations is None:
             return decoded
         duration_rows = self._sequence_rows(durations)
