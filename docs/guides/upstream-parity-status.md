@@ -49,13 +49,17 @@ hardware, precision, samples, and decoding settings.
 Orpheus, CSM, NeuTTS, and MedASR checkpoints returned HTTP 401. Per the audit instruction,
 inaccessible checkpoints remain pending access and receive no pass credit.
 
-Qwen3-ASR matched normalized transcripts on four of five public samples. On
-the longest sample, upstream WER/CER were 0.0588/0.0169 and VoiceHub
-WER/CER were 0.0882/0.0339. VoiceHub took 1.477–1.602 times as long,
-with all five samples flagged. Input token IDs and masks matched exactly.
-Substituting the original log-mel features into the native graph did not
-change the longest-sample transcript, so preprocessing roundoff alone does
-not explain that mismatch. These differences remain unresolved.
+Qwen3-ASR's remaining transcript difference comes from the original
+Transformers backend. Its SDPA and eager audio attention never apply the
+`n_window_infer` window mask, so audio longer than 8 s attends globally.
+The official FlashAttention-2 and vLLM backends and the Transformers port
+use windowed attention in their source, as VoiceHub does. With the original FA2 audio path
+selected (BF16), all five transcripts matched exactly. In FP32, applying
+the original window mask gave identical tokens on all five samples
+(encoder relative error ≤ 3e-6). Removing a quadratic special-token scan in
+the byte-BPE tokenizer and decoding unpadded prompts with fused attention
+reduced VoiceHub's time ratio from 1.33–1.63 to 1.13–1.21. The rest is
+per-layer overhead in the shared decoder.
 
 Parler-TTS now completes the public-transcript comparison after correcting
 checkpoint-symlink loading and selecting eager attention on both sides (the
