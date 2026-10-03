@@ -149,10 +149,22 @@ def validate_published_seamless_m4t_v2_inventory(
     validated against the configured native graph by the adapter.
     """
     expected = SEAMLESS_M4T_V2_CHECKPOINTS.get(source)
-    if expected is None or revision != expected["revision"]:
+    if expected is not None and revision != expected["revision"]:
         return False
     inventory = _reader_inventory(reader)
     full_facts = _inventory_facts(inventory)
+    if expected is None:
+        if revision is not None:
+            return False
+        # A local directory (e.g. a downloaded Hub snapshot) carries no
+        # revision; recognize the audited checkpoint by its header instead.
+        expected = next(
+            (facts
+             for facts in SEAMLESS_M4T_V2_CHECKPOINTS.values() if facts["full_header_fingerprint"] == full_facts[3]),
+            None,
+        )
+        if expected is None:
+            return False
     subset = {
         name: record
         for name, record in inventory.items() if name.startswith(_PERSISTED_PREFIXES) and name not in _ALIASES

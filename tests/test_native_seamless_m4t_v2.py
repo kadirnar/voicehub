@@ -7,6 +7,8 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
+from types import MappingProxyType
+from unittest import mock
 
 import torch
 
@@ -19,6 +21,7 @@ from voicehub.architectures.seamless_m4t_v2.checkpoint import (
     SeamlessM4Tv2S2TCheckpointAdapter,
     native_seamless_m4t_v2_tensor_shapes,
     seamless_m4t_v2_header_fingerprint,
+    validate_published_seamless_m4t_v2_inventory,
 )
 from voicehub.architectures.seamless_m4t_v2.configuration import SeamlessM4Tv2S2TConfig
 from voicehub.architectures.seamless_m4t_v2.frontend import SeamlessM4Tv2FeatureExtractor
@@ -36,6 +39,7 @@ from voicehub.architectures.seamless_m4t_v2.runtime import (
 )
 from voicehub.architectures.seamless_m4t_v2.tokenization import SEAMLESS_M4T_V2_LANGUAGE_TO_ID, SeamlessM4Tv2Tokenizer
 from voicehub.models.asr_seamless_m4t_v2 import SeamlessM4Tv2ASRConfig, SeamlessM4Tv2ForSpeechRecognition
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
 from voicehub.models.asr_seamless_m4t_v2.training_asr_seamless_m4t_v2 import NativeSeamlessM4Tv2TrainingAdapter
 from voicehub.training import AutoTrainingAdapter
 
@@ -388,6 +392,47 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
         self.assertTrue(torch.allclose(encoded[1, :2], reference[:2]))
         self.assertTrue(torch.equal(encoded[0, 3], torch.zeros(8)))
         self.assertTrue(torch.equal(encoded[1, 2:], torch.zeros(2, 8)))
+
+    def test_local_copy_of_published_checkpoint_is_recognized_by_header(self):
+        # Regression: a downloaded snapshot directory has no Hub revision, so
+        # the audited full checkpoint was rejected for its non-S2T tensors.
+        tensors = {
+            "shared.weight": torch.zeros(4, 2),
+            "speech_encoder.inner_layer_norm.weight": torch.ones(2),
+            "t2u_model.unused.weight": torch.zeros(3),
+        }
+        inventory = {name: ("F32", tuple(value.shape)) for name, value in tensors.items()}
+        subset = {name: record for name, record in inventory.items() if not name.startswith("t2u_model.")}
+        facts = {
+            "revision": "0" * 40,
+            "full_tensor_count": 3,
+            "full_parameter_count": 13,
+            "full_tensor_bytes": 52,
+            "full_header_fingerprint": seamless_m4t_v2_header_fingerprint(inventory),
+            "s2t_tensor_count": 2,
+            "s2t_parameter_count": 10,
+            "s2t_tensor_bytes": 40,
+            "s2t_header_fingerprint": seamless_m4t_v2_header_fingerprint(subset),
+            "dtype": "F32",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = save_safetensors(tensors, Path(directory) / "model.safetensors")
+            with mock.patch(
+                    "voicehub.architectures.seamless_m4t_v2.checkpoint.SEAMLESS_M4T_V2_CHECKPOINTS",
+                    MappingProxyType({"facebook/seamless-m4t-v2-large": facts}),
+            ), SafeTensorReader(path) as reader:
+                local = validate_published_seamless_m4t_v2_inventory(reader, source=directory, revision=None)
+                other_revision = validate_published_seamless_m4t_v2_inventory(
+                    reader,
+                    source="facebook/seamless-m4t-v2-large",
+                    revision="1" * 40,
+                )
+            with SafeTensorReader(path) as reader:
+                unknown = validate_published_seamless_m4t_v2_inventory(reader, source=directory, revision=None)
+
+        self.assertTrue(local)
+        self.assertFalse(other_revision)
+        self.assertFalse(unknown)
 
     def test_local_artifact_resolution_rejects_unsafe_shard_paths(self):
         with tempfile.TemporaryDirectory() as directory:
