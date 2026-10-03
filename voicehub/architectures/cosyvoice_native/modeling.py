@@ -214,6 +214,11 @@ class CosyVoiceNativeModel(nn.Module):
         flow_steps: int = 10,
         generator: torch.Generator | None = None,
     ) -> CosyVoiceSynthesisOutput:
+        # Like the source zero-shot frontend, a speech prompt conditions both
+        # the language model (tokens) and the flow (tokens plus mel features).
+        has_prompt_tokens = (prompt_speech_tokens is not None and prompt_speech_tokens.numel() > 0)
+        if has_prompt_tokens != (prompt_features is not None):
+            raise ValueError("`prompt_speech_tokens` and `prompt_features` must be supplied together.")
         speech_tokens = self.llm.generate(
             text_tokens,
             instruction_tokens=instruction_tokens,
@@ -235,7 +240,7 @@ class CosyVoiceNativeModel(nn.Module):
             speech_tokens,
             speech_lengths,
             speaker_embedding,
-            prompt_speech_tokens=(prompt_speech_tokens if prompt_features is not None else None),
+            prompt_speech_tokens=prompt_speech_tokens,
             prompt_features=prompt_features,
             steps=flow_steps,
         )
