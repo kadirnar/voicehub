@@ -34,6 +34,7 @@ from voicehub.architectures.csm.processing import CSMProcessor, CSMTextTokenizer
 from voicehub.architectures.csm.runtime import CSMRuntime, load_csm_runtime
 from voicehub.hub import write_json_file
 from voicehub.models.csm.source.moshi.modules.conv import StreamingConv1d
+from voicehub.models.csm.source.moshi.utils.compile import torch_compile_lazy
 from voicehub.models.csm.inference import CSMForTextToSpeech
 from voicehub.models.csm.training import CSMTrainingBackend, CSMTrainingCollator, prepare_csm_training_inputs
 from voicehub.processing.waveform import resample_waveform_hann
@@ -237,6 +238,33 @@ class NativeCSMSourceNumericsTests(unittest.TestCase):
         runtime.encode_audio(audio, sampling_rate=16_000)
         expected = resample_waveform_hann(audio, 16_000, 24_000, match="functional")
         torch.testing.assert_close(captured["waveform"][0, 0], expected, rtol=0, atol=0)
+
+    def test_mimi_runs_eagerly_like_sesame_setup(self):
+        # Sesame's README exports NO_TORCH_COMPILE=1 so Moshi's lazily
+        # compiled RoPE/RMSNorm/gating kernels stay eager. On CUDA the
+        # compiled kernels round differently (~5e-7 on decoded audio), so the
+        # runtime must run Mimi with Moshi compilation disabled.
+        config = _portable_test_config()
+        with patch.dict("os.environ", {"NO_TORCH_COMPILE": ""}):
+            identity = torch_compile_lazy(lambda tensor: tensor)
+
+        class Codec:
+            sample_rate = 24_000
+
+            def encode(self, waveform):
+                identity(waveform)
+                return torch.zeros(1, config.num_audio_codebooks, 1, dtype=torch.long)
+
+            def decode(self, codes):
+                return identity(torch.zeros(1, 1, codes.shape[-1] * 1_920))
+
+        runtime = CSMRuntime(CSMModel(config), CSMProcessor(_tokenizer(), config), codec=Codec())
+        codes = torch.ones(1, config.num_audio_codebooks, 2, dtype=torch.long)
+        with patch("torch.compile", side_effect=AssertionError("Mimi must run eagerly")):
+            runtime.encode_audio(torch.zeros(1_920), sampling_rate=24_000)
+            with patch.object(runtime.model, "generate_audio_codes", return_value=codes):
+                audio, _ = runtime.generate("Hi.")
+        self.assertEqual(audio.shape[-1], 2 * 1_920)
 
     def test_mimi_uses_csm_pinned_moshi_padding(self):
         codec = build_mimi(device="meta")

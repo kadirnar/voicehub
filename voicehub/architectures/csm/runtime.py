@@ -18,6 +18,7 @@ from voicehub.architectures.csm.modeling import CSMModel
 from voicehub.architectures.csm.processing import CSMCodeSegment, CSMProcessor, CSMTextTokenizer
 from voicehub.audio import load_audio
 from voicehub.hub import read_json_file, write_json_file
+from voicehub.models.csm.source.moshi.utils.compile import no_compile
 from voicehub.processing.waveform import resample_waveform_hann
 
 
@@ -150,7 +151,11 @@ class CSMRuntime:
                 match="functional",
             )
         waveform = waveform.to(device=self.codec_device)
-        codes = codec.encode(waveform.unsqueeze(0).unsqueeze(0))
+        # Sesame's setup disables Moshi's lazy ``torch.compile`` in Mimi
+        # (``NO_TORCH_COMPILE=1``); compiled RoPE/gating kernels round
+        # differently, so keep the eager kernels the source runs.
+        with no_compile():
+            codes = codec.encode(waveform.unsqueeze(0).unsqueeze(0))
         if (codes.ndim != 3 or codes.shape[0] != 1 or
                 codes.shape[1] != self.model.config.num_audio_codebooks):
             raise RuntimeError("Mimi returned an incompatible CSM code tensor.")
@@ -204,7 +209,8 @@ class CSMRuntime:
             temperature=temperature,
             top_k=top_k,
         )
-        audio = codec.decode(codes.to(device=self.codec_device), ).squeeze(0).squeeze(0).float()
+        with no_compile():  # Eager Mimi, as in Sesame's setup (see above).
+            audio = codec.decode(codes.to(device=self.codec_device), ).squeeze(0).squeeze(0).float()
         postprocessed = False
         watermarked = False
         if self.audio_postprocessor is not None:
