@@ -22,9 +22,9 @@ def _postprocess_segments(
 ) -> tuple[SpeechSegment, ...]:
     """Apply VoiceHub's optional filter and padding to FSMN boundaries.
 
-    With ``min_speech_duration_ms=0`` and ``speech_pad_ms=0`` the decoder
-    boundaries are returned unchanged, exactly as FunASR emits them. The
-    decoder already applies the end silence and FunASR's
+    With ``min_speech_duration_ms=0`` and ``speech_pad_ms=0`` the
+    decoder boundaries are returned unchanged, exactly as FunASR emits
+    them. The decoder already applies the end silence and FunASR's
     ``max_single_segment_time``, so neither is applied a second time.
     """
     minimum_speech = min_speech_duration_ms / 1_000.0

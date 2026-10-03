@@ -215,10 +215,11 @@ print(json.dumps({
         # DetectLastFrames on the same frame scores: its data buffer only
         # advances, so a new start never precedes the previous end.
         config = FSMNVADConfig()
+        maximum_cut = [0.99] * 100
+        quick_restart = [0.01] * 10 + [0.99] * 30 + [0.01] * 20 + [0.99] * 30 + [0.01] * 30
         cases = (
-            ([0.99] * 100, 0.6, 800, 500, [(0, 510), (510, 1000)]),
-            ([0.01] * 10 + [0.99] * 30 + [0.01] * 20 + [0.99] * 30 + [0.01] * 30, 0.5, 100, None, [(0, 460),
-                                                                                                   (460, 960)]),
+            (maximum_cut, 0.6, 800, 500, [(0, 510), (510, 1000)]),
+            (quick_restart, 0.5, 100, None, [(0, 460), (460, 960)]),
         )
         for values, threshold, silence_ms, maximum_ms, expected in cases:
             speech = torch.tensor(values)
