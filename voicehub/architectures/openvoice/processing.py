@@ -160,6 +160,49 @@ class OpenVoiceAudioProcessor:
             waveform[boundaries[index]:boundaries[index + 1]] for index in range(number)
             if boundaries[index + 1] > boundaries[index])
 
+    @staticmethod
+    def upstream_reference_segments(
+        waveform: Tensor,
+        *,
+        sampling_rate: int,
+        segment_seconds: float = 10.0,
+    ) -> tuple[Tensor, ...]:
+        """Split source-rate audio exactly like ``se_extractor.split_audio_vad``.
+
+        After its VAD, upstream concatenates the active audio, splits it
+        into ``round(duration / segment_seconds)`` equal parts on
+        millisecond boundaries (pydub slicing), exports every part and
+        resamples each one separately inside ``extract_se``. Here the whole
+        input is treated as active speech (no external VAD), and audio
+        shorter than half a segment is encoded whole instead of failing.
+        """
+        waveform = OpenVoiceAudioProcessor.waveforms(waveform)[0]
+        if (isinstance(sampling_rate, bool) or not isinstance(sampling_rate, int) or sampling_rate <= 0):
+            raise ValueError("`sampling_rate` must be a positive integer.")
+        if (isinstance(segment_seconds, bool) or not isinstance(segment_seconds, (int, float)) or
+                not math.isfinite(float(segment_seconds)) or segment_seconds <= 0):
+            raise ValueError("`segment_seconds` must be finite and positive.")
+        samples = waveform.numel()
+        duration = samples / sampling_rate
+        number = round(duration / float(segment_seconds))
+        if number < 1:
+            # Upstream asserts here; encode the whole recording like
+            # ``extract_se([path])`` instead of failing.
+            return (waveform, )
+        interval = duration / number
+        length_ms = round(1000 * duration)
+        frames_per_ms = sampling_rate / 1000.0
+        segments = []
+        start = 0.0
+        for index in range(number):
+            end = duration if index == number - 1 else min(start + interval, duration)
+            first = int(min(int(start * 1000), length_ms) * frames_per_ms)
+            last = min(samples, int(min(int(end * 1000), length_ms) * frames_per_ms))
+            if last > first:
+                segments.append(waveform[first:last])
+            start = end
+        return tuple(segments)
+
 
 __all__ = [
     "OpenVoiceAudioProcessor",

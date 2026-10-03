@@ -99,8 +99,19 @@ class OpenVoiceRuntime:
                     waveform,
                     segment_seconds=segment_seconds,
                 ))
+        return self.extract_segment_embedding(segments)
+
+    @torch.inference_mode()
+    def extract_segment_embedding(self, segments: Any) -> Tensor:
+        """Average one embedding per already-split reference segment.
+
+        This is upstream ``ToneColorConverter.extract_se``: each segment
+        is encoded on its own and the embeddings are averaged.
+        """
+        if isinstance(segments, (list, tuple)) and not segments:
+            raise ValueError("OpenVoice reference processing produced no speech segments.")
         embeddings = []
-        for segment in segments:
+        for segment in self.processor.waveforms(segments):
             batch = self.processor.spectrogram(
                 segment,
                 device=self.device,

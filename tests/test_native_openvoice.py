@@ -322,12 +322,12 @@ class OpenVoiceArchitectureTests(unittest.TestCase):
         class RecordingRuntime:
 
             def __init__(self):
+                self.processor = OpenVoiceAudioProcessor(OpenVoiceConverterConfig())
                 self.references = []
                 self.sources = []
 
-            def extract_speaker_embedding(self, waveform, *, segment_seconds):
-                del segment_seconds
-                self.references.append(waveform)
+            def extract_segment_embedding(self, segments):
+                self.references.append(segments)
                 return torch.zeros(1, 256, 1)
 
             def convert(self, waveform, *, source_embedding, target_embedding, tau):
@@ -357,7 +357,46 @@ class OpenVoiceArchitectureTests(unittest.TestCase):
         self.assertEqual(expected_base.numel(), 221)
         self.assertEqual(expected_reference.numel(), 221)
         self.assertTrue(torch.equal(model.runtime.sources[0], expected_base))
-        self.assertTrue(torch.equal(model.runtime.references[0], expected_reference))
+        self.assertEqual(len(model.runtime.references[0]), 1)
+        self.assertTrue(torch.equal(model.runtime.references[0][0], expected_reference))
+
+    def test_reference_segments_follow_upstream_millisecond_splitting(self):
+        # Golden (start, length) pairs from upstream ``split_audio_vad`` on
+        # fully active audio (pydub 0.25.1 slicing of the concatenation).
+        cases = {
+            (2_593_917, 44_100): (
+                (0, 432_312),
+                (432_312, 432_312),
+                (864_624, 432_312),
+                (1_296_936, 432_313),
+                (1_729_249, 432_312),
+                (2_161_561, 432_312),
+            ),
+            (245_000, 16_000): ((0, 122_496), (122_496, 122_496)),
+            (1_000_003, 22_050): (
+                (0, 199_993),
+                (199_993, 199_994),
+                (399_987, 199_993),
+                (599_980, 200_016),
+                (799_996, 199_993),
+            ),
+            # Upstream asserts on audio shorter than half a segment; the
+            # native path encodes the whole file like ``extract_se([path])``
+            # (no millisecond truncation of the last sample).
+            (77_040, 16_000): ((0, 77_040), ),
+            (106_171, 22_050): ((0, 106_171), ),
+        }
+        for (samples, rate), expected in cases.items():
+            with self.subTest(samples=samples, rate=rate):
+                waveform = torch.arange(samples, dtype=torch.float32)
+                segments = OpenVoiceAudioProcessor.upstream_reference_segments(
+                    waveform,
+                    sampling_rate=rate,
+                )
+                self.assertEqual(
+                    tuple((int(segment[0].item()), segment.numel()) for segment in segments),
+                    expected,
+                )
 
     def test_documented_usage_opts_into_the_official_pickle_checkpoint(self):
         # The default checkpoint is a legacy pickle that only loads with
