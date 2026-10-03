@@ -943,7 +943,8 @@ class VibeVoiceRealtimeForConditionalGeneration(nn.Module):
     def set_ddpm_inference_steps(self, num_steps: int | None = None) -> None:
         """Set the default DPM step count; ``None`` restores the
         checkpoint's."""
-        steps = (self.config.diffusion_head_config.ddpm_num_inference_steps if num_steps is None else num_steps)
+        steps = (
+            self.config.diffusion_head_config.ddpm_num_inference_steps if num_steps is None else num_steps)
         self.model.noise_scheduler.inference_timestep_schedule(steps)
         self.ddpm_inference_steps = steps
 
