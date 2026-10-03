@@ -4,8 +4,10 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 
 from scripts.benchmark_upstream_parity import compare_results, latency_comparison, run_side
+from scripts.upstream_parity_worker import json_safe, load_tensor_inputs, tts_inputs
 
 
 def result(task, **sample):
@@ -31,6 +33,99 @@ def test_timing_flags_regression_and_keeps_noisy_measurements_inconclusive():
     for invalid in ([1.0], [float("nan")] * 10, [0.0] * 10):
         with pytest.raises(ValueError):
             latency_comparison(invalid, [1.0] * 10, tolerance=0.1)
+
+
+def test_too_few_timings_still_compare_outputs(tmp_path):
+    a, b = tmp_path / "a.npy", tmp_path / "b.npy"
+    np.save(a, np.array([0.1, 0.2], dtype=np.float32))
+    np.save(b, np.array([0.1, 0.2], dtype=np.float32))
+    upstream = result("tts", audio=str(a), sample_rate=16000)
+    candidate = result("tts", audio=str(b), sample_rate=16000)
+    upstream["samples"][0]["warm_seconds"] = [9.0]
+    comparison = compare_results(upstream, candidate)
+    sample = comparison["samples"][0]
+    assert comparison["status"] == "measured"
+    assert sample["waveform_exact"]
+    assert sample["timing"]["status"] == "insufficient-samples"
+    assert sample["timing"]["upstream_samples"] == 1
+    assert sample["timing"]["voicehub_samples"] == 10
+    assert sample["timing"]["regression_flag"] is None
+    assert comparison["timing_regression_flag"] is False
+    json.dumps(comparison, allow_nan=False)
+
+
+def test_enough_timings_keep_the_regression_flag():
+    upstream = result("asr", text="hello", reference="hello")
+    candidate = result("asr", text="hello", reference="hello")
+    candidate["samples"][0]["warm_seconds"] = [1.3] * 5
+    comparison = compare_results(upstream, candidate)
+    assert comparison["samples"][0]["timing"]["status"] == "measured"
+    assert comparison["samples"][0]["timing"]["regression_flag"]
+    assert comparison["timing_regression_flag"]
+
+
+def test_invalid_timings_are_rejected_even_when_insufficient():
+    upstream = result("asr", text="hello", reference="hello")
+    upstream["samples"][0]["warm_seconds"] = [float("nan")]
+    with pytest.raises(ValueError, match="finite and positive"):
+        compare_results(upstream, result("asr", text="hello", reference="hello"))
+
+
+def test_worker_merges_generic_tts_inputs(tmp_path):
+    shared, own = tmp_path / "shared.npz", tmp_path / "own.npz"
+    np.savez(shared, speaker_embedding=np.arange(3, dtype=np.float32), scale=np.array(0.5))
+    np.savez(own, scale=np.array(2.0), tokens=np.array([[1, 2]], dtype=np.int64))
+    request = {
+        "generation": dict(temperature=0.0, speaker="a"),
+        "tensor_inputs": str(shared),
+        "matched_phonemes": True,
+        "phoneme_argument": "phoneme_text",
+    }
+    sample = {"text": "hi", "phonemes": "h ai", "generation": {"speaker": "b"}, "tensor_inputs": str(own)}
+    text, kwargs = tts_inputs(request, sample)
+    assert text == "hi"
+    assert kwargs["temperature"] == 0.0 and kwargs["speaker"] == "b"
+    assert kwargs["phoneme_text"] == "h ai" and "phonemes" not in kwargs
+    assert kwargs["speaker_embedding"].dtype == torch.float32
+    assert kwargs["speaker_embedding"].tolist() == [0.0, 1.0, 2.0]
+    assert kwargs["scale"].item() == 2.0
+    assert kwargs["tokens"].dtype == torch.int64
+
+    kwargs["speaker_embedding"].add_(1)
+    assert tts_inputs(request, sample)[1]["speaker_embedding"].tolist() == [0.0, 1.0, 2.0]
+
+    phonemized = {"text": "hi", "phonemes": "h ai"}
+    assert tts_inputs({"phonemes_as_text": True}, phonemized) == ("h ai", {})
+    assert tts_inputs({"matched_phonemes": True}, phonemized) == ("hi", {"phonemes": "h ai"})
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        tts_inputs({"matched_phonemes": True, "phonemes_as_text": True}, phonemized)
+    assert load_tensor_inputs(None) == {}
+
+
+def test_worker_tensor_inputs_refuse_pickled_arrays(tmp_path):
+    archive = tmp_path / "objects.npz"
+    np.savez(archive, value=np.array([{"a": 1}], dtype=object))
+    with pytest.raises(ValueError):
+        load_tensor_inputs(archive)
+
+
+def test_worker_metadata_is_json_safe():
+    metadata = {
+        "durations": torch.ones(2, 3),
+        "steps": np.int64(4),
+        "scale": torch.tensor(0.5),
+        "nested": [np.zeros(2, dtype=np.float32), (1, "a")],
+        "path": Path("/tmp/x.wav"),
+        "missing": None,
+        "bad": float("nan"),
+        "other": object,
+    }
+    safe = json_safe(metadata)
+    assert safe["durations"] == {"shape": [2, 3], "dtype": "torch.float32"}
+    assert safe["steps"] == 4 and safe["scale"] == 0.5
+    assert safe["nested"] == [{"shape": [2], "dtype": "float32"}, [1, "a"]]
+    assert safe["path"] == "/tmp/x.wav" and safe["missing"] is None
+    json.dumps(safe, allow_nan=False)
 
 
 def test_transcript_agreement_is_distinct_from_accuracy():

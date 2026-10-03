@@ -87,6 +87,9 @@ def error_rate(reference: list[str], hypothesis: list[str]) -> float | None:
     return previous[-1] / len(reference)
 
 
+MINIMUM_TIMING_SAMPLES = 5
+
+
 def latency_comparison(upstream: list[float], voicehub: list[float], *, tolerance: float) -> dict:
     """Report a conservative independent-sample 95% normal-approximation
     interval.
@@ -96,7 +99,7 @@ def latency_comparison(upstream: list[float], voicehub: list[float], *, toleranc
     run can confirm it.
     """
     for values in (upstream, voicehub):
-        if len(values) < 5 or any(not math.isfinite(v) or v <= 0 for v in values):
+        if len(values) < MINIMUM_TIMING_SAMPLES or any(not math.isfinite(v) or v <= 0 for v in values):
             raise ValueError("At least five finite, positive warm timings are required per side.")
     original, wrapped = statistics.mean(upstream), statistics.mean(voicehub)
     uncertainty = 1.96 * math.sqrt(
@@ -111,6 +114,28 @@ def latency_comparison(upstream: list[float], voicehub: list[float], *, toleranc
         "regression_flag": wrapped - original - uncertainty > tolerance * original,
         "method": "independent means, normal approximation; screening only",
     }
+
+
+def timing_comparison(upstream: list[float], voicehub: list[float], *, tolerance: float) -> dict:
+    """Compare warm timings, or mark them insufficient without failing.
+
+    Fewer than ``MINIMUM_TIMING_SAMPLES`` timings on either side (e.g. a
+    slow model run once for correctness) yields an explicit
+    ``insufficient-samples`` record so the output comparison still runs.
+    Recorded timings must still be finite and positive.
+    """
+    for values in (upstream, voicehub):
+        if any(not math.isfinite(v) or v <= 0 for v in values):
+            raise ValueError("Warm timings must be finite and positive.")
+    if min(len(upstream), len(voicehub)) < MINIMUM_TIMING_SAMPLES:
+        return {
+            "status": "insufficient-samples",
+            "minimum_samples": MINIMUM_TIMING_SAMPLES,
+            "upstream_samples": len(upstream),
+            "voicehub_samples": len(voicehub),
+            "regression_flag": None,
+        }
+    return {"status": "measured", **latency_comparison(upstream, voicehub, tolerance=tolerance)}
 
 
 def compare_results(upstream: dict, voicehub: dict, *, timing_tolerance: float = 0.10) -> dict:
@@ -132,7 +157,7 @@ def compare_results(upstream: dict, voicehub: dict, *, timing_tolerance: float =
             "id":
             baseline["id"],
             "timing":
-            latency_comparison(
+            timing_comparison(
                 baseline["warm_seconds"], candidate["warm_seconds"], tolerance=timing_tolerance)
         }
         task = upstream["task"]
@@ -213,7 +238,8 @@ def compare_results(upstream: dict, voicehub: dict, *, timing_tolerance: float =
     return {
         "status": "measured",
         "samples": rows,
-        "timing_regression_flag": any(row["timing"]["regression_flag"] for row in rows)
+        # Rows with insufficient timing samples cannot raise the flag.
+        "timing_regression_flag": any(row["timing"]["regression_flag"] is True for row in rows)
     }
 
 

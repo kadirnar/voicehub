@@ -13,6 +13,7 @@ import hashlib
 import importlib
 import importlib.metadata
 import json
+import math
 import os
 import platform
 import random
@@ -20,7 +21,80 @@ import subprocess
 import sys
 import time
 import traceback
+from functools import lru_cache
 from pathlib import Path
+
+
+def json_safe(value):
+    """Return ``value`` as strict-JSON data for the report.
+
+    Model metadata may carry tensors or arrays; scalar ones become
+    Python numbers and larger ones are summarized by shape and dtype.
+    """
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    if hasattr(value, "shape") and hasattr(value, "dtype"):
+        if len(value.shape) == 0 and hasattr(value, "item"):
+            return json_safe(value.item())
+        return {"shape": list(value.shape), "dtype": str(value.dtype)}
+    if isinstance(value, float) and not math.isfinite(value):
+        return repr(value)
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, Path):
+        return str(value)
+    return repr(value)
+
+
+@lru_cache(maxsize=None)
+def _tensor_input_arrays(path):
+    import numpy as np
+
+    with np.load(path, allow_pickle=False) as archive:
+        return {name: archive[name] for name in archive.files}
+
+
+def load_tensor_inputs(path):
+    """Load a pickle-free ``.npz`` archive as ``{keyword: torch.Tensor}``.
+
+    Each array becomes one keyword argument named after its archive
+    entry (e.g. ``np.savez(path, speaker_embedding=...)``). Arrays are
+    read once and copied per call, so a model cannot alter later repeats
+    in place.
+    """
+    import torch
+
+    if not path:
+        return {}
+    return {name: torch.from_numpy(array.copy()) for name, array in _tensor_input_arrays(str(path)).items()}
+
+
+def tts_inputs(request, sample):
+    """Resolve the text and keyword arguments for one generic TTS call.
+
+    Keywords merge in increasing precedence: ``request["generation"]``,
+    ``request["tensor_inputs"]``, ``sample["generation"]``,
+    ``sample["tensor_inputs"]``, then explicit phonemes.
+    """
+    kwargs = dict(request.get("generation", {}))
+    kwargs.update(load_tensor_inputs(request.get("tensor_inputs")))
+    kwargs.update(sample.get("generation", {}))
+    kwargs.update(load_tensor_inputs(sample.get("tensor_inputs")))
+    text = sample["text"]
+    if sample.get("phonemes"):
+        if request.get("matched_phonemes") and request.get("phonemes_as_text"):
+            raise ValueError("`matched_phonemes` and `phonemes_as_text` are mutually exclusive.")
+        if request.get("matched_phonemes"):
+            # Models name their explicit-phoneme argument differently
+            # (e.g. Kokoro `phonemes`, Inflect `phoneme_text`).
+            kwargs[request.get("phoneme_argument", "phonemes")] = sample["phonemes"]
+        elif request.get("phonemes_as_text"):
+            # Explicit-phoneme models (e.g. StyleTTS 2) take the upstream
+            # G2P output as their text input.
+            text = sample["phonemes"]
+    return text, kwargs
 
 
 def prepare(request, side):
@@ -56,14 +130,12 @@ def prepare(request, side):
 
         def infer(sample):
             if request["task"] == "tts":
-                kwargs = dict(generation)
-                if sample.get("phonemes") and request.get("matched_phonemes"):
-                    kwargs["phonemes"] = sample["phonemes"]
-                out = model.generate(sample["text"], seed=request["seed"], **kwargs)
+                text, kwargs = tts_inputs(request, sample)
+                out = model.generate(text, seed=request["seed"], **kwargs)
                 return {
                     "audio_array": out.audio.detach().float().cpu().numpy().reshape(-1),
                     "sample_rate": out.sample_rate,
-                    "metadata": out.metadata
+                    "metadata": json_safe(out.metadata)
                 }
             audio = sample["audio"] if request.get("input_mode") == "file" else torch.from_numpy(
                 sample["waveform"])
@@ -71,7 +143,10 @@ def prepare(request, side):
                 out = model.transcribe(audio, sampling_rate=sample["sampling_rate"], **generation)
                 return {"text": out.text, "reference": sample["reference"]}
             out = model.detect(audio, sampling_rate=sample["sampling_rate"], **generation)
-            result = {"segments": [[s.start, s.end] for s in out.segments], "metadata": out.metadata}
+            result = {
+                "segments": [[s.start, s.end] for s in out.segments],
+                "metadata": json_safe(out.metadata)
+            }
             if out.probabilities is not None:
                 result["probabilities"] = np.asarray(out.probabilities).reshape(-1).tolist()
             return result
@@ -806,6 +881,11 @@ def main():
                 timings,
                 "peak_cuda_memory_bytes":
                 max(peak_memory) if peak_memory else None,
+                "tensor_inputs_sha256": {
+                    scope: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                    for scope, path in (("request", request.get("tensor_inputs")),
+                                        ("sample", sample.get("tensor_inputs"))) if path
+                },
                 **result
             })
         if side == "upstream" and any(k == "voicehub" or k.startswith("voicehub.") for k in sys.modules):

@@ -36,6 +36,11 @@ The timing report uses the difference between independent mean latencies with
 an approximate 95% interval. A regression is flagged when its lower bound is
 above the configured relative tolerance (10% by default). This is a screening
 rule, not a guarantee of statistical significance for correlated GPU timings.
+If either side records fewer than five warm timings for a sample (for example,
+a slow model run once for correctness), that sample's `timing` entry is
+`{"status": "insufficient-samples", ...}` with `regression_flag: null`; the
+waveform, transcript, or segment comparison still runs. Such samples never set
+the case-level `timing_regression_flag`.
 
 ## Run a comparison
 
@@ -120,6 +125,34 @@ list. Every sample includes `id` and `warm_seconds`.
 - ASR adds `text` and the matching `reference` transcript.
 - VAD adds `segments` as `[start_seconds, end_seconds]` pairs and optionally
   `probabilities`.
+
+### Generic VoiceHub TTS requests
+
+The worker's `voicehub` side loads any registered model with
+`request["config"]` and calls `model.generate(text, seed=request["seed"], **kwargs)`
+for each TTS sample. These request and sample keys shape that call; an upstream
+recipe must read the same keys and files so both sides receive identical inputs.
+
+| Key | Scope | Effect |
+| --- | --- | --- |
+| `generation` | request | JSON keyword arguments for every sample. |
+| `tensor_inputs` | request | Path to a NumPy `.npz` archive. Each array becomes a `torch.Tensor` keyword argument named after its entry, for every sample (for example, a speaker embedding exported by the upstream encoder). |
+| `generation` | sample | JSON keyword arguments for this sample only, such as a per-sample reference voice file. |
+| `tensor_inputs` | sample | `.npz` archive of tensor keyword arguments for this sample only, such as upstream frontend outputs. |
+| `phonemes` | sample | Upstream G2P output for this sample; used only with one of the next two flags. |
+| `matched_phonemes` | request | Pass the sample's `phonemes` as a keyword argument. |
+| `phoneme_argument` | request | Name of that keyword argument (default `phonemes`, e.g. `phoneme_text`). |
+| `phonemes_as_text` | request | Pass the sample's `phonemes` as the text argument instead (explicit-phoneme models). Mutually exclusive with `matched_phonemes`. |
+
+Keyword arguments merge in this order, later entries winning: request
+`generation`, request `tensor_inputs`, sample `generation`, sample
+`tensor_inputs`, then phonemes. Archives are read with `allow_pickle=False`
+(write them with `numpy.savez`), loaded once per process, and copied for every
+call so in-place model updates cannot leak into later repeats. Tensors stay on
+the CPU with their stored dtype; the model decides placement. Each report
+sample records `tensor_inputs_sha256` for the archives it used. Model metadata
+is made JSON-safe: scalar tensors and arrays become numbers, larger ones are
+summarized as `{"shape": [...], "dtype": "..."}`.
 
 The runner preserves loading metadata, command lines, working directories,
 request hashes, exceptions, and separate logs. A `measured` status means both
