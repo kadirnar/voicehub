@@ -14,6 +14,7 @@ therefore has constant memory cost.
 
 from __future__ import annotations
 
+import ctypes
 import json
 import mmap
 import os
@@ -315,17 +316,15 @@ class SafeTensorReader(AbstractContextManager["SafeTensorReader"]):
             tensor = torch.empty(record.shape, dtype=_torch_dtype(record.dtype))
         else:
             self._stream.seek(self._data_start + record.start)
-            payload = bytearray(
-                _read_exact(
-                    self._stream,
-                    record.number_of_bytes,
-                    context=f"tensor {name!r}",
-                ))
-            tensor = torch.frombuffer(
-                payload,
-                dtype=_torch_dtype(record.dtype),
-                count=record.number_of_elements,
-            ).reshape(record.shape).clone()
+            # Read straight into the tensor's own storage so the payload is
+            # copied from the file once, not through intermediate buffers.
+            tensor = torch.empty(record.shape, dtype=_torch_dtype(record.dtype))
+            destination = (ctypes.c_char * record.number_of_bytes).from_address(tensor.data_ptr())
+            found = self._stream.readinto(destination)
+            if found != record.number_of_bytes:
+                raise CheckpointFormatError(
+                    f"Safetensors file ended while reading tensor {name!r}: "
+                    f"expected {record.number_of_bytes} bytes, found {found}.")
         if dtype is not None or str(device) != "cpu":
             tensor = tensor.to(device=device, dtype=dtype or tensor.dtype)
         return tensor

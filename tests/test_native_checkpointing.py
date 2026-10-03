@@ -64,6 +64,29 @@ class SafeTensorTests(unittest.TestCase):
                 atol=0,
             )
 
+    def test_reader_reads_payload_into_tensor_storage_without_python_copies(self):
+        import tracemalloc
+
+        value = torch.arange(1024 * 1024, dtype=torch.float32).reshape(1024, 1024)
+        payload_bytes = value.numel() * value.element_size()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "direct.safetensors"
+            save_safetensors({"weight": value, "flags": value[0] > 9}, path)
+            with SafeTensorReader(path) as reader:
+                tracemalloc.start()
+                try:
+                    restored = reader.get_tensor("weight")
+                    _, peak = tracemalloc.get_traced_memory()
+                finally:
+                    tracemalloc.stop()
+                flags = reader.get_tensor("flags")
+        # Payload bytes must land in tensor storage directly; staging them in
+        # Python bytes/bytearray objects made large checkpoints load slowly.
+        self.assertLess(peak, payload_bytes // 8)
+        torch.testing.assert_close(restored, value, rtol=0, atol=0)
+        self.assertTrue(torch.equal(flags, value[0] > 9))
+        restored.resize_(2 * value.numel())  # Ordinary, resizable storage.
+
     def test_round_trip_is_deterministic_and_preserves_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             first = Path(directory) / "first.safetensors"
