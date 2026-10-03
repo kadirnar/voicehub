@@ -297,7 +297,9 @@ class WebRTCVADInferenceTests(unittest.TestCase):
     def test_webrtc_pcm16_wave_reaches_the_detector_with_its_original_samples(self):
         # py-webrtcvad's example feeds 16-bit WAVE frames unchanged; VoiceHub
         # decodes PCM16 as x / 32768, so the conversion back must be exact.
-        original = [-32768, -32767, -20000, -16385, -16384, -1, 0, 1, 16383, 16384, 16385, 20000, 32766, 32767]
+        original = [
+            -32768, -32767, -20000, -16385, -16384, -1, 0, 1, 16383, 16384, 16385, 20000, 32766, 32767
+        ]
         samples = (original * 12)[:160]
         frames = []
 

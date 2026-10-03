@@ -18,8 +18,9 @@ def _pcm16_tensor(waveform: Any) -> Any:
     """Convert normalized audio to the 16-bit PCM the reference consumes.
 
     Scaling by 32768 inverts the PCM16 decoding (``x / 32768``), so a
-    16-bit source reaches the detector with its original samples, exactly
-    as the reference feeds WAVE frames to ``webrtcvad.Vad.is_speech``.
+    16-bit source reaches the detector with its original samples,
+    exactly as the reference feeds WAVE frames to
+    ``webrtcvad.Vad.is_speech``.
     """
     import torch
 
