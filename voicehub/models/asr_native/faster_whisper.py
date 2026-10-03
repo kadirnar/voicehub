@@ -91,7 +91,7 @@ class FasterWhisperForSpeechRecognition(WhisperForSpeechRecognition):
         )
 
     def _recording_features(self, waveform: Any) -> Any:
-        """Return faster-whisper's ``FeatureExtractor`` log-mel for a recording.
+        """Compute faster-whisper's log-mel for a whole recording.
 
         The waveform is padded with one hop of zeros and normalized with
         one maximum over the whole recording, as upstream does.
@@ -102,7 +102,7 @@ class FasterWhisperForSpeechRecognition(WhisperForSpeechRecognition):
         return self._feature_operation().process({"waveform": padded})["input_features"]
 
     def _window_features(self, features: Any, seek: int, frames: int) -> Any:
-        """Slice ``frames`` log-mel frames and zero-pad them like ``pad_or_trim``."""
+        """Slice log-mel frames and zero-pad them like ``pad_or_trim``."""
         import torch
 
         window = features[:, seek:seek + frames]
@@ -124,7 +124,8 @@ class FasterWhisperForSpeechRecognition(WhisperForSpeechRecognition):
     ) -> tuple[list[tuple[float, float, list[int]]], int]:
         """Split one window's tokens and advance ``seek`` like faster-whisper.
 
-        Returns ``(start, end, tokens)`` segments and the next seek frame.
+        Returns ``(start, end, tokens)`` segments and the next seek
+        frame.
         """
         timestamp_begin = self.tokenizer.timestamp_begin
         time_precision = _INPUT_STRIDE * _TIME_PER_FRAME

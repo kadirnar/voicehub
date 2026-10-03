@@ -1,8 +1,8 @@
 """Regression tests for faster-whisper transcription framing.
 
 Reference behavior: SYSTRAN/faster-whisper ``feature_extractor.py`` and
-``WhisperModel.generate_segments`` / ``_split_segments_by_timestamps`` at
-7b99be5376b41cd481dfc52e8caa00a497c3294e.
+``WhisperModel.generate_segments`` / ``_split_segments_by_timestamps``
+at 7b99be5376b41cd481dfc52e8caa00a497c3294e.
 """
 
 from __future__ import annotations
@@ -163,7 +163,10 @@ class FasterWhisperFramingTests(unittest.TestCase):
                 segment_size=8,
             )
             closed_pairs = wrapper._split_window(
-                [TIMESTAMP_BEGIN, HELLO, TIMESTAMP_BEGIN + 1, TIMESTAMP_BEGIN + 1, HELLO, TIMESTAMP_BEGIN + 3],
+                [
+                    TIMESTAMP_BEGIN, HELLO, TIMESTAMP_BEGIN + 1, TIMESTAMP_BEGIN + 1, HELLO,
+                    TIMESTAMP_BEGIN + 3
+                ],
                 seek=100,
                 segment_size=8,
             )
@@ -181,7 +184,6 @@ class FasterWhisperFramingTests(unittest.TestCase):
         self.assertEqual([segment[:2] for segment in rounded(closed_pairs)[0]], [(1.0, 1.02), (1.02, 1.06)])
         self.assertEqual(closed_pairs[1], 108)
         self.assertEqual(rounded(no_timestamps), ([(1.0, 1.08, [HELLO])], 108))
-
 
     def test_faster_whisper_model_names_resolve_to_safetensors_sources(self):
         expected = {
