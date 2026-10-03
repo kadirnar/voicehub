@@ -13,11 +13,7 @@ from unittest.mock import patch
 import torch
 
 from voicehub.architectures.f5tts.artifacts import resolve_f5tts_artifacts
-from voicehub.architectures.f5tts.metadata import (
-    VOCOS_CHECKPOINT_REVISION,
-    VOCOS_LEGACY_CHECKPOINT,
-    VOCOS_REPOSITORY,
-)
+from voicehub.architectures.f5tts.metadata import VOCOS_CHECKPOINT_REVISION, VOCOS_LEGACY_CHECKPOINT, VOCOS_REPOSITORY
 from voicehub.architectures.kokoro.checkpoint import import_legacy_kokoro_voice
 from voicehub.architectures.voxcpm2.checkpoint import export_voxcpm_checkpoint
 from voicehub.architectures.voxcpm2.codec import VoxCPMAudioVAE
