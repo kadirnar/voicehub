@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -327,6 +328,10 @@ class NativeKokoroRuntimeTests(unittest.TestCase):
         model.config.torch_dtype = "bfloat16"
         self.assertEqual(model._model_dtype(), torch.bfloat16)
 
+    # Hosted Windows runners intermittently abort this bfloat16 CPU forward
+    # with an illegal-instruction fault (0xC000001D) inside PyTorch's CPU
+    # kernels; the dtype handling it guards is platform independent.
+    @unittest.skipIf(sys.platform == "win32", "bfloat16 CPU kernels fault on hosted Windows runners")
     def test_reduced_precision_decoder_runs_without_dtype_mismatch(self):
         config = {
             "vocab": {
