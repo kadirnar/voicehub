@@ -431,8 +431,7 @@ class NativeSupertonicRuntimeTests(unittest.TestCase):
         recorded = vendored["upstream_git_blob_sha1"]
         present = {
             path.relative_to(VENDORED_SOURCE).as_posix()
-            for path in VENDORED_SOURCE.rglob("*")
-            if path.is_file() and "__pycache__" not in path.parts
+            for path in VENDORED_SOURCE.rglob("*") if path.is_file() and "__pycache__" not in path.parts
         }
 
         self.assertEqual(
@@ -448,6 +447,7 @@ class NativeSupertonicRuntimeTests(unittest.TestCase):
             digest = hashlib.sha1(b"blob %d\0" % len(data) + data, usedforsecurity=False).hexdigest()
             with self.subTest(path=relative_path):
                 self.assertEqual(digest, expected)
+
 
 if __name__ == "__main__":
     unittest.main()
