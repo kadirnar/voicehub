@@ -665,9 +665,18 @@ INFERENCE_PROFILES = {
     ),
     "inflecttts":
     _tts(
-        "Uses Inflect's normalized-text frontend with explicit speed and variation controls.",
-        "Set `input_is_phonemes=True` only when supplying checkpoint-compatible phoneme text.",
-        arguments=("speed=1.0", "variation=0.3"),
+        "Synthesizes checkpoint-compatible eSpeak `en-us` phonemes with explicit speed and variation controls.",
+        "VoiceHub ships no English normalizer or G2P for Inflect: pass `phoneme_text` (or exact `input_ids`) "
+        "produced by the release frontend; raw English text alone raises `InflectFrontendError`. The release "
+        "weights are a SHA-256-pinned pickle, so loading needs `trust_pickle_checkpoint=True`.",
+        arguments=(
+            'phoneme_text="ɐ kəmplˈiːt lˈoʊkəl vˈɔɪs kæn fˈɪt ˈɔːlmoʊst ˈɛnɪwˌɛɹ."',
+            "speed=1.0",
+            "variation=0.667",
+        ),
+        text="A complete local voice can fit almost anywhere.",
+        load_arguments=("config=AutoConfig.for_model(\"inflecttts\", trust_pickle_checkpoint=True)", ),
+        voicehub_imports=("AutoConfig", ),
     ),
     "bark":
     _tts(

@@ -12,7 +12,7 @@ hide:
 
 # InflectTTS {.vh-model-title}
 
-<p class="vh-model-detail__summary">Uses Inflect&#x27;s normalized-text frontend with explicit speed and variation controls.</p>
+<p class="vh-model-detail__summary">Synthesizes checkpoint-compatible eSpeak `en-us` phonemes with explicit speed and variation controls.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Text to speech</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">inflecttts</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-inflecttts">Parameters: Not reported</span><span class="vh-model-detail__chip" data-chip-kind="language">Language: en-US</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: preprocessed</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-inflecttts"><strong>Parameter metadata:</strong> Not reported: the audited metadata available for the registered default does not provide an exact parameter total.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -46,29 +46,31 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Uses Inflect's normalized-text frontend with explicit speed and variation controls.
+**Model-specific path:** Synthesizes checkpoint-compatible eSpeak `en-us` phonemes with explicit speed and variation controls.
 
-**Inputs and controls:** Set `input_is_phonemes=True` only when supplying checkpoint-compatible phoneme text.
+**Inputs and controls:** VoiceHub ships no English normalizer or G2P for Inflect: pass `phoneme_text` (or exact `input_ids`) produced by the release frontend; raw English text alone raises `InflectFrontendError`. The release weights are a SHA-256-pinned pickle, so loading needs `trust_pickle_checkpoint=True`.
 
 ```python
 from pathlib import Path
 
-from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig, AutoConfig
 
 model = AutoModelForTextToSpeech.from_pretrained(
     'owensong/Inflect-Micro-v2',
     model_type='inflecttts',
     device="cuda",
     lazy_load=True,
+    config=AutoConfig.for_model("inflecttts", trust_pickle_checkpoint=True),
 )
 output = model.generate(
-    'VoiceHub keeps model integrations explicit and reproducible.',
+    'A complete local voice can fit almost anywhere.',
     generation_config=TTSGenerationConfig(
         seed=42,
         output_file=Path("output.wav"),
     ),
+    phoneme_text="ɐ kəmplˈiːt lˈoʊkəl vˈɔɪs kæn fˈɪt ˈɔːlmoʊst ˈɛnɪwˌɛɹ.",
     speed=1.0,
-    variation=0.3,
+    variation=0.667,
 )
 print(output.file_path, output.sample_rate, output.metadata)
 ```

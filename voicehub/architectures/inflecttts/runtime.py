@@ -72,13 +72,16 @@ def edge_fade(
     if frames <= 0:
         return waveform
     output = waveform.clone()
+    # Like the release's ``np.linspace(..., dtype=float32)``, evaluate the
+    # ramp in float64 and round once; a float32 ``torch.linspace`` differs in
+    # the last ulp for many frames. Built on CPU because MPS lacks float64.
     ramp = torch.linspace(
         0.0,
         1.0,
         frames,
-        device=output.device,
-        dtype=output.dtype,
-    )
+        dtype=torch.float64,
+    ).to(
+        device=output.device, dtype=output.dtype)
     output[:frames] *= ramp
     output[-frames:] *= ramp.flip(0)
     return output
@@ -207,7 +210,11 @@ class InflectV2Runtime(nn.Module):
                 variation=variation,
                 seed=seed,
             )
-            return self.sample_rate, edge_fade(waveform, self.sample_rate).cpu()
+            # Same post-processing as one release chunk: fade, then clip.
+            return (
+                self.sample_rate,
+                edge_fade(waveform, self.sample_rate).clamp(-1.0, 1.0).cpu(),
+            )
 
         phonemes = require_preprocessed_phonemes(
             text,
@@ -228,7 +235,9 @@ class InflectV2Runtime(nn.Module):
                 chunk,
                 add_blank=self.config.add_blank,
             )
-            chunk_seed = (seed + index) % (2**63)
+            # The release seeds chunk `index` with `seed + index`; Torch
+            # accepts seeds up to 2**64 - 1, so no wrap-around is needed.
+            chunk_seed = seed + index
             waveform = self._infer_ids(
                 sequence,
                 speed=speed,
