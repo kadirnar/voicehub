@@ -437,6 +437,56 @@ print(json.dumps({name: name in sys.modules for name in names}))
         self.assertEqual(result.text, "hello hello")
         self.assertEqual(result.language, "en")
 
+    def test_openai_provider_resumes_within_content_frames_like_transcribe(self):
+        # Short input (6 content frames of an 8-frame window). The first
+        # window ends with an unclosed segment after <|0.04|><|0.04|>, so
+        # decoding resumes at frame 4. Transformers ``generate`` (native
+        # Whisper) decodes frames 4-8 of the padded log-mel; OpenAI
+        # ``transcribe`` decodes the content frames 4-6 zero-padded, and does
+        # not resume at all when the resume point is past the content.
+        cases = (
+            (WhisperForSpeechRecognition, WhisperASRConfig, 1_000, 2, 8),
+            (OpenAIWhisperForSpeechRecognition, OpenAIWhisperConfig, 1_000, 2, 6),
+            (WhisperForSpeechRecognition, WhisperASRConfig, 600, 2, 8),
+            (OpenAIWhisperForSpeechRecognition, OpenAIWhisperConfig, 600, 1, None),
+        )
+        for wrapper_type, config_type, samples, calls, slice_stop in cases:
+            with self.subTest(wrapper=wrapper_type.__name__, samples=samples):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    _tiny_artifact(root)
+                    wrapper = wrapper_type(
+                        config_type(name_or_path=root, torch_dtype="float32"),
+                        device="cpu",
+                    )
+                    wrapper.load()
+                    token_set = wrapper.generation_adapter.token_set
+                    outputs = [[272, 259, 274, 274, 257, 261], [272, 259, 274, 261]]
+
+                    class FakeGenerationAdapter:
+
+                        def __init__(self):
+                            self.token_set = token_set
+                            self.features = []
+
+                        def generate(self, features, *, config):
+                            self.features.append(features)
+                            return SimpleNamespace(
+                                generated_sequences=torch.tensor([outputs[len(self.features) - 1]]),
+                                language_token_ids=torch.tensor([263]),
+                            )
+
+                    fake = FakeGenerationAdapter()
+                    wrapper.generation_adapter = fake
+                    waveform = torch.sin(torch.linspace(0.0, 300.0, samples)) * 0.1
+                    wrapper.transcribe(waveform, sampling_rate=16_000, return_timestamps=True)
+                    full = wrapper._chunk_features(waveform)
+
+                self.assertEqual(len(fake.features), calls)
+                if slice_stop is not None:
+                    expected = torch.nn.functional.pad(full[..., 4:slice_stop], (0, 4 + 8 - slice_stop))
+                    torch.testing.assert_close(fake.features[1], expected, rtol=0, atol=0)
+
     def test_long_inputs_decode_slices_of_one_log_mel_like_transformers(self):
         # Transformers Whisper long-form ``generate`` computes the log-mel
         # (including its max-8 normalization) once for the whole input and
