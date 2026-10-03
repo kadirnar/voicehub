@@ -80,7 +80,10 @@ test = [
   "scipy",
   "soundfile>=0.12",
   "torchaudio>=2.8,<2.9",
-  "transformers>=5.14,<6",
+  # Transformers 5.18 masks fully padded Parakeet attention rows with
+  # finfo.min instead of -inf, which changes the optional parity-oracle
+  # output for padded batches (#150 tracks which behavior matches NeMo).
+  "transformers>=5.14,<5.18",
 ]
 
 [tool.setuptools]
