@@ -414,11 +414,13 @@ class SileroVADSegmentationTests(unittest.TestCase):
             config=config,
         )
 
+        # Upstream `get_speech_timestamps` leaves the frame at a forced cut
+        # unassigned and restarts speech on the following frame.
         self.assertEqual(
             segments,
             (
                 SpeechSegment(0, 3072),
-                SpeechSegment(3072, 6144),
+                SpeechSegment(3584, 6144),
             ),
         )
         self.assertTrue(all(segment.duration <= int(0.2 * 16_000) for segment in segments))
@@ -455,6 +457,69 @@ class SileroVADSegmentationTests(unittest.TestCase):
 
         self.assertEqual(segments[0], SpeechSegment(0, 1024))
         self.assertEqual(segments[1].start, 2048)
+
+    def test_segments_match_upstream_get_speech_timestamps(self):
+        # Expected samples were produced by silero-vad 6.2.1
+        # `get_speech_timestamps` (7e30209) with a model replaying these
+        # probabilities; each case differed before the loop mirrored it.
+        speech, silence = 0.9, 0.1
+        cases = (
+            # A final segment exactly `min_speech_duration_ms` long is dropped.
+            ([silence] * 4 + [speech] * 4, {
+                "min_speech_duration_ms": 128,
+            }, ()),
+            # So is an interior segment of exactly that length.
+            ([speech] * 2 + [silence] * 4 + [speech] * 6, {
+                "min_speech_duration_ms": 64,
+                "min_silence_duration_ms": 0,
+            }, ((3072, 6144), )),
+            # A silent frame at a forced cut starts the pending silence.
+            ([speech, speech, silence, silence, speech, speech, speech] + [silence] * 4 + [speech] * 5, {
+                "min_speech_duration_ms": 0,
+                "max_speech_duration_s": 0.25,
+                "min_silence_at_max_speech_ms": 32,
+            }, ((0, 1024), (2048, 3584), (5632, 8192))),
+            # The legacy cut ends at the last long silence.
+            ([speech, silence, silence, speech, silence, silence] + [speech] * 8, {
+                "min_speech_duration_ms": 0,
+                "min_silence_duration_ms": 200,
+                "max_speech_duration_s": 0.3,
+                "min_silence_at_max_speech_ms": 0,
+                "use_max_possible_silence": False,
+            }, ((0, 2048), (3072, 7168))),
+            # A silence exactly `min_silence_at_max_speech_ms` long is not a
+            # cut candidate, and the limit itself is exclusive.
+            ([speech, speech, silence] + [speech] * 9, {
+                "min_speech_duration_ms": 0,
+                "min_silence_duration_ms": 200,
+                "max_speech_duration_s": 0.3,
+                "min_silence_at_max_speech_ms": 32,
+            }, ((0, 4608), (5120, 6144))),
+        )
+        for probabilities, options, expected in cases:
+            with self.subTest(options=options):
+                options = {"speech_pad_ms": 0, **options}
+                segments = segment_speech_probabilities(
+                    probabilities,
+                    audio_length_samples=len(probabilities) * 512,
+                    config=SileroVADSegmentationConfig(**options),
+                )
+
+                self.assertEqual(
+                    tuple((segment.start, segment.end) for segment in segments),
+                    expected,
+                )
+
+    def test_short_gap_padding_moves_both_boundaries_by_half(self):
+        from voicehub.architectures.silero_vad.segmentation import _pad_segments
+
+        segments = _pad_segments(
+            [(100, 1000), (1003, 2000)],
+            audio_length_samples=3000,
+            padding_samples=10,
+        )
+
+        self.assertEqual(segments, (SpeechSegment(90, 1001), SpeechSegment(1002, 2010)))
 
     def test_probability_count_must_match_audio_length(self):
         with self.assertRaisesRegex(ValueError, "Expected 2"):
