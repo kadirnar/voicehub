@@ -37,9 +37,10 @@ class AuditokVADConfig(VoiceHubConfig):
     to calibrate the threshold from the input energy distribution.
 
     Calibration uses the whole input, as Auditok does for offline audio,
-    so no floor is applied by default. Auditok's ``min_energy_threshold``
-    (40 dB) only guards live-stream calibration; set
-    ``minimum_energy_threshold_db`` to clamp the estimate explicitly.
+    so no floor is applied by default. Auditok's
+    ``min_energy_threshold`` (40 dB) only guards live-stream
+    calibration; set ``minimum_energy_threshold_db`` to clamp the
+    estimate explicitly.
     """
 
     model_type = "vad_auditok"

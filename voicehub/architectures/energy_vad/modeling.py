@@ -177,8 +177,8 @@ def _tokenize(
     silence either kept up to ``max_continuous_silence`` or dropped):
     tokens are truncated at ``max_length`` frames, a remainder shorter
     than ``min_length`` is kept only when it directly continues a
-    truncated token (unless ``strict_min_length``), and the minimum length
-    counts frames, a partial final window included.
+    truncated token (unless ``strict_min_length``), and the minimum
+    length counts frames, a partial final window included.
     """
     tokens: list[tuple[int, int]] = []
     silence, noise, possible_silence = 0, 1, 2
@@ -329,8 +329,8 @@ class EnergyVoiceActivityDetector:
             math.floor,
         )
         max_length = (
-            math.inf
-            if max_speech_duration_s is None else _duration_to_windows(max_speech_duration_s, window_s, math.floor))
+            math.inf if max_speech_duration_s is None else _duration_to_windows(
+                max_speech_duration_s, window_s, math.floor))
         if min_length > max_length or max_continuous_silence >= max_length:
             raise ValueError(
                 "`max_speech_duration_s` must span more analysis windows than "

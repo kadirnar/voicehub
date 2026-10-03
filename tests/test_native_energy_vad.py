@@ -271,6 +271,5 @@ class AuditokParityRegressionTests(unittest.TestCase):
         torch.testing.assert_close(energies, expected, rtol=0, atol=1e-12)
 
 
-
 if __name__ == "__main__":
     unittest.main()
