@@ -17,7 +17,13 @@ from voicehub.models.vui.patterns import DelayedPatternProvider
 from voicehub.models.vui.rope import apply_rotary_emb, precompute_freqs_cis
 from voicehub.models.vui.tok import CustomByT5Tokenizer
 from voicehub.models.vui.tts import number_to_words, replace_numbers_with_words
-from voicehub.models.vui.vad import Binarize, SlidingWindow, SlidingWindowFeature, detect_voice_activity
+from voicehub.models.vui.vad import (
+    Binarize,
+    EnergyVADPipeline,
+    SlidingWindow,
+    SlidingWindowFeature,
+    detect_voice_activity,
+)
 
 
 class NativeVuiTests(unittest.TestCase):
@@ -333,7 +339,7 @@ class NativeVuiTests(unittest.TestCase):
             torch.full((3_200, ), 0.2),
             torch.zeros(1_600),
         ))
-        regions = detect_voice_activity(waveform)
+        regions = detect_voice_activity(waveform, pipe=EnergyVADPipeline())
         self.assertEqual(len(regions), 1)
         self.assertLessEqual(regions[0][0], 0.11)
         self.assertGreaterEqual(regions[0][1], 0.29)
@@ -346,6 +352,65 @@ class NativeVuiTests(unittest.TestCase):
         segment = annotation.get_timeline()[0]
         self.assertAlmostEqual(segment.start, 0.15)
         self.assertAlmostEqual(segment.end, 0.35)
+
+    def test_binarize_compares_thresholds_in_float32_like_pyannote(self):
+        # pyannote.audio 3.3.2 reference: [(0.25, 0.45)]. A float32 score equal
+        # to float32(0.8) is not above the onset.
+        scores = SlidingWindowFeature(
+            torch.tensor([[0.1], [0.8], [0.9], [0.85], [0.49], [0.95]]),
+            SlidingWindow(start=0.0, duration=0.1, step=0.1),
+        )
+        timeline = Binarize(onset=0.8, offset=0.5)(scores).get_timeline().support()
+        self.assertEqual([(segment.start, segment.end) for segment in timeline], [(0.25, 0.45)])
+
+    def test_pyannote_vad_aggregation_matches_pyannote_inference(self):
+        import hashlib
+
+        from voicehub.models.vui.vad import PyannoteVADPipeline, aggregate_chunk_scores
+
+        frames = PyannoteVADPipeline.receptive_field()
+        self.assertEqual(
+            (frames.start, frames.duration, frames.step),
+            (0.0, 991 / 16_000, 270 / 16_000),
+        )
+        index = torch.arange(4 * 293, dtype=torch.float64).reshape(4, 293, 1)
+        scores = ((torch.sin(index * 0.37) + 1) / 2).float()
+        aggregated = aggregate_chunk_scores(scores, chunk_duration=5.0, chunk_step=0.5, frames=frames)
+        # Inference.aggregate(..., hamming=True, missing=0.0) from
+        # pyannote.audio 3.3.2 on the same float32 scores.
+        self.assertEqual(tuple(aggregated.shape), (386, 1))
+        self.assertEqual(
+            hashlib.sha256(aggregated.numpy().tobytes()).hexdigest(),
+            "738bc6cc204dc8daef7cbc7f39f8bd1bf92cb076368abd615e0612b78717f644",
+        )
+        self.assertEqual(float(aggregated[1, 0]), 0.6808077096939087)
+
+    def test_pyannote_vad_pipeline_chunks_like_pyannote_inference(self):
+        from voicehub.models.vui.vad import PyannoteVADPipeline
+
+        class FakeSegmentation(torch.nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.weight = torch.nn.Parameter(torch.zeros(()))
+                self.batches = []
+
+            def forward(self, chunks):
+                self.batches.append(tuple(chunks.shape))
+                return torch.full((chunks.shape[0], 293, 3), 0.9)
+
+        model = FakeSegmentation()
+        pipeline = PyannoteVADPipeline(model=model)
+        # Frame counts produced by upstream's pyannote pipeline on Vui audio.
+        for samples, frames in ((84_707, 314), (154_553, 573)):
+            with self.subTest(samples=samples):
+                self.assertEqual(pipeline.frame_scores(torch.zeros(samples)).data.shape[0], frames)
+        model.batches.clear()
+        pipeline.frame_scores(torch.zeros(400_000))
+        self.assertEqual(model.batches, [(32, 80_000), (9, 80_000)])
+        model.batches.clear()
+        regions = detect_voice_activity(torch.zeros(84_707), pipe=pipeline)
+        self.assertEqual(regions, [(0.03096875, 0.03096875 + 313 * 270 / 16_000)])
 
     def test_number_normalization_matches_pinned_inflect_examples(self):
         expected = {
