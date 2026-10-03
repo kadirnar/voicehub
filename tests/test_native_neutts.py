@@ -516,7 +516,8 @@ class NativeNeuTTSTests(unittest.TestCase):
         self.assertEqual(cache.sequence_length(), 5)
 
         projected_lengths = []
-        model.lm_head.register_forward_hook(lambda module, inputs, output: projected_lengths.append(inputs[0].shape[1]))
+        model.lm_head.register_forward_hook(
+            lambda module, inputs, output: projected_lengths.append(inputs[0].shape[1]))
         runtime = SimpleNamespace(
             backbone=model,
             tokenizer=SimpleNamespace(
