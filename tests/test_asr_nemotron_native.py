@@ -475,18 +475,66 @@ class NemotronTokenizerAndProviderTests(unittest.TestCase):
         # boundary as a lone "▁" token before "Q", "apostle", ... and a
         # metaspace-prefixed "▁," that belongs to the previous word.
         offsets = [
-            {"token": " M", "start": 0.88, "end": 0.96},
-            {"token": "r", "start": 0.96, "end": 1.04},
-            {"token": ".", "start": 1.04, "end": 1.12},
-            {"token": " ", "start": 1.04, "end": 1.12},
-            {"token": " ", "start": 1.20, "end": 1.28},
-            {"token": "Qu", "start": 1.20, "end": 1.28},
-            {"token": "ilter", "start": 1.44, "end": 1.52},
-            {"token": " ", "start": 1.84, "end": 1.92},
-            {"token": "apostle", "start": 1.92, "end": 2.40},
-            {"token": " ,", "start": 2.40, "end": 2.48},
-            {"token": " ", "start": 2.56, "end": 2.64},
-            {"token": "?", "start": 2.64, "end": 2.72},
+            {
+                "token": " M",
+                "start": 0.88,
+                "end": 0.96
+            },
+            {
+                "token": "r",
+                "start": 0.96,
+                "end": 1.04
+            },
+            {
+                "token": ".",
+                "start": 1.04,
+                "end": 1.12
+            },
+            {
+                "token": " ",
+                "start": 1.04,
+                "end": 1.12
+            },
+            {
+                "token": " ",
+                "start": 1.20,
+                "end": 1.28
+            },
+            {
+                "token": "Qu",
+                "start": 1.20,
+                "end": 1.28
+            },
+            {
+                "token": "ilter",
+                "start": 1.44,
+                "end": 1.52
+            },
+            {
+                "token": " ",
+                "start": 1.84,
+                "end": 1.92
+            },
+            {
+                "token": "apostle",
+                "start": 1.92,
+                "end": 2.40
+            },
+            {
+                "token": " ,",
+                "start": 2.40,
+                "end": 2.48
+            },
+            {
+                "token": " ",
+                "start": 2.56,
+                "end": 2.64
+            },
+            {
+                "token": "?",
+                "start": 2.64,
+                "end": 2.72
+            },
         ]
         words = NemotronForSpeechRecognition._timestamp_words(offsets, duration=2.70)
         self.assertEqual(
