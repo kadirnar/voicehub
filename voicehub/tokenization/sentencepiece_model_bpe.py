@@ -99,7 +99,7 @@ def load_sentencepiece_model_bpe(
         raise TokenizerAssetError("SentencePiece BPE requires exactly one trainer specification.")
     if _parse_model_type(raw_trainers[0]) != 2:
         raise TokenizerAssetError(
-            "SentencePiece model declares UNIGRAM; use "
+            "SentencePiece model declares UNIGRAM or CHAR; use "
             "`load_sentencepiece_unigram` instead of the BPE loader.")
     trainer = _parse_trainer(raw_trainers[0])
     unknown_ids = [index for index, piece in enumerate(pieces) if piece.piece_type == _UNKNOWN]

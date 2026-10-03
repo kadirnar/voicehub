@@ -1,16 +1,18 @@
 """Dependency-free SentencePiece unigram model reader and tokenizer.
 
-SentencePiece stores ``.model`` files as a small protobuf document.  Pulling
-in a protobuf runtime and the SentencePiece C++ extension merely to read that
-document would make model architecture code depend on two unrelated
-libraries.  This module implements the bounded wire-format subset and the
-unigram Viterbi decoder needed by published speech checkpoints.
+SentencePiece stores ``.model`` files as a small protobuf document.
+Pulling in a protobuf runtime and the SentencePiece C++ extension merely
+to read that document would make model architecture code depend on two
+unrelated libraries.  This module implements the bounded wire-format
+subset and the unigram Viterbi decoder needed by published speech
+checkpoints.
 
-The normalizer uses the Python standard library's NFKC implementation.  That
-is byte-for-byte equivalent for the ASCII transcription domain used by the
-SpeechBrain LibriSpeech checkpoint.  Models carrying a non-standard compiled
-normalization table are rejected unless callers explicitly allow the standard
-``nmt_nfkc`` table.
+Models that carry a precompiled normalization table (``nmt_nfkc`` and
+``nfkc`` models normally do) are normalized with that table exactly as
+SentencePiece's C++ ``Normalizer`` does: longest-prefix matches in the
+Darts-clone trie, whitespace collapsing on the normalized output, and
+the dummy prefix. Models without a table fall back to the Python
+standard library's NFKC implementation.
 """
 
 from __future__ import annotations
@@ -37,6 +39,9 @@ _UNKNOWN = 2
 _CONTROL = 3
 _UNUSED = 5
 _BYTE = 6
+_MODEL_UNIGRAM = 1
+_MODEL_BPE = 2
+_MODEL_CHAR = 4
 _WHITESPACE_MARKER = "\u2581"
 _REPLACEMENT_CHARACTER = "\u2047"
 
@@ -67,6 +72,7 @@ class SentencePieceUnigramAssets:
     escape_whitespaces: bool
     has_precompiled_normalizer: bool
     original_model: bytes
+    precompiled_charsmap: bytes = b""
 
 
 def _read_varint(payload: bytes, offset: int) -> tuple[int, int]:
@@ -161,7 +167,7 @@ def _parse_piece(payload: bytes, *, max_token_bytes: int) -> SentencePieceUnigra
     return SentencePieceUnigramPiece(text, score, piece_type)
 
 
-def _parse_normalizer(payload: bytes, ) -> tuple[str, bool, bool, bool, bool]:
+def _parse_normalizer(payload: bytes, ) -> tuple[str, bool, bool, bool, bytes]:
     fields = _wire_fields(payload)
     raw_name = _single_field(fields, 1, 2, default=b"")
     precompiled = _single_field(fields, 2, 2, default=b"")
@@ -173,7 +179,7 @@ def _parse_normalizer(payload: bytes, ) -> tuple[str, bool, bool, bool, bool]:
         add_dummy_prefix,
         remove_extra_whitespaces,
         escape_whitespaces,
-        bool(precompiled),
+        precompiled,
     )
 
 
@@ -205,11 +211,11 @@ def _parse_trainer(payload: bytes, ) -> tuple[int, int, int, int, str, bool]:
 def _parse_model_type(payload: bytes, ) -> int:
     """Return the SentencePiece ``TrainerSpec.model_type`` enum value."""
     fields = _wire_fields(payload)
-    model_type = _single_field(fields, 3, 0, default=1)
-    if model_type not in {1, 2}:
+    model_type = _single_field(fields, 3, 0, default=_MODEL_UNIGRAM)
+    if model_type not in {_MODEL_UNIGRAM, _MODEL_BPE, _MODEL_CHAR}:
         raise TokenizerAssetError(
-            "VoiceHub supports SentencePiece UNIGRAM and BPE model types, "
-            f"not enum value {model_type}.")
+            "VoiceHub supports SentencePiece UNIGRAM, BPE, and CHAR model "
+            f"types, not enum value {model_type}.")
     return model_type
 
 
@@ -245,10 +251,21 @@ def load_sentencepiece_unigram(
     raw_trainers = [value for number, wire_type, value in fields if number == 2 and wire_type == 2]
     if len(raw_trainers) > 1:
         raise TokenizerAssetError("SentencePiece model contains multiple trainer specifications.")
-    if raw_trainers and _parse_model_type(raw_trainers[0]) != 1:
+    model_type = (_MODEL_UNIGRAM if not raw_trainers else _parse_model_type(raw_trainers[0]))
+    if model_type == _MODEL_BPE:
         raise TokenizerAssetError(
             "SentencePiece model declares BPE; use "
             "`load_sentencepiece_model_bpe` instead of the unigram loader.")
+    if model_type == _MODEL_CHAR and any(len(piece.text) != 1 for piece in pieces
+                                         if piece.piece_type not in {_UNKNOWN, _CONTROL, _UNUSED}):
+        # A CHAR model splits normalized text into code points. With only
+        # single-code-point pieces the unigram lattice has exactly that one
+        # path, so it reproduces SentencePiece's CHAR segmentation
+        # (including fused adjacent unknowns). Multi-character
+        # user-defined symbols would need greedy prefix matching instead.
+        raise TokenizerAssetError(
+            "SentencePiece CHAR models with multi-character pieces are not "
+            "supported.")
     trainer = ((0, 1, 2, -1, f" {_REPLACEMENT_CHARACTER} ",
                 False) if not raw_trainers else _parse_trainer(raw_trainers[0]))
     if trainer[0] != unknown_ids[0]:
@@ -266,7 +283,7 @@ def load_sentencepiece_unigram(
     if len(raw_normalizers) > 1:
         raise TokenizerAssetError("SentencePiece model contains multiple normalizer specifications.")
     normalizer = (("", True, True, True,
-                   False) if not raw_normalizers else _parse_normalizer(raw_normalizers[0]))
+                   b"") if not raw_normalizers else _parse_normalizer(raw_normalizers[0]))
     return SentencePieceUnigramAssets(
         pieces=pieces,
         unk_token_id=trainer[0],
@@ -279,9 +296,127 @@ def load_sentencepiece_unigram(
         add_dummy_prefix=normalizer[1],
         remove_extra_whitespaces=normalizer[2],
         escape_whitespaces=normalizer[3],
-        has_precompiled_normalizer=normalizer[4],
+        has_precompiled_normalizer=bool(normalizer[4]),
         original_model=payload,
+        precompiled_charsmap=normalizer[4],
     )
+
+
+def _decode_utf8_length(data: bytes, start: int) -> int:
+    """Return the byte length of one valid UTF-8 character, or 0.
+
+    Mirrors SentencePiece ``string_util::IsValidDecodeUTF8``: overlong forms,
+    surrogates, and code points above U+10FFFF are malformed.
+    """
+    first = data[start]
+    if first < 0x80:
+        return 1
+    remaining = len(data) - start
+    for length, mask, marker, minimum in ((2, 0xE0, 0xC0, 0x80), (3, 0xF0, 0xE0, 0x800), (4, 0xF8, 0xF0,
+                                                                                          0x10000)):
+        if first & mask != marker:
+            continue
+        if remaining < length:
+            return 0
+        codepoint = first & (0xFF >> (length + 1))
+        for byte in data[start + 1:start + length]:
+            if byte & 0xC0 != 0x80:
+                return 0
+            codepoint = (codepoint << 6) | (byte & 0x3F)
+        valid = codepoint < 0xD800 or 0xE000 <= codepoint <= 0x10FFFF
+        return length if codepoint >= minimum and valid else 0
+    return 0
+
+
+class _PrecompiledNormalizer:
+    """SentencePiece ``Normalizer`` driven by a precompiled charsmap.
+
+    The blob is ``<uint32 trie size><Darts-clone double
+    array><replacement strings>``; each trie value is the offset of a
+    NUL-terminated replacement.
+    """
+
+    _MAX_TRIE_RESULTS = 32
+
+    def __init__(self, blob: bytes) -> None:
+        if len(blob) < 4:
+            raise TokenizerAssetError("SentencePiece precompiled charsmap is truncated.")
+        trie_size = struct.unpack_from("<I", blob)[0]
+        if trie_size == 0 or trie_size % 4 or trie_size > len(blob) - 4:
+            raise TokenizerAssetError("SentencePiece precompiled charsmap trie size is invalid.")
+        self._units = struct.unpack_from(f"<{trie_size // 4}I", blob, 4)
+        self._replacements = blob[4 + trie_size:]
+
+    def _replacement(self, offset: int) -> bytes:
+        end = self._replacements.find(b"\0", offset)
+        if offset >= len(self._replacements) or end < 0:
+            raise TokenizerAssetError("SentencePiece precompiled charsmap value is invalid.")
+        return self._replacements[offset:end]
+
+    def _normalize_prefix(self, data: bytes, start: int) -> tuple[bytes, int]:
+        units = self._units
+        unit = units[0]
+        node = (unit >> 10) << ((unit & (1 << 9)) >> 6)
+        longest_length = 0
+        longest_value = 0
+        results = 0
+        for position in range(start, len(data)):
+            byte = data[position]
+            node ^= byte
+            if node >= len(units):
+                break
+            unit = units[node]
+            if unit & ((1 << 31) | 0xFF) != byte:
+                break
+            node ^= (unit >> 10) << ((unit & (1 << 9)) >> 6)
+            if (unit >> 8) & 1:
+                if results < self._MAX_TRIE_RESULTS and position + 1 - start > longest_length:
+                    longest_length = position + 1 - start
+                    longest_value = units[node] & ((1 << 31) - 1)
+                results += 1
+        if longest_length:
+            return self._replacement(longest_value), longest_length
+        length = _decode_utf8_length(data, start)
+        if not length:
+            # Malformed UTF-8 consumes one byte and emits U+FFFD.
+            return "\ufffd".encode(), 1
+        return data[start:start + length], length
+
+    def normalize(
+        self,
+        text: str,
+        *,
+        add_dummy_prefix: bool,
+        remove_extra_whitespaces: bool,
+        escape_whitespaces: bool,
+    ) -> str:
+        data = text.encode("utf-8", "surrogatepass")
+        position = 0
+        if remove_extra_whitespaces:
+            while position < len(data):
+                replacement, consumed = self._normalize_prefix(data, position)
+                if replacement != b" ":
+                    break
+                position += consumed
+        if position >= len(data):
+            return ""
+        space = _WHITESPACE_MARKER.encode() if escape_whitespaces else b" "
+        output = bytearray(space if add_dummy_prefix else b"")
+        previous_space = remove_extra_whitespaces
+        while position < len(data):
+            replacement, consumed = self._normalize_prefix(data, position)
+            position += consumed
+            if previous_space:
+                replacement = replacement.lstrip(b" ")
+            if replacement:
+                output += (replacement.replace(b" ", space) if escape_whitespaces else replacement)
+                previous_space = replacement.endswith(b" ")
+            if not remove_extra_whitespaces:
+                previous_space = False
+        if remove_extra_whitespaces:
+            while output.endswith(space):
+                del output[-len(space):]
+        return output.decode("utf-8")
 
 
 class SentencePieceUnigramTokenizer:
@@ -324,6 +459,8 @@ class SentencePieceUnigramTokenizer:
                 node = node.setdefault(character, {})
             node.setdefault(None, []).append(token_id)
         self._trie = trie
+        self._precompiled_normalizer = (
+            _PrecompiledNormalizer(assets.precompiled_charsmap) if assets.precompiled_charsmap else None)
         self.max_input_chars = max_input_chars
 
     @classmethod
@@ -384,6 +521,13 @@ class SentencePieceUnigramTokenizer:
         return self._id_to_piece[token_id]
 
     def _normalize(self, text: str) -> str:
+        if self._precompiled_normalizer is not None:
+            return self._precompiled_normalizer.normalize(
+                text,
+                add_dummy_prefix=self._assets.add_dummy_prefix,
+                remove_extra_whitespaces=self._assets.remove_extra_whitespaces,
+                escape_whitespaces=self._assets.escape_whitespaces,
+            )
         if self._assets.normalizer_name not in {"", "identity"}:
             text = unicodedata.normalize("NFKC", text)
         if self._assets.remove_extra_whitespaces:

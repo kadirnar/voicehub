@@ -253,8 +253,9 @@ class SpeechT5ScaledPositionalEncoding(nn.Module):
         encoding[:, 0::2] = torch.sin(positions.float() * divisors)
         encoding[:, 1::2] = torch.cos(positions.float() * divisors)
         # The checkpoint published with Transformers 4.28 contains these two
-        # deterministic buffers. Keeping them persistent preserves that exact
-        # namespace even though newer Transformers releases omit them on save.
+        # buffers, and 4.28 uses the stored values. They differ from this
+        # recomputed table by up to 1.2e-4, so loading them reproduces 4.28;
+        # newer Transformers releases recompute the table and omit it on save.
         self.register_buffer("pe", encoding.unsqueeze(0), persistent=True)
         self.dropout = nn.Dropout(dropout)
         self.dim = dimension

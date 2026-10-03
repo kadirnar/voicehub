@@ -86,7 +86,10 @@ def _write_test_sentencepiece(path: Path) -> None:
         ("b", -0.1, 1),
         ("c", -0.1, 1),
     )
-    trainer = (_varint_field(40, 3) + _varint_field(41, 0) + _varint_field(42, 2) + _varint_field(43, 1))
+    # Like the published spm_char.model, declare TrainerSpec.model_type=CHAR.
+    trainer = (
+        _varint_field(3, 4) + _varint_field(40, 3) + _varint_field(41, 0) + _varint_field(42, 2) +
+        _varint_field(43, 1))
     normalizer = (
         _length_field(1, b"identity") + _varint_field(3, 1) + _varint_field(4, 1) + _varint_field(5, 1))
     payload = b"".join(
@@ -163,7 +166,6 @@ def _wrapper(root: Path) -> SpeechT5ForTextToSpeech:
     wrapper.vocoder = SpeechT5HifiGan(vocoder_config)
     wrapper.vocoder.requires_grad_(False)
     wrapper.transformers_processor = _processor(root)
-    wrapper.processor = wrapper.transformers_processor
     return wrapper
 
 
@@ -297,6 +299,14 @@ class NativeSpeechT5ProcessorTests(unittest.TestCase):
             encoded["attention_mask"].tolist(),
             [[1, 1, 1, 1], [1, 1, 1, 0]],
         )
+
+    def test_char_model_tokenizer_fuses_unknown_characters(self):
+        # The published SpeechT5 tokenizer is a SentencePiece CHAR model;
+        # loading it must not be rejected as an unsupported model type.
+        with tempfile.TemporaryDirectory() as directory:
+            processor = _processor(Path(directory))
+            encoded = processor(text="a xyb", return_tensors="pt")
+        self.assertEqual(encoded["input_ids"].tolist(), [[4, 5, 4, 3, 6, 2]])
 
     def test_raw_targets_are_resampled_padded_and_completely_masked(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -521,6 +531,25 @@ class NativeSpeechT5TrainingAndRuntimeTests(unittest.TestCase):
         self.assertTrue(all(parameter.grad is None for parameter in wrapper.vocoder.parameters()))
         self.assertTrue(manifest["raw_data_fine_tuning"])
         self.assertEqual(manifest["frozen_components"], ["vocoder"])
+
+    def test_public_generate_is_repeatable_after_loading(self):
+        # Regression: loading replaced the generic request processor with the
+        # keyword-only SpeechT5Processor, so every public generate() call
+        # after the first raised TypeError.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build_root = root / "build"
+            build_root.mkdir()
+            export = root / "export"
+            wrapper = _wrapper(build_root)
+            wrapper._prepare_for_inference()
+            wrapper.save_pretrained(export)
+            restored = SpeechT5ForTextToSpeech(export, device="cpu")
+            first = restored.generate("ab", speaker_embeddings=torch.ones(4), maxlenratio=2.0, seed=5)
+            second = restored.generate("ab", speaker_embeddings=torch.ones(4), maxlenratio=2.0, seed=5)
+
+        torch.testing.assert_close(first.audio, second.audio, rtol=0.0, atol=0.0)
+        self.assertEqual(second.metadata["seed"], 5)
 
     def test_native_bundle_round_trip_preserves_seeded_inference(self):
         with tempfile.TemporaryDirectory() as directory:
