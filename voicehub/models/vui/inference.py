@@ -18,6 +18,9 @@ from voicehub.models.vui.artifacts import (
     resolve_vui_artifacts,
 )
 
+# Kept here, not in ``vad``, so loading a config never imports PyTorch.
+VAD_BACKENDS = ("pyannote", "energy")
+
 
 class VuiConfig(VoiceHubConfig):
     """Configuration for Vui checkpoint loading."""
@@ -41,8 +44,6 @@ class VuiConfig(VoiceHubConfig):
         vad_backend: str = "pyannote",
         **kwargs,
     ):
-        from voicehub.models.vui.vad import VAD_BACKENDS
-
         if vad_backend not in VAD_BACKENDS:
             raise ValueError(f"`vad_backend` must be one of {VAD_BACKENDS}, received {vad_backend!r}.")
         super().__init__(

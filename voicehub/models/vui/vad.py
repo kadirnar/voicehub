@@ -28,6 +28,8 @@ from typing import Any
 import torch
 from torch import Tensor
 
+from voicehub.models.vui.inference import VAD_BACKENDS
+
 VAD_SEGMENTATION_URL = (
     "https://whisperx.s3.eu-west-2.amazonaws.com/model_weights/segmentation/"
     "0b5b3216d60a2d32fc086b47ea8c67589aaeb26b7e07fcbe620d6d0b83e209ea/"
@@ -474,7 +476,6 @@ EnergyVADPipeline = _EnergyPipeline
 
 pipeline: Any | None = None
 pipeline_name = "pyannote/voice-activity-detection"
-VAD_BACKENDS = ("pyannote", "energy")
 
 
 def create_vad_pipeline(
