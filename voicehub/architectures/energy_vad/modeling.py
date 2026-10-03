@@ -83,33 +83,64 @@ def _non_silent_energies(energies: Tensor) -> Tensor:
     return energies[energies > _SILENCE_SENTINEL_DB]
 
 
+def _numpy_pairwise_sum(values: list[float]) -> float:
+    # NumPy's float64 ``sum`` of at most 128 values: eight interleaved
+    # partial sums combined pairwise (``pairwise_sum`` in umath).
+    if len(values) < 8:
+        total = 0.0
+        for value in values:
+            total += value
+        return total
+    partial = values[:8]
+    blocked = len(values) - len(values) % 8
+    for index in range(8, blocked, 8):
+        partial = [partial[lane] + values[index + lane] for lane in range(8)]
+    total = (((partial[0] + partial[1]) + (partial[2] + partial[3])) + ((partial[4] + partial[5]) +
+                                                                        (partial[6] + partial[7])))
+    for value in values[blocked:]:
+        total += value
+    return total
+
+
 def _otsu_threshold(energies: Tensor) -> float:
-    minimum = float(energies.min().item())
-    maximum = float(energies.max().item())
+    # Auditok's `_estimate_threshold_otsu` on `np.histogram(energies, 128)`,
+    # reproduced operation by operation so the split edge is bit-identical.
+    values = energies.double().cpu()
+    minimum = float(values.min().item())
+    maximum = float(values.max().item())
     if minimum == maximum:
         return minimum
-    histogram, edges = torch.histogram(
-        energies.double().cpu(),
-        bins=_OTSU_BINS,
-        range=(minimum, maximum),
-    )
-    histogram = histogram.double()
-    centers = (edges[:-1] + edges[1:]) / 2.0
-    weight_0 = histogram.cumsum(dim=0)[:-1]
-    weight_1 = histogram.sum() - weight_0
-    cumulative_mass = (histogram * centers).cumsum(dim=0)[:-1]
-    total_mass = (histogram * centers).sum()
-    valid = (weight_0 > 0) & (weight_1 > 0)
-    between_variance = torch.full_like(weight_0, -1.0)
-    mean_0 = cumulative_mass[valid] / weight_0[valid]
-    mean_1 = (total_mass - cumulative_mass[valid]) / weight_1[valid]
-    between_variance[valid] = (weight_0[valid] * weight_1[valid] * (mean_0 - mean_1).square())
-    candidates = torch.nonzero(
-        between_variance == between_variance.max(),
-        as_tuple=False,
-    ).flatten()
-    split = int(candidates[(candidates.numel() - 1) // 2].item())
-    return float(edges[split + 1].item())
+    step = (maximum - minimum) / _OTSU_BINS
+    edges = torch.arange(_OTSU_BINS + 1, dtype=torch.float64) * step + minimum
+    edges[-1] = maximum
+    indices = ((values - minimum) / (maximum - minimum) * _OTSU_BINS).long()
+    indices[indices == _OTSU_BINS] -= 1
+    indices[values < edges[indices]] -= 1
+    indices[(values >= edges[indices + 1]) & (indices != _OTSU_BINS - 1)] += 1
+    histogram = torch.bincount(indices, minlength=_OTSU_BINS).double().tolist()
+    edge_values = edges.tolist()
+    centers = [(edge_values[index] + edge_values[index + 1]) / 2 for index in range(_OTSU_BINS)]
+    masses = [count * center for count, center in zip(histogram, centers)]
+    total_weight = _numpy_pairwise_sum(histogram)
+    total_mass = _numpy_pairwise_sum(masses)
+    weight_0 = 0.0
+    cumulative_mass = 0.0
+    between_variance = []
+    for index in range(_OTSU_BINS - 1):
+        weight_0 += histogram[index]
+        cumulative_mass += masses[index]
+        weight_1 = total_weight - weight_0
+        if weight_0 == 0 or weight_1 == 0:
+            between_variance.append(-1.0)
+            continue
+        mean_0 = cumulative_mass / weight_0
+        mean_1 = (total_mass - cumulative_mass) / weight_1
+        difference = mean_0 - mean_1
+        between_variance.append(weight_0 * weight_1 * (difference * difference))
+    best = max(between_variance)
+    candidates = [index for index, value in enumerate(between_variance) if value == best]
+    split = candidates[(len(candidates) - 1) // 2]
+    return edge_values[split + 1]
 
 
 def estimate_energy_threshold(
@@ -142,11 +173,23 @@ def estimate_energy_threshold(
         return float(materialized[0].item())
     if normalized == "otsu":
         return _otsu_threshold(materialized)
-    quantile = torch.quantile(
-        materialized.double(),
-        percentile / 100.0,
-    )
-    return float(quantile.item() + _PERCENTILE_MARGIN_DB)
+    return _numpy_linear_percentile(materialized, percentile) + _PERCENTILE_MARGIN_DB
+
+
+def _numpy_linear_percentile(values: Tensor, percentile: float) -> float:
+    # ``np.percentile(values, percentile)`` (method "linear"), including
+    # NumPy's two-sided lerp, so the estimate is bit-identical to Auditok's.
+    ordered = torch.sort(values.double().cpu()).values.tolist()
+    virtual_index = (len(ordered) - 1) * (percentile / 100)
+    if virtual_index >= len(ordered) - 1:
+        return ordered[-1]
+    previous = math.floor(virtual_index)
+    gamma = virtual_index - previous
+    lower, upper = ordered[previous], ordered[previous + 1]
+    difference = upper - lower
+    if gamma >= 0.5:
+        return upper - difference * (1 - gamma)
+    return lower + difference * gamma
 
 
 _DURATION_EPSILON = 1e-10

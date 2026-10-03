@@ -243,6 +243,34 @@ class AuditokParityRegressionTests(unittest.TestCase):
         )
         self.assertEqual(clamped.threshold_db, 40)
 
+    def test_threshold_estimates_are_bit_identical_to_auditok(self):
+        # Expected values: auditok.signal.estimate_energy_threshold (NumPy
+        # histogram/percentile) on the same float64 energies.
+        cases = (
+            (
+                [
+                    24.282, 31.841, 60.064, 49.108, 24.706, 41.656, 43.953, 27.987, 56.729, 25.684, 39.561,
+                    45.837, 41.531, 49.34, 56.892, 67.813, 34.21, 52.427, 54.811, 34.636, 20.075, 68.673,
+                    34.92, 35.699
+                ],
+                44.753671874999995,
+                36.299400000000006,
+            ),
+            (
+                [
+                    31.984, 59.435, 56.102, 22.289, 36.473, 33.106, 48.214, 64.341, 35.278, 68.606, 44.934,
+                    60.411, 63.663, 27.041, 43.676, 37.292, 45.633, 28.043, 28.6, 36.642, 50.841, 27.085,
+                    66.011, 45.235
+                ],
+                46.89490625,
+                36.6304,
+            ),
+        )
+        for values, otsu, p20 in cases:
+            energies = torch.tensor(values, dtype=torch.float64)
+            self.assertEqual(estimate_energy_threshold(energies, method="otsu"), otsu)
+            self.assertEqual(estimate_energy_threshold(energies, method="p20"), p20)
+
     def test_constant_energy_threshold_has_no_percentile_margin(self):
         self.assertEqual(
             estimate_energy_threshold(torch.full((5, ), 42.0, dtype=torch.float64), method="percentile"),
