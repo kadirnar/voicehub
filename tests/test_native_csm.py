@@ -33,9 +33,9 @@ from voicehub.architectures.csm.modeling import CSMAttention, CSMLlama3ScaledRoP
 from voicehub.architectures.csm.processing import CSMProcessor, CSMTextTokenizer
 from voicehub.architectures.csm.runtime import CSMRuntime, load_csm_runtime
 from voicehub.hub import write_json_file
+from voicehub.models.csm.inference import CSMForTextToSpeech
 from voicehub.models.csm.source.moshi.modules.conv import StreamingConv1d
 from voicehub.models.csm.source.moshi.utils.compile import torch_compile_lazy
-from voicehub.models.csm.inference import CSMForTextToSpeech
 from voicehub.models.csm.training import CSMTrainingBackend, CSMTrainingCollator, prepare_csm_training_inputs
 from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.tokenization import ByteBPETokenizer, encode_gpt2_token
@@ -160,7 +160,7 @@ def _source_sample_topk(logits, topk, temperature):
 
 
 def _torchtune_scaled_theta(dim, base, scale_factor, low, high, old_context):
-    """torchtune 0.4.0 ``Llama3ScaledRoPE`` frequency construction."""
+    """Torchtune 0.4.0 ``Llama3ScaledRoPE`` frequency construction."""
     freqs = 1.0 / (base**(torch.arange(0, dim, 2)[:(dim // 2)].float() / dim))
     low_wavelen = old_context / low
     high_wavelen = old_context / high
@@ -200,8 +200,8 @@ class NativeCSMSourceNumericsTests(unittest.TestCase):
             4,
             8192,
         )
-        angles = torch.einsum("i, j -> ij", torch.arange(config.max_sequence_length, dtype=theta.dtype),
-                              theta).float()
+        angles = torch.einsum(
+            "i, j -> ij", torch.arange(config.max_sequence_length, dtype=theta.dtype), theta).float()
         cache = torch.stack([torch.cos(angles), torch.sin(angles)], dim=-1)
         rope = CSMLlama3ScaledRoPE(config)
         torch.testing.assert_close(rope.theta, theta, rtol=0, atol=0)
@@ -911,7 +911,6 @@ class NativeCSMCheckpointTests(unittest.TestCase):
         torch.testing.assert_close(restored_logits, expected, rtol=0, atol=0)
         torch.testing.assert_close(wrapper_logits, expected, rtol=0, atol=0)
 
-
     def test_hub_snapshot_symlinks_load_as_local_runtime(self):
         # ``huggingface-cli download`` snapshots link file names to
         # suffix-less blobs elsewhere; resolving them lost ``.safetensors``
@@ -928,7 +927,9 @@ class NativeCSMCheckpointTests(unittest.TestCase):
             root = Path(directory)
             _write_test_tokenizer(root / "source-tokenizer.json")
             processor = CSMProcessor(CSMTextTokenizer.from_file(root / "source-tokenizer.json"), config)
-            export = CSMRuntime(model, processor, codec=None).save_pretrained(root / "export", include_codec=False)
+            export = CSMRuntime(
+                model, processor, codec=None).save_pretrained(
+                    root / "export", include_codec=False)
             blobs = root / "blobs"
             snapshot = root / "snapshots" / "abc"
             blobs.mkdir()

@@ -125,10 +125,11 @@ def build_mimi(*, device: str | torch.device = "cpu") -> MimiModel:
 def _use_csm_moshi_padding(codec: MimiModel) -> None:
     """Encode partial final frames like the ``moshi==0.2.2`` CSM pins.
 
-    The retained Moshi graph is a later release that zero-pads the waveform
-    to a whole 80 ms frame before the encoder. Sesame's pinned release
-    instead right-pads each causal convolution, which yields different codes
-    for the last, partial frame of every context segment.
+    The retained Moshi graph is a later release that zero-pads the
+    waveform to a whole 80 ms frame before the encoder. Sesame's pinned
+    release instead right-pads each causal convolution, which yields
+    different codes for the last, partial frame of every context
+    segment.
     """
     codec.legacy_encoder_padding = True
     for part in (codec.encoder, codec.downsample):

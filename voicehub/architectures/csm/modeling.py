@@ -79,12 +79,8 @@ class CSMLlama3ScaledRoPE(nn.Module):
                 dtype=buffer_dtype,
             )
         else:
-            frequencies = 1.0 / (
-                config.rope_theta**(torch.arange(
-                    0,
-                    self.dimension,
-                    2,
-                )[:self.dimension // 2].float() / self.dimension))
+            exponents = torch.arange(0, self.dimension, 2)[:self.dimension // 2].float() / self.dimension
+            frequencies = 1.0 / (config.rope_theta**exponents)
             theta = self._scale_frequencies(
                 frequencies,
                 scale_factor=config.rope_scale_factor,
