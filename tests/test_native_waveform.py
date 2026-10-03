@@ -19,6 +19,7 @@ from voicehub.processing import (
     resample_waveform,
     resample_waveform_hann,
     resample_waveform_kaiser,
+    resample_waveform_kaiser_best,
     save_pcm_wave,
 )
 from voicehub.training.data import load_audio_tensor
@@ -191,6 +192,104 @@ class NativeWaveformTests(unittest.TestCase):
     @unittest.skipUnless(TORCHAUDIO_AVAILABLE and torch.cuda.is_available(), "needs torchaudio and CUDA")
     def test_hann_resampling_is_bit_exact_to_torchaudio_on_cuda(self):
         self._assert_hann_matches_torchaudio("cuda", (torch.float32, torch.float64))
+
+    def test_kaiser_best_resampling_matches_librosa_load_defaults(self):
+        # Golden values: librosa 0.9.1 ``resample(x, orig_sr, 22050)``
+        # (resampy 0.4.3 ``kaiser_best``, then ``fix_length`` to ceil).
+        steps = torch.arange(64, dtype=torch.float64)
+        waveform = (0.5 * torch.sin(steps * 0.37) + 0.25 * torch.cos(steps * 1.91)).float()
+        cases = {
+            16_000: (89, {
+                0: 0.24356313049793243,
+                1: 0.17908760905265808,
+                5: 0.6862472891807556,
+                17: -0.4950007200241089,
+                30: 0.3047464191913605,
+                87: -0.2954469323158264,
+                88: 0.0,
+            }),
+            44_100: (32, {
+                0: 0.09166640043258667,
+                1: 0.3042701482772827,
+                5: -0.2680314779281616,
+                17: 0.005466431379318237,
+                30: -0.12004460394382477,
+                31: -0.3977660834789276,
+            }),
+        }
+        for source_rate, (length, values) in cases.items():
+            with self.subTest(source_rate=source_rate):
+                result = resample_waveform_kaiser_best(waveform, source_rate, 22_050)
+                self.assertEqual(result.dtype, torch.float32)
+                self.assertEqual(tuple(result.shape), (length, ))
+                for index, value in values.items():
+                    self.assertAlmostEqual(result[index].item(), value, delta=1e-7)
+        self.assertIs(resample_waveform_kaiser_best(waveform, 22_050, 22_050), waveform)
+
+    def test_kaiser_best_vectorization_matches_the_resampy_loop(self):
+        from voicehub.processing.waveform import _resampy_kaiser_best_table
+
+        def reference(values, source_rate, target_rate):
+            # Line-by-line transcription of resampy 0.4.3 ``_resample_loop``
+            # (float64 weights, float32 output accumulation) + fix_length.
+            ratio = float(target_rate) / source_rate
+            table = _resampy_kaiser_best_table().tolist()
+            if ratio < 1:
+                table = [ratio * value for value in table]
+            delta = [table[index + 1] - table[index] for index in range(len(table) - 1)] + [0.0]
+            scale = min(1.0, ratio)
+            precision = 2**13
+            step = int(scale * precision)
+            samples = values.tolist()
+            output = torch.zeros(int(len(samples) * float(target_rate) / float(source_rate)))
+            for index in range(output.numel()):
+                time = index * (1.0 / ratio)
+                whole = int(time)
+                fraction = scale * (time - whole)
+                accumulator = output[index]
+                for wing_fraction, count, sign, origin in (
+                    (fraction, whole + 1, -1, whole),
+                    (scale - fraction, len(samples) - whole - 1, 1, whole + 1),
+                ):
+                    position = wing_fraction * precision
+                    offset = int(position)
+                    eta = position - offset
+                    for tap in range(min(count, (len(table) - offset) // step)):
+                        weight = table[offset + tap * step] + eta * delta[offset + tap * step]
+                        accumulator = torch.tensor(
+                            float(accumulator) + weight * samples[origin + sign * tap],
+                            dtype=torch.float32,
+                        )
+                output[index] = accumulator
+            length = -(-len(samples) * target_rate // source_rate)
+            return torch.nn.functional.pad(output, (0, length - output.numel()))[:length]
+
+        generator = torch.Generator().manual_seed(0)
+        waveform = torch.rand(57, generator=generator) * 2.0 - 1.0
+        for source_rate in (16_000, 44_100, 48_000, 8_000):
+            target_rate = 22_050
+            with self.subTest(source_rate=source_rate):
+                self.assertTrue(
+                    torch.equal(
+                        resample_waveform_kaiser_best(waveform, source_rate, target_rate),
+                        reference(waveform, source_rate, target_rate),
+                    ))
+
+    def test_kaiser_best_table_matches_the_published_resampy_filter(self):
+        from voicehub.processing.waveform import _resampy_kaiser_best_table
+
+        table = _resampy_kaiser_best_table()
+        self.assertEqual(tuple(table.shape), (409_601, ))
+        published = {
+            0: 0.9173473712608761,
+            1: 0.9173473523046404,
+            4_096: 0.6308682827433317,
+            8_192: 0.08152330317945146,
+            100_000: -0.010423628222795207,
+            409_600: -5.2887095330227954e-08,
+        }
+        for index, value in published.items():
+            self.assertAlmostEqual(table[index].item(), value, delta=1e-11)
 
     def test_pcm_wave_loading_handles_24_bit_and_downmixes(self):
         frames = (

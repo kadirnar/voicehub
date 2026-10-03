@@ -316,6 +316,49 @@ class OpenVoiceArchitectureTests(unittest.TestCase):
                 "vad": True,
             })
 
+    def test_inference_audio_is_resampled_like_upstream_librosa_load(self):
+        from voicehub.processing.waveform import resample_waveform_kaiser_best
+
+        class RecordingRuntime:
+
+            def __init__(self):
+                self.references = []
+                self.sources = []
+
+            def extract_speaker_embedding(self, waveform, *, segment_seconds):
+                del segment_seconds
+                self.references.append(waveform)
+                return torch.zeros(1, 256, 1)
+
+            def convert(self, waveform, *, source_embedding, target_embedding, tau):
+                del source_embedding, target_embedding, tau
+                self.sources.append(waveform)
+                return torch.zeros(32)
+
+        model = OpenVoiceForTextToSpeech(device="cpu", lazy_load=True)
+        model.runtime = RecordingRuntime()
+        steps = torch.arange(441, dtype=torch.float32)
+        base = torch.sin(steps * 0.05)
+        reference = torch.cos(steps[:160] * 0.3)
+        model._generate(
+            "unused",
+            base_audio=base,
+            base_audio_sampling_rate=44_100,
+            source_embedding=torch.zeros(1, 256, 1),
+            speaker_audio_path=reference,
+            speaker_audio_sampling_rate=16_000,
+            seed=0,
+        )
+
+        # Upstream ``ToneColorConverter.convert``/``extract_se`` read audio
+        # with ``librosa.load(sr=22050)``: resampy kaiser_best, ceil length.
+        expected_base = resample_waveform_kaiser_best(base, 44_100, 22_050)
+        expected_reference = resample_waveform_kaiser_best(reference, 16_000, 22_050)
+        self.assertEqual(expected_base.numel(), 221)
+        self.assertEqual(expected_reference.numel(), 221)
+        self.assertTrue(torch.equal(model.runtime.sources[0], expected_base))
+        self.assertTrue(torch.equal(model.runtime.references[0], expected_reference))
+
     def test_architecture_registration_is_lazy_and_truthful(self):
         spec = get_architecture_spec("openvoice")
         self.assertEqual(spec.architecture_id, "openvoice-v2-converter")
