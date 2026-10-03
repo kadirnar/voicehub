@@ -238,6 +238,26 @@ class SegmentationProviderPostprocessingTests(unittest.TestCase):
             UPSTREAM_BINARIZE[1][1],
         )
 
+    def test_non_native_rates_resample_like_torchaudio_functional(self):
+        # pyannote.audio's Audio uses torchaudio.functional.resample defaults,
+        # which resample_waveform_hann reproduces bit for bit.
+        from voicehub.processing.waveform import resample_waveform_hann
+
+        waveform = torch.randn(48_000, generator=torch.Generator().manual_seed(3))
+        with tempfile.TemporaryDirectory() as directory:
+            provider = self._provider(directory, SCORES, SEGMENTATION_3_STEP)
+            seen = []
+            frame_output = provider._frame_output
+
+            def capture(values):
+                seen.append(values)
+                return frame_output(values)
+
+            provider._frame_output = capture
+            output = provider.detect(waveform, sampling_rate=48_000)
+        torch.testing.assert_close(seen[0], resample_waveform_hann(waveform, 48_000, 16_000), rtol=0, atol=0)
+        self.assertEqual(output.duration, 1.0)
+
     def test_regions_are_clipped_to_the_recording(self):
         # The last frame middle (0.4160 s) lies beyond a 0.41 s recording and
         # padding pushes the first region before zero; VADOutput needs both

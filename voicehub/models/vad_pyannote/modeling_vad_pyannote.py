@@ -238,17 +238,25 @@ class PyannoteVADForVoiceActivityDetection(PreTrainedVADModel):
     ) -> VADOutput:
         import torch
 
-        from voicehub.processing.waveform import load_native_audio
+        from voicehub.processing.waveform import NativeAudio, load_native_audio, resample_waveform_hann
 
         if window_size_samples is not None:
             raise ValueError(
                 "PyanNet chunk and frame geometry are fixed by the converted "
                 "checkpoint; `window_size_samples` is not supported.")
-        materialized = load_native_audio(
-            audio,
-            sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
-        )
+        materialized = load_native_audio(audio, sampling_rate=sampling_rate)
+        if materialized.sampling_rate != self.sample_rate:
+            # pyannote.audio's ``Audio`` downmixes, then resamples with
+            # ``torchaudio.functional.resample`` defaults.
+            materialized = NativeAudio(
+                waveform=resample_waveform_hann(
+                    materialized.waveform,
+                    materialized.sampling_rate,
+                    self.sample_rate,
+                ),
+                sampling_rate=self.sample_rate,
+                path=materialized.path,
+            )
         with torch.inference_mode():
             output = self._frame_output(materialized.waveform)
         scores = output.scores[:, 0].detach().float().cpu()
