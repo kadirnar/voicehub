@@ -450,5 +450,21 @@ class NativeMossTrainingTests(unittest.TestCase):
             }])
 
 
+class NativeMossLocalTransformerTests(unittest.TestCase):
+
+    def test_rotary_table_is_computed_once_per_forward(self):
+        from dataclasses import replace
+
+        from voicehub.architectures.mosstts.local_transformer import MossQwenDepthModel
+
+        model = MossQwenDepthModel(replace(_tiny_qwen(), num_hidden_layers=2)).eval()
+        calls = []
+        for layer in model.layers:
+            layer.self_attn.rotary.register_forward_hook(lambda *_: calls.append(None))
+        with torch.no_grad():
+            model(inputs_embeds=torch.randn(1, 3, 8))
+        self.assertEqual(len(calls), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

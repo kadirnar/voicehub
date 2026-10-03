@@ -296,6 +296,7 @@ class CausalSelfAttention(nn.Module):
         cache: DynamicKVCache | None,
         use_cache: bool,
         output_attentions: bool,
+        rotary_embeddings: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, Tensor | None, DynamicKVCache | None]:
         batch_size, query_length, _ = hidden_states.shape
         query = self._shape(
@@ -318,7 +319,11 @@ class CausalSelfAttention(nn.Module):
         key = key.transpose(1, 2)
         value = value.transpose(1, 2)
 
-        cosine, sine = self.rotary(position_ids, dtype=query.dtype)
+        if rotary_embeddings is None:
+            rotary_embeddings = self.rotary(position_ids, dtype=query.dtype)
+        # A shared table is built in the hidden-state dtype; the cast is a
+        # no-op unless autocast gave the projections another dtype.
+        cosine, sine = (table.to(dtype=query.dtype) for table in rotary_embeddings)
         query, key = apply_rotary_embedding(
             query,
             key,
@@ -499,6 +504,7 @@ class CausalLMDecoderLayer(nn.Module):
         cache: DynamicKVCache | None,
         use_cache: bool,
         output_attentions: bool,
+        rotary_embeddings: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, Tensor | None, DynamicKVCache | None]:
         residual = hidden_states
         attention_output, attention, cache = self.self_attn(
@@ -508,6 +514,7 @@ class CausalLMDecoderLayer(nn.Module):
             cache=cache,
             use_cache=use_cache,
             output_attentions=output_attentions,
+            rotary_embeddings=rotary_embeddings,
         )
         hidden_states = residual + attention_output * self.config.residual_multiplier
         residual = hidden_states
@@ -656,6 +663,10 @@ class CausalLMModel(nn.Module):
             max_position_embeddings=self.config.max_position_embeddings,
             device=hidden_states.device,
         )
+        # Every layer shares one RoPE table; compute it once per forward like
+        # the reference models do instead of once per layer.
+        rotary_embeddings = (
+            self.layers[0].self_attn.rotary(position_ids, dtype=hidden_states.dtype) if len(self.layers) else None)
 
         hidden_history: list[Tensor] | None = ([] if output_hidden_states else None)
         attention_history: list[Tensor] | None = ([] if output_attentions else None)
@@ -675,6 +686,7 @@ class CausalLMModel(nn.Module):
                         cache=None,
                         use_cache=False,
                         output_attentions=False,
+                        rotary_embeddings=rotary_embeddings,
                     )
                     return result
 
@@ -692,6 +704,7 @@ class CausalLMModel(nn.Module):
                     cache=past_key_values,
                     use_cache=use_cache,
                     output_attentions=output_attentions,
+                    rotary_embeddings=rotary_embeddings,
                 )
             if attention_history is not None:
                 if attention is None:
@@ -779,7 +792,12 @@ class CausalLMForCausalLM(nn.Module):
         output_hidden_states: bool = False,
         label_smoothing: float = 0.0,
         ignore_index: int = -100,
+        logits_to_keep: int = 0,
     ) -> CausalLMOutput:
+        if (isinstance(logits_to_keep, bool) or not isinstance(logits_to_keep, int) or logits_to_keep < 0):
+            raise ValueError("`logits_to_keep` must be a non-negative integer.")
+        if labels is not None and logits_to_keep:
+            raise ValueError("Causal-LM loss requires logits for the complete sequence.")
         if (labels is not None and isinstance(past_key_values, DynamicKVCache) and
                 past_key_values.sequence_length()):
             raise ValueError("Causal-LM loss cannot be computed from a partial cached "
@@ -796,7 +814,12 @@ class CausalLMForCausalLM(nn.Module):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
         )
-        logits = (self.lm_head(decoder_output.last_hidden_state) / self.config.logits_scaling).float()
+        # `logits_to_keep=0` keeps every position; generation only needs the
+        # last one, so it skips projecting (and upcasting) the whole prompt.
+        hidden_states = decoder_output.last_hidden_state
+        if logits_to_keep:
+            hidden_states = hidden_states[:, -logits_to_keep:, :]
+        logits = (self.lm_head(hidden_states) / self.config.logits_scaling).float()
         loss = None
         if labels is not None:
             if not isinstance(labels, Tensor) or labels.ndim != 2:
@@ -884,6 +907,7 @@ class CausalLMForCausalLM(nn.Module):
                 attention_mask=step_mask,
                 past_key_values=step.cache,
                 use_cache=step.use_cache,
+                logits_to_keep=1,
             )
             return GenerationStepOutput(
                 logits=output.logits,

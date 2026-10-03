@@ -153,6 +153,7 @@ class HiggsAudioV2DecoderLayer(nn.Module):
         cache: DynamicKVCache | None,
         use_cache: bool,
         output_attentions: bool,
+        rotary_embeddings: tuple[Tensor, Tensor] | None = None,
     ) -> tuple[Tensor, Tensor | None, DynamicKVCache | None]:
         residual = hidden_states
         normalized = self._select(
@@ -168,6 +169,7 @@ class HiggsAudioV2DecoderLayer(nn.Module):
             cache=cache,
             use_cache=use_cache,
             output_attentions=output_attentions,
+            rotary_embeddings=rotary_embeddings,
         )
         hidden_states = residual + attended
         residual = hidden_states
@@ -367,6 +369,9 @@ class HiggsAudioV2Model(nn.Module):
             max_position_embeddings=self.config.max_position_embeddings,
             device=hidden_states.device,
         )
+        # Every layer shares one RoPE table; compute it once per forward.
+        rotary_embeddings = (
+            self.layers[0].self_attn.rotary(position_ids, dtype=hidden_states.dtype) if len(self.layers) else None)
         hidden_history = [] if output_hidden_states else None
         attention_history = [] if output_attentions else None
         for layer in self.layers:
@@ -386,6 +391,7 @@ class HiggsAudioV2Model(nn.Module):
                         cache=None,
                         use_cache=False,
                         output_attentions=False,
+                        rotary_embeddings=rotary_embeddings,
                     )
                     return result
 
@@ -404,6 +410,7 @@ class HiggsAudioV2Model(nn.Module):
                     cache=past_key_values,
                     use_cache=use_cache,
                     output_attentions=output_attentions,
+                    rotary_embeddings=rotary_embeddings,
                 )
             if attention_history is not None:
                 if attention is None:

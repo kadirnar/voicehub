@@ -342,6 +342,16 @@ class NativeHiggsInventoryTests(unittest.TestCase):
             with self.assertRaises(CheckpointCompatibilityError):
                 validate_higgs_checkpoint(model, bad)
 
+    def test_rotary_table_is_computed_once_per_forward(self):
+        model = HiggsAudioV2ForConditionalGeneration(HiggsAudioV2Config.tiny()).eval()
+        calls = []
+        for layer in model.model.layers:
+            layer.self_attn.rotary.register_forward_hook(lambda *_: calls.append(None))
+        with torch.no_grad():
+            model(torch.tensor([[1, 7, 8, 9]]), use_cache=False)
+        self.assertEqual(len(model.model.layers), 2)
+        self.assertEqual(len(calls), 1)
+
 
 class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
 

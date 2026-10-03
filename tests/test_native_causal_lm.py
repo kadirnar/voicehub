@@ -510,6 +510,75 @@ class CausalLMGraphTests(unittest.TestCase):
             )
         self.assertEqual(fused_attention.call_count, 0)
 
+    def test_rotary_table_is_computed_once_per_forward(self):
+        model = Qwen3ForCausalLM(_tiny_config(Qwen3Config, num_hidden_layers=3)).eval()
+        calls = []
+        for layer in model.model.layers:
+            layer.self_attn.rotary.register_forward_hook(lambda *_: calls.append(None))
+        token_ids = torch.tensor([[1, 5, 6, 7]])
+
+        with torch.no_grad():
+            output = model(token_ids, use_cache=True)
+            self.assertEqual(len(calls), 1)
+            model(token_ids[:, -1:], past_key_values=output.past_key_values, use_cache=True)
+            self.assertEqual(len(calls), 2)
+
+            # The shared table reproduces the per-layer computation bit for bit.
+            hidden_states = model.model.embed_tokens(token_ids)
+            position_ids = torch.arange(token_ids.shape[1]).unsqueeze(0)
+            for layer in model.model.layers:
+                hidden_states, _, _ = layer(
+                    hidden_states,
+                    attention_mask=None,
+                    position_ids=position_ids,
+                    cache=None,
+                    use_cache=False,
+                    output_attentions=False,
+                )
+            expected = model.lm_head(model.model.norm(hidden_states)).float()
+        self.assertTrue(torch.equal(output.logits, expected))
+
+    def test_logits_to_keep_projects_only_trailing_positions(self):
+        model = LlamaForCausalLM(_tiny_config(LlamaConfig)).eval()
+        token_ids = torch.tensor([[1, 5, 6, 7, 8]])
+        with torch.no_grad():
+            full = model(token_ids).logits
+            self.assertTrue(torch.equal(model(token_ids, logits_to_keep=0).logits, full))
+            trailing = model(token_ids, logits_to_keep=2).logits
+
+        self.assertEqual(tuple(trailing.shape), (1, 2, 41))
+        self.assertEqual(trailing.dtype, torch.float32)
+        torch.testing.assert_close(trailing, full[:, -2:], atol=1e-6, rtol=1e-5)
+        for invalid in (-1, True, 1.0):
+            with self.subTest(logits_to_keep=invalid), self.assertRaisesRegex(ValueError, "logits_to_keep"):
+                model(token_ids, logits_to_keep=invalid)
+        with self.assertRaisesRegex(ValueError, "complete sequence"):
+            model(token_ids, labels=token_ids, logits_to_keep=1)
+
+    def test_generation_projects_only_the_last_prompt_position(self):
+        model = LlamaForCausalLM(_tiny_config(LlamaConfig)).eval()
+        projected_lengths = []
+        model.lm_head.register_forward_hook(lambda _, inputs, __: projected_lengths.append(inputs[0].shape[1]))
+        prompt = torch.tensor([[1, 5, 6, 7]])
+
+        with torch.no_grad():
+            output = model.generate(
+                prompt,
+                generation_config=GenerationConfig(
+                    max_new_tokens=3,
+                    pad_token_id=0,
+                    use_cache=True,
+                ),
+            )
+            self.assertEqual(projected_lengths, [1, 1, 1])
+
+            # Greedy tokens match a full-sequence, full-vocabulary recompute.
+            expected = prompt
+            for _ in range(3):
+                next_token = model(expected, use_cache=False).logits[:, -1].argmax(dim=-1, keepdim=True)
+                expected = torch.cat((expected, next_token), dim=-1)
+        self.assertTrue(torch.equal(output.sequences, expected))
+
 
 class CausalLMCheckpointTests(unittest.TestCase):
 
