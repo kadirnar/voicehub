@@ -12,7 +12,7 @@ hide:
 
 # GraniteSpeech {.vh-model-title}
 
-<p class="vh-model-detail__summary">Uses Granite Speech&#x27;s instruction prompt with deterministic generation.</p>
+<p class="vh-model-detail__summary">Uses a Granite Speech model-card instruction prompt with deterministic generation.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Automatic speech recognition</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">granite-speech</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-asr_granite_speech">Parameters: 2.3B</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: en, fr +4</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-asr_granite_speech"><strong>Parameter metadata:</strong> Exact learned-parameter total for VoiceHub&#x27;s audited native primary graph at the registered default selection; separately loaded auxiliary models are excluded.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -46,9 +46,9 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Uses Granite Speech's instruction prompt with deterministic generation.
+**Model-specific path:** Uses a Granite Speech model-card instruction prompt with deterministic generation.
 
-**Inputs and controls:** Medical or regulated recordings still require domain review; model output is not a verified record.
+**Inputs and controls:** Without `prompt`, the model card's raw-transcript prompt `<|audio|>can you transcribe the speech into a written format?` is used; `<|audio|>` is prepended when a prompt omits it. Medical or regulated recordings still require domain review; model output is not a verified record.
 
 ```python
 from pathlib import Path
@@ -67,7 +67,7 @@ model = AutoModelForSpeechRecognition.from_pretrained(
 )
 output = model.transcribe(
     AUDIO_FILE,
-    prompt="Transcribe the recording faithfully in English.",
+    prompt="transcribe the speech with proper punctuation and capitalization.",
     do_sample=False,
 )
 print(output.text)
