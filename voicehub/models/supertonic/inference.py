@@ -189,7 +189,7 @@ class SupertonicForTextToSpeech(PreTrainedTTSModel):
             raise RuntimeError(f"Supertonic returned an invalid audio duration: {seconds}.")
         sample_count = min(
             len(waveform),
-            max(0, round(self.sample_rate * seconds)),
+            max(0, int(self.sample_rate * seconds)),
         )
         if sample_count == 0:
             raise RuntimeError("Supertonic returned an empty audio waveform.")

@@ -432,9 +432,11 @@ class NativeSupertonicRuntime(
                 speed=speed,
                 generator=generator,
             )
+            # py/example_onnx.py trims with ``int(sample_rate * duration)``,
+            # the same truncation its latent mask applies.
             sample_count = min(
                 waveform.shape[-1],
-                max(1, round(float(duration[0].item()) * self.sample_rate)),
+                max(1, int(self.sample_rate * float(duration[0].item()))),
             )
             if index and silence.numel():
                 pieces.append(silence)
