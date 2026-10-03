@@ -263,6 +263,49 @@ class NativeBarkTests(unittest.TestCase):
         self.assertEqual(lengths[0], audio.shape[1])
         self.assertTrue(torch.isfinite(audio).all())
 
+    def _write_tiny_runtime(self, directory):
+        from voicehub.architectures.bark.checkpoint import save_bark_safetensors
+        from voicehub.architectures.bark.modeling import BarkModel
+
+        architecture, generation = self._tiny_config()
+        model = BarkModel(architecture, generation_config=generation).eval()
+        root = Path(directory)
+        save_bark_safetensors(model, root / "model.safetensors")
+        (root / "config.json").write_text(json.dumps(architecture.to_dict()))
+        (root / "generation_config.json").write_text(json.dumps(generation.to_dict()))
+        (root / "tokenizer.json").write_text("{}")
+        (root / "tokenizer_config.json").write_text("{}")
+        (root / "vocab.txt").write_text("[PAD]\n[UNK]\nhello\nworld\n")
+        (root / "speaker_embeddings_path.json").write_text("{}")
+        return root
+
+    def test_public_generate_can_be_called_repeatedly_after_load(self):
+        import torch
+
+        from voicehub.models.bark.inference import BarkForTextToSpeech
+
+        torch.manual_seed(3)
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._write_tiny_runtime(directory)
+            model = BarkForTextToSpeech(
+                model_path=root,
+                device="cpu",
+                verify_official_integrity=False,
+            )
+            model.load()
+            options = {
+                "semantic_do_sample": False,
+                "coarse_do_sample": False,
+                "fine_temperature": 1.0,
+            }
+            first = model.generate("hello world", seed=1, **options)
+            second = model.generate("hello world", seed=1, **options)
+
+        # Loading must not replace the wrapper's text processor, which the
+        # shared generate() contract calls positionally on every request.
+        self.assertNotIsInstance(model.processor, type(model.transformers_processor))
+        torch.testing.assert_close(first.audio, second.audio)
+
     def test_safe_loader_rejects_incomplete_namespace(self):
         import torch
 
