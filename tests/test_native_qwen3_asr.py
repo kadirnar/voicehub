@@ -239,6 +239,23 @@ class NativeQwen3ASRTests(unittest.TestCase):
                 )
             self.assertTrue(all(mask is not None for mask in masks))
 
+    def test_inference_context_is_inserted_verbatim(self):
+        # qwen_asr passes the context as the system message unchanged, and
+        # VoiceHub training prompts already did; inference used to strip it.
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = _runtime(Path(temporary))
+            context = " Names: Quilter\n"
+            prepared = runtime.processor.prepare_inference_batch(
+                (torch.zeros(1_600), ),
+                sampling_rates=(16_000, ),
+                contexts=(context, ),
+            )
+            prompt = runtime.processor.tokenizer.decode(
+                prepared["input_ids"][0],
+                skip_special_tokens=False,
+            )
+            self.assertTrue(prompt.startswith(f"<|im_start|>system\n{context}<|im_end|>\n"))
+
     def test_processor_matches_qwen_whitespace_and_frame_boundaries(self):
         self.assertEqual(
             qwen2_pretokenize(" \tword \t2"),
