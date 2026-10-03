@@ -21,6 +21,7 @@ from .modeling import TextToLatentRFDiT
 
 _FLOAT_DTYPES = frozenset({"F16", "BF16", "F32", "F64"})
 _CONFIG_METADATA_KEY = "config_json"
+_INFERENCE_LENGTH_KEYS = ("max_text_len", "max_caption_len")
 
 
 def irodori_header_fingerprint(inventory: Mapping[str, tuple[str, tuple[int, ...]]], ) -> str:
@@ -82,6 +83,35 @@ def read_irodori_config(reader: SafeTensorReader) -> IrodoriModelConfig:
         return IrodoriModelConfig.from_dict(normalized)
     except (TypeError, ValueError) as error:
         raise CheckpointCompatibilityError(f"Irodori checkpoint configuration is invalid: {error}") from error
+
+
+def read_irodori_inference_lengths(path: str | Path) -> dict[str, int]:
+    """Return the padded text/caption lengths recorded in ``config_json``.
+
+    The original runtime keeps ``max_text_len``/``max_caption_len`` from
+    the flat checkpoint config as inference padding widths (they also
+    scale the duration predictor's token-count feature), so custom
+    checkpoints trained with other widths need them.
+    """
+    with SafeTensorReader(Path(path).expanduser().resolve()) as reader:
+        raw = reader.metadata.get(_CONFIG_METADATA_KEY)
+    if raw is None:
+        return {}
+    try:
+        values = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise CheckpointCompatibilityError("Irodori `config_json` metadata is not valid JSON.") from error
+    if not isinstance(values, Mapping):
+        raise CheckpointCompatibilityError("Irodori `config_json` must decode to an object.")
+    lengths = {}
+    for name in _INFERENCE_LENGTH_KEYS:
+        value = values.get(name)
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise CheckpointCompatibilityError(f"Irodori `{name}` must be an integer.")
+        lengths[name] = value
+    return lengths
 
 
 def native_irodori_tensor_shapes(
@@ -292,6 +322,7 @@ __all__ = [
     "load_irodori_safetensors",
     "native_irodori_tensor_shapes",
     "read_irodori_config",
+    "read_irodori_inference_lengths",
     "save_irodori_safetensors",
     "validate_irodori_export",
     "validate_irodori_reader",

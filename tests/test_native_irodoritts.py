@@ -159,8 +159,9 @@ class _FakeCodec:
         self.latent_dim = latent_dim
         self.calls = 0
 
-    def encode_waveform(self, waveform: torch.Tensor) -> torch.Tensor:
+    def encode_waveform(self, waveform: torch.Tensor, *, sample_rate: int | None = None) -> torch.Tensor:
         self.calls += 1
+        self.sample_rate_arguments = getattr(self, "sample_rate_arguments", []) + [sample_rate]
         value = waveform.float().mean()
         return value.expand(1, 3, self.latent_dim).clone()
 
@@ -516,6 +517,8 @@ class NativeIrodoriTests(unittest.TestCase):
                 [False, False],
             )
             self.assertEqual(codec.calls, 2)
+            # The codec owns resampling, as the released prepare_manifest path does.
+            self.assertEqual(codec.sample_rate_arguments, [48_000, 48_000])
 
     def test_training_device_sync_supports_codec_with_read_only_device(self):
 

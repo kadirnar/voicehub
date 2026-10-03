@@ -11,7 +11,6 @@ import torch
 import torch.nn.functional as F
 
 from voicehub.checkpointing import SafeTensorReader
-from voicehub.processing.waveform import resample_waveform
 
 from .codec import IrodoriDACVAECodec
 from .configuration import IrodoriModelConfig
@@ -199,13 +198,7 @@ class IrodoriBatchProcessor:
                 if (isinstance(sample_rate, bool) or not isinstance(sample_rate, int) or sample_rate <= 0):
                     raise ValueError("Irodori sample rates must be positive integers.")
                 waveform = waveform.detach().float().flatten()
-                if sample_rate != self.codec.sample_rate:
-                    waveform = resample_waveform(
-                        waveform,
-                        sample_rate,
-                        self.codec.sample_rate,
-                    )
-                latents.append(self.codec.encode_waveform(waveform)[0].cpu())
+                latents.append(self.codec.encode_waveform(waveform, sample_rate=sample_rate)[0].cpu())
         return _pad_latents(latents, latent_dim=self.config.latent_dim)
 
     def _reference(

@@ -13,9 +13,9 @@ import torch
 
 from voicehub.checkpointing import SafeTensorReader
 from voicehub.optimization.protocols import OptimizationCompileTarget, OptimizationModuleRoot
-from voicehub.processing.waveform import load_pcm_wave, resample_waveform
+from voicehub.processing.waveform import load_pcm_wave
 
-from .checkpoint import load_irodori_safetensors
+from .checkpoint import load_irodori_safetensors, read_irodori_inference_lengths
 from .codec import IrodoriDACVAECodec
 from .conditioning import (
     load_speaker_inversion_payload,
@@ -190,6 +190,7 @@ class InferenceRuntime:
         tokenizer: IrodoriTokenizer,
         codec: IrodoriDACVAECodec,
         model_device: str | torch.device,
+        inference_lengths: dict[str, int] | None = None,
     ) -> None:
         self.model = model
         self.model_cfg = model_cfg
@@ -198,8 +199,16 @@ class InferenceRuntime:
         self.codec = codec
         self.model_device = resolve_runtime_device(model_device)
         self.codec_device = codec.device
-        self.default_text_max_len = 256
-        self.default_caption_max_len = 512 if model_cfg.use_caption_condition else 256
+        # Like the released runtime: checkpoint widths when recorded, else the
+        # 256-token default for text and the text width for captions.
+        lengths = dict(inference_lengths or {})
+        text_max_len = lengths.get("max_text_len")
+        self.default_text_max_len = (
+            int(text_max_len) if isinstance(text_max_len, int) and text_max_len > 0 else 256)
+        caption_max_len = lengths.get("max_caption_len")
+        self.default_caption_max_len = (
+            int(caption_max_len)
+            if isinstance(caption_max_len, int) and caption_max_len > 0 else self.default_text_max_len)
 
     def optimization_compile_targets(
         self,
@@ -282,6 +291,7 @@ class InferenceRuntime:
             tokenizer=tokenizer,
             codec=codec,
             model_device=model_device,
+            inference_lengths=read_irodori_inference_lengths(key.checkpoint),
         )
 
     def _batch_tokens(
@@ -384,24 +394,28 @@ class InferenceRuntime:
                 device=self.model_device,
             )
             return latent, mask, None, None
+        limit_reference = (request.max_ref_seconds is not None and request.max_ref_seconds > 0)
         if request.ref_latent is not None:
             latent = self._load_preencoded_latent(request.ref_latent)
         elif request.ref_wav is not None:
             waveform, sample_rate = load_pcm_wave(request.ref_wav)
-            if request.max_ref_seconds is not None:
-                waveform = waveform[:max(1, int(float(request.max_ref_seconds) * sample_rate))]
-            if sample_rate != self.codec.sample_rate:
-                waveform = resample_waveform(
-                    waveform,
-                    sample_rate,
-                    self.codec.sample_rate,
-                )
+            if limit_reference:
+                waveform = waveform[:max(1, int(float(request.max_ref_seconds) * float(sample_rate)))]
+            # The codec resamples and loudness-normalizes like the released
+            # runtime; `ref_normalize_db=None` disables normalization.
             latent = self.codec.encode_waveform(
                 waveform,
+                sample_rate=sample_rate,
                 normalize_db=request.ref_normalize_db,
+                ensure_max=request.ref_ensure_max,
             ).cpu()
         else:
             raise ValueError("Supply a reference or set `no_reference=True`.")
+        if limit_reference:
+            latent = latent[:, :max(
+                1,
+                math.ceil(float(request.max_ref_seconds) * self.codec.sample_rate / self.codec.hop_length),
+            )]
         patched = patchify_latent(latent, self.model_cfg.latent_patch_size).to(
             device=self.model_device,
             dtype=self.model.dtype,
@@ -435,6 +449,9 @@ class InferenceRuntime:
         batch_size = int(request.num_candidates)
         if batch_size <= 0:
             raise ValueError("`num_candidates` must be positive.")
+        decode_mode = str(request.decode_mode).strip().lower()
+        if decode_mode not in {"sequential", "batch"}:
+            raise ValueError("`decode_mode` must be 'sequential' or 'batch'.")
         max_text_len = request.max_text_len or self.default_text_max_len
         max_caption_len = request.max_caption_len or self.default_caption_max_len
         timings = []
@@ -468,7 +485,9 @@ class InferenceRuntime:
                 float(request.max_seconds),
                 max(float(request.min_seconds), float(request.seconds)),
             )
-            latent_steps = math.ceil(seconds * self.codec.sample_rate / self.codec.hop_length)
+            # Trim to the requested sample count, not the latent-frame grid.
+            target_samples = max(1, int(seconds * self.codec.sample_rate))
+            latent_steps = math.ceil(target_samples / self.codec.hop_length)
         elif self.model_cfg.use_duration_predictor:
             (
                 text_state,
@@ -520,9 +539,10 @@ class InferenceRuntime:
             minimum = math.ceil(request.min_seconds * self.codec.sample_rate / self.codec.hop_length)
             maximum = math.floor(request.max_seconds * self.codec.sample_rate / self.codec.hop_length)
             latent_steps = min(maximum, max(minimum, latent_steps))
+            target_samples = latent_steps * self.codec.hop_length
         else:
-            latent_steps = math.ceil(30.0 * self.codec.sample_rate / self.codec.hop_length)
-        target_samples = latent_steps * self.codec.hop_length
+            target_samples = int(30.0 * self.codec.sample_rate)
+            latent_steps = math.ceil(target_samples / self.codec.hop_length)
         patched_steps = math.ceil(latent_steps / self.model_cfg.latent_patch_size)
         used_seed = secrets.randbits(63) if request.seed is None else int(request.seed)
         sampled_started = time.perf_counter()
@@ -532,6 +552,11 @@ class InferenceRuntime:
         use_speaker = self.model_cfg.use_speaker_condition_resolved and not request.no_ref
         if not use_speaker:
             speaker_scale = 0.0
+        speaker_kv_scale = request.speaker_kv_scale if use_speaker else None
+        # The released runtime only scales speaker K/V while t >= 0.9 by default.
+        speaker_kv_min_t = (
+            None if speaker_kv_scale is None else
+            0.9 if request.speaker_kv_min_t is None else float(request.speaker_kv_min_t))
         sampled = sample_euler_rf_cfg(
             model=self.model,
             text_input_ids=text_ids,
@@ -556,9 +581,9 @@ class InferenceRuntime:
             rescale_k=request.rescale_k,
             rescale_sigma=request.rescale_sigma,
             use_context_kv_cache=request.context_kv_cache,
-            speaker_kv_scale=request.speaker_kv_scale if use_speaker else None,
+            speaker_kv_scale=speaker_kv_scale,
             speaker_kv_max_layers=request.speaker_kv_max_layers,
-            speaker_kv_min_t=request.speaker_kv_min_t,
+            speaker_kv_min_t=speaker_kv_min_t,
             t_schedule_mode=request.t_schedule_mode,
             sway_coeff=request.sway_coeff,
         )
@@ -569,7 +594,13 @@ class InferenceRuntime:
             self.model_cfg.latent_dim,
         )[:, :latent_steps]
         decoded_started = time.perf_counter()
-        decoded = self.codec.decode_latent(latents).cpu()
+        if decode_mode == "batch":
+            decoded = self.codec.decode_latent(latents).cpu()
+        else:
+            # Default of the released runtime: one candidate per codec call.
+            decoded = [
+                self.codec.decode_latent(latents[index:index + 1]).cpu()[0] for index in range(batch_size)
+            ]
         audios = []
         for index, waveform in enumerate(decoded):
             maximum = target_samples
