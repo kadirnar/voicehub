@@ -14,6 +14,7 @@ from torch import Tensor
 from voicehub.architectures.csm.configuration import CSMArchitectureConfig
 from voicehub.architectures.csm.metadata import CSM_BOS_TOKEN_ID, CSM_EOS_TOKEN_ID, CSM_TOKENIZER_FILE
 from voicehub.tokenization import ByteBPETokenizer
+from voicehub.tokenization.llama3 import llama3_pretokenize
 
 
 class CSMTextTokenizer:
@@ -40,6 +41,10 @@ class CSMTextTokenizer:
             prefix_token_ids=(CSM_BOS_TOKEN_ID, ),
             suffix_token_ids=(CSM_EOS_TOKEN_ID, ),
             pad_token_id=CSM_EOS_TOKEN_ID,
+            # The released tokenizer.json splits text with the Llama 3
+            # expression; the generic GPT-2 scanner groups digits and
+            # whitespace differently.
+            pretokenizer=llama3_pretokenize,
         )
         return cls(tokenizer, source_path=source)
 

@@ -49,9 +49,10 @@ class CSMCheckpointReport:
 
 def inspect_csm_checkpoint(path: str | Path) -> CSMCheckpointReport:
     """Inspect CSM metadata without materializing its six-gigabyte payload."""
-    source = Path(path).expanduser().resolve()
-    if source.suffix.lower() != ".safetensors":
+    # Check the given name: Hub snapshot symlinks point at suffix-less blobs.
+    if Path(path).suffix.lower() != ".safetensors":
         raise ValueError("Native CSM checkpoints must use Safetensors.")
+    source = Path(path).expanduser().resolve()
     with SafeTensorReader(source) as reader:
         inventory = {
             name: (

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -39,11 +40,21 @@ class CSMArtifacts:
     official_codec: bool
 
 
+def _absolute(path: Path) -> Path:
+    """Return an absolute path without following symlinks.
+
+    Hugging Face snapshot entries are symlinks to suffix-less blobs, so
+    resolving them would lose both the file name and the snapshot folder
+    that holds the sibling tokenizer.
+    """
+    return Path(os.path.abspath(path))
+
+
 def _required(root: Path, filename: str) -> Path:
     path = root / filename
     if not path.is_file():
         raise FileNotFoundError(f"Native CSM requires {filename!r} in {root}.")
-    return path.resolve()
+    return _absolute(path)
 
 
 def _file_sha256(path: Path) -> str:
@@ -89,13 +100,13 @@ def resolve_csm_artifacts(
         raise TypeError("`include_codec` must be a boolean.")
     local = Path(source).expanduser()
     if local.exists():
-        checkpoint = (local.resolve() if local.is_file() else _required(local, CSM_CHECKPOINT_FILE))
+        checkpoint = (_absolute(local) if local.is_file() else _required(local, CSM_CHECKPOINT_FILE))
         if checkpoint.suffix.lower() != ".safetensors":
             raise ValueError("Native CSM checkpoints must use Safetensors.")
         root = checkpoint.parent
         tokenizer = _required(root, CSM_TOKENIZER_FILE)
         candidate_config = root / "config.json"
-        config = candidate_config.resolve() if candidate_config.is_file() else None
+        config = _absolute(candidate_config) if candidate_config.is_file() else None
         official_model = False
         resolved_revision = None
         source_name = str(local.resolve())
@@ -133,11 +144,11 @@ def resolve_csm_artifacts(
             raise FileNotFoundError(f"CSM Mimi checkpoint was not found: {codec_checkpoint}.")
         if codec_checkpoint.suffix.lower() != ".safetensors":
             raise ValueError("Native CSM Mimi checkpoints use Safetensors.")
-        codec_checkpoint = codec_checkpoint.resolve()
+        codec_checkpoint = _absolute(codec_checkpoint)
     elif include_codec:
         local_codec = checkpoint.parent / "mimi.safetensors"
         if local.exists() and local_codec.is_file():
-            codec_checkpoint = local_codec.resolve()
+            codec_checkpoint = _absolute(local_codec)
         elif local.exists():
             raise FileNotFoundError(
                 "A local CSM runtime requires `mimi.safetensors`, an "

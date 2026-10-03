@@ -34,7 +34,10 @@ from voicehub.architectures.csm.processing import CSMProcessor, CSMTextTokenizer
 from voicehub.architectures.csm.runtime import CSMRuntime, load_csm_runtime
 from voicehub.hub import write_json_file
 from voicehub.models.csm.inference import CSMForTextToSpeech
+from voicehub.models.csm.source.moshi.modules.conv import StreamingConv1d
+from voicehub.models.csm.source.moshi.utils.compile import torch_compile_lazy
 from voicehub.models.csm.training import CSMTrainingBackend, CSMTrainingCollator, prepare_csm_training_inputs
+from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.tokenization import ByteBPETokenizer, encode_gpt2_token
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -55,8 +58,10 @@ def _tokenizer():
     return CSMTextTokenizer(tokenizer)
 
 
-def _write_test_tokenizer(path: Path) -> None:
+def _write_test_tokenizer(path: Path, *, merges: tuple[str, ...] = ()) -> None:
     vocabulary = {encode_gpt2_token(bytes((value, ))): value for value in range(256)}
+    for offset, merge in enumerate(merges):
+        vocabulary[merge.replace(" ", "")] = 256 + offset
     write_json_file(
         path, {
             "version":
@@ -92,7 +97,7 @@ def _write_test_tokenizer(path: Path) -> None:
             "model": {
                 "type": "BPE",
                 "vocab": vocabulary,
-                "merges": [],
+                "merges": list(merges),
                 "unk_token": None,
             },
         })
@@ -120,6 +125,176 @@ def _portable_test_config() -> CSMArchitectureConfig:
             max_sequence_length=4,
         ),
     )
+
+
+class NativeCSMTokenizerTests(unittest.TestCase):
+
+    def test_released_tokenizer_uses_llama3_split(self):
+        # Llama 3 splits digit runs into groups of at most three, so the
+        # "3 4" merge cannot cross the "123|456|7" boundary. The generic
+        # GPT-2 scanner kept "1234567" whole and emitted the merged token.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tokenizer.json"
+            _write_test_tokenizer(path, merges=("3 4", ))
+            tokenizer = CSMTextTokenizer.from_file(path)
+        ids = tokenizer.encode("1234567", speaker=0)
+        self.assertEqual(
+            ids,
+            (128_000, *b"[0]1234567", 128_001),
+        )
+        self.assertEqual(
+            tokenizer.encode("34", speaker=1),
+            (128_000, *b"[1]", 256, 128_001),
+        )
+
+
+def _source_sample_topk(logits, topk, temperature):
+    """Verbatim ``models.sample_topk`` from SesameAILabs/csm@daed31e."""
+    logits = logits / temperature
+    indices_to_remove = logits < torch.topk(logits, topk)[0][..., -1, None]
+    scores_processed = logits.masked_fill(indices_to_remove, -float("Inf"))
+    scores_processed = functional.log_softmax(scores_processed, dim=-1)
+    probs = functional.softmax(scores_processed, dim=-1)
+    q = torch.empty_like(probs).exponential_(1)
+    return torch.argmax(probs / q, dim=-1, keepdim=True).to(dtype=torch.int)
+
+
+def _torchtune_scaled_theta(dim, base, scale_factor, low, high, old_context):
+    """Torchtune 0.4.0 ``Llama3ScaledRoPE`` frequency construction."""
+    freqs = 1.0 / (base**(torch.arange(0, dim, 2)[:(dim // 2)].float() / dim))
+    low_wavelen = old_context / low
+    high_wavelen = old_context / high
+    new_freqs = []
+    for freq in freqs:
+        wavelen = 2 * math.pi / freq
+        if wavelen < high_wavelen:
+            new_freqs.append(freq)
+        elif wavelen > low_wavelen:
+            new_freqs.append(freq / scale_factor)
+        else:
+            smooth = (old_context / wavelen - low) / (high - low)
+            new_freqs.append((1 - smooth) * freq / scale_factor + smooth * freq)
+    return torch.tensor(new_freqs, dtype=freqs.dtype)
+
+
+class NativeCSMSourceNumericsTests(unittest.TestCase):
+
+    def test_bfloat16_sampling_matches_source_log_softmax_path(self):
+        # softmax(log_softmax(x)) and softmax(x) differ after bfloat16
+        # rounding; on this batch 18 draws pick a different token.
+        generator = torch.Generator().manual_seed(0)
+        logits = (torch.randn(4096, 2051, generator=generator) * 2).to(torch.bfloat16)
+        torch.manual_seed(5)
+        expected = _source_sample_topk(logits, 50, 0.9)
+        torch.manual_seed(5)
+        actual = sample_top_k(logits, top_k=50, temperature=0.9)
+        torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+
+    def test_rope_tables_match_torchtune_and_follow_model_dtype(self):
+        config = CSMArchitectureConfig().backbone
+        theta = _torchtune_scaled_theta(
+            config.head_dim,
+            500_000,
+            32,
+            1,
+            4,
+            8192,
+        )
+        angles = torch.einsum(
+            "i, j -> ij", torch.arange(config.max_sequence_length, dtype=theta.dtype), theta).float()
+        cache = torch.stack([torch.cos(angles), torch.sin(angles)], dim=-1)
+        rope = CSMLlama3ScaledRoPE(config)
+        torch.testing.assert_close(rope.theta, theta, rtol=0, atol=0)
+        torch.testing.assert_close(rope.cache, cache, rtol=0, atol=0)
+        # Upstream builds these buffers in float32 and then calls
+        # ``model.to(dtype=torch.bfloat16)``, which casts them too.
+        model = CSMModel(_portable_test_config(), dtype=torch.bfloat16)
+        self.assertEqual(model.backbone.layers[0].attn.rope.cache.dtype, torch.bfloat16)
+        meta = CSMModel(_portable_test_config(), device="meta", dtype=torch.bfloat16)
+        meta = meta.to_empty(device="cpu")
+        meta.materialize_runtime_buffers("cpu")
+        for decoder in (meta.backbone, meta.decoder):
+            rope = decoder.layers[0].attn.rope
+            reference = CSMLlama3ScaledRoPE(decoder.config)
+            self.assertEqual(rope.cache.dtype, torch.bfloat16)
+            torch.testing.assert_close(rope.cache, reference.cache.to(torch.bfloat16), rtol=0, atol=0)
+
+    def test_context_audio_is_resampled_like_torchaudio_functional(self):
+        config = _portable_test_config()
+        captured = {}
+
+        class Codec:
+            sample_rate = 24_000
+
+            def encode(self, waveform):
+                captured["waveform"] = waveform
+                return torch.zeros(1, config.num_audio_codebooks, 2, dtype=torch.long)
+
+            def decode(self, codes):
+                return codes
+
+        runtime = CSMRuntime(CSMModel(config), CSMProcessor(_tokenizer(), config), codec=Codec())
+        audio = torch.sin(torch.arange(16_000) * 0.37) * 0.5
+        runtime.encode_audio(audio, sampling_rate=16_000)
+        expected = resample_waveform_hann(audio, 16_000, 24_000, match="functional")
+        torch.testing.assert_close(captured["waveform"][0, 0], expected, rtol=0, atol=0)
+
+    def test_mimi_runs_eagerly_like_sesame_setup(self):
+        # Sesame's README exports NO_TORCH_COMPILE=1 so Moshi's lazily
+        # compiled RoPE/RMSNorm/gating kernels stay eager. On CUDA the
+        # compiled kernels round differently (~5e-7 on decoded audio), so the
+        # runtime must run Mimi with Moshi compilation disabled.
+        config = _portable_test_config()
+        with patch.dict("os.environ", {"NO_TORCH_COMPILE": ""}):
+            identity = torch_compile_lazy(lambda tensor: tensor)
+
+        class Codec:
+            sample_rate = 24_000
+
+            def encode(self, waveform):
+                identity(waveform)
+                return torch.zeros(1, config.num_audio_codebooks, 1, dtype=torch.long)
+
+            def decode(self, codes):
+                return identity(torch.zeros(1, 1, codes.shape[-1] * 1_920))
+
+        runtime = CSMRuntime(CSMModel(config), CSMProcessor(_tokenizer(), config), codec=Codec())
+        codes = torch.ones(1, config.num_audio_codebooks, 2, dtype=torch.long)
+        with patch("torch.compile", side_effect=AssertionError("Mimi must run eagerly")):
+            runtime.encode_audio(torch.zeros(1_920), sampling_rate=24_000)
+            with patch.object(runtime.model, "generate_audio_codes", return_value=codes):
+                audio, _ = runtime.generate("Hi.")
+        self.assertEqual(audio.shape[-1], 2 * 1_920)
+
+    def test_mimi_uses_csm_pinned_moshi_padding(self):
+        codec = build_mimi(device="meta")
+        self.assertTrue(codec.legacy_encoder_padding)
+        encoder = [
+            module for part in (codec.encoder, codec.downsample) for module in part.modules()
+            if isinstance(module, StreamingConv1d)
+        ]
+        self.assertTrue(encoder)
+        self.assertTrue(all(module.legacy_right_padding for module in encoder))
+        decoder = [module for module in codec.decoder.modules() if isinstance(module, StreamingConv1d)]
+        self.assertFalse(any(module.legacy_right_padding for module in decoder))
+
+    def test_legacy_convolution_padding_matches_moshi_0_2_2(self):
+        torch.manual_seed(3)
+        convolution = StreamingConv1d(2, 3, kernel_size=8, stride=4, causal=True)
+        convolution.legacy_right_padding = True
+        inputs = torch.randn(1, 2, 37)
+        # moshi 0.2.2: left-pad ``kernel - stride`` and right-pad until the
+        # final window is full, both with zeros, then convolve.
+        padding_total = 8 - 4
+        frames = math.ceil((37 - 8 + padding_total) / 4 + 1)
+        extra = (frames - 1) * 4 + (8 - padding_total) - 37
+        reference = functional.conv1d(
+            functional.pad(inputs, (padding_total, extra)),
+            convolution.conv.conv.weight,
+            convolution.conv.conv.bias,
+            stride=4,
+        )
+        torch.testing.assert_close(convolution(inputs), reference)
 
 
 class NativeCSMDependencyTests(unittest.TestCase):
@@ -735,6 +910,37 @@ class NativeCSMCheckpointTests(unittest.TestCase):
             wrapper_logits = wrapper.model(tokens, mask).logits
         torch.testing.assert_close(restored_logits, expected, rtol=0, atol=0)
         torch.testing.assert_close(wrapper_logits, expected, rtol=0, atol=0)
+
+    def test_hub_snapshot_symlinks_load_as_local_runtime(self):
+        # ``huggingface-cli download`` snapshots link file names to
+        # suffix-less blobs elsewhere; resolving them lost ``.safetensors``
+        # and the folder that holds the tokenizer.
+        torch.manual_seed(31)
+        config = _portable_test_config()
+        model = CSMModel(config).eval()
+        tokens = torch.zeros(1, 3, config.num_audio_codebooks + 1, dtype=torch.long)
+        tokens[..., -1] = torch.tensor([[2, 3, 4]])
+        mask = torch.zeros_like(tokens, dtype=torch.bool)
+        mask[..., -1] = True
+        expected = model(tokens, mask).logits
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _write_test_tokenizer(root / "source-tokenizer.json")
+            processor = CSMProcessor(CSMTextTokenizer.from_file(root / "source-tokenizer.json"), config)
+            export = CSMRuntime(
+                model, processor, codec=None).save_pretrained(
+                    root / "export", include_codec=False)
+            blobs = root / "blobs"
+            snapshot = root / "snapshots" / "abc"
+            blobs.mkdir()
+            snapshot.mkdir(parents=True)
+            for index, name in enumerate(("model.safetensors", "tokenizer.json", "config.json")):
+                blob = blobs / f"{index:064x}"
+                (export / name).rename(blob)
+                (snapshot / name).symlink_to(blob)
+            restored = load_csm_runtime(snapshot, dtype="float32", include_codec=False)
+            restored_logits = restored.model(tokens, mask).logits
+        torch.testing.assert_close(restored_logits, expected, rtol=0, atol=0)
 
 
 class NativeCSMRuntimeBoundaryTests(unittest.TestCase):

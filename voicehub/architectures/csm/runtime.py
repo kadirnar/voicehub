@@ -18,6 +18,8 @@ from voicehub.architectures.csm.modeling import CSMModel
 from voicehub.architectures.csm.processing import CSMCodeSegment, CSMProcessor, CSMTextTokenizer
 from voicehub.audio import load_audio
 from voicehub.hub import read_json_file, write_json_file
+from voicehub.models.csm.source.moshi.utils.compile import no_compile
+from voicehub.processing.waveform import resample_waveform_hann
 
 
 @runtime_checkable
@@ -135,13 +137,25 @@ class CSMRuntime:
         loaded = load_audio(
             audio,
             sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
         )
-        waveform = loaded.waveform.to(
-            device=self.codec_device,
-            dtype=torch.float32,
-        )
-        codes = codec.encode(waveform.unsqueeze(0).unsqueeze(0))
+        waveform = loaded.waveform.to(dtype=torch.float32)
+        if loaded.sampling_rate != self.sample_rate:
+            # Sesame's README prepares context audio with
+            # ``torchaudio.functional.resample`` (Hann sinc, width 6,
+            # rolloff 0.99). Mimi codes are sensitive to the filter, so use
+            # the bit-compatible native kernel rather than the generic one.
+            waveform = resample_waveform_hann(
+                waveform,
+                loaded.sampling_rate,
+                self.sample_rate,
+                match="functional",
+            )
+        waveform = waveform.to(device=self.codec_device)
+        # Sesame's setup disables Moshi's lazy ``torch.compile`` in Mimi
+        # (``NO_TORCH_COMPILE=1``); compiled RoPE/gating kernels round
+        # differently, so keep the eager kernels the source runs.
+        with no_compile():
+            codes = codec.encode(waveform.unsqueeze(0).unsqueeze(0))
         if (codes.ndim != 3 or codes.shape[0] != 1 or
                 codes.shape[1] != self.model.config.num_audio_codebooks):
             raise RuntimeError("Mimi returned an incompatible CSM code tensor.")
@@ -195,7 +209,8 @@ class CSMRuntime:
             temperature=temperature,
             top_k=top_k,
         )
-        audio = codec.decode(codes.to(device=self.codec_device), ).squeeze(0).squeeze(0).float()
+        with no_compile():  # Eager Mimi, as in Sesame's setup (see above).
+            audio = codec.decode(codes.to(device=self.codec_device), ).squeeze(0).squeeze(0).float()
         postprocessed = False
         watermarked = False
         if self.audio_postprocessor is not None:

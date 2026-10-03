@@ -24,6 +24,7 @@ from voicehub.checkpointing import SafeTensorReader
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
 from voicehub.models.csm.source.moshi.models.compression import MimiModel
 from voicehub.models.csm.source.moshi.modules import SEANetDecoder, SEANetEncoder, transformer
+from voicehub.models.csm.source.moshi.modules.conv import StreamingConv1d
 from voicehub.models.csm.source.moshi.quantization import SplitResidualVectorQuantizer
 
 MIMI_SAMPLE_RATE = 24_000
@@ -117,7 +118,24 @@ def build_mimi(*, device: str | torch.device = "cpu") -> MimiModel:
             decoder_transformer=decoder_transformer,
         )
     codec.set_num_codebooks(MIMI_NUM_CODEBOOKS)
+    _use_csm_moshi_padding(codec)
     return codec
+
+
+def _use_csm_moshi_padding(codec: MimiModel) -> None:
+    """Encode partial final frames like the ``moshi==0.2.2`` CSM pins.
+
+    The retained Moshi graph is a later release that zero-pads the
+    waveform to a whole 80 ms frame before the encoder. Sesame's pinned
+    release instead right-pads each causal convolution, which yields
+    different codes for the last, partial frame of every context
+    segment.
+    """
+    codec.legacy_encoder_padding = True
+    for part in (codec.encoder, codec.downsample):
+        for module in part.modules():
+            if isinstance(module, StreamingConv1d):
+                module.legacy_right_padding = True
 
 
 def _inventory_fingerprint(reader: SafeTensorReader) -> str:
@@ -197,9 +215,10 @@ def load_mimi_checkpoint(
     require_official_inventory: bool = True,
 ) -> MimiCheckpointReport:
     """Validate the complete Mimi header, then stream-copy its tensors."""
-    source = Path(path).expanduser().resolve()
-    if source.suffix.lower() != ".safetensors":
+    # Check the given name: Hub snapshot symlinks point at suffix-less blobs.
+    if Path(path).suffix.lower() != ".safetensors":
         raise ValueError("Native Mimi checkpoints must use Safetensors.")
+    source = Path(path).expanduser().resolve()
     with SafeTensorReader(source) as reader:
         tensor_map = _validate_mimi_layout(codec, reader)
         parameter_count = sum(reader.record(name).number_of_elements for name in reader.keys())
