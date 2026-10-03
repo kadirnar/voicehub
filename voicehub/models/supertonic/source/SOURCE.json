@@ -2,7 +2,26 @@
   "architecture_source": {
     "license": "MIT",
     "repository": "https://github.com/supertone-inc/supertonic",
-    "revision": "7e2804f96016a7028cb1ed627353c61c1e9dd281"
+    "revision": "7e2804f96016a7028cb1ed627353c61c1e9dd281",
+    "vendored_files": {
+      "import_rewrites": {
+        "supertonic": "voicehub.models.supertonic.source.supertonic"
+      },
+      "upstream_directory": "py",
+      "upstream_git_blob_sha1": {
+        "supertonic/README.md": "9985439dd540970fa0a4da89d24db4d4ec6c1ad4",
+        "supertonic/example_onnx.py": "0c09720c54950e531ef1e480eae6855ed3c18e36",
+        "supertonic/example_pypi.py": "d1c1c6f08cddc02b4a6be0f299d8894937ca553a",
+        "supertonic/helper.py": "ff9e4dac3158a332e3179e268c7cadb095c1a59e",
+        "supertonic/pyproject.toml": "09aa437d78223ddf8483279e7c32aab31a37bfe8",
+        "supertonic/requirements.txt": "5f7d78b93a056533c9e85b137331104a6ce194a0",
+        "supertonic/uv.lock": "9130dd24c8ccccc809ecc76220de740cbac8f301"
+      },
+      "voicehub_added": [
+        "__init__.py",
+        "supertonic/__init__.py"
+      ]
+    }
   },
   "checkpoint": {
     "format": "onnx",
@@ -17,6 +36,9 @@
   "upstream": "https://github.com/supertone-inc/supertonic",
   "voicehub_port": {
     "author_training_recipe_published": false,
+    "deviations": [
+      "Multi-chunk synthesis trims each chunk to its predicted duration before inserting the inter-chunk silence. Upstream TextToSpeech.__call__ concatenates the padded chunk waveforms and example_onnx.py trims only the joined result, which keeps earlier chunks' vocoder padding and drops the same number of real samples from the end. The vendored upstream files are kept unmodified; this deviation lives only in the VoiceHub runtime."
+    ],
     "limitations": [
       "The released repository contains inference graphs but no audio encoder, trainable style encoder path, optimizer configuration, dataset pipeline, or complete author training recipe.",
       "Fine-tuning therefore requires precomputed style tensors and duration and/or latent targets.",
