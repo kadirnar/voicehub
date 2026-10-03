@@ -19,9 +19,10 @@ def normalize_model_source(value: str | Path) -> str:
     """Normalize an explicit local source while preserving Hub identifiers.
 
     Local paths are made absolute without following symlinks. Hub-cache
-    snapshot entries are symlinks to suffix-less content blobs, so resolving
-    them would lose the filename and the sibling files of the snapshot.
-    Resolve explicitly where a containment or identity check needs it.
+    snapshot entries are symlinks to suffix-less content blobs, so
+    resolving them would lose the filename and the sibling files of the
+    snapshot. Resolve explicitly where a containment or identity check
+    needs it.
     """
     if not isinstance(value, (str, Path)):
         raise TypeError("A model source must be a string or pathlib.Path.")
