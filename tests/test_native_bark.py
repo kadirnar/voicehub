@@ -203,6 +203,127 @@ class NativeBarkTests(unittest.TestCase):
             )
         self.assertEqual(generated[0, -4:].tolist(), [8, 12, 8, 12])
 
+    def test_sampling_follows_upstream_filter_order_and_eos_rule(self):
+        import torch
+
+        from voicehub.architectures.bark.modeling import _filter_logits, _split_options
+
+        logits = torch.tensor([[2.0, 1.0, 0.0, -1.0]])
+        # Upstream applies top-p to the unscaled distribution (p = .64, .24,
+        # .09, .03): top_p=0.8 keeps two tokens at any temperature.
+        filtered = _filter_logits(logits, temperature=0.1, top_k=0, top_p=0.8)
+        self.assertEqual(torch.isfinite(filtered).sum().item(), 2)
+        torch.testing.assert_close(filtered[0, :2], logits[0, :2] / 0.1)
+
+        semantic, coarse, fine = _split_options({
+            "temperature": 0.9,
+            "min_eos_p": 0.3,
+            "fine_temperature": 0.4,
+        })
+        self.assertEqual(semantic, {"temperature": 0.9, "min_eos_p": 0.3})
+        self.assertEqual(coarse, {"temperature": 0.9})
+        # The fine stage keeps its own temperature, as in generate_audio().
+        self.assertEqual(fine, {"temperature": 0.4})
+        self.assertEqual(_split_options({"temperature": 0.9})[2], {})
+
+    def test_min_eos_p_uses_the_temperature_scaled_distribution(self):
+        import torch
+
+        from voicehub.architectures.bark.modeling import BarkModel
+
+        architecture, generation = self._tiny_config()
+        model = BarkModel(architecture, generation_config=generation).eval()
+        semantic = model.semantic
+        # EOS (id 10) has probability ~0.27 at temperature 1 but ~0.12 at
+        # temperature 0.5: upstream keeps sampling at 0.5, whereas a check
+        # on the unscaled logits would stop immediately.
+        bias = torch.full((12, ), -30.0)
+        bias[3] = 1.0
+        bias[10] = 0.0
+        with torch.no_grad():
+            for parameter in semantic.parameters():
+                parameter.zero_()
+            semantic.lm_head = torch.nn.Linear(8, 12, bias=True)
+            semantic.lm_head.weight.zero_()
+            semantic.lm_head.bias.copy_(bias)
+
+            def run(temperature):
+                return semantic._autoregressive_generate(
+                    torch.tensor([[1]]),
+                    max_new_tokens=3,
+                    do_sample=False,
+                    temperature=temperature,
+                    top_k=0,
+                    top_p=1.0,
+                    eos_token_id=10,
+                    min_eos_p=0.2,
+                    allowed_token_range=(0, 11),
+                )[0, 1:].tolist()
+
+            self.assertEqual(run(0.5), [3, 3, 3])
+            self.assertEqual(run(1.0), [10])
+
+    def test_fine_temperature_one_samples_instead_of_argmax(self):
+        import torch
+
+        from voicehub.architectures.bark.modeling import BarkModel
+
+        architecture, generation = self._tiny_config()
+        torch.manual_seed(0)
+        model = BarkModel(architecture, generation_config=generation).eval()
+        coarse = torch.tensor([[10, 18, 11, 19, 12, 20, 13, 21]])
+        calls = []
+        original = torch.multinomial
+
+        def record(*args, **kwargs):
+            calls.append(args[0].shape)
+            return original(*args, **kwargs)
+
+        torch.multinomial = record
+        try:
+            model.fine_acoustics.generate(
+                coarse,
+                semantic_config=generation.semantic,
+                coarse_config=generation.coarse,
+                generation_config=generation.fine,
+                codebook_size=generation.codebook_size,
+                temperature=1.0,
+            )
+        finally:
+            torch.multinomial = original
+        self.assertTrue(calls)
+
+    def test_transformers_generation_defaults_do_not_override_upstream_sampling(self):
+        from voicehub.architectures.bark.configuration import BarkGenerationConfig
+
+        published = {
+            "sample_rate": 24_000,
+            "codebook_size": 1024,
+            "semantic_config": {
+                "temperature": 0.7,
+                "top_k": 50,
+                "top_p": 1.0,
+                "transformers_version": "4.31.0.dev0",
+            },
+            "coarse_acoustics_config": {
+                "temperature": 0.7,
+                "top_k": 50,
+                "transformers_version": "4.31.0.dev0",
+            },
+            "fine_acoustics_config": {
+                "temperature": 0.5,
+                "transformers_version": "4.31.0.dev0",
+            },
+        }
+        config = BarkGenerationConfig.from_dict(published)
+        self.assertEqual(config.semantic.top_k, 0)
+        self.assertEqual(config.semantic.min_eos_p, 0.2)
+        self.assertEqual(config.coarse.top_k, 0)
+        self.assertEqual(config.fine.temperature, 0.5)
+        # VoiceHub's own serialized settings round-trip unchanged.
+        config.semantic.top_k = 7
+        self.assertEqual(BarkGenerationConfig.from_dict(config.to_dict()).semantic.top_k, 7)
+
     def test_safe_export_reconstructs_config_and_exact_state(self):
         import torch
 
