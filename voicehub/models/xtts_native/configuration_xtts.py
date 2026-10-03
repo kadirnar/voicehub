@@ -18,6 +18,7 @@ class XTTSConfig(VoiceHubConfig):
         revision: str | None = XTTS2_CHECKPOINT_REVISION,
         cache_dir: str | Path | None = None,
         local_files_only: bool = False,
+        trust_pickle_checkpoint: bool = False,
         torch_dtype: str = "float32",
         training_text_loss_weight: float = 0.01,
         training_mel_loss_weight: float = 1.0,
@@ -32,6 +33,7 @@ class XTTSConfig(VoiceHubConfig):
         self.revision = revision
         self.cache_dir = None if cache_dir is None else str(Path(cache_dir).expanduser())
         self.local_files_only = local_files_only
+        self.trust_pickle_checkpoint = trust_pickle_checkpoint
         self.torch_dtype = torch_dtype
         self.training_text_loss_weight = training_text_loss_weight
         self.training_mel_loss_weight = training_mel_loss_weight
@@ -53,6 +55,8 @@ class XTTSConfig(VoiceHubConfig):
             self.revision = self.revision.strip()
         if not isinstance(self.local_files_only, bool):
             raise TypeError("XTTS `local_files_only` must be a boolean.")
+        if not isinstance(self.trust_pickle_checkpoint, bool):
+            raise TypeError("XTTS `trust_pickle_checkpoint` must be a boolean.")
         if self.sample_rate != 24_000:
             raise ValueError("XTTS v2 produces audio at 24,000 Hz.")
         if self.torch_dtype not in {"float32", "float16", "bfloat16"}:
