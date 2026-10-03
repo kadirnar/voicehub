@@ -171,9 +171,11 @@ print(json.dumps({
             [False, True, True, True, False, True, False],
         )
         boundaries = inference.boundaries(decisions, probabilities=probabilities)
+        # SpeechBrain's get_boundaries keeps the single active frame as a
+        # zero-length interval; only the length filter removes it.
         self.assertEqual(
             [(item.start, item.end) for item in boundaries],
-            [(0.01, 0.03)],
+            [(0.01, 0.03), (0.05, 0.05)],
         )
         self.assertEqual(
             inference.remove_short(
@@ -182,6 +184,26 @@ print(json.dumps({
             ),
             (),
         )
+
+    def test_single_frame_activity_bridges_close_segments_like_speechbrain(self):
+        model = SpeechBrainCRDNNVADModel(SpeechBrainCRDNNVADConfig()).eval()
+        inference = SpeechBrainVADInference(model)
+        # 30 active frames, 20 silent, one active, 20 silent, 30 active.
+        probabilities = torch.tensor([0.9] * 30 + [0.1] * 20 + [0.9] + [0.1] * 20 + [0.9] * 30)
+        decisions = inference.threshold(
+            probabilities,
+            activation_threshold=0.5,
+            deactivation_threshold=0.25,
+        )
+        boundaries = inference.boundaries(decisions)
+        self.assertEqual(len(boundaries), 3)
+        self.assertEqual(boundaries[1].start, boundaries[1].end)
+        merged = inference.merge_close(boundaries, maximum_gap=0.25)
+        # Upstream (e5cb1f65) returns [[0.0, 0.99]]: both 0.21 s gaps merge
+        # through the zero-length interval at 0.50 s.
+        self.assertEqual(len(merged), 1)
+        self.assertAlmostEqual(merged[0].start, 0.0)
+        self.assertAlmostEqual(merged[0].end, 0.99)
 
     def test_frontend_clips_top_db_per_sequence_independent_of_batch(self):
         frontend = SpeechBrainCRDNNVADModel(SpeechBrainCRDNNVADConfig()).frontend
