@@ -282,6 +282,26 @@ class ESPnetUpstreamBeamSearchParityTests(unittest.TestCase):
             reference, _ = upstream(np.array([5, token]), candidates.numpy(), up_states[token])
             np.testing.assert_allclose(single.numpy(), reference, rtol=1e-5, atol=1e-3)
 
+    def test_frontend_builds_the_stft_window_on_the_input_device(self):
+        # ESPnet's Stft calls torch.hann_window(win_length, dtype, device)
+        # per forward; a CPU-built window moved to CUDA differs by one ulp.
+        from unittest import mock
+
+        from voicehub.architectures.espnet_transformer.frontend import ESPnetDefaultFrontend
+
+        frontend = ESPnetDefaultFrontend(_config())
+        self.assertNotIn("_window", dict(frontend.named_buffers()))
+        calls = []
+        original = torch.hann_window
+
+        def recording_window(*args, **kwargs):
+            calls.append(kwargs)
+            return original(*args, **kwargs)
+
+        with mock.patch.object(torch, "hann_window", recording_window):
+            frontend(torch.randn(1, 64, dtype=torch.float64).float())
+        self.assertEqual(calls, [{"dtype": torch.float32, "device": torch.device("cpu")}])
+
     def test_end_detect_matches_upstream(self):
         rng = np.random.default_rng(0)
         for _ in range(200):

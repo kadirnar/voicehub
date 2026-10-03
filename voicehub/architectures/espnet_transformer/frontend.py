@@ -63,15 +63,8 @@ class ESPnetDefaultFrontend(nn.Module):
     """Hann STFT, power spectrum, and checkpoint-stored log-mel bank."""
 
     def __init__(self, config: ESPnetLibriSpeechTransformerConfig) -> None:
-        import torch
-
         super().__init__()
         self.config = ESPnetLibriSpeechTransformerConfig.coerce(config)
-        self.register_buffer(
-            "_window",
-            torch.hann_window(self.config.win_length),
-            persistent=False,
-        )
         self.logmel = ESPnetLogMel(self.config)
 
     def forward(
@@ -112,7 +105,13 @@ class ESPnetDefaultFrontend(nn.Module):
             n_fft=self.config.n_fft,
             hop_length=self.config.hop_length,
             win_length=self.config.win_length,
-            window=self._window.to(device=values.device, dtype=values.dtype),
+            # ESPnet's ``Stft`` builds the window on the input device for
+            # every call; a CPU-built window differs by one ulp on CUDA.
+            window=torch.hann_window(
+                self.config.win_length,
+                dtype=values.dtype,
+                device=values.device,
+            ),
             center=self.config.center,
             pad_mode=self.config.pad_mode,
             normalized=self.config.normalized_stft,
