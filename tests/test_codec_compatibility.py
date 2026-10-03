@@ -99,6 +99,50 @@ class CodecCompatibilityTests(unittest.TestCase):
         measured = integrated_loudness(normalized, sample_rate)
         self.assertAlmostEqual(float(measured.item()), -20.0, places=2)
 
+    def test_loudness_matches_audiotools_meter(self):
+        import math
+
+        import torch
+
+        from voicehub.components.audio.codecs._compat import AudioSignal, integrated_loudness
+
+        def tone(frequency, seconds, amplitude, rate):
+            time = torch.arange(int(seconds * rate), dtype=torch.float64) / rate
+            return amplitude * torch.sin(2 * math.pi * frequency * time)
+
+        chirp_time = torch.arange(int(1.13 * 24_000), dtype=torch.float64) / 24_000
+        # Expected values from audiotools 0.7.2 ``AudioSignal(x, rate).loudness()`` on CPU.
+        cases = {
+            # Shorter than 0.5 s: audiotools zero-pads to 0.5 s before metering.
+            "short_mono": (tone(440.0, 0.2, 0.05, 16_000)[None, None], 16_000, -34.018470764160156),
+            # The last 400 ms gating block is partial and must be zero-padded, not dropped.
+            "stereo_partial_block": (
+                torch.stack([
+                    0.2 * torch.sin(2 * math.pi * (50 * chirp_time + 4000 * chirp_time**2)),
+                    tone(700.0, 1.13, 0.1, 24_000),
+                ])[None],
+                24_000,
+                -13.6265869140625,
+            ),
+            # Surround channels are weighted by 1.41, as in audiotools.
+            "five_channels": (
+                torch.stack([tone(100.0 * (index + 1), 1.0, 0.05 * (index + 1), 16_000)
+                             for index in range(5)])[None],
+                16_000,
+                -11.228500366210938,
+            ),
+        }
+        for name, (audio, rate, expected) in cases.items():
+            audio = audio.float()
+            with self.subTest(signal=name):
+                self.assertAlmostEqual(integrated_loudness(audio, rate).item(), expected, delta=2e-5)
+                self.assertAlmostEqual(AudioSignal(audio, rate).loudness().item(), expected, delta=2e-5)
+
+        audio = cases["stereo_partial_block"][0].float().requires_grad_()
+        integrated_loudness(audio, 24_000).sum().backward()
+        self.assertTrue(bool(torch.isfinite(audio.grad).all()))
+        self.assertGreater(float(audio.grad.abs().sum()), 0.0)
+
     def test_short_audio_signal_keeps_its_original_length(self):
         import torch
 
