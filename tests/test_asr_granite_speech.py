@@ -311,6 +311,18 @@ class GraniteSpeechConfigurationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Safetensors"):
             GraniteSpeechASRConfig(use_safetensors=False)
 
+    def test_default_prompt_is_the_model_card_raw_transcription_prompt(self):
+        from voicehub.architectures.granite_speech.processing import DEFAULT_TRANSCRIPTION_PROMPT
+
+        published = ("<|audio|>can you transcribe the speech into a written format?")
+        self.assertEqual(GraniteSpeechASRConfig().transcription_prompt, published)
+        self.assertEqual(DEFAULT_TRANSCRIPTION_PROMPT, published)
+        self.assertEqual(
+            GraniteSpeechProcessor.render_instruction(GraniteSpeechProcessor.instruction_prompt(None), ),
+            "USER: <|audio|>can you transcribe the speech into a written format?"
+            "\n ASSISTANT:",
+        )
+
     def test_official_checkpoint_namespace_is_exact(self):
         shapes = native_granite_speech_tensor_shapes(_official_config(), )
         self.assertEqual(len(shapes), 954)
@@ -627,6 +639,36 @@ class GraniteSpeechNativeRuntimeTests(unittest.TestCase):
             rtol=0.0,
             atol=float32_epsilon,
         )
+
+    def test_conformer_attention_pins_the_reference_math_kernel(self):
+        from unittest import mock
+
+        from voicehub.architectures.granite_speech import modeling
+        from voicehub.architectures.granite_speech.modeling import GraniteSpeechCTCEncoder
+
+        real_attention = modeling.functional.scaled_dot_product_attention
+        backends = []
+
+        def recording_attention(*args, **kwargs):
+            backends.append((
+                torch.backends.cuda.math_sdp_enabled(),
+                torch.backends.cuda.flash_sdp_enabled(),
+                torch.backends.cuda.mem_efficient_sdp_enabled(),
+                torch.backends.cuda.cudnn_sdp_enabled(),
+            ))
+            return real_attention(*args, **kwargs)
+
+        encoder = GraniteSpeechCTCEncoder(_tiny_config().encoder_config, ).eval()
+        with mock.patch.object(
+                modeling.functional,
+                "scaled_dot_product_attention",
+                recording_attention,
+        ):
+            encoder(torch.randn(1, 7, 160))
+        # Fused kernels round the relative-position-biased attention
+        # differently from the reference's pinned math kernel.
+        self.assertEqual(len(backends), encoder.num_layers)
+        self.assertEqual(set(backends), {(True, False, False, False)})
 
     @unittest.skipUnless(
         TRANSFORMERS_AVAILABLE,
