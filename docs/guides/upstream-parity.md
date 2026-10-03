@@ -122,7 +122,14 @@ list. Every sample includes `id` and `warm_seconds`.
 
 - TTS adds `audio` (an absolute path to a NumPy array saved without pickle) and
   `sample_rate`. Keep WAV copies for listening.
-- ASR adds `text` and the matching `reference` transcript.
+- ASR adds `text` and the matching `reference` transcript. The runner
+  compares `text` only. The generic VoiceHub worker also reports, when the
+  model returns them, the detected `language`, timestamped `segments` as
+  `[start_seconds, end_seconds, text]` rows (plus `segment_speakers`, one label
+  per segment, when any segment has a speaker) and `words` as
+  `[text, start_seconds, end_seconds]` rows (plus `word_confidences`, one score
+  per word, when any word has one). Upstream recipes should write the same keys
+  and shapes so the fields can be compared.
 - VAD adds `segments` as `[start_seconds, end_seconds]` pairs and optionally
   `probabilities`.
 

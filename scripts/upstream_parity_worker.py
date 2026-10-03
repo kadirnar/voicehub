@@ -97,6 +97,38 @@ def tts_inputs(request, sample):
     return text, kwargs
 
 
+def asr_result(output, reference):
+    """Return the comparable fields of one VoiceHub ``ASROutput``.
+
+    ``text`` and ``reference`` are always present; the runner compares
+    ``text``. Everything else is reported only when the model returns it,
+    in the shapes upstream recipes write, so recipes can compare them:
+
+    - ``language``: the detected (or requested) language code.
+    - ``segments``: ``[start, end, text]`` rows. ``segment_speakers`` lists
+      one speaker label (or ``None``) per segment when any segment has one.
+    - ``words``: ``[text, start, end]`` rows over all segments.
+      ``word_confidences`` lists one score (or ``None``) per word when any
+      word has one.
+    """
+    result = {"text": output.text, "reference": reference}
+    if output.language is not None:
+        result["language"] = output.language
+    segments = output.segments
+    if segments:
+        result["segments"] = [[segment.start, segment.end, segment.text] for segment in segments]
+        speakers = [segment.speaker for segment in segments]
+        if any(speaker is not None for speaker in speakers):
+            result["segment_speakers"] = speakers
+    words = [word for segment in segments for word in segment.words]
+    if words:
+        result["words"] = [[word.text, word.start, word.end] for word in words]
+        confidences = [word.confidence for word in words]
+        if any(confidence is not None for confidence in confidences):
+            result["word_confidences"] = confidences
+    return result
+
+
 def prepare(request, side):
     import numpy as np
     import torch
@@ -141,7 +173,7 @@ def prepare(request, side):
                 sample["waveform"])
             if request["task"] == "asr":
                 out = model.transcribe(audio, sampling_rate=sample["sampling_rate"], **generation)
-                return {"text": out.text, "reference": sample["reference"]}
+                return asr_result(out, sample["reference"])
             out = model.detect(audio, sampling_rate=sample["sampling_rate"], **generation)
             result = {
                 "segments": [[s.start, s.end] for s in out.segments],
