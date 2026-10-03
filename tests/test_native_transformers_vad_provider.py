@@ -253,7 +253,10 @@ class NativeTransformersVADProviderTests(unittest.TestCase):
             with self.subTest(extra=extra):
                 config = _tiny_config(
                     architecture="Wav2Vec2ForAudioFrameClassification",
-                    extra={"id2label": labels, **extra},
+                    extra={
+                        "id2label": labels,
+                        **extra
+                    },
                 )
                 self.assertEqual(config.num_labels, 3)
 
@@ -322,14 +325,14 @@ class NativeTransformersVADProviderTests(unittest.TestCase):
 
     def test_multiclass_checkpoint_requires_explicit_speech_label(self):
         wrapper = TransformersVADForVoiceActivityDetection(TransformersVADConfig())
+        # Numeric speech labels must match exactly, not as a token of generic
+        # or speaker names.
         for labels in (
             {
                 0: "music",
                 1: "noise",
                 2: "silence",
             },
-            # Numeric speech labels must match exactly, not as a token of
-            # generic or speaker names.
             {
                 "0": "LABEL_0",
                 "1": "LABEL_1",
@@ -347,19 +350,21 @@ class NativeTransformersVADProviderTests(unittest.TestCase):
 
     def test_single_logit_and_negative_labels_resolve_the_positive_class(self):
         wrapper = TransformersVADForVoiceActivityDetection(TransformersVADConfig())
-        wrapper.native_config = SimpleNamespace(extra_config={"id2label": {
-            "0": "speech",
-            "1": "non-speech",
-        }})
+        wrapper.native_config = SimpleNamespace(
+            extra_config={"id2label": {
+                "0": "speech",
+                "1": "non-speech",
+            }})
 
         self.assertEqual(wrapper._speech_class_id(1), 0)
         self.assertEqual(wrapper._speech_class_id(2), 0)
 
-        wrapper.native_config = SimpleNamespace(extra_config={"id2label": {
-            "0": "silence",
-            "1": "voice_activity",
-            "2": "1",
-        }})
+        wrapper.native_config = SimpleNamespace(
+            extra_config={"id2label": {
+                "0": "silence",
+                "1": "voice_activity",
+                "2": "1",
+            }})
         self.assertEqual(wrapper._speech_class_id(3), 1)
         wrapper.native_config = SimpleNamespace(extra_config={"id2label": {
             "0": "0",
