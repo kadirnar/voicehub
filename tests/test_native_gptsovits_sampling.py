@@ -1,4 +1,5 @@
-"""Regression tests: native GPT-SoVITS S1 sampling matches the released sampler.
+"""Regression tests: native GPT-SoVITS S1 sampling matches the released
+sampler.
 
 The reference below is a verbatim transcription of upstream
 ``GPT_SoVITS/AR/models/utils.py`` (``logits_to_probs`` and

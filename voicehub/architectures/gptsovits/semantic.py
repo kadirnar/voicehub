@@ -84,13 +84,15 @@ def _sample_next_token(
     temperature: float,
     repetition_penalty: float,
 ) -> Tensor:
-    """Sample one semantic token exactly like upstream ``AR.models.utils.sample``.
+    """Sample one semantic token exactly like upstream
+    ``AR.models.utils.sample``.
 
-    The repetition penalty is written into ``logits`` in place because the
-    upstream EOS check takes the greedy argmax of the penalized scores. Then
-    top-p is applied to the untempered scores, followed by temperature and
-    top-k, and the token is drawn with the exponential-race sampler, which
-    consumes the random generator exactly as the released inference does.
+    The repetition penalty is written into ``logits`` in place because
+    the upstream EOS check takes the greedy argmax of the penalized
+    scores. Then top-p is applied to the untempered scores, followed by
+    temperature and top-k, and the token is drawn with the exponential-
+    race sampler, which consumes the random generator exactly as the
+    released inference does.
     """
     if previous_tokens.numel() and repetition_penalty != 1.0:
         score = torch.gather(logits, 1, previous_tokens)
