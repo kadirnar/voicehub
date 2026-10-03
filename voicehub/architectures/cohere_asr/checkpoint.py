@@ -249,7 +249,8 @@ class CohereAsrCheckpointAdapter(CheckpointAdapter):
                     assign=True,
                 )
         model.tie_weights()
-        remaining = tuple(name for name, value in model.state_dict().items() if value.device.type == "meta")
+        remaining = tuple(
+            name for name, value in (*model.named_parameters(), *model.named_buffers()) if value.device.type == "meta")
         if remaining:
             raise CheckpointCompatibilityError(
                 "Cohere ASR checkpoint assignment left meta tensors: " + ", ".join(remaining[:5]))

@@ -193,13 +193,16 @@ class RelPositionalEncoding(nn.Module):
 
     def __init__(self, hidden_size: int) -> None:
         super().__init__()
+        self.hidden_size = hidden_size
+
+    def _inverse_frequency(self, device: torch.device) -> torch.Tensor:
+        # Computed on CPU in float32 like the reference initializer, and
+        # deliberately not a buffer: the runtime builds the graph on the
+        # meta device and only assigns checkpoint tensors, so a
+        # non-persistent buffer would stay on meta after loading.
         inverse_frequency = 1.0 / (
-            10_000.0**(torch.arange(0, hidden_size, 2, dtype=torch.float32) / hidden_size))
-        self.register_buffer(
-            "_inverse_frequency",
-            inverse_frequency,
-            persistent=False,
-        )
+            10_000.0**(torch.arange(0, self.hidden_size, 2, dtype=torch.float32) / self.hidden_size))
+        return inverse_frequency.to(device)
 
     @torch.no_grad()
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -213,7 +216,7 @@ class RelPositionalEncoding(nn.Module):
         )
         frequencies = torch.outer(
             positions,
-            self._inverse_frequency.to(hidden_states.device),
+            self._inverse_frequency(hidden_states.device),
         )
         positional = torch.stack(
             (frequencies.sin(), frequencies.cos()),

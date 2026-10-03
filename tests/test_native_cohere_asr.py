@@ -865,6 +865,52 @@ class CohereAsrArtifactTests(unittest.TestCase):
                 reloaded.model.transf_decoder._embedding.token_embedding.weight,
             )
 
+    def test_meta_loaded_runtime_runs_inference_like_the_source_graph(self):
+        # The loader builds the graph on the meta device and assigns only
+        # checkpoint tensors; nothing used at inference may stay on meta.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            runtime = _runtime(root / "source")
+            runtime.model.eval()
+            destination = save_cohere_asr_runtime(runtime, root / "export")
+            reloaded = load_cohere_asr_runtime(
+                destination,
+                device="cpu",
+                compute_dtype="float32",
+            )
+
+            self.assertFalse([
+                name for name, value in (*reloaded.model.named_parameters(), *reloaded.model.named_buffers())
+                if value.is_meta
+            ])
+            prepared = runtime.processor(
+                torch.linspace(-0.3, 0.3, 96),
+                language="en",
+                sampling_rate=16_000,
+            )
+            arguments = (
+                prepared["input_features"],
+                prepared["attention_mask"],
+                prepared["decoder_input_ids"],
+            )
+            expected = runtime.model.generate(*arguments, max_new_tokens=3)
+            actual = reloaded.model.generate(*arguments, max_new_tokens=3)
+            self.assertEqual(actual.sequences.tolist(), expected.sequences.tolist())
+            torch.testing.assert_close(
+                reloaded.model(
+                    input_features=arguments[0],
+                    attention_mask=arguments[1],
+                    decoder_input_ids=arguments[2],
+                ).logits,
+                runtime.model(
+                    input_features=arguments[0],
+                    attention_mask=arguments[1],
+                    decoder_input_ids=arguments[2],
+                ).logits,
+                rtol=0,
+                atol=0,
+            )
+
     def test_malformed_exports_leave_no_partial_destination(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
