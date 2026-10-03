@@ -207,9 +207,17 @@ class XTTSForTextToSpeech(PreTrainedTTSModel):
         if not self.config.trust_pickle_checkpoint:
             raise _legacy_checkpoint_error(source)
         # Fetch only what inference reads (not dvae.pth, speakers, samples).
+        paths = [config_path]
         for filename in ("vocab.json", _LEGACY_CHECKPOINT):
-            resolve_pretrained_file(source, filename, **download)
-        return config_path.parent
+            paths.append(resolve_pretrained_file(source, filename, **download))
+        # Offline resolution may serve each file from a different cache
+        # (VoiceHub's or huggingface_hub's); load from one complete copy.
+        for directory in dict.fromkeys(path.parent for path in paths):
+            if all((directory / path.name).is_file() for path in paths):
+                return directory
+        raise FileNotFoundError(
+            f"XTTS v2 files for {str(source)!r} were resolved from different "
+            f"cache snapshots: {', '.join(str(path) for path in paths)}.")
 
     def _convert_legacy_checkpoint(self, legacy_path: Path) -> Path:
         if not legacy_path.is_file():

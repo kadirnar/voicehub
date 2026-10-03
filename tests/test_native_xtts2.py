@@ -537,6 +537,33 @@ class XTTSLegacyCheckpointLoadingTests(unittest.TestCase):
         load_xtts2_checkpoint(nn.ModuleDict({"gpt": nn.ModuleDict({"text_head": target})}), converted)
         torch.testing.assert_close(target.weight, self.state["gpt.text_head.weight"])
 
+    def test_trusted_hub_checkpoint_uses_one_complete_cache_snapshot(self):
+        # Offline, config.json may come from VoiceHub's cache while the
+        # other files come from a huggingface_hub snapshot.
+        partial = self.root / "partial"
+        partial.mkdir()
+        (partial / "config.json").write_text("{}", encoding="utf-8")
+        self._mock_hub()
+
+        def download_file(repo_id, filename, *, subfolder="", **kwargs):
+            if filename == "config.json":
+                return partial / filename
+            path = self.repository / subfolder / filename
+            if not path.is_file():
+                raise FileNotFoundError(f"Could not find the requested Hub file: {filename}.")
+            return path
+
+        model = XTTSForTextToSpeech(
+            model_path="acme/xtts",
+            device="cpu",
+            trust_pickle_checkpoint=True,
+        )
+        with patch("voicehub.hub.download_hugging_face_file", side_effect=download_file):
+            self.assertEqual(model._resolve_artifact_directory(), self.repository)
+            (self.repository / "config.json").unlink()
+            with self.assertRaisesRegex(FileNotFoundError, "different cache snapshots"):
+                model._resolve_artifact_directory()
+
     def test_configuration_rejects_non_boolean_trust(self):
         with self.assertRaisesRegex(TypeError, "trust_pickle_checkpoint"):
             XTTSForTextToSpeech(device="cpu", trust_pickle_checkpoint="yes")
