@@ -70,15 +70,48 @@ class NeuTTSBackbone(CausalLMForCausalLM):
             device=device,
             dtype=dtype,
         )
+        # The published runtime builds its rotary frequencies on the CPU and
+        # moves the model afterwards. CUDA's float32 ``pow`` differs from the
+        # CPU result in the last bit for some frequencies, which changes
+        # bf16 query/key rotations and therefore sampled tokens.
         factor = config.linear_rope_factor
-        if factor is not None:
-            for layer in self.model.layers:
-                layer.self_attn.rotary = LinearScalingRotaryEmbedding(
+        for layer in self.model.layers:
+            if factor is None:
+                rotary = RotaryEmbedding(
+                    self.config.head_dim,
+                    base=self.config.rope_theta,
+                    scaling=self.config.rope_scaling,
+                )
+            else:
+                rotary = LinearScalingRotaryEmbedding(
                     self.config.head_dim,
                     base=self.config.rope_theta,
                     factor=factor,
-                    device=device,
                 )
+            layer.self_attn.rotary = rotary if device is None else rotary.to(device)
+
+    def next_token_logits(
+        self,
+        token_ids: Tensor,
+        *,
+        cache: Any | None,
+        use_cache: bool,
+    ) -> tuple[Tensor, Any | None]:
+        """Project only the last position, as the published sampler does.
+
+        The upstream generation loop computes the vocabulary projection
+        for the final prompt position alone. Projecting every prompt
+        position runs a differently shaped bf16 matrix product whose
+        last row can differ in the final bit.
+        """
+        output = self.model(
+            token_ids,
+            past_key_values=cache,
+            use_cache=use_cache,
+        )
+        hidden_states = output.last_hidden_state[:, -1:, :]
+        logits = (self.lm_head(hidden_states) / self.config.logits_scaling).float()
+        return logits, output.past_key_values
 
     def save_pretrained(self, directory: str | Path) -> Path:
         """Export exact upstream config semantics plus safe native weights."""
@@ -373,16 +406,12 @@ class NeuTTSRuntime(nn.Module):
         speech_end_id = self.tokenizer.convert_tokens_to_ids(SPEECH_GENERATION_END)
 
         def decoder_step(step: GenerationStepInput) -> GenerationStepOutput:
-            output = self.backbone(
+            logits, cache = self.backbone.next_token_logits(
                 step.token_ids,
-                attention_mask=None,
-                past_key_values=step.cache,
+                cache=step.cache,
                 use_cache=step.use_cache,
             )
-            return GenerationStepOutput(
-                logits=output.logits,
-                cache=output.past_key_values,
-            )
+            return GenerationStepOutput(logits=logits, cache=cache)
 
         available = self.max_context - input_ids.shape[-1]
         if available <= 0:

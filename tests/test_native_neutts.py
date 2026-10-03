@@ -470,6 +470,75 @@ class NativeNeuTTSTests(unittest.TestCase):
         self.assertIsNotNone(model.model.embed_tokens.weight.grad)
         self.assertIsNotNone(model.lm_head.weight.grad)
 
+    def test_rotary_frequencies_are_computed_like_the_published_cpu_load(self):
+        import torch
+
+        from voicehub.architectures.neutts.configuration import NeuTTSBackboneConfig
+        from voicehub.architectures.neutts.modeling import NeuTTSBackbone
+
+        values = dict(
+            _tiny_backbone_values(),
+            head_dim=128,
+            num_attention_heads=1,
+            hidden_size=128,
+            rope_theta=10_000.0,
+        )
+        config = NeuTTSBackboneConfig.from_dict(values)
+        # transformers builds `inv_freq` on the CPU before `.to(device)`.
+        expected = 1.0 / (10_000.0**(torch.arange(0, 128, 2, dtype=torch.int64).float() / 128))
+        devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
+        for device in devices:
+            with self.subTest(device=device):
+                model = NeuTTSBackbone(config, device=device)
+                rotary = model.model.layers[0].self_attn.rotary
+                self.assertEqual(rotary.inverse_frequency.device.type, device)
+                self.assertTrue(torch.equal(rotary.inverse_frequency.cpu(), expected))
+        if torch.cuda.is_available():
+            on_device = 1.0 / (10_000.0**(torch.arange(0, 128, 2, device="cuda").float() / 128))
+            # Documents why the CPU construction matters on CUDA hosts.
+            self.assertFalse(torch.equal(on_device.cpu(), expected))
+
+    def test_generation_projects_only_the_last_position(self):
+        import torch
+
+        from voicehub.architectures.neutts.configuration import NeuTTSBackboneConfig
+        from voicehub.architectures.neutts.modeling import NeuTTSBackbone, NeuTTSRuntime
+
+        torch.manual_seed(0)
+        model = NeuTTSBackbone(NeuTTSBackboneConfig.from_dict(_tiny_backbone_values())).eval()
+        tokens = torch.tensor([[1, 4, 5, 6, 7]])
+        with torch.inference_mode():
+            logits, cache = model.next_token_logits(tokens, cache=None, use_cache=True)
+            full = model(tokens).logits
+        self.assertEqual(tuple(logits.shape), (1, 1, 64))
+        self.assertEqual(logits.dtype, torch.float32)
+        self.assertTrue(torch.allclose(logits[:, -1], full[:, -1]))
+        self.assertEqual(cache.sequence_length(), 5)
+
+        projected_lengths = []
+        model.lm_head.register_forward_hook(
+            lambda module, inputs, output: projected_lengths.append(inputs[0].shape[1]))
+        runtime = SimpleNamespace(
+            backbone=model,
+            tokenizer=SimpleNamespace(
+                convert_tokens_to_ids=lambda token: 2,
+                pad_token_id=0,
+            ),
+            max_context=12,
+            min_new_tokens=3,
+        )
+        with torch.inference_mode():
+            generated = NeuTTSRuntime._generate_tokens(
+                runtime,
+                tokens,
+                max_new_tokens=4,
+                temperature=1.0,
+                top_k=5,
+                seed=0,
+            )
+        self.assertGreaterEqual(generated.shape[1], 3)
+        self.assertEqual(set(projected_lengths), {1})
+
     def test_text_and_phoneme_control_token_injection_is_rejected(self):
         from voicehub.architectures.neutts.modeling import NeuTTSRuntime
         from voicehub.architectures.neutts.tokenization import normalize_neutts_text
