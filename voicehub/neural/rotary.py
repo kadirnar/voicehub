@@ -44,12 +44,14 @@ class RotaryEmbedding(nn.Module):
     def _compute_inverse_frequency(self) -> Tensor:
         """Return the (scaled) float32 inverse frequencies on the CPU.
 
-        The frequencies are always evaluated on the CPU (as the Hugging Face
-        reference implementations do) and moved afterwards: CUDA `pow` rounds
-        some of these float32 values differently, which shifts RoPE angles at
-        long positions and changes bfloat16 outputs.
+        The frequencies are always evaluated on the CPU (as the Hugging
+        Face reference implementations do) and moved afterwards: CUDA
+        `pow` rounds some of these float32 values differently, which
+        shifts RoPE angles at long positions and changes bfloat16
+        outputs.
         """
-        exponents = torch.arange(0, self.dimension, 2, dtype=torch.int64, device="cpu").float() / self.dimension
+        exponents = torch.arange(
+            0, self.dimension, 2, dtype=torch.int64, device="cpu").float() / self.dimension
         inverse_frequency = 1.0 / (self.base**exponents)
         scaling = self.scaling
         if scaling is not None:
@@ -81,8 +83,9 @@ class RotaryEmbedding(nn.Module):
     def reset_inverse_frequency(self, device=None) -> None:
         """Rebuild the non-persistent frequencies, e.g. after a meta load.
 
-        Applies the same CPU evaluation and RoPE scaling as construction, so
-        loaders never need their own copy of the formula.
+        Applies the same CPU evaluation and RoPE scaling as
+        construction, so loaders never need their own copy of the
+        formula.
         """
         target = self.inverse_frequency.device if device is None else torch.device(device)
         self.inverse_frequency = self._compute_inverse_frequency().to(device=target)
