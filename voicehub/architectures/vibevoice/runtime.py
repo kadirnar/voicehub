@@ -118,12 +118,18 @@ def _validate_audio_processor(
 def _validate_generation(
     values: dict[str, Any],
     config: VibeVoiceASRConfig,
+    *,
+    tokenizer_eos_token_id: int,
 ) -> dict[str, Any]:
     if not isinstance(values, dict):
         raise TypeError("VibeVoice generation config must be an object.")
+    # The published ASR-HF config leaves ``text_config.eos_token_id`` null;
+    # generation then stops on the tokenizer EOS that generation_config.json
+    # records, exactly like transformers' ``generate``.
+    text_eos_token_id = config.text_config.eos_token_id
     expected = {
         "do_sample": False,
-        "eos_token_id": config.text_config.eos_token_id,
+        "eos_token_id": (tokenizer_eos_token_id if text_eos_token_id is None else text_eos_token_id),
         "pad_token_id": 151_655,
         "use_cache": True,
     }
@@ -277,6 +283,7 @@ def load_vibevoice_runtime(
         generation = _validate_generation(
             read_json_file(artifacts.generation_config),
             config,
+            tokenizer_eos_token_id=tokenizer.eos_token_id,
         )
         processor: VibeVoiceProcessor = VibeVoiceASRProcessor(
             tokenizer,

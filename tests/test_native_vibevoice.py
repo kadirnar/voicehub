@@ -59,7 +59,11 @@ from voicehub.tokenization.assets import encode_gpt2_token
 from voicehub.training import AutoTrainingAdapter, get_training_spec
 
 
-def _text_config(*, layers: int = 1) -> Qwen2Config:
+def _text_config(
+    *,
+    layers: int = 1,
+    eos_token_id: int | None = VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+) -> Qwen2Config:
     return Qwen2Config(
         vocab_size=151_936,
         hidden_size=8,
@@ -70,13 +74,13 @@ def _text_config(*, layers: int = 1) -> Qwen2Config:
         max_position_embeddings=1_024,
         max_window_layers=layers,
         bos_token_id=None,
-        eos_token_id=VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+        eos_token_id=eos_token_id,
         pad_token_id=VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
         tie_word_embeddings=False,
     )
 
 
-def _asr_config() -> VibeVoiceASRConfig:
+def _asr_config(*, text_eos_token_id: int | None = VIBEVOICE_TOKEN_IDS["<|endoftext|>"]) -> VibeVoiceASRConfig:
     acoustic = VibeVoiceASRTokenizerConfig(
         hidden_size=4,
         num_filters=2,
@@ -90,7 +94,7 @@ def _asr_config() -> VibeVoiceASRConfig:
     return VibeVoiceASRConfig(
         acoustic_tokenizer_encoder_config=acoustic,
         semantic_tokenizer_encoder_config=semantic,
-        text_config=_text_config(),
+        text_config=_text_config(eos_token_id=text_eos_token_id),
         acoustic_tokenizer_chunk_size=3_200,
     )
 
@@ -206,9 +210,15 @@ def _write_tokenizer(root: Path) -> None:
     )
 
 
-def _write_asr_artifact(root: Path) -> VibeVoiceASRForConditionalGeneration:
+def _write_asr_artifact(
+    root: Path,
+    *,
+    text_eos_token_id: int | None = VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+    generation_eos_token_id: int = VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+    published_layout: bool = False,
+) -> VibeVoiceASRForConditionalGeneration:
     root.mkdir(parents=True)
-    config = _asr_config()
+    config = _asr_config(text_eos_token_id=text_eos_token_id)
     model = VibeVoiceASRForConditionalGeneration(config)
     write_json_file(root / "config.json", config.to_dict())
     _write_tokenizer(root)
@@ -228,7 +238,7 @@ def _write_asr_artifact(root: Path) -> VibeVoiceASRForConditionalGeneration:
         root / "generation_config.json",
         {
             "do_sample": False,
-            "eos_token_id": VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+            "eos_token_id": generation_eos_token_id,
             "pad_token_id": VIBEVOICE_TOKEN_IDS["<|image_pad|>"],
             "use_cache": True,
             "max_new_tokens": 32_768,
@@ -238,8 +248,16 @@ def _write_asr_artifact(root: Path) -> VibeVoiceASRForConditionalGeneration:
         "audited by the native prompt renderer",
         encoding="utf-8",
     )
+    state = model.state_dict()
+    if published_layout:
+        # microsoft/VibeVoice-ASR-HF stores unprefixed top-level modules.
+        state = {
+            name.replace("model.language_model.", "language_model.model.", 1).replace(
+                "lm_head.", "language_model.lm_head.", 1).removeprefix("model."): value
+            for name, value in state.items()
+        }
     save_safetensors(
-        model.state_dict(),
+        state,
         root / "model.safetensors",
     )
     return model
@@ -321,6 +339,55 @@ class NativeVibeVoiceTests(unittest.TestCase):
                 imported & forbidden,
                 f"{path.name} imports {sorted(imported & forbidden)!r}",
             )
+
+    def test_asr_loads_published_config_with_null_text_eos(self):
+        # microsoft/VibeVoice-ASR-HF@f22241c ships ``text_config.eos_token_id``
+        # null and ``generation_config.json`` eos 151643 (<|endoftext|>).
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            _write_asr_artifact(root / "published", text_eos_token_id=None)
+            runtime = load_vibevoice_runtime(
+                root / "published",
+                device="cpu",
+                compute_dtype="float32",
+            )
+            self.assertIsNone(runtime.config.text_config.eos_token_id)
+            self.assertEqual(
+                runtime.generation_config["eos_token_id"],
+                VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+            )
+            _write_asr_artifact(
+                root / "mismatch",
+                text_eos_token_id=None,
+                generation_eos_token_id=VIBEVOICE_TOKEN_IDS["<|im_end|>"],
+            )
+            with self.assertRaisesRegex(ValueError, "eos_token_id disagrees"):
+                load_vibevoice_runtime(
+                    root / "mismatch",
+                    device="cpu",
+                    compute_dtype="float32",
+                )
+
+    def test_asr_loads_published_unprefixed_tensor_names(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = _write_asr_artifact(root / "published", published_layout=True)
+            with SafeTensorReader(root / "published" / "model.safetensors") as reader:
+                names = set(reader.keys())  # noqa: SIM118 - reader is not a Mapping
+            self.assertIn("language_model.lm_head.weight", names)
+            self.assertIn("language_model.model.embed_tokens.weight", names)
+            self.assertIn("multi_modal_projector.acoustic_norm.weight", names)
+            self.assertFalse(any(name.startswith(("model.", "lm_head.")) for name in names))
+            runtime = load_vibevoice_runtime(
+                root / "published",
+                device="cpu",
+                compute_dtype="float32",
+            )
+            loaded = runtime.model.state_dict()
+            expected = source.state_dict()
+            self.assertEqual(set(loaded), set(expected))
+            for name, value in expected.items():
+                torch.testing.assert_close(loaded[name], value, rtol=0, atol=0, msg=name)
 
     def test_asr_raw_training_and_portable_reload(self):
         with tempfile.TemporaryDirectory() as temporary:

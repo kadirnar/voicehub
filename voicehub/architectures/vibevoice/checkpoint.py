@@ -1,11 +1,14 @@
 """Strict, streaming Safetensors lifecycle for native VibeVoice graphs.
 
-The published VibeVoice checkpoints already use the same parameter
-namespace as the native VoiceHub modules.  This adapter therefore
-performs an identity mapping, but still treats checkpoint headers as
-untrusted input: every shard is reconciled with its index and every
-name, shape, and dtype is validated before any model parameter is
-assigned.
+The published TTS checkpoints already use the same parameter namespace
+as the native VoiceHub modules.  The published ASR-HF checkpoint stores
+its top-level modules unprefixed (``language_model.model.*``,
+``language_model.lm_head.*``, ``acoustic_tokenizer_encoder.*``, ...),
+which transformers renames on load; this adapter applies the same
+prefix renames and otherwise performs an identity mapping.  Checkpoint
+headers are still treated as untrusted input: every shard is reconciled
+with its index and every name, shape, and dtype is validated before any
+model parameter is assigned.
 """
 
 from __future__ import annotations
@@ -162,6 +165,41 @@ def vibevoice_header_fingerprint(inventory: Mapping[str, tuple[str, tuple[int, .
         rows.append(f"{name}\t{dtype}\t" + ",".join(str(value) for value in dimensions))
     payload = ("\n".join(rows) + "\n").encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+# Published ASR-HF layout -> native namespace, mirroring the transformers
+# ``vibevoice_asr`` checkpoint conversion mapping.  Native exports already
+# use the target names and therefore pass through unchanged.
+_ASR_PUBLISHED_PREFIXES = (
+    ("language_model.model.", "model.language_model."),
+    ("language_model.lm_head.", "lm_head."),
+    ("acoustic_tokenizer_encoder.", "model.acoustic_tokenizer_encoder."),
+    ("semantic_tokenizer_encoder.", "model.semantic_tokenizer_encoder."),
+    ("multi_modal_projector.", "model.multi_modal_projector."),
+)
+
+
+def _native_tensor_name(name: str, config: VibeVoiceConfig) -> str:
+    if isinstance(config, VibeVoiceASRConfig):
+        for source, target in _ASR_PUBLISHED_PREFIXES:
+            if name.startswith(source):
+                return target + name[len(source):]
+    return name
+
+
+def _native_source_names(
+    inventory: TensorInventory,
+    config: VibeVoiceConfig,
+) -> dict[str, str]:
+    """Map each native tensor name to its checkpoint source name."""
+    sources: dict[str, str] = {}
+    for name in sorted(inventory):
+        native = _native_tensor_name(name, config)
+        if native in sources:
+            raise CheckpointCompatibilityError(
+                f"VibeVoice tensors {sources[native]!r} and {name!r} both map to {native!r}.")
+        sources[native] = name
+    return sources
 
 
 def _reader_inventory(reader: VibeVoiceReader) -> TensorInventory:
@@ -354,7 +392,7 @@ def _materialize_runtime_buffers(
 
 
 class VibeVoiceCheckpointAdapter(CheckpointAdapter):
-    """Identity adapter for all three published native graphs."""
+    """Strict adapter for the three published graphs (ASR prefix renames)."""
 
     architecture_id = "vibevoice"
     adapter_id = "vibevoice-safetensors"
@@ -398,7 +436,9 @@ class VibeVoiceCheckpointAdapter(CheckpointAdapter):
         if not isinstance(reader, (SafeTensorReader, ShardedSafeTensorReader)):
             raise TypeError("VibeVoice loading requires a strict Safetensors reader.")
 
-        inventory = _reader_inventory(reader)
+        source_inventory = _reader_inventory(reader)
+        source_names = _native_source_names(source_inventory, resolved)
+        inventory = {native: source_inventory[source] for native, source in source_names.items()}
         target_state = model.state_dict()
         expected = set(target_state)
         available = set(inventory)
@@ -434,7 +474,7 @@ class VibeVoiceCheckpointAdapter(CheckpointAdapter):
 
         with torch.no_grad():
             for name in loaded:
-                value = reader.get_tensor(name)
+                value = reader.get_tensor(source_names[name])
                 selected_dtype = (dtype if dtype is not None and value.is_floating_point() else value.dtype)
                 model.load_state_dict(
                     {name: value.to(
