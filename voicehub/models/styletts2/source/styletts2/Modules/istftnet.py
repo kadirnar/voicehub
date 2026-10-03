@@ -88,9 +88,11 @@ class TorchSTFT(torch.nn.Module):
         self.win_length = win_length
         if window != "hann":
             raise ValueError("Native StyleTTS 2 iSTFT supports the released Hann window.")
+        # Upstream uses float32(scipy.signal.get_window("hann", fftbins=True)),
+        # which is computed in float64; a float32 torch window differs by 1 ulp.
         self.register_buffer(
             "window",
-            torch.hann_window(win_length, periodic=True),
+            torch.hann_window(win_length, periodic=True, dtype=torch.float64).to(torch.float32),
             persistent=False,
         )
 

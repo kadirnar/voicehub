@@ -10,6 +10,7 @@ from voicehub.modeling_outputs import TTSOutput
 from voicehub.modeling_utils import PreTrainedTTSModel
 from voicehub.models._shared import finish_audio_output, resolve_torch_dtype, seeded_inference
 from voicehub.models.styletts2.configuration_styletts2 import StyleTTS2Config
+from voicehub.path_utils import is_explicit_local_path
 
 
 class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
@@ -26,6 +27,14 @@ class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
         lazy_load: bool = True,
         **config_overrides: Any,
     ) -> None:
+        # `_coerce_config` resolves symlinks. Hub-cache snapshot files are
+        # symlinks to suffix-less blobs, so keep the caller's spelling to
+        # preserve the checkpoint suffix and its sibling `config.yml`.
+        raw_source = model_path if model_path is not None else (
+            config if isinstance(config, (str, Path)) else getattr(config, "name_or_path", None))
+        self._caller_source = (
+            Path(raw_source).expanduser().absolute()
+            if isinstance(raw_source, (str, Path)) and is_explicit_local_path(raw_source) else None)
         config = self._coerce_config(
             config,
             model_path=model_path,
@@ -40,6 +49,10 @@ class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
             raise ValueError("StyleTTS 2 requires a local native artifact or reviewed "
                              "legacy checkpoint.")
         source = Path(self.config.name_or_path).expanduser()
+        caller_source = getattr(self, "_caller_source", None)
+        if (caller_source is not None and caller_source.exists() and
+                caller_source.resolve() == source.resolve()):
+            source = caller_source
         if source.is_dir():
             checkpoint_path = source / "model.safetensors"
             config_path = (
@@ -47,9 +60,16 @@ class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
                 "config.json")
         else:
             checkpoint_path = source
-            config_path = (
-                Path(self.config.config_path).expanduser() if self.config.config_path else
-                Path(__file__).parent / "source" / "styletts2" / "Configs" / "config_libritts.yml")
+            # Released checkpoints ship `Models/<name>/config.yml` beside the
+            # weights; it holds the trained diffusion sigma_data.
+            released_config = source.parent / "config.yml"
+            if self.config.config_path:
+                config_path = Path(self.config.config_path).expanduser()
+            elif released_config.is_file():
+                config_path = released_config
+            else:
+                config_path = (
+                    Path(__file__).parent / "source" / "styletts2" / "Configs" / "config_libritts.yml")
         if not checkpoint_path.is_file():
             raise FileNotFoundError(f"StyleTTS 2 checkpoint was not found: {checkpoint_path}.")
         if not config_path.is_file():
@@ -60,8 +80,8 @@ class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
 
         dtype = resolve_torch_dtype(torch, self.config.dtype, self.device)
         self.model = StyleTTS2Runtime(
-            checkpoint_path=str(checkpoint_path.resolve()),
-            config_path=str(config_path.resolve()),
+            checkpoint_path=str(checkpoint_path.absolute()),
+            config_path=str(config_path.absolute()),
             assets_directory=self.config.assets_directory,
             device=self.device,
             language=self.config.language,

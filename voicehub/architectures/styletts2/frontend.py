@@ -13,6 +13,7 @@ from torch.nn import functional
 
 from voicehub.audio import AudioInput, load_audio
 from voicehub.processing.audio import htk_mel_filter_bank
+from voicehub.processing.waveform import resample_waveform_kaiser
 
 _PAD = "$"
 _PUNCTUATION = ';:,.!?¡¿—…"«»“” '
@@ -22,6 +23,13 @@ _IPA = (
     "ɹɺɾɻʀʁɽʂʃʈʧʉʊʋⱱʌɣɤʍχʎʏʑʐʒʔʡʕʢǀǁǂǃˈˌːˑʼʴʰʱʲʷˠˤ˞↓↑→↗↘'̩'ᵻ")
 STYLETTS2_SYMBOLS = tuple(_PAD + _PUNCTUATION + _LETTERS + _IPA)
 STYLETTS2_SYMBOL_TO_ID = {symbol: index for index, symbol in enumerate(STYLETTS2_SYMBOLS)}
+# Released StyleTTS 2 builds its model-input mel with
+# ``torchaudio.transforms.MelSpectrogram(n_mels=80, n_fft=2048,
+# win_length=1200, hop_length=300)`` (meldataset.py and the inference
+# notebooks). That call omits ``sample_rate``, so the 24 kHz audio is binned by
+# torchaudio's default 16 kHz HTK filter bank. The checkpoints were trained on
+# those features; the 24 kHz rate applies only to the mel losses.
+STYLETTS2_INPUT_MEL_FILTER_SAMPLE_RATE = 16_000
 
 
 class NativeStyleTTS2Frontend:
@@ -223,12 +231,31 @@ def load_style_reference(
     *,
     sample_rate: int,
 ) -> Tensor:
-    loaded = load_audio(audio, target_sampling_rate=sample_rate)
-    return trim_reference_silence(loaded.waveform.float())
+    """Load a mono reference like released ``librosa.load(path, sr=24000)``.
+
+    librosa resamples with soxr ``HQ``. The style encoder reads the mel
+    bins above the source Nyquist, so imaging left by a short sinc
+    kernel shifts the style vector noticeably. A 64-zero Kaiser kernel
+    with torchaudio's ``kaiser_best`` rolloff/beta is the closest torch-
+    only match.
+    """
+    loaded = load_audio(audio)
+    waveform = loaded.waveform.float()
+    if int(loaded.sampling_rate) != int(sample_rate):
+        waveform = resample_waveform_kaiser(
+            waveform,
+            int(loaded.sampling_rate),
+            int(sample_rate),
+            lowpass_filter_width=64,
+            rolloff=0.9475937167399596,
+            beta=14.769656459379492,
+        )
+    return trim_reference_silence(waveform)
 
 
 __all__ = [
     "NativeStyleTTS2Frontend",
+    "STYLETTS2_INPUT_MEL_FILTER_SAMPLE_RATE",
     "STYLETTS2_SYMBOLS",
     "STYLETTS2_SYMBOL_TO_ID",
     "StyleTTS2MelSpectrogram",
