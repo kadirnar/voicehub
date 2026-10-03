@@ -318,6 +318,32 @@ class NativeStyleTTS2Tests(unittest.TestCase):
             )
         self.assertEqual(set(state), set(model.state_dict()))
 
+    def test_hub_cache_symlinks_keep_their_file_type(self):
+        # huggingface_hub snapshots are suffixed symlinks to suffix-less
+        # content-addressed blobs; the format must follow the caller's name.
+        model = StyleTTS2Modules(**{name: nn.Linear(2, 2) for name in DEPLOYABLE_STYLETTS2_COMPONENTS})
+        payload = {"net": {name: component.state_dict() for name, component in model.items()}}
+        config_source = (
+            ROOT / "voicehub" / "models" / "styletts2" / "source" / "styletts2" / "Configs" /
+            "config_libritts.yml")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "blobs").mkdir()
+            torch.save(payload, root / "blobs" / "0123abcd")
+            (root / "blobs" / "4567cdef").write_bytes(config_source.read_bytes())
+            snapshot = root / "snapshots" / "rev" / "Models" / "LibriTTS"
+            snapshot.mkdir(parents=True)
+            (snapshot / "epochs_2nd_00020.pth").symlink_to(root / "blobs" / "0123abcd")
+            (snapshot / "config.yml").symlink_to(root / "blobs" / "4567cdef")
+            state = read_legacy_styletts2_checkpoint(
+                model,
+                snapshot / "epochs_2nd_00020.pth",
+                trust_pickle_checkpoint=True,
+            )
+            config = load_styletts2_config(snapshot / "config.yml")
+        self.assertEqual(set(state), set(model.state_dict()))
+        self.assertTrue(config.multispeaker)
+
     def test_preprocessed_objective_backpropagates(self):
         graph = _fake_training_graph()
         objective = StyleTTS2TrainingModel(

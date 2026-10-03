@@ -63,7 +63,7 @@ class StyleTTS2Runtime:
         )
         self.model = build_styletts2_model(self.config)
 
-        checkpoint = Path(checkpoint_path).expanduser().resolve()
+        checkpoint = Path(checkpoint_path).expanduser().absolute()
         if not checkpoint.is_file():
             raise FileNotFoundError(f"StyleTTS 2 checkpoint was not found: {checkpoint}.")
         if checkpoint.suffix.lower() == ".safetensors":

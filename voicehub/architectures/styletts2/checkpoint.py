@@ -51,7 +51,7 @@ def _expected_state(model: nn.Module) -> Mapping[str, Tensor]:
 
 
 def inspect_styletts2_checkpoint(path: str | Path, ) -> StyleTTS2CheckpointReport:
-    source = Path(path).expanduser().resolve()
+    source = Path(path).expanduser().absolute()
     if source.suffix.lower() != ".safetensors":
         raise ValueError("Checkpoint inspection accepts Safetensors only.")
     with SafeTensorReader(source) as reader:
@@ -148,7 +148,7 @@ def read_legacy_styletts2_checkpoint(
             "Legacy StyleTTS 2 checkpoints use a PyTorch pickle container. "
             "Review the file and pass `trust_pickle_checkpoint=True` once, "
             "then export Safetensors.")
-    source = Path(path).expanduser().resolve()
+    source = Path(path).expanduser().absolute()
     if not source.is_file():
         raise FileNotFoundError(f"StyleTTS 2 checkpoint was not found: {source}.")
     if source.suffix.lower() not in {".pth", ".pt", ".t7"}:

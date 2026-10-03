@@ -387,7 +387,7 @@ def load_styletts2_config(path: str | Path | None, ) -> StyleTTS2ArchitectureCon
     """Load typed JSON or recognize a pinned upstream YAML profile."""
     if path is None:
         return StyleTTS2ArchitectureConfig()
-    source = Path(path).expanduser().resolve()
+    source = Path(path).expanduser().absolute()
     if not source.is_file():
         raise FileNotFoundError(f"StyleTTS 2 configuration was not found: {source}.")
     if source.suffix.lower() == ".json":

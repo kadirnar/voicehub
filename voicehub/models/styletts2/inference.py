@@ -60,8 +60,8 @@ class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
 
         dtype = resolve_torch_dtype(torch, self.config.dtype, self.device)
         self.model = StyleTTS2Runtime(
-            checkpoint_path=str(checkpoint_path.resolve()),
-            config_path=str(config_path.resolve()),
+            checkpoint_path=str(checkpoint_path.absolute()),
+            config_path=str(config_path.absolute()),
             assets_directory=self.config.assets_directory,
             device=self.device,
             language=self.config.language,
