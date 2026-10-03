@@ -593,6 +593,116 @@ def _hann_sinc_kernel(
     return kernel, width
 
 
+# resampy 0.4 ``kaiser_best``: 50 zero crossings, 2**13 table entries per
+# crossing, Kaiser taper. The published table is ``sinc_window`` with these
+# parameters (maximum deviation 2.3e-12).
+_KAISER_BEST_ZEROS = 50
+_KAISER_BEST_PRECISION = 2**13
+_KAISER_BEST_ROLLOFF = 0.9173473712608761
+_KAISER_BEST_BETA = 12.984585251213232
+_kaiser_best_table: Tensor | None = None
+
+
+def _resampy_kaiser_best_table() -> Tensor:
+    global _kaiser_best_table
+    if _kaiser_best_table is None:
+        count = _KAISER_BEST_PRECISION * _KAISER_BEST_ZEROS
+        positions = torch.linspace(0, _KAISER_BEST_ZEROS, count + 1, dtype=torch.float64)
+        sinc = _KAISER_BEST_ROLLOFF * torch.sinc(_KAISER_BEST_ROLLOFF * positions)
+        taper = torch.kaiser_window(
+            2 * count + 1,
+            periodic=False,
+            beta=_KAISER_BEST_BETA,
+            dtype=torch.float64,
+        )[count:]
+        _kaiser_best_table = taper * sinc
+    return _kaiser_best_table
+
+
+def resample_waveform_kaiser_best(
+    waveform: Tensor,
+    source_rate: int,
+    target_rate: int,
+) -> Tensor:
+    """Resample mono audio like ``librosa.load(path, sr=target_rate)``.
+
+    This reproduces librosa's default ``res_type="kaiser_best"`` path:
+    resampy's interpolated windowed-sinc filter (float64 weights,
+    samples accumulated in the input dtype in resampy's order), followed
+    by librosa's ``fix_length`` to ``ceil(samples * target / source)``.
+    Upstream recipes that load audio with librosa defaults need it to
+    see the same samples; the generic :func:`resample_waveform` uses a
+    different Hann-windowed kernel.
+    """
+    source_rate = _positive_rate(source_rate, name="source_rate")
+    target_rate = _positive_rate(target_rate, name="target_rate")
+    if not isinstance(waveform, Tensor) or waveform.ndim != 1:
+        raise ValueError("`waveform` must be a rank-one PyTorch tensor.")
+    if not waveform.is_floating_point():
+        raise TypeError("`waveform` must use a floating-point dtype.")
+    if waveform.numel() == 0:
+        raise ValueError("`waveform` cannot be empty.")
+    if source_rate == target_rate:
+        return waveform
+    ratio = float(target_rate) / source_rate
+    resampled_length = int(waveform.numel() * float(target_rate) / float(source_rate))
+    if resampled_length < 1:
+        raise ValueError("`waveform` is too short to resample.")
+    device = waveform.device
+    table = _resampy_kaiser_best_table().to(device=device)
+    if ratio < 1:
+        table = ratio * table
+    delta = torch.diff(table, append=table[-1:])
+    scale = min(1.0, ratio)
+    index_step = int(scale * _KAISER_BEST_PRECISION)
+    times = torch.arange(resampled_length, dtype=torch.float64, device=device) * (1.0 / ratio)
+    whole = times.to(dtype=torch.long)
+    fraction = scale * (times - whole.to(dtype=torch.float64))
+    rows = -(-table.numel() // index_step)
+    # Row ``k`` views the filter entries ``k * index_step + offset`` for
+    # ``0 <= offset <= index_step``: one contiguous row per tap keeps the
+    # per-sample lookups cache-local.
+    padding = (0, (rows + 1) * index_step + 1 - table.numel())
+    weight_rows = torch.nn.functional.pad(table, padding).unfold(0, index_step + 1, index_step)
+    delta_rows = torch.nn.functional.pad(delta, padding).unfold(0, index_step + 1, index_step)
+    # Zero padding replaces resampy's per-sample edge bounds: a zero
+    # sample adds an exact zero to the float32 accumulator.
+    padded = torch.nn.functional.pad(waveform.to(dtype=torch.float64), (rows, rows))
+    output = torch.zeros(resampled_length, dtype=torch.float64, device=device)
+    wings = (
+        (fraction, -1, whole + rows),
+        (scale - fraction, 1, whole + rows + 1),
+    )
+    for wing_fraction, direction, origin in wings:
+        position = wing_fraction * _KAISER_BEST_PRECISION
+        offset = position.to(dtype=torch.long)
+        eta = position - offset.to(dtype=torch.float64)
+        limits = (table.numel() - offset) // index_step
+        minimum = int(limits.min().item())
+        for tap in range(int(limits.max().item())):
+            weights = torch.addcmul(
+                weight_rows[tap].index_select(0, offset),
+                eta,
+                delta_rows[tap].index_select(0, offset),
+            )
+            if tap >= minimum:
+                weights = weights.masked_fill(limits <= tap, 0.0)
+            products = weights * padded.index_select(0, origin + direction * tap)
+            # resampy adds each float64 product to a float32 output in
+            # tap order; reproduce that rounding sequence exactly.
+            output = (output + products).to(dtype=waveform.dtype).to(dtype=torch.float64)
+    output = output.to(dtype=waveform.dtype)
+    output_length = ceil(waveform.numel() * ratio)
+    return _fix_length(output, output_length)
+
+
+def _fix_length(waveform: Tensor, length: int) -> Tensor:
+    """Right-pad with zeros or trim to ``length`` (librosa ``fix_length``)."""
+    if waveform.numel() >= length:
+        return waveform[:length].contiguous()
+    return torch.nn.functional.pad(waveform, (0, length - waveform.numel()))
+
+
 @dataclass(frozen=True, slots=True)
 class NativeAudio:
     """A normalized mono waveform with an explicit sampling rate."""
@@ -746,5 +856,6 @@ __all__ = [
     "resample_waveform",
     "resample_waveform_hann",
     "resample_waveform_kaiser",
+    "resample_waveform_kaiser_best",
     "save_pcm_wave",
 ]

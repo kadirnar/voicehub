@@ -54,7 +54,7 @@ This example is maintained against VoiceHub's public API; it is not copied from 
 ```python
 from pathlib import Path
 
-from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig
+from voicehub import AutoModelForTextToSpeech, TTSGenerationConfig, AutoConfig
 
 BASE_AUDIO = Path("base.wav")
 REFERENCE_AUDIO = Path("reference.wav")
@@ -67,6 +67,7 @@ model = AutoModelForTextToSpeech.from_pretrained(
     model_type='openvoice',
     device="cuda",
     lazy_load=True,
+    config=AutoConfig.for_model("openvoice", trust_pickle_checkpoint=True),
 )
 output = model.generate(
     'VoiceHub keeps model integrations explicit and reproducible.',

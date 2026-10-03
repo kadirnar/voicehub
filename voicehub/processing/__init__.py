@@ -31,6 +31,7 @@ _MODULES = {
     "resample_waveform": "voicehub.processing.waveform",
     "resample_waveform_hann": "voicehub.processing.waveform",
     "resample_waveform_kaiser": "voicehub.processing.waveform",
+    "resample_waveform_kaiser_best": "voicehub.processing.waveform",
     "save_pcm_wave": "voicehub.processing.waveform",
 }
 

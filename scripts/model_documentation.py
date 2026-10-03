@@ -500,6 +500,8 @@ INFERENCE_PROFILES = {
             "speaker_audio_path=str(REFERENCE_AUDIO)",
             "tau=0.3",
         ),
+        load_arguments=("config=AutoConfig.for_model(\"openvoice\", trust_pickle_checkpoint=True)", ),
+        voicehub_imports=("AutoConfig", ),
     ),
     "outetts":
     _tts(

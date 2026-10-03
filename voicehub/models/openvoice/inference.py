@@ -11,7 +11,7 @@ from voicehub.modeling_outputs import TTSOutput
 from voicehub.modeling_utils import PreTrainedTTSModel
 from voicehub.models._shared import finish_audio_output, resolve_torch_dtype, seeded_inference
 from voicehub.models.openvoice.configuration_openvoice import OpenVoiceConfig
-from voicehub.processing.waveform import load_native_audio, resample_waveform
+from voicehub.processing.waveform import load_native_audio, resample_waveform_kaiser_best
 
 
 class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
@@ -80,6 +80,53 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
                 not math.isfinite(float(value)) or value <= 0):
             raise ValueError(f"`{name}` must be finite and positive.")
         return float(value)
+
+    def _load_audio(
+        self,
+        value: Any,
+        *,
+        sampling_rate: int | None,
+    ):
+        """Load audio at the converter rate like upstream's ``librosa.load``.
+
+        Upstream ``ToneColorConverter.convert`` and ``extract_se`` read
+        every waveform with ``librosa.load(path, sr=22050)`` (resampy
+        ``kaiser_best``). The converter is sensitive to the band edge,
+        so the generic VoiceHub resampler changes the converted
+        waveform.
+        """
+        audio = load_native_audio(value, sampling_rate=sampling_rate)
+        return resample_waveform_kaiser_best(
+            audio.waveform,
+            audio.sampling_rate,
+            self.sample_rate,
+        )
+
+    def _speaker_embedding(
+        self,
+        value: Any,
+        *,
+        sampling_rate: int | None,
+    ):
+        """Follow upstream ``se_extractor.get_se`` after its VAD step.
+
+        The source-rate audio is split on upstream's millisecond
+        boundaries and every segment is resampled on its own, exactly as
+        ``extract_se`` reloads each exported segment file.
+        """
+        audio = load_native_audio(value, sampling_rate=sampling_rate)
+        segments = self.runtime.processor.upstream_reference_segments(
+            audio.waveform,
+            sampling_rate=audio.sampling_rate,
+            segment_seconds=self.config.reference_segment_seconds,
+        )
+        return self.runtime.extract_segment_embedding([
+            resample_waveform_kaiser_best(
+                segment,
+                audio.sampling_rate,
+                self.sample_rate,
+            ) for segment in segments
+        ])
 
     @staticmethod
     def _validate_embedding(value: Any, *, name: str) -> None:
@@ -278,15 +325,14 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
                 )
                 base_audio = generated.audio
                 base_audio_sampling_rate = generated.sample_rate
-            base = load_native_audio(
+            base = self._load_audio(
                 base_audio,
                 sampling_rate=base_audio_sampling_rate,
-                target_sampling_rate=self.sample_rate,
             )
             if source_embedding is None:
-                source_embedding = self.runtime.extract_speaker_embedding(
-                    base.waveform,
-                    segment_seconds=self.config.reference_segment_seconds,
+                source_embedding = self._speaker_embedding(
+                    base_audio,
+                    sampling_rate=base_audio_sampling_rate,
                 )
             else:
                 source_embedding = self._load_embedding(
@@ -295,14 +341,9 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
                     device=self.device,
                 )
             if target_embedding is None:
-                target = load_native_audio(
+                target_embedding = self._speaker_embedding(
                     speaker_audio_path,
                     sampling_rate=speaker_audio_sampling_rate,
-                    target_sampling_rate=self.sample_rate,
-                )
-                target_embedding = self.runtime.extract_speaker_embedding(
-                    target.waveform,
-                    segment_seconds=self.config.reference_segment_seconds,
                 )
             else:
                 target_embedding = self._load_embedding(
@@ -311,7 +352,7 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
                     device=self.device,
                 )
             waveform = self.runtime.convert(
-                base.waveform,
+                base,
                 source_embedding=source_embedding,
                 target_embedding=target_embedding,
                 tau=tau,
@@ -324,7 +365,7 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
                 "architecture": "openvoice-v2-converter",
                 "base_source": ("provided-audio" if provided_base_audio else "native-melotts"),
                 "language": language,
-                "reference_segmentation": "equal-no-external-vad",
+                "reference_segmentation": "upstream-equal-split-no-external-vad",
                 "seed": effective_seed,
                 "requested_seed": seed,
                 "tau": float(tau),
@@ -348,16 +389,12 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
     ) -> Any:
         """Normalize raw training audio while preserving variable lengths."""
         if isinstance(value, (str, Path, Mapping)):
-            return load_native_audio(
-                value,
-                sampling_rate=sampling_rate,
-                target_sampling_rate=self.sample_rate,
-            ).waveform
+            return self._load_audio(value, sampling_rate=sampling_rate)
         rows = self.runtime.processor.waveforms(value)
         source_rate = self.sample_rate if sampling_rate is None else sampling_rate
         try:
             return tuple(
-                resample_waveform(
+                resample_waveform_kaiser_best(
                     row,
                     source_rate,
                     self.sample_rate,

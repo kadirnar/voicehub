@@ -316,6 +316,99 @@ class OpenVoiceArchitectureTests(unittest.TestCase):
                 "vad": True,
             })
 
+    def test_inference_audio_is_resampled_like_upstream_librosa_load(self):
+        from voicehub.processing.waveform import resample_waveform_kaiser_best
+
+        class RecordingRuntime:
+
+            def __init__(self):
+                self.processor = OpenVoiceAudioProcessor(OpenVoiceConverterConfig())
+                self.references = []
+                self.sources = []
+
+            def extract_segment_embedding(self, segments):
+                self.references.append(segments)
+                return torch.zeros(1, 256, 1)
+
+            def convert(self, waveform, *, source_embedding, target_embedding, tau):
+                del source_embedding, target_embedding, tau
+                self.sources.append(waveform)
+                return torch.zeros(32)
+
+        model = OpenVoiceForTextToSpeech(device="cpu", lazy_load=True)
+        model.runtime = RecordingRuntime()
+        steps = torch.arange(441, dtype=torch.float32)
+        base = torch.sin(steps * 0.05)
+        reference = torch.cos(steps[:160] * 0.3)
+        model._generate(
+            "unused",
+            base_audio=base,
+            base_audio_sampling_rate=44_100,
+            source_embedding=torch.zeros(1, 256, 1),
+            speaker_audio_path=reference,
+            speaker_audio_sampling_rate=16_000,
+            seed=0,
+        )
+
+        # Upstream ``ToneColorConverter.convert``/``extract_se`` read audio
+        # with ``librosa.load(sr=22050)``: resampy kaiser_best, ceil length.
+        expected_base = resample_waveform_kaiser_best(base, 44_100, 22_050)
+        expected_reference = resample_waveform_kaiser_best(reference, 16_000, 22_050)
+        self.assertEqual(expected_base.numel(), 221)
+        self.assertEqual(expected_reference.numel(), 221)
+        self.assertTrue(torch.equal(model.runtime.sources[0], expected_base))
+        self.assertEqual(len(model.runtime.references[0]), 1)
+        self.assertTrue(torch.equal(model.runtime.references[0][0], expected_reference))
+
+    def test_reference_segments_follow_upstream_millisecond_splitting(self):
+        # Golden (start, length) pairs from upstream ``split_audio_vad`` on
+        # fully active audio (pydub 0.25.1 slicing of the concatenation).
+        cases = {
+            (2_593_917, 44_100): (
+                (0, 432_312),
+                (432_312, 432_312),
+                (864_624, 432_312),
+                (1_296_936, 432_313),
+                (1_729_249, 432_312),
+                (2_161_561, 432_312),
+            ),
+            (245_000, 16_000): ((0, 122_496), (122_496, 122_496)),
+            (1_000_003, 22_050): (
+                (0, 199_993),
+                (199_993, 199_994),
+                (399_987, 199_993),
+                (599_980, 200_016),
+                (799_996, 199_993),
+            ),
+            # Upstream asserts on audio shorter than half a segment; the
+            # native path encodes the whole file like ``extract_se([path])``
+            # (no millisecond truncation of the last sample).
+            (77_040, 16_000): ((0, 77_040), ),
+            (106_171, 22_050): ((0, 106_171), ),
+        }
+        for (samples, rate), expected in cases.items():
+            with self.subTest(samples=samples, rate=rate):
+                waveform = torch.arange(samples, dtype=torch.float32)
+                segments = OpenVoiceAudioProcessor.upstream_reference_segments(
+                    waveform,
+                    sampling_rate=rate,
+                )
+                self.assertEqual(
+                    tuple((int(segment[0].item()), segment.numel()) for segment in segments),
+                    expected,
+                )
+
+    def test_documented_usage_opts_into_the_official_pickle_checkpoint(self):
+        # The default checkpoint is a legacy pickle that only loads with
+        # ``trust_pickle_checkpoint=True``; the published example must run.
+        root = Path(__file__).resolve().parents[1]
+        page = (root / "docs/models/providers/openvoice.md").read_text(encoding="utf-8")
+        usage = page.split("```python", 1)[1].split("```", 1)[0]
+        self.assertIn("from_pretrained(\n    'myshell-ai/OpenVoiceV2'", usage)
+        self.assertIn('AutoConfig.for_model("openvoice", trust_pickle_checkpoint=True)', usage)
+        notebook = (root / "notebooks/models/openvoice.ipynb").read_text(encoding="utf-8")
+        self.assertIn("trust_pickle_checkpoint=True", notebook)
+
     def test_architecture_registration_is_lazy_and_truthful(self):
         spec = get_architecture_spec("openvoice")
         self.assertEqual(spec.architecture_id, "openvoice-v2-converter")
