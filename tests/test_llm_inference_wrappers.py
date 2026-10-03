@@ -560,6 +560,7 @@ class WrapperHelperTests(unittest.TestCase):
             waveform=torch.tensor([[[0.1, -0.1]]]),
             generated_steps=2,
             sample_rate=24_000,
+            finish_reason="stop",
         )
         model = HiggsTTSForTextToSpeech(device="cpu")
         model._runtime = SimpleNamespace(generate=Mock(return_value=response))

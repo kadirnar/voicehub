@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from dataclasses import dataclass
 from numbers import Real
 
@@ -49,6 +50,7 @@ class HiggsAudioV2GenerationOutput:
     text_sequence: Tensor
     sample_rate: int
     generated_steps: int
+    finish_reason: str = "stop"
 
 
 class HiggsAudioV2Generator:
@@ -148,7 +150,7 @@ class HiggsAudioV2Generator:
     def _decode_completed(
         self,
         delayed: Tensor,
-    ) -> tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor, str]:
         # Public generation currently accepts one request at a time. Keeping
         # this boundary explicit avoids ragged-code padding entering a codec.
         if delayed.shape[0] != 1:
@@ -163,11 +165,18 @@ class HiggsAudioV2Generator:
         start = int(bos_rows[-1, 0])
         after_start = stream[start:]
         eos_rows = (after_start == eos).all(dim=-1).nonzero()
-        if not len(eos_rows):
-            raise RuntimeError(
-                "Higgs reached `max_new_tokens` before completing the "
-                "audio EOS delay pattern.")
-        end = int(eos_rows[0, 0])
+        truncated = not len(eos_rows)
+        if truncated:
+            # ``max_new_tokens`` cut the stream before its all-EOS frame.
+            # Like the source, return the audio generated so far: keep every
+            # aligned frame whose delayed codebooks were all generated.
+            end = after_start.shape[0]
+            if end - 1 < self.model.config.num_codebooks:
+                raise RuntimeError(
+                    "Higgs reached `max_new_tokens` before completing one "
+                    "audio frame; increase `max_new_tokens`.")
+        else:
+            end = int(eos_rows[0, 0])
         delayed_content = after_start[1:end]
         aligned = self.processor.revert_delay_pattern(delayed_content)
         # The aligned frame holding the first stream EOS (codebook 0 in the
@@ -177,6 +186,7 @@ class HiggsAudioV2Generator:
         eos_columns = (aligned == eos).any(dim=-1).nonzero()
         if len(eos_columns):
             aligned = aligned[:int(eos_columns[0, 0])]
+            truncated = False
         if not len(aligned):
             raise RuntimeError("Higgs generation produced no complete audio frame.")
         aligned = aligned.clamp(
@@ -186,7 +196,7 @@ class HiggsAudioV2Generator:
         audio_codes = aligned.transpose(0, 1).unsqueeze(0)
         with torch.no_grad():
             waveform = self.processor.audio_tokenizer.decode(audio_codes).audio_values
-        return waveform, audio_codes
+        return waveform, audio_codes, "length" if truncated else "stop"
 
     @torch.no_grad()
     def generate(
@@ -360,7 +370,13 @@ class HiggsAudioV2Generator:
             ).float()
 
         delayed = torch.stack(delayed_frames, dim=1)
-        waveform, audio_codes = self._decode_completed(delayed)
+        waveform, audio_codes, finish_reason = self._decode_completed(delayed)
+        if finish_reason == "length":
+            warnings.warn(
+                f"Higgs reached `max_new_tokens` ({max_new_tokens}) before "
+                "the audio stream ended; returning truncated audio.",
+                stacklevel=2,
+            )
         return HiggsAudioV2GenerationOutput(
             waveform=waveform,
             audio_codes=audio_codes,
@@ -368,6 +384,7 @@ class HiggsAudioV2Generator:
             text_sequence=input_ids,
             sample_rate=self.processor.sample_rate,
             generated_steps=delayed.shape[1],
+            finish_reason=finish_reason,
         )
 
 
