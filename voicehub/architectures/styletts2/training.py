@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from numbers import Real
 from typing import Any
 
@@ -184,6 +184,31 @@ class StyleTTS2TrainingModel(nn.Module):
                 n_mels=config.n_mels,
             ) for n_fft, win_length, hop_length in resolutions)
         self.minimum_mel_samples = max(transform.n_fft // 2 + 1 for transform in self.mel_transforms)
+        # Running sum/count of the per-batch sigma_data estimates; their mean
+        # is what upstream writes back into the saved config.
+        self._sigma_data_sum = 0.0
+        self._sigma_data_count = 0
+
+    @property
+    def estimated_sigma_data(self) -> float | None:
+        """Mean of the per-batch sigma_data estimates, if any were made."""
+        if self._sigma_data_count == 0:
+            return None
+        return self._sigma_data_sum / self._sigma_data_count
+
+    def export_config(self) -> StyleTTS2ArchitectureConfig:
+        """Return the config to save, carrying the estimated sigma_data."""
+        sigma_data = self.estimated_sigma_data
+        if sigma_data is None:
+            return self.config
+        diffusion = self.config.diffusion
+        return replace(
+            self.config,
+            diffusion=replace(
+                diffusion,
+                dist=replace(diffusion.dist, sigma_data=sigma_data),
+            ),
+        )
 
     @staticmethod
     def _length_mask(lengths: Tensor, steps: int) -> Tensor:
@@ -462,6 +487,8 @@ class StyleTTS2TrainingModel(nn.Module):
     def _generator_outputs(
         self,
         batch: tuple[Tensor, ...],
+        *,
+        estimate_sigma_data: bool = False,
     ) -> dict[str, Tensor]:
         (
             input_ids,
@@ -601,6 +628,13 @@ class StyleTTS2TrainingModel(nn.Module):
             ],
             dim=0,
         )
+        if estimate_sigma_data and self.config.diffusion.dist.estimate_sigma_data:
+            # Upstream re-estimates the EDM sigma_data from every training
+            # batch before the diffusion loss and saves the running mean.
+            sigma_data = target_style.detach().std(dim=-1).mean().item()
+            self.model.diffusion.diffusion.sigma_data = sigma_data
+            self._sigma_data_sum += sigma_data
+            self._sigma_data_count += 1
         diffusion_inputs = {"embedding": bert}
         if self.config.multispeaker:
             diffusion_inputs["features"] = reference_style
@@ -707,7 +741,7 @@ class StyleTTS2TrainingModel(nn.Module):
 
     def generator_objective(self, **batch_values: Any) -> dict[str, Any]:
         batch = self._validate_batch(**batch_values)
-        outputs = self._generator_outputs(batch)
+        outputs = self._generator_outputs(batch, estimate_sigma_data=self.training)
         adversarial = outputs["waveform"].new_zeros(())
         feature_matching = outputs["waveform"].new_zeros(())
         relativistic = outputs["waveform"].new_zeros(())

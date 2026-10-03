@@ -224,9 +224,10 @@ class StyleTTS2ForTextToSpeech(PreTrainedTTSModel):
         self.load()
         from voicehub.architectures.styletts2.checkpoint import save_styletts2_pretrained
 
+        config = (self.model.config if self.training_model is None else self.training_model.export_config())
         save_styletts2_pretrained(
             self.model.model,
-            self.model.config,
+            config,
             save_directory,
         )
 
