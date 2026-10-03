@@ -280,6 +280,52 @@ print(json.dumps({name: name in sys.modules for name in names}))
                 "hubert",
             )
 
+    def test_other_input_rates_resample_like_the_transformers_pipeline(self):
+        # The reference Transformers CTC pipeline resamples non-16 kHz input
+        # with torchaudio.functional.resample defaults. The generic native
+        # resampler changed 8 kHz LibriSpeech transcripts.
+        from voicehub.processing import resample_waveform_hann
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = HubertForSpeechRecognition(
+                HubertASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+                lazy_load=False,
+            )
+            waveform = torch.randn(
+                1_201,
+                generator=torch.Generator().manual_seed(11),
+            )
+            captured = []
+
+            def capture(module, args, kwargs):
+                del module, kwargs
+                captured.append(args[0].clone())
+
+            handle = wrapper.model.register_forward_pre_hook(capture, with_kwargs=True)
+            try:
+                for rate in (8_000, 22_050):
+                    with self.subTest(rate=rate):
+                        captured.clear()
+                        wrapper.transcribe(waveform, sampling_rate=rate)
+                        resampled = resample_waveform_hann(waveform, rate, 16_000)
+                        expected = wrapper.ctc_processor.prepare_audio_batch((resampled, ))["input_values"]
+                        torch.testing.assert_close(captured[0], expected, rtol=0, atol=0)
+                        try:
+                            import torchaudio
+                        except ImportError:
+                            continue
+                        torch.testing.assert_close(
+                            resampled,
+                            torchaudio.functional.resample(waveform, rate, 16_000),
+                            rtol=0,
+                            atol=0,
+                        )
+            finally:
+                handle.remove()
+
     def test_local_sharded_checkpoint_loads_strictly(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
