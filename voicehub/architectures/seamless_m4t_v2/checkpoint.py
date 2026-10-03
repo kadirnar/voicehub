@@ -159,8 +159,9 @@ def validate_published_seamless_m4t_v2_inventory(
         # A local directory (e.g. a downloaded Hub snapshot) carries no
         # revision; recognize the audited checkpoint by its header instead.
         expected = next(
-            (facts
-             for facts in SEAMLESS_M4T_V2_CHECKPOINTS.values() if facts["full_header_fingerprint"] == full_facts[3]),
+            (
+                facts for facts in SEAMLESS_M4T_V2_CHECKPOINTS.values()
+                if facts["full_header_fingerprint"] == full_facts[3]),
             None,
         )
         if expected is None:
@@ -319,8 +320,9 @@ class SeamlessM4Tv2S2TCheckpointAdapter(CheckpointAdapter):
         # Non-persistent buffers are not in the checkpoint; a meta-device
         # graph would otherwise keep them as data-less meta tensors.
         model.materialize_derived_buffers(device)
-        remaining = tuple(name for name, value in (*model.state_dict().items(), *model.named_buffers())
-                          if value.device.type == "meta")
+        remaining = tuple(
+            name for name, value in (*model.state_dict().items(), *model.named_buffers())
+            if value.device.type == "meta")
         if remaining:
             raise CheckpointCompatibilityError(
                 "SeamlessM4T-v2 assignment left meta tensors: " + ", ".join(remaining[:5]))

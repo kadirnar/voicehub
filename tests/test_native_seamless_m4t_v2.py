@@ -38,8 +38,8 @@ from voicehub.architectures.seamless_m4t_v2.runtime import (
     save_seamless_m4t_v2_runtime,
 )
 from voicehub.architectures.seamless_m4t_v2.tokenization import SEAMLESS_M4T_V2_LANGUAGE_TO_ID, SeamlessM4Tv2Tokenizer
-from voicehub.models.asr_seamless_m4t_v2 import SeamlessM4Tv2ASRConfig, SeamlessM4Tv2ForSpeechRecognition
 from voicehub.checkpointing import SafeTensorReader, save_safetensors
+from voicehub.models.asr_seamless_m4t_v2 import SeamlessM4Tv2ASRConfig, SeamlessM4Tv2ForSpeechRecognition
 from voicehub.models.asr_seamless_m4t_v2.training_asr_seamless_m4t_v2 import NativeSeamlessM4Tv2TrainingAdapter
 from voicehub.training import AutoTrainingAdapter
 
@@ -428,7 +428,8 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
                     revision="1" * 40,
                 )
             with SafeTensorReader(path) as reader:
-                unknown = validate_published_seamless_m4t_v2_inventory(reader, source=directory, revision=None)
+                unknown = validate_published_seamless_m4t_v2_inventory(
+                    reader, source=directory, revision=None)
 
         self.assertTrue(local)
         self.assertFalse(other_revision)
