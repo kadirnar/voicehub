@@ -33,7 +33,10 @@ from voicehub.architectures.higgs_audio_v2.metadata import (
     HIGGS_AUDIO_V2_SOURCE_REVISION,
     HIGGS_AUDIO_V2_TOKENIZER_REVISION,
 )
-from voicehub.architectures.higgs_audio_v2.modeling import HiggsAudioV2DecoderLayer, HiggsAudioV2ForConditionalGeneration
+from voicehub.architectures.higgs_audio_v2.modeling import (
+    HiggsAudioV2DecoderLayer,
+    HiggsAudioV2ForConditionalGeneration,
+)
 from voicehub.architectures.higgs_audio_v2.processing import (
     HIGGS_SPECIAL_TOKEN_IDS,
     HiggsAudioV2Processor,
@@ -598,8 +601,9 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
             generator = HiggsAudioV2Generator(runtime.model, runtime.processor)
             batch = runtime.processor.generation_batch("hi")
             # Stop before the codec: the random model may not finish its EOS.
-            with patch.object(HiggsAudioV2DecoderLayer, "_select", staticmethod(record)), patch.object(
-                    HiggsAudioV2Generator, "_decode_completed", stop), self.assertRaises(Stop):
+            select_patch = patch.object(HiggsAudioV2DecoderLayer, "_select", staticmethod(record))
+            codec_patch = patch.object(HiggsAudioV2Generator, "_decode_completed", stop)
+            with select_patch, codec_patch, self.assertRaises(Stop):
                 generator.generate(batch, max_new_tokens=5, temperature=0.0, ras_window=None)
         decode_masks = [mask for length, mask in masks if length == 1]
         self.assertTrue(decode_masks)
@@ -622,7 +626,8 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
                     audio_input_ids_mask=torch.ones(1, 1, dtype=torch.bool),
                     past_key_values=prefill.past_key_values.clone(),
                 )
-                torch.testing.assert_close(expected_frame.logits, placeholder_frame.logits, rtol=0.0, atol=0.0)
+                torch.testing.assert_close(
+                    expected_frame.logits, placeholder_frame.logits, rtol=0.0, atol=0.0)
 
     def test_public_wrapper_routes_native_generation_options(self):
         response = HiggsAudioV2GenerationOutput(
