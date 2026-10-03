@@ -246,6 +246,44 @@ class NativeTransformersVADProviderTests(unittest.TestCase):
             [(0.0, 0.2)],
         )
 
+    def test_hugging_face_label_map_defines_the_class_count(self):
+        labels = {"0": "noise", "1": "music", "2": "speech"}
+        # Hugging Face does not serialize `num_labels`; `id2label` wins.
+        for extra in ({}, {"num_labels": 2}):
+            with self.subTest(extra=extra):
+                config = _tiny_config(
+                    architecture="Wav2Vec2ForAudioFrameClassification",
+                    extra={"id2label": labels, **extra},
+                )
+                self.assertEqual(config.num_labels, 3)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = _tiny_config(
+                architecture="Wav2Vec2ForAudioFrameClassification",
+                extra={"id2label": labels},
+            )
+            model = Wav2Vec2ForAudioFrameClassification(config)
+            with torch.no_grad():
+                model.classifier.weight.zero_()
+                model.classifier.bias.copy_(torch.tensor([0.0, -6.0, 6.0]))
+            values = config.to_dict()
+            values.pop("num_labels")
+            values["architectures"] = ["Wav2Vec2ForAudioFrameClassification"]
+            (root / "config.json").write_text(json.dumps(values), encoding="utf-8")
+            save_safetensors(model.state_dict(), root / "model.safetensors")
+            Wav2Vec2FeatureExtractor(sampling_rate=100, return_attention_mask=True).save_pretrained(root)
+            wrapper = TransformersVADForVoiceActivityDetection(
+                TransformersVADConfig(name_or_path=str(root)),
+                device="cpu",
+                lazy_load=False,
+            )
+            output = wrapper.detect(torch.zeros(30), sampling_rate=100, return_frames=True)
+
+        self.assertEqual(output.metadata["speech_class_id"], 2)
+        self.assertEqual(tuple(output.probabilities.shape), (7, ))
+        self.assertGreater(float(output.probabilities.min()), 0.99)
+
     def test_task_ambiguous_and_asr_checkpoints_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "task-ambiguous"):
             TransformersVADForVoiceActivityDetection._infer_architecture_family({

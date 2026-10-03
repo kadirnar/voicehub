@@ -259,6 +259,12 @@ class Wav2Vec2Config:
             if name in resolved:
                 resolved[name] = tuple(resolved[name])
 
+        # Hugging Face configurations do not serialize ``num_labels``; it is
+        # the length of ``id2label``, which also wins over a stale value.
+        id2label = source.get("id2label")
+        if isinstance(id2label, Mapping):
+            resolved["num_labels"] = len(id2label)
+
         declared_layers = source.get("num_feat_extract_layers")
         if declared_layers is not None:
             _require_integer(
