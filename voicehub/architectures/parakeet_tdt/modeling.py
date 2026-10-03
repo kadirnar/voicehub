@@ -906,8 +906,9 @@ class ParakeetForTDT(nn.Module):
             )
             last_label_frames = torch.where(labels, frame_indices, last_label_frames)
             frame_indices = frame_indices + step_durations
-            forced = (labels & (labels_on_frame >= self.max_symbols_per_step) & (step_durations == 0) &
-                      (frame_indices < valid_lengths))
+            forced = (
+                labels & (labels_on_frame >= self.max_symbols_per_step) & (step_durations == 0) &
+                (frame_indices < valid_lengths))
             if bool(torch.any(forced)):
                 # Record the forced advance as a one-frame blank so token
                 # timestamps keep NeMo's zero duration for the last label.
