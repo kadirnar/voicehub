@@ -36,11 +36,11 @@ class _DiscardedTrainingValue:
     """Inert stand-in for non-tensor training metadata in the official archive.
 
     The published ``ckpt1.checkpoint`` stores optimizer, scheduler, and
-    reporter state next to ``model``. The reporter statistics contain NumPy
-    scalars (``numpy.core.multiarray.scalar`` / ``numpy.dtype``), which the
-    weights-only unpickler rejects by default. Only ``model`` is consumed, so
-    these values are materialized as opaque placeholders without importing
-    NumPy or executing any third-party constructor.
+    reporter state next to ``model``. The reporter statistics contain
+    NumPy scalars (``numpy.core.multiarray.scalar`` / ``numpy.dtype``),
+    which the weights-only unpickler rejects by default. Only ``model``
+    is consumed, so these values are materialized as opaque placeholders
+    without importing NumPy or executing any third-party constructor.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

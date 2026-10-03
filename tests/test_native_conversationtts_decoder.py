@@ -194,7 +194,11 @@ class ConversationPromptAudioTests(unittest.TestCase):
         # LibriSpeech prompt, changing the prompt's Mimi codes.
         import tempfile
 
-        from voicehub.models.conversationtts.source.conversationtts.inference import generator, generator_pod, generator_pod_cn
+        from voicehub.models.conversationtts.source.conversationtts.inference import (
+            generator,
+            generator_pod,
+            generator_pod_cn,
+        )
         from voicehub.processing.waveform import resample_waveform, resample_waveform_hann, save_pcm_wave
 
         source = torch.sin(torch.arange(1_600, dtype=torch.float32) * 0.37) * 0.5
