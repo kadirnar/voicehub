@@ -1,9 +1,10 @@
 """Source-exact CosyVoice 3 prompt-audio frontend (PyTorch only).
 
 The source frontend loads prompt audio with ``torchaudio.load``, resamples
-with ``torchaudio.transforms.Resample`` (windowed sinc, Hann window, six
-zero crossings, roll-off 0.99), extracts speech tokens at 16 kHz and the
-flow's prompt mel at 24 kHz with Matcha-TTS ``mel_spectrogram`` (n_fft
+with ``torchaudio.transforms.Resample`` (reproduced by
+:func:`voicehub.processing.resample_waveform_hann` with
+``match="transform"``), extracts speech tokens at 16 kHz and the flow's
+prompt mel at 24 kHz with Matcha-TTS ``mel_spectrogram`` (n_fft
 1920, hop 480, 80 Slaney mels, ``center=False`` with reflect padding,
 natural-log compression). Both steps run on CPU in float32 like the
 source; only the results move to the model device.
@@ -23,62 +24,6 @@ PROMPT_MEL_N_FFT = 1_920
 PROMPT_MEL_HOP_LENGTH = 480
 PROMPT_MEL_WIN_LENGTH = 1_920
 PROMPT_MEL_BINS = 80
-
-
-@lru_cache(maxsize=8)
-def _hann_sinc_kernel(
-    source_rate: int,
-    target_rate: int,
-    lowpass_filter_width: int,
-    rolloff: float,
-) -> tuple[Tensor, int, int, int]:
-    divisor = math.gcd(source_rate, target_rate)
-    original = source_rate // divisor
-    target = target_rate // divisor
-    base_frequency = min(original, target) * rolloff
-    width = math.ceil(lowpass_filter_width * original / base_frequency)
-    # Same dtype choices and operation order as torchaudio's cached
-    # float32 kernel: float64 tap offsets, float32 phase offsets.
-    indices = torch.arange(-width, width + original, dtype=torch.float64)[None, None] / original
-    times = torch.arange(0, -target, -1, dtype=torch.float32)[:, None, None] / target + indices
-    times = times * base_frequency
-    times = times.clamp(-lowpass_filter_width, lowpass_filter_width)
-    window = torch.cos(times * math.pi / lowpass_filter_width / 2)**2
-    times = times * math.pi
-    kernel = torch.where(times == 0, torch.tensor(1.0, dtype=torch.float64), times.sin() / times)
-    kernel = kernel * (window * (base_frequency / original))
-    return kernel.to(torch.float32), width, original, target
-
-
-def resample_hann_sinc(
-    waveform: Tensor,
-    source_rate: int,
-    target_rate: int,
-    *,
-    lowpass_filter_width: int = 6,
-    rolloff: float = 0.99,
-) -> Tensor:
-    """Resample a rank-one waveform like ``torchaudio.transforms.Resample``."""
-    if not isinstance(waveform, Tensor) or waveform.ndim != 1 or not waveform.is_floating_point():
-        raise ValueError("`waveform` must be a rank-one floating-point tensor.")
-    if source_rate == target_rate:
-        return waveform
-    kernel, width, original, target = _hann_sinc_kernel(
-        int(source_rate),
-        int(target_rate),
-        int(lowpass_filter_width),
-        float(rolloff),
-    )
-    length = waveform.shape[-1]
-    padded = functional.pad(waveform.float()[None], (width, width + original))
-    resampled = functional.conv1d(
-        padded[:, None],
-        kernel.to(device=waveform.device),
-        stride=original,
-    )
-    resampled = resampled.transpose(1, 2).reshape(1, -1)
-    target_length = math.ceil(target * length / original)
-    return resampled[0, :target_length]
 
 
 def _slaney_hz_to_mel(frequencies: Tensor) -> Tensor:
@@ -157,5 +102,4 @@ def prompt_mel_features(waveform: Tensor) -> Tensor:
 __all__ = [
     "PROMPT_MEL_SAMPLE_RATE",
     "prompt_mel_features",
-    "resample_hann_sinc",
 ]

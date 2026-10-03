@@ -10,11 +10,7 @@ import torch
 from torch import Tensor
 
 from voicehub.architectures.cosyvoice_native.artifacts import resolve_cosyvoice_artifacts
-from voicehub.architectures.cosyvoice_native.audio import (
-    PROMPT_MEL_SAMPLE_RATE,
-    prompt_mel_features,
-    resample_hann_sinc,
-)
+from voicehub.architectures.cosyvoice_native.audio import PROMPT_MEL_SAMPLE_RATE, prompt_mel_features
 from voicehub.architectures.cosyvoice_native.checkpoint import export_cosyvoice_checkpoint, load_cosyvoice_checkpoint
 from voicehub.architectures.cosyvoice_native.configuration import CosyVoiceArchitectureConfig
 from voicehub.architectures.cosyvoice_native.modeling import CosyVoiceNativeModel, CosyVoiceSynthesisOutput
@@ -25,7 +21,7 @@ from voicehub.architectures.cosyvoice_native.speech_tokenizer import (
 from voicehub.architectures.cosyvoice_native.tokenization import CosyVoiceTextTokenizer
 from voicehub.hub import read_json_file, write_json_file
 from voicehub.optimization.protocols import OptimizationCompileTarget
-from voicehub.processing.waveform import NativeAudio, load_native_audio
+from voicehub.processing.waveform import NativeAudio, load_native_audio, resample_waveform_hann
 
 
 class CosyVoiceNativeRuntime:
@@ -125,7 +121,7 @@ class CosyVoiceNativeRuntime:
         """Resample on CPU exactly like the source's torchaudio frontend."""
         waveform = audio.waveform.detach().to(device="cpu", dtype=torch.float32)
         return NativeAudio(
-            waveform=resample_hann_sinc(waveform, audio.sampling_rate, target_rate),
+            waveform=resample_waveform_hann(waveform, audio.sampling_rate, target_rate, match="transform"),
             sampling_rate=target_rate,
             path=audio.path,
         )

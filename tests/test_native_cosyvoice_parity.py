@@ -21,7 +21,7 @@ from torch.nn import functional
 
 from voicehub.architectures.cosyvoice_native import flow as flow_module
 from voicehub.architectures.cosyvoice_native import vocoder as vocoder_module
-from voicehub.architectures.cosyvoice_native.audio import _prompt_mel_filters, prompt_mel_features, resample_hann_sinc
+from voicehub.architectures.cosyvoice_native.audio import _prompt_mel_filters, prompt_mel_features
 from voicehub.architectures.cosyvoice_native.configuration import CosyVoiceArchitectureConfig
 from voicehub.architectures.cosyvoice_native.flow import _apply_leading_rotary, fixed_flow_noise
 from voicehub.architectures.cosyvoice_native.language_model import CosyVoiceLanguageModel, nucleus_keep_count
@@ -36,6 +36,7 @@ from voicehub.architectures.cosyvoice_native.tokenization import (
 )
 from voicehub.architectures.cosyvoice_native.vocoder import CosyVoiceSourceNoise
 from voicehub.models.cosyvoice_native.configuration_cosyvoice import CosyVoiceConfig
+from voicehub.processing import resample_waveform_hann
 from voicehub.tokenization import encode_gpt2_token
 
 
@@ -362,7 +363,7 @@ class CosyVoicePromptFrontendParityTests(unittest.TestCase):
         for source_rate, target_rate in ((16_000, 24_000), (16_000, 16_000), (44_100, 16_000), (22_050,
                                                                                                 24_000)):
             expected = torchaudio.transforms.Resample(source_rate, target_rate)(waveform[None])[0]
-            actual = resample_hann_sinc(waveform, source_rate, target_rate)
+            actual = resample_waveform_hann(waveform, source_rate, target_rate, match="transform")
             self.assertTrue(torch.equal(actual, expected), (source_rate, target_rate))
 
     @unittest.skipUnless(importlib.util.find_spec("librosa"), "librosa reference unavailable")
