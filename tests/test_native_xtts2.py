@@ -460,8 +460,7 @@ class XTTSLegacyCheckpointLoadingTests(unittest.TestCase):
         (self.repository / "dvae.pth").write_bytes(b"unused by inference")
 
     def _mock_hub(self):
-        """Serve ``self.repository`` as a Hub repository, recording
-        fetches."""
+        """Serve ``self.repository`` as a Hub repository, recording fetches."""
         fetched = []
 
         def download_file(repo_id, filename, *, subfolder="", **kwargs):
