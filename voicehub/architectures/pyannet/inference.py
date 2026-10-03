@@ -41,10 +41,10 @@ def _repeat_pad(values: Tensor, target_samples: int) -> Tensor:
 def _closest_frame(time_s: float, *, frame_step_s: float) -> int:
     """Mirror ``pyannote.core.SlidingWindow.closest_frame`` (start 0).
 
-    pyannote evaluates the rule in seconds with ``np.rint`` (round half to
-    even, like Python's ``round``).  Evaluating it in samples instead
-    rounds ties such as the 30 s chunk start on the segmentation-3.0 grid
-    differently and shifts that chunk by one frame.
+    pyannote evaluates the rule in seconds with ``np.rint`` (round half
+    to even, like Python's ``round``).  Evaluating it in samples instead
+    rounds ties such as the 30 s chunk start on the segmentation-3.0
+    grid differently and shifts that chunk by one frame.
     """
     return max(0, round((time_s - 0.0 - 0.5 * frame_step_s) / frame_step_s))
 
@@ -148,9 +148,11 @@ class PyanNetFrameInference:
             self.model.config.sinc_stride * 27 if config.is_brouhaha else chunk_samples / frames_per_chunk)
         # pyannote.audio builds its frame grid in seconds:
         # SlidingWindow(start=0, duration=step=chunk duration / frames).
-        frame_step_s = (frame_hop / config.sampling_rate if config.is_brouhaha else self.duration_s / frames_per_chunk)
+        frame_step_s = (
+            frame_hop / config.sampling_rate if config.is_brouhaha else self.duration_s / frames_per_chunk)
         starts_in_frames = tuple(
-            _closest_frame(0.0 + index * self.step_s, frame_step_s=frame_step_s) for index in range(len(starts)))
+            _closest_frame(0.0 + index * self.step_s, frame_step_s=frame_step_s)
+            for index in range(len(starts)))
         required_frames = _closest_frame(
             0.0 + self.duration_s + (len(starts) - 1) * self.step_s,
             frame_step_s=frame_step_s,

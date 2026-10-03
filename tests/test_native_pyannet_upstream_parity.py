@@ -27,8 +27,8 @@ from voicehub.models.vad_pyannote_segmentation import (
 SEGMENTATION_3_STEP = 10.0 / 589
 SCORES = np.asarray(
     [
-        0.5, 0.9, 1.0, 0.5, 0.4, 0.0, 0.0, 0.6, 0.0, 1.0, 1.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.7, 0.8, 0.5, 0.5, 0.3,
-        0.0, 1.0, 1.0, 1.0
+        0.5, 0.9, 1.0, 0.5, 0.4, 0.0, 0.0, 0.6, 0.0, 1.0, 1.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.7, 0.8, 0.5, 0.5,
+        0.3, 0.0, 1.0, 1.0, 1.0
     ],
     dtype=np.float32,
 ).tolist()
@@ -90,7 +90,8 @@ UPSTREAM_BINARIZE = (
 
 
 def _pyannote_aggregate(chunk_scores, *, duration, step, num_samples, sample_rate):
-    """Transcription of pyannote.audio 3.0.0 ``Inference.slide`` aggregation."""
+    """Transcription of pyannote.audio 3.0.0 ``Inference.slide``
+    aggregation."""
     num_chunks, frames_per_chunk, _ = chunk_scores.shape
     frame = duration / frames_per_chunk
 
@@ -198,7 +199,8 @@ class SegmentationProviderPostprocessingTests(unittest.TestCase):
         config = _powerset_config()
         model = PyanNet(config)
         root = Path(directory)
-        save_safetensors(model.state_dict(), root / "model.safetensors", metadata={"format": "voicehub-pyannet-v1"})
+        save_safetensors(
+            model.state_dict(), root / "model.safetensors", metadata={"format": "voicehub-pyannet-v1"})
         write_json_file(root / "config.json", config.to_dict())
         provider = PyannoteSegmentationVADForVoiceActivityDetection(
             PyannoteSegmentationVADConfig(name_or_path=root),
