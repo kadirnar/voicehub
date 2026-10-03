@@ -17,6 +17,7 @@ from typing import Any
 import torch
 from torch import Tensor, nn
 from torch.nn import functional
+from torch.nn.attention import SDPBackend, sdpa_kernel
 from torch.utils.checkpoint import checkpoint
 
 from voicehub.architectures.causal_lm.modeling import CausalLMOutput, GraniteForCausalLM
@@ -161,14 +162,17 @@ class GraniteSpeechConformerAttention(nn.Module):
             positional_bias[block_count - 1:positional_bias.shape[0]:block_count].masked_fill_(
                 invalid, mask_value)
 
-        attended = functional.scaled_dot_product_attention(
-            queries,
-            keys,
-            values,
-            attn_mask=positional_bias,
-            dropout_p=0.0,
-            scale=self.scale,
-        )
+        # The reference pins the math kernel for this relative-position
+        # bias; fused kernels round differently (visibly so in bfloat16).
+        with sdpa_kernel(SDPBackend.MATH):
+            attended = functional.scaled_dot_product_attention(
+                queries,
+                keys,
+                values,
+                attn_mask=positional_bias,
+                dropout_p=0.0,
+                scale=self.scale,
+            )
         attended = attended.transpose(1, 2).reshape(
             batch_size,
             normalized.shape[1],
