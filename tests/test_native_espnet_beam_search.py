@@ -302,6 +302,21 @@ class ESPnetUpstreamBeamSearchParityTests(unittest.TestCase):
             frontend(torch.randn(1, 64, dtype=torch.float64).float())
         self.assertEqual(calls, [{"dtype": torch.float32, "device": torch.device("cpu")}])
 
+    def test_mel_matrix_keeps_espnet_transposed_layout_after_loading(self):
+        # ESPnet registers torch.from_numpy(librosa_melmat.T): a transposed
+        # view whose layout selects the CUDA GEMM reduction of upstream.
+        from voicehub.architectures.espnet_transformer.frontend import ESPnetLogMel
+
+        config = _config()
+        bins = config.n_fft // 2 + 1
+        logmel = ESPnetLogMel(config)
+        self.assertEqual(tuple(logmel.melmat.shape), (bins, config.n_mels))
+        self.assertEqual(logmel.melmat.stride(), (1, bins))
+        source = torch.rand(bins, config.n_mels).contiguous()
+        logmel.load_state_dict({"melmat": source})
+        self.assertEqual(logmel.melmat.stride(), (1, bins))
+        torch.testing.assert_close(logmel.melmat, source, rtol=0, atol=0)
+
     def test_end_detect_matches_upstream(self):
         rng = np.random.default_rng(0)
         for _ in range(200):

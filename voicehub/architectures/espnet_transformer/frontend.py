@@ -39,8 +39,10 @@ class ESPnetLogMel(nn.Module):
             maximum_frequency=config.f_max,
         )
         # The source checkpoint stores librosa's transposed filter matrix as
-        # ``frontend.logmel.melmat``.
-        self.register_buffer("melmat", filters.transpose(0, 1).contiguous())
+        # ``frontend.logmel.melmat``. ESPnet registers it as a transposed
+        # view (``torch.from_numpy(melmat.T)``); keeping that memory layout
+        # makes CUDA pick the same GEMM reduction as upstream.
+        self.register_buffer("melmat", filters.contiguous().transpose(0, 1))
 
     def forward(
         self,
