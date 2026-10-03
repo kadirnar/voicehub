@@ -141,10 +141,54 @@ class NativeNeMoArchitectureTests(unittest.TestCase):
         decoded = tokenizer.decode_ctc([4, 1, 1, 4, 0, 2, 2, 4], )
 
         self.assertEqual(decoded.text, "a b")
-        self.assertEqual(decoded.words[0].start_offset, 1)
-        self.assertEqual(decoded.words[1].end_offset, 6)
+        # NeMo offsets: a character spans from the previous emission frame
+        # (one frame early for the first) to its own emission frame.
+        self.assertEqual(decoded.words[0].start_offset, 0)
+        self.assertEqual(decoded.words[0].end_offset, 1)
+        self.assertEqual(decoded.words[1].start_offset, 4)
+        self.assertEqual(decoded.words[1].end_offset, 5)
         with self.assertRaisesRegex(ValueError, "cannot encode"):
             tokenizer.encode("c")
+
+    def test_ctc_decoding_matches_nemo_word_offsets_and_apostrophes(self):
+        # Expected values were produced by NeMo 2.5 `CTCDecoding`
+        # (greedy_batch, compute_timestamps) for the QuartzNet15x5 labels.
+        tokenizer = NeMoCharacterTokenizer()
+        cases = (
+            (
+                [0, 27, 0, 14, 26, 15, 1, 22, 16, 27, 18],
+                "' nzoavp'r",
+                [(" ", 0, 0), ("'", 0, 0), (" ", 1, 2), ("n", 2, 3), ("z", 3, 4), ("o", 4, 5), ("a", 5, 6),
+                 ("v", 6, 7), ("p", 7, 8), ("'", 8, 8), ("r", 9, 10)],
+                [("'", 0, 0), ("nzoavp'r", 2, 10)],
+            ),
+            (
+                [0, 27, 8, 4, 7, 28, 0, 13, 0, 28],
+                "'hdg m",
+                [(" ", 0, 0), ("'", 0, 0), ("h", 1, 2), ("d", 2, 3), ("g", 3, 4), (" ", 4, 6), ("m", 6, 7),
+                 (" ", 7, 8)],
+                [("'hdg", 0, 4), ("m", 6, 7)],
+            ),
+            (
+                [3, 0, 27, 3, 0, 13, 14, 5, 21, 18, 27, 18],
+                "c'c mneur'r",
+                [("c", 0, 0), (" ", 0, 1), ("'", 1, 1), ("c", 2, 3), (" ", 3, 4), ("m", 4, 5), ("n", 5, 6),
+                 ("e", 6, 7), ("u", 7, 8), ("r", 8, 9), ("'", 9, 9), ("r", 10, 11)],
+                [("c'c", 0, 3), ("mneur'r", 4, 11)],
+            ),
+        )
+        for labels, text, characters, words in cases:
+            with self.subTest(labels=labels):
+                decoded = tokenizer.decode_ctc(labels)
+                self.assertEqual(decoded.text, text)
+                self.assertEqual(
+                    [(item.token, item.start_offset, item.end_offset) for item in decoded.characters],
+                    characters,
+                )
+                self.assertEqual(
+                    [(item.word, item.start_offset, item.end_offset) for item in decoded.words],
+                    words,
+                )
 
     def test_native_artifact_loads_exports_and_reloads(self):
         torch.manual_seed(17)
