@@ -237,7 +237,8 @@ class NativeWhisperXProviderTests(unittest.TestCase):
                 return SimpleNamespace(logits=logits, input_lengths=torch.tensor([0]))
 
         model = RecordingCTC()
-        processor = SimpleNamespace(prepare_audio_batch=lambda waveforms: self.fail("processor normalization used"))
+        processor = SimpleNamespace(
+            prepare_audio_batch=lambda waveforms: self.fail("processor normalization used"))
         runtime = SimpleNamespace(
             model=model,
             native_config=SimpleNamespace(minimum_input_samples=400),
@@ -289,7 +290,12 @@ class NativeWhisperXProviderTests(unittest.TestCase):
             device="cpu",
         )
         tokenizer = SimpleNamespace(
-            vocabulary={"<pad>": 0, "h": 1, "i": 2, "|": 3},
+            vocabulary={
+                "<pad>": 0,
+                "h": 1,
+                "i": 2,
+                "|": 3
+            },
             pad_token_id=0,
             word_delimiter_token="|",
         )
