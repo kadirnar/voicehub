@@ -379,7 +379,8 @@ class HostSynchronizationTests(unittest.TestCase):
         )
         prompt = torch.tensor([[1, 5, 6, 7]])
         with torch.no_grad():
-            output, reads = _count_host_transfers(lambda: model.generate(prompt, generation_config=generation))
+            output, reads = _count_host_transfers(
+                lambda: model.generate(prompt, generation_config=generation))
 
         steps = output.sequences.shape[1] - prompt.shape[1]
         self.assertGreater(steps, 0)
