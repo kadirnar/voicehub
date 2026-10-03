@@ -296,7 +296,8 @@ class NativeGPTSoVITSTests(unittest.TestCase):
         }
         requests = []
         model = GPTSoVITSForTextToSpeech(device="cpu")
-        model.model = SimpleNamespace(run=lambda request: requests.append(request) or [(32_000, torch.ones(4))])
+        model.model = SimpleNamespace(
+            run=lambda request: requests.append(request) or [(32_000, torch.ones(4))])
         ignored_options = {
             "text_language": "en",
             "speaker_audio_path": "reference.wav",
