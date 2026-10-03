@@ -6,6 +6,7 @@ import math
 
 import torch
 from torch import Tensor
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
 from voicehub.architectures.fishtts.modeling import FishS2ForConditionalGeneration
 
@@ -59,10 +60,14 @@ def logits_to_probabilities(
         src=remove_sorted,
     )
     filtered = logits.masked_fill(remove, float("-inf"))
-    return torch.softmax(
-        filtered / max(float(temperature), 1e-5),
-        dim=-1,
-    )
+    # The source divides by a temperature tensor in the logits dtype, so a
+    # bfloat16 model uses the bfloat16-rounded temperature.
+    divisor = torch.tensor(
+        float(temperature),
+        device=logits.device,
+        dtype=logits.dtype,
+    ).clamp(min=1e-5)
+    return torch.softmax(filtered / divisor, dim=-1)
 
 
 def sample_exponential_race(probabilities: Tensor) -> Tensor:
@@ -72,7 +77,17 @@ def sample_exponential_race(probabilities: Tensor) -> Tensor:
     if not torch.isfinite(probabilities).all() or probabilities.sum() <= 0:
         raise ValueError("Fish probabilities must be finite and non-empty.")
     exponential = -torch.log(torch.rand_like(probabilities))
-    return torch.argmax(probabilities / exponential).to(dtype=torch.long)
+    sampled = torch.argmax(probabilities / exponential)
+    # A uniform draw of exactly 0 (about 1/256 per element in bfloat16)
+    # gives an infinite arrival time. When it hits the only token left by
+    # top-k/top-p, every ratio is 0 and argmax would return token 0, which
+    # has zero probability; keep the surviving token instead.
+    sampled = torch.where(
+        probabilities[sampled] > 0,
+        sampled,
+        torch.argmax(probabilities),
+    )
+    return sampled.to(dtype=torch.long)
 
 
 def sample_logits(
@@ -208,8 +223,14 @@ def generate_fish_codes(
         device=parameter.device,
         dtype=torch.long,
     )
-    for _ in range(steps):
-        slow = model.forward_generate(current, positions)
+    for step in range(steps):
+        if step == 0:
+            slow = model.forward_generate(current, positions)
+        else:
+            # The source decodes every token after the prefill under the
+            # math SDPA backend (float32 accumulation for bfloat16).
+            with sdpa_kernel(SDPBackend.MATH):
+                slow = model.forward_generate(current, positions)
         main = _sample_main_token(
             slow.logits[0, -1],
             model=model,
@@ -231,8 +252,11 @@ def generate_fish_codes(
             top_k=top_k,
         )
         generated.append(codes)
-        previous = previous.roll(-1)
-        previous[-1] = main
+        if step > 0:
+            # The source never enters the prefill token into the
+            # repetition-aware sampling window.
+            previous = previous.roll(-1)
+            previous[-1] = main
         next_token = torch.cat((main.view(1), codes)).view(
             1,
             model.config.num_codebooks + 1,
