@@ -267,6 +267,123 @@ class NativeVoxCPMInventoryTests(unittest.TestCase):
         )
 
 
+def _non_unit_rope_config() -> VoxCPM2ArchitectureConfig:
+    config = _tiny_config()
+    factors = (0.9977997200264581, 1.5, 4.0, 31.0)
+    rope = replace(config.lm_config.rope_scaling, long_factor=factors, short_factor=factors)
+    return replace(config, lm_config=replace(config.lm_config, rope_scaling=rope))
+
+
+def _source_rope_tables(config, dtype: torch.dtype) -> tuple[torch.Tensor, torch.Tensor]:
+    """Upstream MiniCPMLongRoPE tables after the source's `model.to(dtype)`."""
+    dimension = config.lm_config.head_dim
+    inverse = 1.0 / (config.lm_config.rope_theta**(torch.arange(0, dimension, 2).float() / dimension))
+    positions = torch.arange(config.lm_config.max_position_embeddings, dtype=torch.float32)
+    factors = torch.tensor(config.lm_config.rope_scaling.short_factor, dtype=torch.float32)
+    embedding = torch.outer(positions, 1.0 / factors) * inverse
+    embedding = torch.cat((embedding, embedding), dim=-1)
+    return embedding.cos().to(dtype), embedding.sin().to(dtype)
+
+
+class NativeVoxCPMTokenizerTests(unittest.TestCase):
+
+    def test_cjk_split_matches_source_mask_multichar_chinese_tokens(self):
+        # Source rule: split a token iff its spelling without U+2581 is itself
+        # a vocabulary entry of >= 2 characters in U+4E00..U+9FFF; characters
+        # missing from the vocabulary become <unk>.
+        vocabulary = {
+            "<unk>": 0,
+            "<s>": 1,
+            "</s>": 2,
+            "▁": 3,
+            "你": 10,  # 你
+            "好": 11,  # 好
+            "你好": 12,  # 你好 (in vocabulary -> split)
+            "▁你好": 13,  # ▁你好 (clean form in vocabulary -> split)
+            "▁注解": 14,  # ▁注解 (注解 not in vocabulary -> kept)
+            "注": 15,
+            "解": 16,
+            "㐀㐁": 17,  # CJK Ext-A pair (outside source range -> kept)
+            "㐀": 18,
+            "㐁": 19,
+            "天气": 20,  # 天气 with 气 missing -> split to <unk>
+            "天": 21,
+            "a": 127,
+        }
+        assets = SentencePieceBPEAssets(
+            vocabulary=vocabulary,
+            merges=(),
+            special_tokens={},
+            added_tokens={},
+            unk_token_id=0,
+            prefix_token_ids=(1, ),
+            prepend=" ",
+            replacement_source=" ",
+            replacement_target="▁",
+            byte_fallback=False,
+            fuse_unk=False,
+            original_document={},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tokenizer.json"
+            path.write_text("{}\n", encoding="utf-8")
+            with patch(
+                    "voicehub.architectures.voxcpm2.processing.load_sentencepiece_bpe",
+                    return_value=assets,
+            ):
+                tokenizer = VoxCPM2Tokenizer.from_file(path, config=_tiny_config())
+        self.assertEqual(
+            tokenizer.split_map,
+            {
+                12: (10, 11),
+                13: (10, 11),
+                20: (21, 0),
+            },
+        )
+
+
+class NativeVoxCPMSourceNumericsTests(unittest.TestCase):
+
+    def test_local_transformers_inherit_backbone_longrope_factors(self):
+        # Upstream builds the local encoder and DiT from
+        # `lm_config.model_copy()`, so they keep the backbone LongRoPE factors.
+        config = _non_unit_rope_config()
+        model = VoxCPM2Model(config)
+        cosine, sine = _source_rope_tables(config, torch.float32)
+        for decoder in (
+                model.base_lm,
+                model.feat_encoder.encoder,
+                model.feat_decoder.estimator.decoder,
+        ):
+            self.assertEqual(
+                tuple(decoder.rope_emb.short_factor),
+                config.lm_config.rope_scaling.short_factor,
+            )
+            torch.testing.assert_close(decoder.rope_emb.cos_cached, cosine, rtol=0, atol=0)
+            torch.testing.assert_close(decoder.rope_emb.sin_cached, sine, rtol=0, atol=0)
+        self.assertIsNone(model.residual_lm.rope_emb)
+
+    def test_rope_tables_follow_low_precision_parameter_dtype(self):
+        # Upstream casts the whole model (including the non-persistent RoPE
+        # tables) with `model.to(bfloat16)` before inference.
+        config = _non_unit_rope_config()
+        cosine, sine = _source_rope_tables(config, torch.bfloat16)
+        direct = VoxCPM2Model(config, dtype=torch.bfloat16)
+        with torch.device("meta"):
+            streamed = VoxCPM2Model(config, dtype=torch.bfloat16)
+        streamed.to_empty(device="cpu")
+        streamed.materialize_runtime_buffers("cpu")
+        for model in (direct, streamed):
+            for decoder in (
+                    model.base_lm,
+                    model.feat_encoder.encoder,
+                    model.feat_decoder.estimator.decoder,
+            ):
+                self.assertEqual(decoder.rope_emb.cos_cached.dtype, torch.bfloat16)
+                torch.testing.assert_close(decoder.rope_emb.cos_cached, cosine, rtol=0, atol=0)
+                torch.testing.assert_close(decoder.rope_emb.sin_cached, sine, rtol=0, atol=0)
+
+
 class NativeVoxCPMTrainingTests(unittest.TestCase):
 
     def test_full_sft_runs_published_losses_and_keeps_codec_frozen(self):
@@ -434,6 +551,124 @@ class NativeVoxCPMProviderTests(unittest.TestCase):
         self.assertEqual(output.audio.shape, (32, ))
         self.assertEqual(output.metadata["backend"], "voicehub-native")
         self.assertEqual(generate.call_args.kwargs["seed"], 7)
+
+    def test_continuation_prompt_is_left_padded_and_decoded_as_codec_context(self):
+        # Source: prompt audio uses padding_mode="left", and the non-streaming
+        # decode prepends the last (streaming_prefix_len - 1) = 3 prefix audio
+        # patches, then trims their samples from the waveform.
+        torch.manual_seed(0)
+        waveform = torch.randn(29)
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            codec = runtime.codec
+            patch_size = runtime.model.patch_size
+            patch_samples = codec.hop_length * patch_size
+            pad = -waveform.numel() % patch_samples
+            with torch.no_grad():
+                expected_prompt = codec.encode(
+                    torch.nn.functional.pad(waveform, (pad, 0))[None, None],
+                    codec.sample_rate,
+                )
+            generated = torch.randn(1, runtime.model.feat_dim, 2 * patch_size)
+            with patch.object(
+                    runtime.model,
+                    "generate_features",
+                    return_value=generated,
+            ) as generate, patch.object(
+                    codec,
+                    "decode",
+                    wraps=codec.decode,
+            ) as decode:
+                audio = runtime.generate(
+                    "a",
+                    prompt_audio=waveform.numpy(),
+                    prompt_sampling_rate=codec.sample_rate,
+                    prompt_text="a",
+                )
+            prefix_features = generate.call_args.kwargs["audio_feats"][0]
+            prompt_patches = expected_prompt.shape[-1] // patch_size
+            context = min(3, prompt_patches)
+            torch.testing.assert_close(
+                prefix_features[-prompt_patches:].permute(2, 0, 1).flatten(1),
+                expected_prompt[0],
+            )
+            decoded_latents = decode.call_args.args[0]
+            torch.testing.assert_close(
+                decoded_latents,
+                torch.cat((expected_prompt[..., -context * patch_size:], generated), dim=-1),
+            )
+            with torch.no_grad():
+                full = codec.decode(decoded_latents).squeeze(1)
+        self.assertEqual(context, 3)
+        torch.testing.assert_close(audio, full[..., context * patch_size * codec.decode_chunk_size:])
+        self.assertEqual(audio.shape[-1], 2 * patch_size * codec.decode_chunk_size)
+
+    def test_reference_audio_keeps_right_padding_and_no_codec_context(self):
+        waveform = torch.randn(29)
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            codec = runtime.codec
+            pad = -waveform.numel() % (codec.hop_length * runtime.model.patch_size)
+            with torch.no_grad():
+                expected = codec.encode(
+                    torch.nn.functional.pad(waveform, (0, pad))[None, None],
+                    codec.sample_rate,
+                )
+            generated = torch.randn(1, runtime.model.feat_dim, 4)
+            with patch.object(
+                    runtime.model,
+                    "generate_features",
+                    return_value=generated,
+            ) as generate, patch.object(codec, "decode", wraps=codec.decode) as decode:
+                runtime.generate(
+                    "a",
+                    reference_audio=waveform.numpy(),
+                    reference_sampling_rate=codec.sample_rate,
+                )
+            features = generate.call_args.kwargs["audio_feats"][0]
+            reference = features[1:1 + expected.shape[-1] // runtime.model.patch_size]
+            torch.testing.assert_close(reference.permute(2, 0, 1).flatten(1), expected[0])
+            torch.testing.assert_close(decode.call_args.args[0], generated)
+
+    def test_generation_length_is_bounded_by_target_text_tokens(self):
+        # Source `_generate_with_prompt_cache` always uses
+        # max_len=min(int(len(target_tokens) * 6.0 + 10), max_len).
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            tokens = len(runtime.processor.tokenizer.encode("a a"))
+            generated = torch.randn(1, runtime.model.feat_dim, 4)
+            for requested, expected in ((2_000, int(tokens * 6.0 + 10)), (12, 12)):
+                with patch.object(
+                        runtime.model,
+                        "generate_features",
+                        return_value=generated,
+                ) as generate:
+                    runtime.generate("a a", max_length=requested)
+                self.assertEqual(generate.call_args.kwargs["max_length"], expected)
+
+    def test_public_generation_defaults_match_source_voxcpm_generate(self):
+        # Source `VoxCPM.generate`: cfg_value=2.0, inference_timesteps=10,
+        # min_len=2, max_len=4096.
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            wrapper = VoxCPMForTextToSpeech(VoxCPMConfig(), device="cpu")
+            wrapper._runtime = runtime
+            with patch.object(runtime, "generate", return_value=torch.zeros(1, 32)) as generate:
+                wrapper.generate("a")
+        options = generate.call_args.kwargs
+        self.assertEqual(options["guidance"], 2.0)
+        self.assertEqual(options["diffusion_steps"], 10)
+        self.assertEqual(options["min_length"], 2)
+        self.assertEqual(options["max_length"], 4_096)
+
+    def test_generation_folds_target_text_whitespace_like_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _tiny_runtime(Path(directory))
+            wrapper = VoxCPMForTextToSpeech(VoxCPMConfig(), device="cpu")
+            wrapper._runtime = runtime
+            with patch.object(runtime, "generate", return_value=torch.zeros(1, 32)) as generate:
+                wrapper.generate("a\n  a\t a")
+        self.assertEqual(generate.call_args.args[0], "a a a")
 
     def test_external_postprocessing_options_fail_closed(self):
         wrapper = VoxCPMForTextToSpeech(

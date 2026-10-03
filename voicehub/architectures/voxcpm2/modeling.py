@@ -703,11 +703,13 @@ class VoxCPM2Model(nn.Module):
     def parameter_dtype(self) -> torch.dtype:
         return next(self.parameters()).dtype
 
-    def materialize_runtime_buffers(self, device) -> None:
-        self.base_lm.materialize_runtime_buffers(device)
-        self.residual_lm.materialize_runtime_buffers(device)
-        self.feat_encoder.encoder.materialize_runtime_buffers(device)
-        self.feat_decoder.estimator.decoder.materialize_runtime_buffers(device)
+    def materialize_runtime_buffers(self, device, dtype=None) -> None:
+        """Rebuild non-persistent buffers in the loaded parameter dtype."""
+        dtype = self.parameter_dtype if dtype is None else dtype
+        self.base_lm.materialize_runtime_buffers(device, dtype)
+        self.residual_lm.materialize_runtime_buffers(device, dtype)
+        self.feat_encoder.encoder.materialize_runtime_buffers(device, dtype)
+        self.feat_decoder.estimator.decoder.materialize_runtime_buffers(device, dtype)
 
     def setup_generation_cache(
         self,

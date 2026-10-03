@@ -57,13 +57,20 @@ def _apply_rotary(
 
 
 class MiniCPMLongRoPE(nn.Module):
-    """Source-compatible MiniCPM long-context rotary embedding."""
+    """Source-compatible MiniCPM long-context rotary embedding.
+
+    The cosine/sine tables are computed in float32 and then stored in
+    the module dtype, exactly like the source, whose ``model.to(dtype)``
+    also casts these floating-point buffers before low-precision
+    inference.
+    """
 
     def __init__(
         self,
         config: VoxCPMTransformerConfig,
         *,
         device=None,
+        dtype=None,
     ) -> None:
         super().__init__()
         self.dimension = config.head_dim
@@ -102,6 +109,8 @@ class MiniCPMLongRoPE(nn.Module):
                 device=resolved_device,
                 dtype=torch.float32,
             )
+            if dtype is not None:
+                cosine, sine = cosine.to(dtype), sine.to(dtype)
         self.register_buffer("inv_freq", inverse, persistent=False)
         self.register_buffer("cos_cached", cosine, persistent=False)
         self.register_buffer("sin_cached", sine, persistent=False)
@@ -136,7 +145,7 @@ class MiniCPMLongRoPE(nn.Module):
             embedding.sin().to(dtype) * self.scaling_factor,
         )
 
-    def materialize(self, device) -> None:
+    def materialize(self, device, dtype=None) -> None:
         exponents = torch.arange(
             0,
             self.dimension,
@@ -151,6 +160,8 @@ class MiniCPMLongRoPE(nn.Module):
             device=device,
             dtype=torch.float32,
         )
+        if dtype is not None:
+            cosine, sine = cosine.to(dtype), sine.to(dtype)
         self.inv_freq = inverse
         self.cos_cached = cosine
         self.sin_cached = sine
@@ -530,7 +541,7 @@ class MiniCPMModel(nn.Module):
             device=device,
             dtype=dtype,
         )
-        self.rope_emb = (None if config.no_rope else MiniCPMLongRoPE(config, device=device))
+        self.rope_emb = (None if config.no_rope else MiniCPMLongRoPE(config, device=device, dtype=dtype))
         self.kv_cache = StaticKVCache()
 
     def forward(
@@ -597,9 +608,9 @@ class MiniCPMModel(nn.Module):
             )
         return self.norm(hidden_states)
 
-    def materialize_runtime_buffers(self, device) -> None:
+    def materialize_runtime_buffers(self, device, dtype=None) -> None:
         if self.rope_emb is not None:
-            self.rope_emb.materialize(device)
+            self.rope_emb.materialize(device, dtype)
 
 
 def local_transformer_config(
@@ -612,14 +623,13 @@ def local_transformer_config(
     kv_channels: int | None,
     no_rope: bool = False,
 ) -> VoxCPMTransformerConfig:
-    """Create source-equivalent local encoder/DiT/RALM configs."""
-    head_dim = (hidden_size // num_attention_heads if kv_channels is None else kv_channels)
-    factors = tuple(1.0 for _ in range(head_dim // 2))
-    rope = replace(
-        base.rope_scaling,
-        long_factor=factors,
-        short_factor=factors,
-    )
+    """Create source-equivalent local encoder/DiT/RALM configs.
+
+    The source builds these with ``lm_config.model_copy()`` and only
+    overrides the sizes, so the local transformers inherit the
+    backbone's LongRoPE ``rope_scaling`` (including its per-dimension
+    factors).
+    """
     return replace(
         base,
         hidden_size=hidden_size,
@@ -629,7 +639,6 @@ def local_transformer_config(
         kv_channels=kv_channels,
         vocab_size=0,
         no_rope=no_rope,
-        rope_scaling=rope,
     )
 
 

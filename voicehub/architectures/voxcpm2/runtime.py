@@ -50,6 +50,12 @@ def _dtype(value: str | torch.dtype) -> torch.dtype:
         raise ValueError(f"Unsupported VoxCPM dtype {value!r}.") from error
 
 
+# Source defaults: ``retry_badcase_ratio_threshold`` and
+# ``streaming_prefix_len - 1``.
+_AUDIO_TEXT_RATIO_LIMIT = 6.0
+_CONTINUATION_CONTEXT_PATCHES = 3
+
+
 class VoxCPM2Runtime:
     """Complete native VoxCPM2 model, tokenizer, and frozen AudioVAE."""
 
@@ -105,7 +111,16 @@ class VoxCPM2Runtime:
         audio: Any,
         *,
         sampling_rate: int | None = None,
+        padding: str = "right",
     ) -> Tensor:
+        """Encode mono audio into AudioVAE latent patches.
+
+        Like the source, isolated reference audio is padded on the right
+        while continuation prompts are padded on the left so that the
+        prompt ends exactly where generation continues.
+        """
+        if padding not in ("left", "right"):
+            raise ValueError("VoxCPM audio padding must be 'left' or 'right'.")
         loaded = load_audio(
             audio,
             sampling_rate=sampling_rate,
@@ -120,9 +135,10 @@ class VoxCPM2Runtime:
         patch_samples = (self.codec.hop_length * self.model.patch_size)
         remainder = waveform.numel() % patch_samples
         if remainder:
+            amount = patch_samples - remainder
             waveform = torch.nn.functional.pad(
                 waveform,
-                (0, patch_samples - remainder),
+                (amount, 0) if padding == "left" else (0, amount),
             )
         with torch.no_grad():
             encoded = self.codec.encode(
@@ -152,6 +168,7 @@ class VoxCPM2Runtime:
             None if prompt_audio is None else self.encode_audio(
                 prompt_audio,
                 sampling_rate=prompt_sampling_rate,
+                padding="left",
             ))
         reference_features = (
             None if reference_audio is None else self.encode_audio(
@@ -171,6 +188,12 @@ class VoxCPM2Runtime:
                 raise ValueError("VoxCPM seed must be a non-negative integer.")
             generator = torch.Generator(device=self.device)
             generator.manual_seed(seed)
+        # The source always bounds generation by the target text length
+        # (``min(int(len(tokens) * 6.0 + 10), max_len)``), independently of
+        # its optional bad-case retry loop.
+        target_tokens = len(self.processor.tokenizer.encode(text))
+        max_length = min(int(target_tokens * _AUDIO_TEXT_RATIO_LIMIT + 10), max_length)
+        min_length = min(min_length, max_length - 1)
         self.prepare_for_inference()
         features = self.model.generate_features(
             **prefix,
@@ -180,7 +203,21 @@ class VoxCPM2Runtime:
             guidance=guidance,
             generator=generator,
         )
-        return self.codec.decode(features.float()).squeeze(1)
+        context = 0
+        audio_positions = prefix["audio_mask"][0].nonzero().flatten()
+        if prefix["audio_mask"][0, -1]:
+            # Continuation decodes the trailing prefix audio patches as causal
+            # codec context and trims their audio, exactly like the source.
+            context = min(_CONTINUATION_CONTEXT_PATCHES, audio_positions.numel())
+            prompt_context = prefix["audio_feats"][0, audio_positions[-context:]].to(
+                device=features.device,
+                dtype=features.dtype,
+            )
+            features = torch.cat((prompt_context.permute(2, 0, 1).flatten(1)[None], features), dim=-1)
+        audio = self.codec.decode(features.float()).squeeze(1)
+        if context:
+            audio = audio[..., context * self.model.patch_size * self.codec.decode_chunk_size:]
+        return audio
 
     def prepare_training_inputs(
         self,
