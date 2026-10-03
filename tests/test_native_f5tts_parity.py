@@ -279,6 +279,15 @@ class ReducedPrecisionLoadingTests(unittest.TestCase):
         self.assertEqual(next(runtime.ema_model.transformer.parameters()).dtype, torch.float16)
         self.assertEqual(runtime.ema_model.mel_spec.window.dtype, torch.float32)
         self.assertEqual(runtime.ema_model.mel_spec.filter_bank.dtype, torch.float32)
+        # Not merely re-widened from half precision.
+        self.assertTrue(
+            torch.equal(runtime.ema_model.mel_spec.window,
+                        F5MelSpectrogram(n_fft=32, win_length=32).window))
+        self.assertTrue(
+            torch.equal(
+                runtime.ema_model.mel_spec.filter_bank,
+                F5MelSpectrogram(sample_rate=8_000, n_fft=32, hop_length=8, win_length=32,
+                                 n_mels=8).filter_bank))
         self.assertEqual(next(runtime.vocoder.parameters()).dtype, torch.float32)
 
 

@@ -100,10 +100,11 @@ class F5TTSForTextToSpeech(PreTrainedTTSModel):
                 ode_method=self.config.ode_method,
             )
         if dtype != torch.float32:
-            flow_model.to(dtype=dtype)
-            # The released recipe extracts the conditioning mel with a
-            # float32 frontend that is not part of the cast checkpoint graph.
-            flow_model.mel_spec.float()
+            # Cast only the DiT. The released recipe extracts the
+            # conditioning mel with a float32 frontend outside the cast
+            # graph; casting and re-widening its buffers would keep their
+            # half-precision rounding.
+            flow_model.transformer.to(dtype=dtype)
         load_f5tts_checkpoint(
             flow_model,
             artifacts.checkpoint,
