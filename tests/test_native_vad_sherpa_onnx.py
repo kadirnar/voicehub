@@ -1,8 +1,8 @@
 """Regression tests for the Sherpa-compatible native VAD segmentation.
 
-Expected values follow the pinned sherpa-onnx sources
-(``silero-vad-model.cc`` and ``voice-activity-detector.cc`` at
-``d1fedc1daac9304cd8f85350a38aed2e5e120f02``).
+Expected values follow the pinned sherpa-onnx C++ Silero model and
+VoiceActivityDetector sources at commit
+``d1fedc1daac9304cd8f85350a38aed2e5e120f02``.
 """
 
 import unittest

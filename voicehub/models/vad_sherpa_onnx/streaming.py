@@ -16,8 +16,8 @@ def _float32(value: float) -> float:
 def _duration_samples(sample_rate: int, seconds: float) -> int:
     """Return Sherpa's ``int32_t(sample_rate * float_seconds)``.
 
-    The C++ product is evaluated in float32 and truncated, so e.g. 251 ms
-    is 4015 samples upstream while double arithmetic gives 4016.
+    The C++ product is evaluated in float32 and truncated, so e.g. 251
+    ms is 4015 samples upstream while double arithmetic gives 4016.
     """
     return int(_float32(_float32(sample_rate) * _float32(seconds)))
 
