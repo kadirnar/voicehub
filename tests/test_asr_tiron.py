@@ -449,6 +449,27 @@ class TironNativeRuntimeTests(unittest.TestCase):
             }],
         )
 
+    def test_auto_dtype_follows_reference_harness(self):
+        # The harness runs the bfloat16 checkpoint in bfloat16 on CUDA.
+        expected = {
+            "cuda": torch.bfloat16,
+            "mps": torch.float16,
+            "cpu": torch.float32,
+        }
+        for device, dtype in expected.items():
+            with self.subTest(device=device):
+                self.assertIs(
+                    TironForSpeechRecognition(device=device)._model_dtype(),
+                    dtype,
+                )
+        self.assertIs(
+            TironForSpeechRecognition(
+                device="cuda",
+                torch_dtype="float16",
+            )._model_dtype(),
+            torch.float16,
+        )
+
     def test_invalid_inference_controls_fail_before_generation(self):
         wrapper = TironForSpeechRecognition(device="cpu")
         cases = (

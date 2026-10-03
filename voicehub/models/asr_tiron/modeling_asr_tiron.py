@@ -53,6 +53,18 @@ class TironForSpeechRecognition(WhisperForSpeechRecognition):
         self._declared_token_count = 0
         super().__init__(config, **kwargs)
 
+    def _model_dtype(self) -> Any:
+        import torch
+
+        if self.config.torch_dtype != "auto":
+            return super()._model_dtype()
+        # Tiron is published in bfloat16 and its reference harness runs it in
+        # bfloat16 on CUDA (float16 on MPS, float32 elsewhere).
+        return {
+            "cuda": torch.bfloat16,
+            "mps": torch.float16,
+        }.get(torch.device(self.device).type, torch.float32)
+
     def _validate_tokenizer_vocabulary(
         self,
         tokenizer: Any,
