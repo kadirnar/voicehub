@@ -574,6 +574,50 @@ class NemotronTokenizerAndProviderTests(unittest.TestCase):
                     config,
                 )
 
+    def test_published_transformers_generation_configuration_loads(self):
+        from voicehub.architectures.nemotron_asr.runtime import resolve_nemotron_asr_generation_config
+
+        config = _tiny_config()
+        # generation_config.json as published at the pinned revision: the
+        # Transformers file, without the native RNN-T settings.
+        published = {
+            "_from_model_config": True,
+            "decoder_start_token_id": config.blank_token_id,
+            "pad_token_id": 0,
+            "transformers_version": "5.13.0.dev0",
+        }
+        resolved = resolve_nemotron_asr_generation_config(published, config)
+        self.assertEqual(resolved["blank_token_id"], config.blank_token_id)
+        self.assertEqual(resolved["max_symbols_per_step"], config.max_symbols_per_step)
+        self.assertEqual(
+            resolved["num_lookahead_tokens"],
+            config.encoder_config.default_num_lookahead_tokens,
+        )
+        self.assertEqual(
+            resolve_nemotron_asr_generation_config(None, config),
+            {
+                "blank_token_id": config.blank_token_id,
+                "max_symbols_per_step": config.max_symbols_per_step,
+                "num_lookahead_tokens": 0,
+            },
+        )
+        with self.assertRaisesRegex(ValueError, "decoder_start_token_id"):
+            resolve_nemotron_asr_generation_config(
+                {
+                    **published,
+                    "decoder_start_token_id": 0,
+                },
+                config,
+            )
+        with self.assertRaisesRegex(ValueError, "max_symbols_per_step"):
+            resolve_nemotron_asr_generation_config(
+                {
+                    **published,
+                    "max_symbols_per_step": 99,
+                },
+                config,
+            )
+
     def test_registration_does_not_claim_unverified_optimizations(self):
         from voicehub.architectures.nemotron_asr.registration import create_nemotron_asr_architecture_spec
 
