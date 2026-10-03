@@ -43,11 +43,12 @@ def _process_sampling_logits(
     top_p: Optional[float],
     repetition_penalty: float,
 ) -> Tensor:
-    """Apply the released Chatterbox order: temperature, repetition
-    penalty, min-p, then top-p.
+    """Apply the released Chatterbox order: temperature, repetition penalty,
+    min-p, then top-p.
 
-    Top-p after min-p uses the renormalized distribution, so the order is
-    observable whenever ``top_p < 1``; a generic order changes sampling.
+    Top-p after min-p uses the renormalized distribution, so the order
+    is observable whenever ``top_p < 1``; a generic order changes
+    sampling.
     """
     if not do_sample:
         return apply_repetition_penalty(logits, generated_ids, repetition_penalty)
