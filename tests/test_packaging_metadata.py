@@ -175,7 +175,8 @@ class PackagingMetadataTests(unittest.TestCase):
         cls.dependencies = _read_project_dependencies()
 
     def test_only_training_is_a_public_runtime_extra(self):
-        self.assertEqual(set(self.extras), {"docs", "test", "training"})
+        # ``conversion`` only serves one-time offline weight conversion.
+        self.assertEqual(set(self.extras), {"conversion", "docs", "test", "training"})
         self.assertEqual(
             FORBIDDEN_INFERENCE_EXTRAS & self.extras.keys(),
             set(),
