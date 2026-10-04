@@ -200,7 +200,7 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
                 raise ValueError(f"`{name}` must be non-negative.")
             if name == "sdp_ratio" and value > 1:
                 raise ValueError("`sdp_ratio` must be in [0, 1].")
-        max_frames = model_inputs.get("max_frames", 4_096)
+        max_frames = model_inputs.get("max_frames")
         if max_frames is not None and (isinstance(max_frames, bool) or not isinstance(max_frames, int) or
                                        max_frames < 1):
             raise ValueError("`max_frames` must be a positive integer or None.")
@@ -227,7 +227,7 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
         sdp_ratio: float = 0.2,
         noise_scale: float = 0.6,
         noise_scale_w: float = 0.8,
-        max_frames: int | None = 4_096,
+        max_frames: int | None = None,
         seed: int | None = None,
     ) -> TTSOutput:
         del text

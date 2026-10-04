@@ -169,7 +169,7 @@ class MeloTTSRuntime:
         sdp_ratio: float = 0.2,
         noise_scale: float = 0.6,
         noise_scale_w: float = 0.8,
-        max_frames: int | None = 4_096,
+        max_frames: int | None = None,
     ) -> Tensor:
         self._validate_controls(
             speed=speed,
