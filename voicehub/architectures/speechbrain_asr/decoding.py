@@ -34,7 +34,12 @@ def _select_hidden(
 
 
 class SpeechBrainRNNLMBeamSearch:
-    """Pinned SpeechBrain attention beam search with RNNLM shallow fusion."""
+    """Pinned SpeechBrain attention beam search with RNNLM shallow fusion.
+
+    Scoring follows the released ``hyperparams.yaml``: SpeechBrain's
+    ``S2SRNNBeamSearcher`` with ``RNNLMScorer`` and ``CoverageScorer``
+    as full scorers, so the coverage penalty enters every search step.
+    """
 
     def __init__(
         self,
@@ -172,6 +177,18 @@ class SpeechBrainRNNLMBeamSearch:
                 combined = acoustic + resolved_lm_weight * lm_scores
             else:
                 combined = acoustic
+            if config.coverage_penalty > 0.0:
+                # The released hyperparams.yaml registers coverage as a full
+                # scorer (``CoverageScorer``): every step subtracts the
+                # length-normalized penalty of the cumulative attention from
+                # each beam before top-k, so it shapes the search itself.
+                coverage = attention if coverage is None else coverage + attention
+                penalty = (
+                    torch.maximum(
+                        coverage,
+                        coverage.new_full((), 0.5),
+                    ).sum(dim=-1) - coverage.shape[-1] * 0.5)
+                combined = combined + (-penalty / (step + 1)).unsqueeze(1) * config.coverage_penalty
             vocabulary_size = combined.shape[-1]
             candidate_scores = (sequence_scores.unsqueeze(1) + combined)
             candidate_scores = candidate_scores / (step + 1)
@@ -192,21 +209,8 @@ class SpeechBrainRNNLMBeamSearch:
             attention_state = attention_state.index_select(predecessor)
             lm_hidden = _select_hidden(lm_hidden, predecessor)
             previous_peaks = previous_peaks.index_select(0, predecessor)
-
-            if config.coverage_penalty > 0.0:
-                current_attention = attention.index_select(0, predecessor)
-                if coverage is None:
-                    coverage = current_attention
-                else:
-                    coverage = (coverage.index_select(0, predecessor) + current_attention)
-                penalty = (
-                    torch.maximum(
-                        coverage,
-                        coverage.new_full((), 0.5),
-                    ).sum(dim=-1) - coverage.shape[-1] * 0.5)
-                candidate_scores = (
-                    candidate_scores.reshape(batch_size * beam) -
-                    (penalty / (step + 1)) * config.coverage_penalty).reshape(batch_size, beam)
+            if coverage is not None:
+                coverage = coverage.index_select(0, predecessor)
             fallback_scores = candidate_scores.reshape(batch_size * beam)
 
             alive = torch.cat(
