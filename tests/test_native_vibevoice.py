@@ -12,6 +12,7 @@ from unittest import mock
 import torch
 
 from voicehub.architectures.causal_lm import Qwen2Config
+from voicehub.architectures.vibevoice.asr_codec import VibeVoiceASREncoderOutput
 from voicehub.architectures.vibevoice.checkpoint import (
     VibeVoiceCheckpointAdapter,
     _materialize_runtime_buffers,
@@ -33,9 +34,11 @@ from voicehub.architectures.vibevoice.metadata import (
 )
 from voicehub.architectures.vibevoice.modeling import (
     VibeVoiceASRForConditionalGeneration,
+    VibeVoiceASRModel,
     VibeVoiceForConditionalGeneration,
     VibeVoiceRealtimeForConditionalGeneration,
 )
+from voicehub.architectures.vibevoice.processing import VibeVoiceASRProcessor
 from voicehub.architectures.vibevoice.registration import (
     create_vibevoice_asr_architecture_spec,
     create_vibevoice_tts_architecture_spec,
@@ -59,7 +62,11 @@ from voicehub.tokenization.assets import encode_gpt2_token
 from voicehub.training import AutoTrainingAdapter, get_training_spec
 
 
-def _text_config(*, layers: int = 1) -> Qwen2Config:
+def _text_config(
+    *,
+    layers: int = 1,
+    eos_token_id: int | None = VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+) -> Qwen2Config:
     return Qwen2Config(
         vocab_size=151_936,
         hidden_size=8,
@@ -70,13 +77,14 @@ def _text_config(*, layers: int = 1) -> Qwen2Config:
         max_position_embeddings=1_024,
         max_window_layers=layers,
         bos_token_id=None,
-        eos_token_id=VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+        eos_token_id=eos_token_id,
         pad_token_id=VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
         tie_word_embeddings=False,
     )
 
 
-def _asr_config() -> VibeVoiceASRConfig:
+def _asr_config(
+        *, text_eos_token_id: int | None = VIBEVOICE_TOKEN_IDS["<|endoftext|>"]) -> VibeVoiceASRConfig:
     acoustic = VibeVoiceASRTokenizerConfig(
         hidden_size=4,
         num_filters=2,
@@ -90,7 +98,7 @@ def _asr_config() -> VibeVoiceASRConfig:
     return VibeVoiceASRConfig(
         acoustic_tokenizer_encoder_config=acoustic,
         semantic_tokenizer_encoder_config=semantic,
-        text_config=_text_config(),
+        text_config=_text_config(eos_token_id=text_eos_token_id),
         acoustic_tokenizer_chunk_size=3_200,
     )
 
@@ -206,9 +214,28 @@ def _write_tokenizer(root: Path) -> None:
     )
 
 
-def _write_asr_artifact(root: Path) -> VibeVoiceASRForConditionalGeneration:
+def _published_asr_name(name: str) -> str:
+    """Rename a native tensor to the unprefixed microsoft/VibeVoice-ASR-HF
+    layout."""
+    for native, published in (
+        ("model.language_model.", "language_model.model."),
+        ("lm_head.", "language_model.lm_head."),
+        ("model.", ""),
+    ):
+        if name.startswith(native):
+            return published + name[len(native):]
+    return name
+
+
+def _write_asr_artifact(
+    root: Path,
+    *,
+    text_eos_token_id: int | None = VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+    generation_eos_token_id: int = VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+    published_layout: bool = False,
+) -> VibeVoiceASRForConditionalGeneration:
     root.mkdir(parents=True)
-    config = _asr_config()
+    config = _asr_config(text_eos_token_id=text_eos_token_id)
     model = VibeVoiceASRForConditionalGeneration(config)
     write_json_file(root / "config.json", config.to_dict())
     _write_tokenizer(root)
@@ -228,7 +255,7 @@ def _write_asr_artifact(root: Path) -> VibeVoiceASRForConditionalGeneration:
         root / "generation_config.json",
         {
             "do_sample": False,
-            "eos_token_id": VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+            "eos_token_id": generation_eos_token_id,
             "pad_token_id": VIBEVOICE_TOKEN_IDS["<|image_pad|>"],
             "use_cache": True,
             "max_new_tokens": 32_768,
@@ -238,8 +265,11 @@ def _write_asr_artifact(root: Path) -> VibeVoiceASRForConditionalGeneration:
         "audited by the native prompt renderer",
         encoding="utf-8",
     )
+    state = model.state_dict()
+    if published_layout:
+        state = {_published_asr_name(name): value for name, value in state.items()}
     save_safetensors(
-        model.state_dict(),
+        state,
         root / "model.safetensors",
     )
     return model
@@ -321,6 +351,149 @@ class NativeVibeVoiceTests(unittest.TestCase):
                 imported & forbidden,
                 f"{path.name} imports {sorted(imported & forbidden)!r}",
             )
+
+    def test_asr_loads_published_config_with_null_text_eos(self):
+        # microsoft/VibeVoice-ASR-HF@f22241c ships ``text_config.eos_token_id``
+        # null and ``generation_config.json`` eos 151643 (<|endoftext|>).
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            _write_asr_artifact(root / "published", text_eos_token_id=None)
+            runtime = load_vibevoice_runtime(
+                root / "published",
+                device="cpu",
+                compute_dtype="float32",
+            )
+            self.assertIsNone(runtime.config.text_config.eos_token_id)
+            self.assertEqual(
+                runtime.generation_config["eos_token_id"],
+                VIBEVOICE_TOKEN_IDS["<|endoftext|>"],
+            )
+            _write_asr_artifact(
+                root / "mismatch",
+                text_eos_token_id=None,
+                generation_eos_token_id=VIBEVOICE_TOKEN_IDS["<|im_end|>"],
+            )
+            with self.assertRaisesRegex(ValueError, "eos_token_id disagrees"):
+                load_vibevoice_runtime(
+                    root / "mismatch",
+                    device="cpu",
+                    compute_dtype="float32",
+                )
+
+    def test_asr_loads_published_unprefixed_tensor_names(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = _write_asr_artifact(root / "published", published_layout=True)
+            with SafeTensorReader(root / "published" / "model.safetensors") as reader:
+                names = set(reader.keys())  # noqa: SIM118 - reader is not a Mapping
+            self.assertIn("language_model.lm_head.weight", names)
+            self.assertIn("language_model.model.embed_tokens.weight", names)
+            self.assertIn("multi_modal_projector.acoustic_norm.weight", names)
+            self.assertFalse(any(name.startswith(("model.", "lm_head.")) for name in names))
+            runtime = load_vibevoice_runtime(
+                root / "published",
+                device="cpu",
+                compute_dtype="float32",
+            )
+            loaded = runtime.model.state_dict()
+            expected = source.state_dict()
+            self.assertEqual(set(loaded), set(expected))
+            for name, value in expected.items():
+                torch.testing.assert_close(loaded[name], value, rtol=0, atol=0, msg=name)
+
+    def test_asr_unparsable_output_drops_the_assistant_header(self):
+        extract = VibeVoiceASRProcessor.extract_segments
+        self.assertEqual(extract("assistant\nplain words\n"), "plain words")
+        self.assertEqual(extract("assistant\n[{\"Start\":0"), '[{"Start":0')
+        self.assertEqual(
+            extract('assistant\n[{"Start":"x","End":1,"Content":"a"}]'),
+            '[{"Start":"x","End":1,"Content":"a"}]')
+        self.assertEqual(
+            extract('assistant\n[{"Start":0,"End":1.5,"Speaker":0,"Content":"a"}]\n'),
+            [{
+                "Start": 0.0,
+                "End": 1.5,
+                "Speaker": 0,
+                "Content": "a",
+            }],
+        )
+
+    def test_asr_audio_token_count_is_exact_past_float32_precision(self):
+        # 16,777,601 samples (~11.65 min): float32 ``ceil(n / 3200)`` gives
+        # 5243 while the processor expands ceil(n / 3200) = 5244 placeholders.
+        model = VibeVoiceASRModel(_asr_config()).eval()
+        hop_length = model.config.acoustic_tokenizer_encoder_config.hop_length
+        samples = 16_777_601
+        frames = -(-samples // hop_length)
+        width = frames * hop_length
+
+        def encoder_stub(hidden_size):
+
+            def forward(chunk, *, padding_cache=None, use_cache=False):
+                del use_cache
+                return VibeVoiceASREncoderOutput(
+                    latents=torch.zeros(chunk.shape[0], chunk.shape[-1] // hop_length, hidden_size),
+                    padding_cache=padding_cache,
+                )
+
+            return forward
+
+        model.acoustic_tokenizer_encoder.forward = encoder_stub(4)
+        model.semantic_tokenizer_encoder.forward = encoder_stub(6)
+        padding_mask = torch.zeros(1, width, dtype=torch.bool)
+        padding_mask[:, :samples] = True
+        _, features = model.get_audio_features(
+            torch.zeros(1, 1, width),
+            padding_mask=padding_mask,
+            chunk_size=width,
+        )
+        self.assertEqual(features.shape[0], frames)
+        self.assertEqual(frames, 5_244)
+
+    def test_asr_generate_uses_fused_attention_for_unpadded_prompts(self):
+        torch.manual_seed(0)
+        model = VibeVoiceASRForConditionalGeneration(_asr_config()).eval()
+        input_values = torch.randn(1, 1, 6_400)
+        padding_mask = torch.ones(1, 6_400, dtype=torch.long)
+        audio_id = model.config.audio_token_id
+        input_ids = torch.tensor([[11, 12, audio_id, audio_id, 13]])
+        attention_mask = torch.ones_like(input_ids)
+        language_model = model.model.language_model
+        masks = []
+        original_forward = language_model.forward
+
+        def spy(*args, **kwargs):
+            masks.append(kwargs.get("attention_mask"))
+            return original_forward(*args, **kwargs)
+
+        language_model.forward = spy
+        generated = model.generate(
+            input_ids,
+            attention_mask=attention_mask,
+            input_values=input_values,
+            padding_mask=padding_mask,
+            max_new_tokens=4,
+            eos_token_id=-1,
+            generator=torch.Generator().manual_seed(3),
+        )
+        language_model.forward = original_forward
+        self.assertEqual(len(masks), 4)
+        self.assertTrue(all(mask is None for mask in masks))
+
+        # Uncached greedy reference through the explicit masked path.
+        reference = input_ids
+        with torch.no_grad():
+            for _ in range(4):
+                logits = model(
+                    reference,
+                    attention_mask=torch.ones_like(reference),
+                    input_values=input_values,
+                    padding_mask=padding_mask,
+                    use_cache=False,
+                    generator=torch.Generator().manual_seed(3),
+                ).logits
+                reference = torch.cat((reference, logits[:, -1:].argmax(dim=-1)), dim=-1)
+        torch.testing.assert_close(generated, reference, rtol=0, atol=0)
 
     def test_asr_raw_training_and_portable_reload(self):
         with tempfile.TemporaryDirectory() as temporary:

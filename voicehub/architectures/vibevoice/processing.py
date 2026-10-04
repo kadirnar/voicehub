@@ -481,15 +481,17 @@ class VibeVoiceASRProcessor:
         candidate = text.strip()
         if candidate.startswith("assistant"):
             candidate = candidate[len("assistant"):].strip()
+        # Like transformers' ``extract_speaker_dict``, unparsable output is
+        # returned without the decoded ``assistant`` role header.
         if not candidate.startswith("["):
-            return text
+            return candidate
         try:
             value = json.loads(candidate)
         except json.JSONDecodeError:
-            return text
+            return candidate
         if not isinstance(value, list) or not all(isinstance(item, dict) and "Content" in item
                                                   for item in value):
-            return text
+            return candidate
         output: list[dict[str, Any]] = []
         for item in value:
             normalized = dict(item)
@@ -499,7 +501,7 @@ class VibeVoiceASRProcessor:
                     valid_timestamp = (
                         not isinstance(timestamp, bool) and isinstance(timestamp, (int, float)))
                     if not valid_timestamp:
-                        return text
+                        return candidate
                     normalized[key] = float(timestamp)
             output.append(normalized)
         return output
