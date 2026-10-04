@@ -140,7 +140,9 @@ class MedASRUpstreamGoldenTest(unittest.TestCase):
             ).logits
         expected = torch.tensor(UPSTREAM_LOGITS, dtype=torch.float64)
         self.assertEqual(tuple(logits.shape), (1, *expected.shape))
-        torch.testing.assert_close(logits[0], expected, rtol=0.0, atol=1e-9)
+        # The model runs in float64, but the log-mel features are float32 like
+        # upstream; macOS FFT/log kernels move the logits by up to ~7e-8.
+        torch.testing.assert_close(logits[0], expected, rtol=0.0, atol=1e-6)
 
 
 if __name__ == "__main__":
