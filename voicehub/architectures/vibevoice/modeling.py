@@ -945,6 +945,17 @@ class VibeVoiceRealtimeForConditionalGeneration(nn.Module):
         )
         if initialize:
             self.tts_eos_classifier.apply(self.model._initialize_module)
+        # Upstream keeps the DPM step count as a runtime sampling default
+        # (`set_ddpm_inference_steps`), separate from checkpoint state.
+        self.ddpm_inference_steps = (config.diffusion_head_config.ddpm_num_inference_steps)
+
+    def set_ddpm_inference_steps(self, num_steps: int | None = None) -> None:
+        """Set the default DPM step count; ``None`` restores the
+        checkpoint's."""
+        steps = (
+            self.config.diffusion_head_config.ddpm_num_inference_steps if num_steps is None else num_steps)
+        self.model.noise_scheduler.inference_timestep_schedule(steps)
+        self.ddpm_inference_steps = steps
 
     def optimization_compile_targets(
         self,
@@ -1051,7 +1062,9 @@ class VibeVoiceRealtimeForConditionalGeneration(nn.Module):
                 device=combined_condition.device,
                 dtype=combined_condition.dtype,
             )
-            native_schedule = (self.model.noise_scheduler.inference_timestep_schedule(inference_steps))
+            native_schedule = (
+                self.model.noise_scheduler.inference_timestep_schedule(
+                    self.ddpm_inference_steps if inference_steps is None else inference_steps))
             controller = prediction_head.diffusion_sampling_controller
             prepared_schedule = (
                 native_schedule if controller is None else controller.prepare_schedule(native_schedule))

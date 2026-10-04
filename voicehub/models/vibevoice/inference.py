@@ -147,6 +147,8 @@ class VibeVoiceForTextToSpeech(PreTrainedTTSModel):
         )
         if not isinstance(runtime.config, NativeVibeVoiceTTSConfig):
             raise TypeError("VibeVoice TTS received an ASR checkpoint.")
+        if runtime.config.is_streaming:
+            runtime.model.set_ddpm_inference_steps(self.config.diffusion_steps)
         self.runtime = runtime
         self.model = runtime.model
         self._processor = runtime.processor
