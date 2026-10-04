@@ -147,13 +147,23 @@ class _FakeDecoder(nn.Module):
         return self.scale * (value + prosody + style.mean().reshape(1, 1, 1))
 
 
+class _FakeKDiffusion(nn.Module):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.sigma_data = 0.2
+
+
 class _FakeDiffusion(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
         self.scale = nn.Parameter(torch.tensor(0.1))
+        self.diffusion = _FakeKDiffusion()
+        self.seen_sigma_data = []
 
     def forward(self, target, *, embedding, features):
+        self.seen_sigma_data.append(self.diffusion.sigma_data)
         return (
             target.square().mean() + self.scale * embedding.square().mean() + 0.0 * features.square().mean())
 
@@ -169,6 +179,28 @@ def _fake_training_graph() -> nn.Module:
     graph.decoder = _FakeDecoder()
     graph.diffusion = _FakeDiffusion()
     return graph
+
+
+def _single_utterance_batch(seed: int) -> dict[str, torch.Tensor]:
+    generator = torch.Generator().manual_seed(seed)
+    alignments = torch.zeros(1, 3, 4)
+    alignments[0, 0, :1] = 1
+    alignments[0, 1, 1:3] = 1
+    alignments[0, 2, 3:] = 1
+    return {
+        "input_ids": torch.tensor([[0, 2, 3]]),
+        "input_lengths": torch.tensor([3]),
+        "alignments": alignments,
+        "alignment_lengths": torch.tensor([4]),
+        "normalized_mel": torch.randn(1, 1, 4, 8, generator=generator),
+        "normalized_mel_lengths": torch.tensor([8]),
+        "reference_mel": torch.randn(1, 1, 4, 16, generator=generator),
+        "reference_mel_lengths": torch.tensor([16]),
+        "f0_targets": torch.randn(1, 8, generator=generator),
+        "noise_targets": torch.randn(1, 8, generator=generator),
+        "audio_values": torch.randn(1, 1, 32, generator=generator),
+        "audio_lengths": torch.tensor([32]),
+    }
 
 
 class NativeStyleTTS2Tests(unittest.TestCase):
@@ -470,6 +502,73 @@ class NativeStyleTTS2Tests(unittest.TestCase):
                 "waveform_loss",
         ):
             torch.testing.assert_close(baseline[name], changed[name])
+
+    def test_training_estimates_sigma_data_from_each_batch(self):
+        import dataclasses
+
+        graph = _fake_training_graph()
+        config = _tiny_config()
+        objective = StyleTTS2TrainingModel(graph, config, enable_discriminators=False)
+        expected = []
+        for seed in (0, 1, 2):
+            values = _single_utterance_batch(seed)
+            with torch.no_grad():
+                style = torch.cat(
+                    [
+                        graph.style_encoder(values["normalized_mel"]),
+                        graph.predictor_encoder(values["normalized_mel"]),
+                    ],
+                    dim=-1,
+                )
+            expected.append(style.std(dim=-1).mean().item())
+            objective(**values)
+
+        # Upstream sets sigma_data from each batch before the EDM loss.
+        self.assertEqual(len(graph.diffusion.seen_sigma_data), 3)
+        for seen, estimate in zip(graph.diffusion.seen_sigma_data, expected):
+            self.assertAlmostEqual(seen, estimate, places=6)
+        mean = sum(expected) / len(expected)
+        self.assertAlmostEqual(objective.estimated_sigma_data, mean, places=6)
+        exported = objective.export_config()
+        self.assertAlmostEqual(exported.diffusion.dist.sigma_data, mean, places=6)
+        self.assertTrue(exported.diffusion.dist.estimate_sigma_data)
+        self.assertEqual(config.diffusion.dist.sigma_data, 0.2)
+
+        # Evaluation passes reuse the current value without re-estimating.
+        objective.eval()
+        objective(**_single_utterance_batch(3))
+        self.assertAlmostEqual(graph.diffusion.seen_sigma_data[-1], expected[-1], places=6)
+        self.assertAlmostEqual(objective.estimated_sigma_data, mean, places=6)
+
+        fixed_graph = _fake_training_graph()
+        fixed = dataclasses.replace(
+            config,
+            diffusion=dataclasses.replace(
+                config.diffusion,
+                dist=dataclasses.replace(config.diffusion.dist, estimate_sigma_data=False),
+            ),
+        )
+        fixed_objective = StyleTTS2TrainingModel(fixed_graph, fixed, enable_discriminators=False)
+        fixed_objective(**_single_utterance_batch(0))
+        self.assertEqual(fixed_graph.diffusion.seen_sigma_data, [0.2])
+        self.assertIsNone(fixed_objective.estimated_sigma_data)
+        self.assertIs(fixed_objective.export_config(), fixed)
+
+    def test_saved_config_carries_estimated_sigma_data(self):
+        import types
+
+        config = _tiny_config()
+        objective = StyleTTS2TrainingModel(_fake_training_graph(), config, enable_discriminators=False)
+        for seed in (0, 1):
+            objective(**_single_utterance_batch(seed))
+        wrapper = StyleTTS2ForTextToSpeech(model_path="unused", device="cpu")
+        wrapper.model = types.SimpleNamespace(model=build_styletts2_model(config), config=config)
+        wrapper.training_model = objective
+        with tempfile.TemporaryDirectory() as directory:
+            wrapper.export_native_pretrained(directory)
+            saved = load_styletts2_config(Path(directory) / "config.json")
+        self.assertNotEqual(saved.diffusion.dist.sigma_data, 0.2)
+        self.assertAlmostEqual(saved.diffusion.dist.sigma_data, objective.estimated_sigma_data, places=12)
 
     def test_training_collator_pads_both_alignment_axes(self):
         collator = StyleTTS2TrainingCollator()
