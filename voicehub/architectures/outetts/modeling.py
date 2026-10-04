@@ -102,6 +102,7 @@ class OuteTTSForCausalLM(CausalLMForCausalLM):
                 attention_mask=step_mask,
                 past_key_values=step.cache,
                 use_cache=step.use_cache,
+                logits_to_keep=1,
             )
             return GenerationStepOutput(
                 logits=output.logits,

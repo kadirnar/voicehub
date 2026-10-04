@@ -494,6 +494,10 @@ class MossQwenDepthModel(nn.Module):
         if position_ids.shape[0] == 1 and batch_size != 1:
             position_ids = position_ids.expand(batch_size, -1)
         hidden_states = inputs_embeds
+        # Every layer shares one RoPE table; compute it once per forward.
+        rotary_embeddings = (
+            self.layers[0].self_attn.rotary(position_ids, dtype=hidden_states.dtype)
+            if len(self.layers) else None)
         for layer in self.layers:
             hidden_states, _, past_key_values = layer(
                 hidden_states,
@@ -502,6 +506,7 @@ class MossQwenDepthModel(nn.Module):
                 cache=past_key_values,
                 use_cache=use_cache,
                 output_attentions=False,
+                rotary_embeddings=rotary_embeddings,
             )
         return LocalTransformerOutput(
             last_hidden_state=self.norm(hidden_states),
