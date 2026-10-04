@@ -58,13 +58,24 @@ class RelativePositionalEncoding(nn.Module):
     def __init__(self, config: ParakeetEncoderConfig) -> None:
         super().__init__()
         self.config = config
-        inverse_frequency = 1.0 / (
-            10_000.0**(torch.arange(0, config.hidden_size, 2, dtype=torch.float32) / config.hidden_size))
         self.register_buffer(
             "inv_freq",
-            inverse_frequency,
+            self.inverse_frequency(config.hidden_size),
             persistent=False,
         )
+
+    @staticmethod
+    def inverse_frequency(
+        hidden_size: int,
+        device: torch.device | str | None = None,
+    ) -> torch.Tensor:
+        """Return the deterministic, non-checkpointed frequency buffer."""
+        exponents = torch.arange(0, hidden_size, 2, dtype=torch.float32, device=device) / hidden_size
+        return 1.0 / (10_000.0**exponents)
+
+    def reset_buffers(self, device: torch.device | str) -> None:
+        """Rebuild ``inv_freq`` after meta-device construction."""
+        self.inv_freq = self.inverse_frequency(self.config.hidden_size, device)
 
     @torch.no_grad()
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -822,7 +833,9 @@ class ParakeetForTDT(nn.Module):
         else:
             valid_lengths = encoder_output.attention_mask.sum(-1).long()
         if maximum_steps is None:
-            maximum_steps = self.max_symbols_per_step * encoded_frames
+            # Every frame emits at most ``max_symbols_per_step`` labels plus
+            # one blank or forced advance, so this bound is never reached.
+            maximum_steps = (self.max_symbols_per_step + 1) * encoded_frames
         if isinstance(maximum_steps, bool) or maximum_steps < 1:
             raise ValueError("`maximum_steps` must be a positive integer.")
 
@@ -841,6 +854,15 @@ class ParakeetForTDT(nn.Module):
         duration_steps = [torch.zeros_like(previous_tokens[:, 0])]
         cache = ParakeetDecoderCache(self.config)
         finished = frame_indices >= valid_lengths
+        # NeMo counts consecutive labels emitted on one frame and forces a
+        # one-frame advance once ``max_symbols_per_step`` is reached.
+        last_label_frames = torch.full_like(frame_indices, -1)
+        labels_on_frame = torch.zeros_like(frame_indices)
+        configured_durations = torch.tensor(
+            self.config.durations,
+            device=projected.device,
+            dtype=torch.long,
+        )
 
         for _ in range(maximum_steps):
             if bool(torch.all(finished)):
@@ -857,11 +879,6 @@ class ParakeetForTDT(nn.Module):
             )[:, -1]
             next_tokens = logits[:, :self.config.vocab_size].argmax(-1)
             duration_indices = logits[:, self.config.vocab_size:].argmax(-1)
-            configured_durations = torch.tensor(
-                self.config.durations,
-                device=duration_indices.device,
-                dtype=torch.long,
-            )
             step_durations = configured_durations[duration_indices]
             step_durations = torch.where(
                 (next_tokens == self.config.blank_token_id)
@@ -881,7 +898,28 @@ class ParakeetForTDT(nn.Module):
             )
             sequence_steps.append(next_tokens)
             duration_steps.append(step_durations)
+            labels = (~finished) & (next_tokens != self.config.blank_token_id)
+            labels_on_frame = torch.where(
+                labels & (last_label_frames == frame_indices),
+                labels_on_frame + 1,
+                torch.where(labels, torch.ones_like(labels_on_frame), labels_on_frame),
+            )
+            last_label_frames = torch.where(labels, frame_indices, last_label_frames)
             frame_indices = frame_indices + step_durations
+            forced = (
+                labels & (labels_on_frame >= self.max_symbols_per_step) & (step_durations == 0) &
+                (frame_indices < valid_lengths))
+            if bool(torch.any(forced)):
+                # Record the forced advance as a one-frame blank so token
+                # timestamps keep NeMo's zero duration for the last label.
+                sequence_steps.append(
+                    torch.where(
+                        forced,
+                        torch.full_like(next_tokens, self.config.blank_token_id),
+                        torch.full_like(next_tokens, self.config.pad_token_id),
+                    ))
+                duration_steps.append(forced.long())
+                frame_indices = frame_indices + forced.long()
             finished = frame_indices >= valid_lengths
             previous_tokens = next_tokens[:, None]
         else:

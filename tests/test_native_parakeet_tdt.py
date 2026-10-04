@@ -21,7 +21,12 @@ from voicehub.architectures.parakeet_tdt.configuration import ParakeetEncoderCon
 from voicehub.architectures.parakeet_tdt.decoding import decode_tdt_sequence
 from voicehub.architectures.parakeet_tdt.loss import tdt_loss
 from voicehub.architectures.parakeet_tdt.metadata import PARAKEET_TDT_CHECKPOINTS, PARAKEET_TRANSFORMERS_REVISION
-from voicehub.architectures.parakeet_tdt.modeling import ParakeetEncoderOutput, ParakeetForTDT
+from voicehub.architectures.parakeet_tdt.modeling import (
+    ParakeetEncoderOutput,
+    ParakeetForTDT,
+    RelativePositionalEncoding,
+    RelativeSelfAttention,
+)
 from voicehub.architectures.parakeet_tdt.processing import ParakeetFeatureExtractor, ParakeetProcessor
 from voicehub.architectures.parakeet_tdt.runtime import (
     ParakeetTDTRuntime,
@@ -32,6 +37,7 @@ from voicehub.architectures.parakeet_tdt.tokenization import ParakeetTokenizer, 
 from voicehub.checkpointing.errors import CheckpointCompatibilityError
 from voicehub.models.asr_parakeet_tdt import ParakeetTDTASRConfig, ParakeetTDTForSpeechRecognition
 from voicehub.models.asr_parakeet_tdt.training_asr_parakeet_tdt import NativeParakeetTDTTrainingAdapter
+from voicehub.processing.audio import mel_filter_bank
 from voicehub.processing.waveform import save_pcm_wave
 from voicehub.training.auto import AutoTrainingAdapter
 from voicehub.training.specs import get_training_spec
@@ -349,18 +355,52 @@ class NativeParakeetTDTTests(unittest.TestCase):
             sampling_rate=16_000,
         )
         self.assertEqual(output["input_features"].shape, (2, 28, 8))
+        # NeMo counts every centered STFT frame: samples // hop + 1.
         self.assertEqual(
             output["attention_mask"].sum(-1).tolist(),
-            [20, 27],
+            [21, 28],
         )
-        first = output["input_features"][0, :20]
+        first = output["input_features"][0, :21]
         torch.testing.assert_close(
             first.mean(dim=0),
             torch.zeros(8),
             atol=2e-6,
             rtol=0,
         )
-        self.assertTrue(torch.all(output["input_features"][0, 20:] == 0))
+        self.assertTrue(torch.all(output["input_features"][0, 21:] == 0))
+
+    def test_frontend_matches_nemo_filterbank_features(self):
+        torch.manual_seed(11)
+        extractor = ParakeetFeatureExtractor(feature_size=8)
+        waveform = torch.randn(4_377)
+        single = extractor(waveform, sampling_rate=16_000)
+        # NeMo FilterbankFeatures (v2.4.0, normalize=per_feature): torch.stft
+        # with its default reflect centre padding, |X|^2, Slaney mel, log with
+        # a 2**-24 guard, every centred frame valid, unbiased std + 1e-5.
+        emphasized = torch.cat((waveform[:1], waveform[1:] - 0.97 * waveform[:-1]))
+        spectrum = torch.stft(
+            emphasized,
+            n_fft=512,
+            hop_length=160,
+            win_length=400,
+            window=torch.hann_window(400, periodic=False),
+            center=True,
+            return_complex=True,
+        )
+        power = torch.view_as_real(spectrum).pow(2).sum(-1)
+        filters = mel_filter_bank(
+            sample_rate=16_000,
+            n_fft=512,
+            n_mels=8,
+            dtype=torch.float64,
+        ).to(torch.float32)
+        log_mel = torch.log(filters @ power + 2**-24)
+        expected = ((log_mel - log_mel.mean(-1, keepdim=True)) / (log_mel.std(-1, keepdim=True) + 1e-5)).T
+        torch.testing.assert_close(single["input_features"][0], expected, atol=1e-4, rtol=1e-4)
+        self.assertEqual(single["attention_mask"].sum().item(), 4_377 // 160 + 1)
+        # Batching (right padding) never changes the valid frames.
+        batched = extractor((torch.randn(3_200), waveform), sampling_rate=16_000)
+        torch.testing.assert_close(batched["input_features"][1], single["input_features"][0])
 
     def test_tdt_loss_matches_reference_values_and_backpropagates(self):
         torch.manual_seed(3)
@@ -512,6 +552,52 @@ class NativeParakeetTDTTests(unittest.TestCase):
         self.assertEqual(generated.sequences.tolist(), [[8, 4, 8, 5]])
         self.assertEqual(generated.durations.tolist(), [[0, 0, 1, 2]])
 
+    def test_greedy_decoding_forces_advance_after_max_symbols_like_nemo(self):
+        model = ParakeetForTDT(_tiny_config())
+
+        def audio_features(input_features, attention_mask=None):
+            del input_features, attention_mask
+            return ParakeetEncoderOutput(
+                last_hidden_state=torch.zeros(1, 2, 8),
+                pooler_output=torch.zeros(1, 2, 4),
+                attention_mask=torch.ones(1, 2, dtype=torch.int),
+            )
+
+        class Decoder(nn.Module):
+
+            def forward(self, input_ids, cache=None):
+                del cache
+                return torch.zeros(input_ids.shape[0], 1, 4)
+
+        class Joint(nn.Module):
+
+            def forward(self, **kwargs):
+                # Always the label "h" with duration 0: NeMo's label-looping
+                # decoder emits max_symbols labels, then advances one frame.
+                batch = kwargs["encoder_hidden_states"].shape[0]
+                output = torch.full((batch, 1, 12), -100.0)
+                output[:, :, 4] = 100.0
+                output[:, :, 9] = 100.0
+                return output
+
+        model.get_audio_features = audio_features
+        model.decoder = Decoder()
+        model.joint = Joint()
+        generated = model.generate(
+            torch.zeros(1, 2, 8),
+            torch.ones(1, 2, dtype=torch.long),
+        )
+        self.assertEqual(generated.sequences.tolist(), [[8, 4, 4, 4, 4, 8, 4, 4, 4, 4, 8]])
+        self.assertEqual(generated.durations.tolist(), [[0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]])
+        decoded = decode_tdt_sequence(
+            _tiny_tokenizer(),
+            generated.sequences[0],
+            generated.durations[0],
+            frame_seconds=0.08,
+        )
+        self.assertEqual(decoded.text, "hhhhhhhh")
+        self.assertEqual([value.start for value in decoded.tokens], [0.0] * 4 + [0.08] * 4)
+
     def test_timestamp_decoder_preserves_repeats_and_zeroes_punctuation(self):
         decoded = decode_tdt_sequence(
             _tiny_tokenizer(),
@@ -657,6 +743,26 @@ class NativeParakeetTDTTests(unittest.TestCase):
                     restored.model.state_dict()[name],
                     value,
                 )
+            # The reload builds the graph on the meta device; buffers that
+            # Safetensors does not carry (relative-position frequencies)
+            # must be rebuilt so the restored graph actually runs.
+            self.assertFalse(any(value.is_meta for value in restored.model.buffers()))
+            features = torch.randn(1, 12, 8)
+            mask = torch.ones(1, 12, dtype=torch.long)
+            decoder_ids = torch.tensor([[8, 4]])
+            runtime.model.eval()
+            with torch.no_grad():
+                expected = runtime.model(
+                    features,
+                    attention_mask=mask,
+                    decoder_input_ids=decoder_ids,
+                )
+                actual = restored.model(
+                    features,
+                    attention_mask=mask,
+                    decoder_input_ids=decoder_ids,
+                )
+            torch.testing.assert_close(actual.logits, expected.logits)
 
     def test_training_adapter_does_not_create_directory_before_export(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -753,18 +859,47 @@ class NativeParakeetTDTTests(unittest.TestCase):
                 attention_mask=mask,
                 decoder_input_ids=decoder_ids,
             )
+        # Only valid (unpadded) encoder frames carry defined semantics.
+        # Transformers >= 5.18 fills fully padded query rows with
+        # finfo.min (uniform attention) where NeMo and VoiceHub return
+        # zeros, so padded frames are compared by the NeMo test below.
+        valid = actual.attention_mask.bool()
+        self.assertEqual(valid.sum(-1).tolist(), [16, 13])
         torch.testing.assert_close(
-            actual.last_hidden_state,
-            expected.last_hidden_state,
+            actual.last_hidden_state[valid],
+            expected.last_hidden_state[valid],
             atol=1e-6,
             rtol=1e-6,
         )
         torch.testing.assert_close(
-            actual.logits,
-            expected.logits,
+            actual.logits[valid],
+            expected.logits[valid],
             atol=1e-6,
             rtol=1e-6,
         )
+
+    def test_padded_attention_follows_nemo_masking(self):
+        # NeMo RelPositionMultiHeadAttention (use_pytorch_sdpa=False, as the
+        # published checkpoint is configured) fills masked scores with
+        # -10000, applies softmax, then zeroes every masked weight: valid
+        # queries never see padded keys and fully padded queries attend to
+        # nothing. Valid frames must also not depend on the padding length.
+        config = _tiny_config()
+        torch.manual_seed(5)
+        attention = RelativeSelfAttention(config.encoder_config, 0).eval()
+        positions = RelativePositionalEncoding(config.encoder_config)
+        hidden = torch.randn(1, 9, 8)
+        padded = torch.cat((hidden, torch.randn(1, 4, 8)), dim=1)
+        valid = torch.arange(13)[None, :] < 9
+        square = valid[:, None, None, :] & valid[:, None, :, None]
+        with torch.no_grad():
+            output, weights = attention(padded, positions(padded), square)
+            reference, _ = attention(hidden, positions(hidden), None)
+        self.assertTrue(torch.all(weights[:, :, 9:] == 0))
+        self.assertTrue(torch.all(weights[:, :, :9, 9:] == 0))
+        torch.testing.assert_close(weights[:, :, :9].sum(-1), torch.ones(1, 2, 9))
+        self.assertTrue(torch.all(output[:, 9:] == 0))
+        torch.testing.assert_close(output[:, :9], reference, atol=1e-6, rtol=1e-6)
 
 
 def _meta_state(config):
