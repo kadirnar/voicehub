@@ -295,6 +295,50 @@ class SileroVADCheckpointTests(unittest.TestCase):
 
 
 @unittest.skipUnless(torch is not None, "Native Silero VAD uses PyTorch")
+class SileroVADArtifactTests(unittest.TestCase):
+
+    def test_default_checkpoint_is_the_archive_upstream_runs(self):
+        # silero-vad 6.2.1 `load_silero_vad()` runs `data/silero_vad.jit`.
+        # The standalone `silero_vad_16k.safetensors` (tinygrad example)
+        # holds different 16 kHz weights (frame probabilities differ by up
+        # to 0.62 on LibriSpeech), so it must not be the default.
+        from voicehub.models.vad_silero.artifacts import _remote_filename
+
+        for sampling_rate in (8_000, 16_000):
+            with self.subTest(sampling_rate=sampling_rate):
+                self.assertEqual(
+                    _remote_filename(sample_rate=sampling_rate, checkpoint_filename=None),
+                    ("silero_vad.jit", "data"),
+                )
+        self.assertEqual(
+            _remote_filename(
+                sample_rate=16_000,
+                checkpoint_filename="data/silero_vad_16k.safetensors",
+            ),
+            ("silero_vad_16k.safetensors", "data"),
+        )
+
+    def test_local_upstream_layout_prefers_the_official_archive(self):
+        import tempfile
+
+        from voicehub.models.vad_silero.artifacts import resolve_silero_vad_artifact
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "data").mkdir()
+            for name in ("silero_vad_16k.safetensors", "silero_vad.jit"):
+                (root / "data" / name).write_bytes(b"")
+
+            artifact = resolve_silero_vad_artifact(root, sample_rate=16_000)
+            self.assertEqual(artifact.checkpoint.name, "silero_vad.jit")
+            self.assertEqual(artifact.checkpoint_format, "torchscript")
+
+            (root / "model.safetensors").write_bytes(b"")
+            artifact = resolve_silero_vad_artifact(root, sample_rate=16_000)
+            self.assertEqual(artifact.checkpoint.name, "model.safetensors")
+
+
+@unittest.skipUnless(torch is not None, "Native Silero VAD uses PyTorch")
 class SileroVADObjectiveTests(unittest.TestCase):
 
     def test_weighted_binary_loss_matches_the_released_recipe(self):

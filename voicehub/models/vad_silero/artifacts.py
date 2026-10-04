@@ -88,22 +88,21 @@ def _local_candidates(
             source / relative,
             source / "native_export" / relative,
         )
-    native_names = (
+    # VoiceHub exports first, then the official archive that upstream's
+    # `load_silero_vad()` runs. The standalone upstream
+    # `silero_vad_16k.safetensors` (released for the tinygrad example) holds
+    # different weights than that archive, so it is only a fallback.
+    names = (
         Path("native_export") / NATIVE_SILERO_VAD_FILENAME,
         Path(NATIVE_SILERO_VAD_FILENAME),
+        Path("native_export") / "silero_vad.jit",
+        Path("silero_vad.jit"),
+        Path("data") / "silero_vad.jit",
         Path("native_export") / f"silero_vad_{sample_rate // 1_000}k.safetensors",
         Path(f"silero_vad_{sample_rate // 1_000}k.safetensors"),
         Path("data") / f"silero_vad_{sample_rate // 1_000}k.safetensors",
     )
-    if sample_rate == 16_000:
-        native_names += (Path("data") / "silero_vad_16k.safetensors", )
-    return tuple(
-        source / relative for relative in (
-            *native_names,
-            Path("native_export") / "silero_vad.jit",
-            Path("silero_vad.jit"),
-            Path("data") / "silero_vad.jit",
-        ))
+    return tuple(source / relative for relative in names)
 
 
 def _remote_filename(
@@ -111,9 +110,10 @@ def _remote_filename(
     sample_rate: int,
     checkpoint_filename: str | None,
 ) -> tuple[str, str]:
-    value = checkpoint_filename
-    if value is None:
-        value = ("data/silero_vad_16k.safetensors" if sample_rate == 16_000 else "data/silero_vad.jit")
+    # Both rates default to the official merged archive used by upstream
+    # `load_silero_vad()`; its weights are imported, never executed.
+    value = "data/silero_vad.jit" if checkpoint_filename is None else checkpoint_filename
+    del sample_rate
     path = PurePosixPath(value)
     if path.is_absolute() or ".." in path.parts or path.name in {"", ".", ".."}:
         raise ValueError("`checkpoint_filename` must be a safe repository-relative path.")

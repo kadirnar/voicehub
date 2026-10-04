@@ -3,7 +3,10 @@
 The fixed 8 kHz and 16 kHz dimensions are taken from the official Silero
 VAD v6.2.1 TorchScript modules at revision
 ``7e30209a3e901f9842f81b225f3e93d8199902b1``.  The released standalone
-Safetensors checkpoint contains the 16 kHz branch only.
+Safetensors checkpoint contains a 16 kHz branch only, with weights that
+differ from the TorchScript archive run by upstream
+``load_silero_vad()``; VoiceHub therefore imports the archive's weights
+by default.
 """
 
 from __future__ import annotations
