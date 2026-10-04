@@ -172,6 +172,31 @@ class BaseApiTests(unittest.TestCase):
         self.assertEqual(output.metadata["speed"], 1.25)
         self.assertEqual(output.metadata["seed"], 7)
 
+    def test_explicit_none_generation_option_overrides_configured_default(self):
+        model = DummyForTextToSpeech(DummyConfig(generation_config={
+            "speed": 1.1,
+            "max_frames": 4096,
+        }, ))
+        output = model.generate(
+            "hello",
+            generation_config=TTSGenerationConfig(seed=7),
+            seed=None,
+            max_frames=None,
+            backend_option=None,
+        )
+
+        self.assertIsNone(output.metadata["seed"])
+        self.assertIsNone(output.metadata["max_frames"])
+        self.assertIsNone(output.metadata["backend_option"])
+        self.assertEqual(output.metadata["speed"], 1.1)
+        self.assertEqual(
+            model.generation_config.to_dict(),
+            {
+                "speed": 1.1,
+                "max_frames": 4096
+            },
+        )
+
     def test_generation_config_round_trip(self):
         generation_config = TTSGenerationConfig(
             speed=1.2,

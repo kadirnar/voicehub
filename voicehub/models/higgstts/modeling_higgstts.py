@@ -175,8 +175,7 @@ class HiggsTTSForTextToSpeech(PreTrainedTTSModel):
         scene_prompt = model_inputs.get("scene_prompt")
         if scene_prompt is not None and (not isinstance(scene_prompt, str) or not scene_prompt.strip()):
             raise ValueError("`scene_prompt` must be a non-empty string or None.")
-        # Public generation configs drop ``None`` overrides, so ``0`` is the
-        # explicit way to disable top-k or repetition-aware sampling (the
+        # ``None`` or ``0`` disables top-k or repetition-aware sampling (the
         # upstream serving engine also treats ``ras_win_len <= 0`` as off).
         top_k = model_inputs.get("top_k", 50)
         if top_k is not None and (isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 0):

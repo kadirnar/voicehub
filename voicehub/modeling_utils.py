@@ -980,10 +980,14 @@ class PreTrainedTTSModel(BaseTTSModel, PreTrainedSpeechModel, ABC):
                     raise TypeError("`generation_config` must be a TTSGenerationConfig.")
                 defaults.update(generation_config.to_dict())
             defaults.update(kwargs)
-            generation_options = self.generation_config_class.from_dict(defaults)
+            generation_options = self.generation_config_class.from_dict(defaults).to_dict()
+            # Generation configs store only set values. Re-apply explicit
+            # per-call ``None`` overrides so they disable a default instead of
+            # being silently replaced by it.
+            generation_options.update({name: None for name, value in kwargs.items() if value is None})
             return self._forward_with_llm_backend(
                 text,
-                generation_options.to_dict(),
+                generation_options,
                 backend_config=backend_config,
                 backend_client=backend_client,
             )

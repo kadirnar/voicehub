@@ -466,6 +466,37 @@ class NativeMeloTTSTests(unittest.TestCase):
         self.assertEqual(report.tensor_count, len(original.state_dict()))
         self.assertTrue(torch.equal(direct.float(), reloaded))
 
+    def test_public_generate_forwards_explicit_none_max_frames(self):
+        config = _tiny_config()
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = save_melotts_pretrained(
+                build_melotts_model(config).eval(),
+                config,
+                directory,
+            )
+            model = MeloTTSForTextToSpeech(model_path=artifact, device="cpu")
+            model.load()
+            with mock.patch.object(
+                    model.model,
+                    "generate",
+                    wraps=model.model.generate,
+            ) as generate:
+                model.generate(
+                    "ab",
+                    input_ids=[1, 2, 1],
+                    tone_ids=[0, 1, 0],
+                    language_ids=[0, 0, 0],
+                    bert_features=torch.zeros(1024, 3),
+                    ja_bert_features=torch.zeros(768, 3),
+                    noise_scale=0.0,
+                    noise_scale_w=0.0,
+                    sdp_ratio=0.0,
+                    max_frames=None,
+                    seed=0,
+                )
+
+        self.assertIsNone(generate.call_args.kwargs["max_frames"])
+
     @staticmethod
     def _hub_cache_snapshot(root: Path, files: dict[str, Path]) -> Path:
         """Mirror the Hugging Face cache: named symlinks to suffix-less
