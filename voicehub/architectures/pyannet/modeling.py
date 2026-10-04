@@ -218,6 +218,14 @@ class SincNet(nn.Module):
         length = length - 5 + 1
         return (length - 3) // 3 + 1
 
+    @staticmethod
+    def receptive_field_size(num_frames: int = 1, *, stride: int = 10) -> int:
+        """Mirror pyannote.audio's ``SincNet.receptive_field_size``."""
+        size = num_frames
+        for kernel, kernel_stride in reversed(tuple(zip((251, 3, 5, 3, 5, 3), (stride, 3, 1, 3, 1, 3)))):
+            size = kernel + (size - 1) * kernel_stride
+        return size
+
 
 class ParametricSigmoid(nn.Module):
     """Map logits to a closed physical-value interval."""

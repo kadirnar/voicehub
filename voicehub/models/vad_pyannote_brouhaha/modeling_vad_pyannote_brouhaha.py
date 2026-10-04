@@ -7,8 +7,7 @@ from typing import Any
 
 from voicehub.inference_configuration import VADInferenceConfig
 from voicehub.modeling_outputs import VADOutput
-from voicehub.models.vad_pyannote.modeling_vad_pyannote import PyannoteVADForVoiceActivityDetection
-from voicehub.vad_utils import frame_probabilities_to_segments
+from voicehub.models.vad_pyannote.modeling_vad_pyannote import PyannoteVADForVoiceActivityDetection, _pyannote_segments
 
 from .configuration_vad_pyannote_brouhaha import PyannoteBrouhahaVADConfig
 
@@ -58,17 +57,25 @@ class PyannoteBrouhahaVADForVoiceActivityDetection(PyannoteVADForVoiceActivityDe
     ) -> VADOutput:
         import torch
 
-        from voicehub.processing.waveform import load_native_audio
+        from voicehub.processing.waveform import NativeAudio, load_native_audio, resample_waveform_hann
 
         if window_size_samples is not None:
             raise ValueError(
                 "Brouhaha chunk and frame geometry are fixed by its "
                 "checkpoint; `window_size_samples` is not supported.")
-        materialized = load_native_audio(
-            audio,
-            sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
-        )
+        materialized = load_native_audio(audio, sampling_rate=sampling_rate)
+        if materialized.sampling_rate != self.sample_rate:
+            # pyannote.audio's ``Audio`` downmixes, then resamples with
+            # ``torchaudio.functional.resample`` defaults.
+            materialized = NativeAudio(
+                waveform=resample_waveform_hann(
+                    materialized.waveform,
+                    materialized.sampling_rate,
+                    self.sample_rate,
+                ),
+                sampling_rate=self.sample_rate,
+                path=materialized.path,
+            )
         with torch.inference_mode():
             output = self._frame_output(materialized.waveform)
         values = output.scores.detach().float().cpu()
@@ -86,12 +93,14 @@ class PyannoteBrouhahaVADForVoiceActivityDetection(PyannoteVADForVoiceActivityDe
             speech_pad_ms=speech_pad_ms,
             max_speech_duration_s=max_speech_duration_s,
         )
-        segments = frame_probabilities_to_segments(
+        # brouhaha.pipeline.RegressiveActivityDetectionPipeline binarizes
+        # the VAD column with pyannote's Binarize on the receptive-field
+        # frame grid (frame middles, strict onset/offset comparisons).
+        segments = _pyannote_segments(
             vad_scores.tolist(),
-            sampling_rate=self.sample_rate,
-            frame_hop_samples=output.frame_hop_samples,
-            frame_length_samples=output.frame_length_samples,
-            duration_samples=materialized.waveform.numel(),
+            frame_step_s=output.frame_step_s,
+            frame_duration_s=output.frame_duration_s,
+            duration=materialized.waveform.numel() / self.sample_rate,
             config=postprocessing,
         )
         frame_snr = tuple(float(item) for item in snr_scores.tolist())
@@ -119,6 +128,10 @@ class PyannoteBrouhahaVADForVoiceActivityDetection(PyannoteVADForVoiceActivityDe
                 output.frame_hop_samples,
                 "frame_length_samples":
                 output.frame_length_samples,
+                "frame_step_seconds":
+                output.frame_step_s,
+                "frame_duration_seconds":
+                output.frame_duration_s,
                 "frame_scores_available":
                 True,
                 "mean_snr_db": (float(snr_scores.mean().item()) if snr_scores.numel() else None),
