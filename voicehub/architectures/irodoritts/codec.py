@@ -11,10 +11,10 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
+from voicehub.processing.loudness import normalize_loudness
 from voicehub.processing.waveform import resample_waveform_hann
 
 from .codec_graph import DACVAE
-from .loudness import normalize_loudness
 from .metadata import IRODORI_CODEC_CHECKPOINT
 
 _CODEC_DEFAULT = object()

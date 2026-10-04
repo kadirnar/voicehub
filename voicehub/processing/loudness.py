@@ -1,19 +1,20 @@
-"""BS.1770 loudness normalization used by the released Irodori codec frontend.
+"""BS.1770 integrated loudness compatible with ``descript-audiotools``.
 
-The original Irodori-TTS runtime normalizes reference and training audio
-with ``audiotools.AudioSignal.normalize(-16)`` followed by
-``ensure_max_of_audio()``. This module reproduces that computation with
-PyTorch only: the pyloudnorm K-weighting biquads (coefficients rounded
-to float32 as audiotools does), 400 ms gating blocks with 75 % overlap
-whose final block is zero-padded like ``julius.core.unfold``, zero
-padding of signals shorter than 0.5 s, the -70 LUFS absolute and -10 LU
-relative gates, and the exponential gain formula.
+The released DAC, Semantic-DACVAE and Irodori-TTS frontends measure and
+normalize loudness with ``audiotools.AudioSignal.loudness()`` and
+``normalize()``. This module reproduces that computation with PyTorch only:
+the pyloudnorm K-weighting biquads (coefficients rounded to float32 as
+audiotools does), 400 ms gating blocks with 75 % overlap whose final block is
+zero-padded like ``julius.core.unfold``, zero padding of signals shorter than
+0.5 s, the audiotools channel gains, the -70 LUFS absolute and -10 LU relative
+gates, and the exponential gain formula.
 
 The only intentional difference is the IIR evaluation: audiotools runs a
-sequential float32 ``torchaudio.functional.lfilter``; here the same
-filters are applied as a float64 FFT convolution with their impulse
-response, truncated far below float32 resolution. Measured loudness
-agrees to a few float32 ulps.
+sequential float32 ``torchaudio.functional.lfilter`` on CPU; here the same
+filters are applied on CPU as a float64 FFT convolution with their impulse
+response, truncated far below float32 resolution. Measured loudness agrees to
+a few float32 ulps. audiotools' optional FIR approximation for CUDA tensors is
+not reproduced; the exact IIR response is used on every device.
 """
 
 from __future__ import annotations
@@ -92,23 +93,38 @@ def _k_weight(audio: torch.Tensor, sample_rate: int) -> torch.Tensor:
     response = _k_weighting_impulse_response(int(sample_rate))
     length = audio.shape[-1]
     size = 1 << math.ceil(math.log2(length + response.numel() - 1))
-    spectrum = torch.fft.rfft(audio.detach().to(device="cpu", dtype=torch.float64), size)
+    spectrum = torch.fft.rfft(audio.to(device="cpu", dtype=torch.float64), size)
     filtered = torch.fft.irfft(spectrum * torch.fft.rfft(response, size), size)[..., :length]
     return filtered.to(dtype=torch.float32)
 
 
-def integrated_loudness(audio: torch.Tensor, sample_rate: int) -> torch.Tensor:
-    """Gated BS.1770 loudness of ``(batch, channels, time)`` float audio.
-
-    Mirrors ``audiotools.AudioSignal.loudness()`` (including its 0.5 s
-    zero padding and -70 LUFS floor) and returns one float32 value per
-    item.
-    """
+def _as_batched_channels(audio: torch.Tensor) -> torch.Tensor:
+    if audio.ndim == 1:
+        return audio[None, None]
+    if audio.ndim == 2:
+        return audio[None]
     if audio.ndim != 3:
-        raise ValueError("Loudness input must have shape (batch, channels, time).")
+        raise ValueError(
+            "Audio must have shape (time,), (channels, time), or "
+            f"(batch, channels, time); received {tuple(audio.shape)}.")
+    return audio
+
+
+def integrated_loudness(audio: torch.Tensor, sample_rate: int) -> torch.Tensor:
+    """Gated BS.1770 loudness like ``audiotools.AudioSignal.loudness()``.
+
+    ``audio`` has shape ``(time,)``, ``(channels, time)`` or ``(batch,
+    channels, time)`` with at most five channels. Signals shorter than
+    0.5 s are zero-padded and the result is floored at -70 LUFS, as in
+    audiotools. Returns one float32 value per batch item on the CPU. The
+    measurement is differentiable with respect to ``audio``.
+    """
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive.")
+    audio = _as_batched_channels(torch.as_tensor(audio))
     if audio.shape[1] > len(_CHANNEL_GAINS):
         raise ValueError("BS.1770 loudness supports at most five channels.")
-    audio = audio.detach().to(device="cpu", dtype=torch.float32)
+    audio = audio.to(device="cpu", dtype=torch.float32)
     minimum_samples = 0.5 * sample_rate
     if audio.shape[-1] < minimum_samples:
         padding = int((0.5 - audio.shape[-1] / sample_rate) * sample_rate)
@@ -141,21 +157,39 @@ def integrated_loudness(audio: torch.Tensor, sample_rate: int) -> torch.Tensor:
     return torch.maximum(loudness, torch.full_like(loudness, _MIN_LOUDNESS))
 
 
-def normalize_loudness(waveform: torch.Tensor, sample_rate: int, target_db: float) -> torch.Tensor:
-    """Normalize one mono float32 waveform like audiotools ``normalize``.
+def normalize_loudness(
+    audio: torch.Tensor,
+    sample_rate: int,
+    target_db: float | torch.Tensor,
+    *,
+    peak_limit: float = 1.0,
+) -> torch.Tensor:
+    """Normalize loudness like audiotools ``normalize(target_db)``.
 
-    Equivalent to ``AudioSignal(w).normalize(target_db).ensure_max_of_audio()``.
+    With the default ``peak_limit`` this is
+    ``AudioSignal(audio).normalize(target_db).ensure_max_of_audio()``; pass
+    ``float("inf")`` to skip the peak limit. The input shape and floating
+    dtype are preserved.
     """
-    if waveform.ndim != 1:
-        raise ValueError("Loudness normalization expects a mono waveform.")
-    waveform = waveform.to(dtype=torch.float32)
-    measured = integrated_loudness(waveform[None, None], sample_rate).to(waveform.device)
-    gain = torch.exp((torch.as_tensor(float(target_db), device=waveform.device) - measured) * _GAIN_FACTOR)
-    normalized = waveform * gain[0]
-    peak = normalized.abs().max()
-    if peak > 1.0:
-        normalized = normalized * (1.0 / peak)
-    return normalized
+    audio = torch.as_tensor(audio)
+    original_shape = audio.shape
+    output_dtype = audio.dtype
+    normalized = _as_batched_channels(audio).to(dtype=torch.float32)
+    measured = integrated_loudness(normalized, sample_rate).to(normalized.device)
+    target = torch.as_tensor(target_db, dtype=normalized.dtype, device=normalized.device)
+    gain = torch.exp((target - measured) * _GAIN_FACTOR)
+    normalized = normalized * gain[:, None, None]
+    if math.isfinite(peak_limit):
+        peak = normalized.abs().amax(dim=-1, keepdim=True)
+        scale = torch.where(
+            peak > peak_limit,
+            peak_limit / peak.clamp_min(torch.finfo(normalized.dtype).tiny),
+            torch.ones_like(peak),
+        )
+        normalized = normalized * scale
+    if output_dtype.is_floating_point:
+        normalized = normalized.to(dtype=output_dtype)
+    return normalized.reshape(original_shape)
 
 
 __all__ = ["integrated_loudness", "normalize_loudness"]
