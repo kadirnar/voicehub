@@ -224,8 +224,9 @@ class XTTS2Tokenizer:
         preprocessed: bool,
     ) -> str:
         if preprocessed:
-            normalized = unicodedata.normalize("NFKC", text).strip()
-            return _WHITESPACE_PATTERN.sub(" ", normalized)
+            # The released vocabulary has no normalizer: source-normalized
+            # text reaches BPE unchanged (no Unicode NFKC folding).
+            return _WHITESPACE_PATTERN.sub(" ", text.strip())
         base_language = language.split("-", 1)[0]
         if base_language in _TRANSCRIPTION_REQUIRED:
             raise ValueError(

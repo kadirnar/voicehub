@@ -187,6 +187,52 @@ class NativeXTTS2Tests(unittest.TestCase):
             [5, 6, 10],
         )
 
+    def test_tokenizer_keeps_normalized_text_without_unicode_folding(self):
+        vocabulary = {
+            "[UNK]": 0,
+            "[START]": 1,
+            "[STOP]": 2,
+            "[SPACE]": 3,
+            "[en]": 4,
+            "m": 5,
+            "e": 6,
+            "r": 7,
+            "er": 8,
+            "\uff4d": 9,  # FULLWIDTH LATIN SMALL LETTER M (NFKC -> "m")
+            "\u00b2": 10,  # SUPERSCRIPT TWO (NFKC -> "2")
+        }
+        payload = {
+            "normalizer": None,
+            "pre_tokenizer": {
+                "type": "Whitespace"
+            },
+            "decoder": None,
+            "model": {
+                "type": "BPE",
+                "unk_token": "[UNK]",
+                "continuing_subword_prefix": None,
+                "end_of_word_suffix": None,
+                "fuse_unk": False,
+                "vocab": vocabulary,
+                "merges": ["e r"],
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "vocab.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            tokenizer = XTTS2Tokenizer.from_file(path)
+
+        # Like the source tokenizer (no normalizer), pre-normalized text is
+        # tokenized as given; compatibility characters are not NFKC-folded.
+        self.assertEqual(
+            tokenizer.encode(
+                " \uff4der  \u00b2 ",
+                language="en",
+                preprocessed=True,
+            ),
+            [4, 9, 8, 3, 10],
+        )
+
     def test_native_generation_uses_signed_repetition_penalty(self):
         model = _tiny_gpt().eval()
 
