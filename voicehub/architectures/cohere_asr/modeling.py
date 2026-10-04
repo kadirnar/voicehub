@@ -58,25 +58,41 @@ class CohereGenerateOutput:
     sequences: torch.Tensor
 
 
-class FilterbankFeatures(nn.Module):
-    """Persistent frontend buffers carried by the official checkpoint."""
+def frontend_window_and_filters(config: CohereAsrConfig) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return the float32 analysis window and ``[mel, bin]`` Slaney bank.
 
-    def __init__(self, config: CohereAsrConfig) -> None:
-        super().__init__()
+    Built on CPU like the reference feature extractor
+    (``torch.hann_window(periodic=False)`` and librosa's float32 Slaney
+    filters). The checkpoint stores the same tensors rounded to
+    bfloat16; those copies must not drive feature extraction.
+    """
+    with torch.device("cpu"):
         window = torch.hann_window(
             config.win_length,
             periodic=False,
             dtype=torch.float32,
         )
+        # librosa rounds the Slaney bank to float32 twice; the reference
+        # bank differs from a single float64 evaluation by one ULP in 157 of
+        # the 32,896 weights of the published 128-bin configuration.
         filters = mel_filter_bank(
             sample_rate=config.sample_rate,
             n_fft=config.n_fft,
             n_mels=config.encoder_config.num_mel_bins,
-            dtype=torch.float64,
-            device=window.device,
-        ).to(torch.float32)
-        self.register_buffer("window", window)
-        self.register_buffer("fb", filters.unsqueeze(0))
+            dtype=torch.float32,
+            match_librosa=True,
+        )
+    return window, filters
+
+
+class FilterbankFeatures(nn.Module):
+    """Persistent frontend buffers carried by the official checkpoint."""
+
+    def __init__(self, config: CohereAsrConfig) -> None:
+        super().__init__()
+        window, filters = frontend_window_and_filters(config)
+        self.register_buffer("window", window.to(torch.get_default_device()))
+        self.register_buffer("fb", filters.unsqueeze(0).to(torch.get_default_device()))
 
 
 class CoherePreprocessor(nn.Module):
@@ -193,13 +209,16 @@ class RelPositionalEncoding(nn.Module):
 
     def __init__(self, hidden_size: int) -> None:
         super().__init__()
+        self.hidden_size = hidden_size
+
+    def _inverse_frequency(self, device: torch.device) -> torch.Tensor:
+        # Computed on CPU in float32 like the reference initializer, and
+        # deliberately not a buffer: the runtime builds the graph on the
+        # meta device and only assigns checkpoint tensors, so a
+        # non-persistent buffer would stay on meta after loading.
         inverse_frequency = 1.0 / (
-            10_000.0**(torch.arange(0, hidden_size, 2, dtype=torch.float32) / hidden_size))
-        self.register_buffer(
-            "_inverse_frequency",
-            inverse_frequency,
-            persistent=False,
-        )
+            10_000.0**(torch.arange(0, self.hidden_size, 2, dtype=torch.float32) / self.hidden_size))
+        return inverse_frequency.to(device)
 
     @torch.no_grad()
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -213,7 +232,7 @@ class RelPositionalEncoding(nn.Module):
         )
         frequencies = torch.outer(
             positions,
-            self._inverse_frequency.to(hidden_states.device),
+            self._inverse_frequency(hidden_states.device),
         )
         positional = torch.stack(
             (frequencies.sin(), frequencies.cos()),
@@ -354,30 +373,29 @@ class RelPositionMultiHeadAttention(nn.Module):
                 -1,
             )
         position = self._reshape(self.linear_pos(position_embeddings))
-        content_scores = torch.matmul(
-            query + self.pos_bias_u[None, :, None, :],
-            key.transpose(-1, -2),
-        )
+        # Same evaluation order as the reference: the relative-position term
+        # becomes an additive bias of one fused attention call, so the
+        # content scores and the softmax stay in float32 inside the kernel
+        # instead of being rounded to a half-precision dtype.
         position_scores = torch.matmul(
             query + self.pos_bias_v[None, :, None, :],
             position.transpose(-1, -2),
         )
         position_scores = self._relative_shift(position_scores)
-        position_scores = position_scores[..., :content_scores.shape[-1]]
-        scores = (content_scores + position_scores) * self.scaling
-        expanded_mask = None
+        position_scores = position_scores[..., :key.shape[2]] * self.scaling
         if invalid_attention_mask is not None:
-            expanded_mask = invalid_attention_mask[:, None, :, :]
-            scores = scores.masked_fill(expanded_mask, -1e9)
-        weights = torch.softmax(scores, dim=-1)
-        if expanded_mask is not None:
-            weights = weights.masked_fill(expanded_mask, 0.0)
-        weights = F.dropout(
-            weights,
-            p=self.dropout,
-            training=self.training,
+            position_scores = position_scores.masked_fill(
+                invalid_attention_mask[:, None, :, :],
+                float("-inf"),
+            )
+        output = F.scaled_dot_product_attention(
+            query + self.pos_bias_u[None, :, None, :],
+            key,
+            value,
+            attn_mask=position_scores,
+            dropout_p=self.dropout if self.training else 0.0,
+            scale=self.scaling,
         )
-        output = torch.matmul(weights, value)
         output = output.transpose(1, 2).contiguous().view(
             hidden_states.shape[0],
             hidden_states.shape[1],
@@ -471,7 +489,10 @@ class ConformerEncoder(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         valid = (torch.arange(maximum, device=lengths.device)[None, :] < lengths[:, None])
         invalid_padding = ~valid
-        invalid_attention = ~(valid[:, :, None] & valid[:, None, :])
+        # Mask padded keys only: valid query rows see exactly the reference
+        # mask, and padded query rows (never read by valid frames) stay
+        # finite instead of softmaxing over no key at all.
+        invalid_attention = invalid_padding[:, None, :].expand(-1, maximum, -1)
         return invalid_padding, invalid_attention
 
     def forward(
@@ -1096,5 +1117,6 @@ __all__ = [
     "CohereEncoderOutput",
     "CohereGenerateOutput",
     "FilterbankFeatures",
+    "frontend_window_and_filters",
     "shift_tokens_right",
 ]

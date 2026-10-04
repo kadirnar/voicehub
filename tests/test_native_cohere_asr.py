@@ -612,6 +612,75 @@ class CohereAsrTokenizerAndProcessorTests(unittest.TestCase):
                 atol=0,
             )
 
+    def test_published_mel_bank_matches_librosa_float32_rounding(self):
+        try:
+            import librosa
+        except (ImportError, ModuleNotFoundError) as error:
+            self.skipTest(f"Optional librosa reference unavailable: {error}")
+        from voicehub.architectures.cohere_asr.modeling import frontend_window_and_filters
+
+        config = CohereAsrConfig()
+        reference = librosa.filters.mel(
+            sr=config.sample_rate,
+            n_fft=config.n_fft,
+            n_mels=config.encoder_config.num_mel_bins,
+            fmin=0.0,
+            fmax=config.sample_rate / 2,
+            norm="slaney",
+        )
+        _, actual = frontend_window_and_filters(config)
+        self.assertEqual(actual.dtype, torch.float32)
+        self.assertTrue(torch.equal(actual, torch.from_numpy(reference)))
+
+    def test_frontend_ignores_bfloat16_checkpoint_frontend_buffers(self):
+        # The published checkpoint stores the window and mel bank rounded to
+        # bfloat16; the reference frontend uses exact float32 tensors.
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = _runtime(Path(temporary))
+            extractor = runtime.processor.feature_extractor
+            waveform = torch.linspace(-0.35, 0.25, 64)
+            exact = extractor(waveform, sampling_rate=16_000, chunk_long_audio=False)
+            featurizer = runtime.model.preprocessor.featurizer
+            self.assertTrue(torch.equal(extractor.window, torch.hann_window(8, periodic=False)))
+            with torch.no_grad():
+                featurizer.window.copy_(featurizer.window.to(torch.bfloat16).float())
+                featurizer.fb.copy_(featurizer.fb.to(torch.bfloat16).float())
+            loaded = extractor(waveform, sampling_rate=16_000, chunk_long_audio=False)
+
+            torch.testing.assert_close(loaded["input_features"], exact["input_features"], rtol=0, atol=0)
+
+    def test_frontend_dither_uses_the_cpu_length_seeded_generator(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = _runtime(Path(temporary))
+            extractor = runtime.processor.feature_extractor
+            waveform = 0.3 * torch.randn(64, generator=torch.Generator().manual_seed(7))
+            extractor.dither = 1e-2
+            dithered = extractor(waveform, sampling_rate=16_000, chunk_long_audio=False)
+            generator = torch.Generator(device="cpu").manual_seed(waveform.numel())
+            noisy = waveform + 1e-2 * torch.randn(waveform.numel(), generator=generator)
+            extractor.dither = 0.0
+            manual = extractor(noisy, sampling_rate=16_000, chunk_long_audio=False)
+            torch.testing.assert_close(dithered["input_features"], manual["input_features"], rtol=0, atol=0)
+
+    def test_frontend_extracts_on_cpu_for_every_target_device(self):
+        # The reference processor computes features on CPU; the target
+        # device only receives the finished tensors.
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = _runtime(Path(temporary))
+            extractor = runtime.processor.feature_extractor
+            extractor.dither = 1e-2
+            waveform = 0.3 * torch.randn(64, generator=torch.Generator().manual_seed(7))
+            on_cpu = extractor(waveform, sampling_rate=16_000, chunk_long_audio=False)
+            meta = extractor(waveform, sampling_rate=16_000, device="meta", chunk_long_audio=False)
+            self.assertEqual(meta["input_features"].device.type, "meta")
+            self.assertEqual(meta["attention_mask"].device.type, "meta")
+            if torch.cuda.is_available():
+                on_cuda = extractor(
+                    waveform.cuda(), sampling_rate=16_000, device="cuda", chunk_long_audio=False)
+                self.assertEqual(on_cuda["input_features"].device.type, "cuda")
+                torch.testing.assert_close(
+                    on_cuda["input_features"].cpu(), on_cpu["input_features"], rtol=0, atol=0)
+
     def test_optional_transformers_frontend_parity(self):
         try:
             import numpy as np
@@ -771,6 +840,91 @@ class CohereAsrModelTests(unittest.TestCase):
                 labels=torch.tensor([[-100]]),
             )
 
+    def test_relative_attention_matches_reference_evaluation_order(self):
+        # Reference (Transformers Parakeet encoder) order: the shifted
+        # relative-position term, scaled and masked with -inf, is the
+        # additive mask of one SDPA call on (query + bias_u, key, value).
+        # Explicit bf16 score/softmax tensors lost precision and flipped
+        # near-tied bfloat16 decoding steps on the real checkpoint.
+        from torch.nn import functional as F
+
+        from voicehub.architectures.cohere_asr.modeling import (
+            ConformerEncoder,
+            RelPositionalEncoding,
+            RelPositionMultiHeadAttention,
+        )
+
+        torch.manual_seed(0)
+        attention = RelPositionMultiHeadAttention(16, 2, 0.0).eval()
+        with torch.no_grad():
+            for parameter in attention.parameters():
+                parameter.normal_(0.0, 0.3)
+        hidden = torch.randn(2, 9, 16)
+        positions = RelPositionalEncoding(16)(hidden)
+        padding, invalid = ConformerEncoder._masks(torch.tensor([9, 6]), 9)
+
+        def reference(module, values, position_values):
+            query = module._reshape(module.linear_q(values))
+            key = module._reshape(module.linear_k(values))
+            value = module._reshape(module.linear_v(values))
+            relative = module._reshape(module.linear_pos(position_values.expand(2, -1, -1)))
+            bias = module._relative_shift(
+                (query + module.pos_bias_v[None, :, None, :]) @ relative.transpose(-1, -2))[..., :9]
+            bias = (bias * module.scaling).masked_fill(padding[:, None, None, :], float("-inf"))
+            output = F.scaled_dot_product_attention(
+                query + module.pos_bias_u[None, :, None, :],
+                key,
+                value,
+                attn_mask=bias,
+                scale=module.scaling,
+            )
+            return module.linear_out(output.transpose(1, 2).reshape(2, 9, 16))
+
+        with torch.no_grad():
+            for dtype in (torch.float32, torch.bfloat16):
+                module = attention.to(dtype)
+                actual = module(hidden.to(dtype), positions.to(dtype), invalid)
+                expected = reference(module, hidden.to(dtype), positions.to(dtype))
+                self.assertTrue(torch.isfinite(actual).all())
+                valid = ~padding
+                torch.testing.assert_close(actual[valid], expected[valid], rtol=0, atol=0)
+            module = attention.to(torch.float64)
+            actual = module(hidden.double(), positions.double(), invalid)
+            # Transformer-XL scores computed explicitly in float64.
+            query = module._reshape(module.linear_q(hidden.double()))
+            key = module._reshape(module.linear_k(hidden.double()))
+            value = module._reshape(module.linear_v(hidden.double()))
+            relative = module._reshape(module.linear_pos(positions.double().expand(2, -1, -1)))
+            content = (query + module.pos_bias_u[None, :, None, :]) @ key.transpose(-1, -2)
+            shifted = module._relative_shift(
+                (query + module.pos_bias_v[None, :, None, :]) @ relative.transpose(-1, -2))[..., :9]
+            scores = ((content + shifted) * module.scaling).masked_fill(
+                padding[:, None, None, :], float("-inf"))
+            explicit = module.linear_out((scores.softmax(-1) @ value).transpose(1, 2).reshape(2, 9, 16))
+            torch.testing.assert_close(actual[~padding], explicit[~padding], rtol=1e-12, atol=1e-12)
+
+    def test_encoder_valid_frames_ignore_batch_padding(self):
+        config = _tiny_config()
+        model = CohereAsrForConditionalGeneration(config).eval()
+        features = torch.randn(1, 40, 8, generator=torch.Generator().manual_seed(3))
+        alone = model.encode(features, torch.ones(1, 40, dtype=torch.bool))
+        padded_features = torch.cat((features, torch.zeros(1, 24, 8)), dim=1)
+        batch = model.encode(
+            torch.cat((padded_features, torch.randn(1, 64, 8)), dim=0),
+            torch.cat((
+                torch.cat((torch.ones(1, 40), torch.zeros(1, 24)), dim=1),
+                torch.ones(1, 64),
+            )).bool(),
+        )
+        valid = int(alone.attention_mask[0].sum())
+        self.assertTrue(torch.isfinite(batch.last_hidden_state).all())
+        torch.testing.assert_close(
+            batch.last_hidden_state[0, :valid],
+            alone.last_hidden_state[0, :valid],
+            rtol=1e-5,
+            atol=1e-5,
+        )
+
     def test_checkpoint_loader_validates_before_assignment(self):
         config = _tiny_config()
         source_model = CohereAsrForConditionalGeneration(config)
@@ -863,6 +1017,52 @@ class CohereAsrArtifactTests(unittest.TestCase):
             self.assertIs(
                 reloaded.model.log_softmax.mlp.layer0.weight,
                 reloaded.model.transf_decoder._embedding.token_embedding.weight,
+            )
+
+    def test_meta_loaded_runtime_runs_inference_like_the_source_graph(self):
+        # The loader builds the graph on the meta device and assigns only
+        # checkpoint tensors; nothing used at inference may stay on meta.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            runtime = _runtime(root / "source")
+            runtime.model.eval()
+            destination = save_cohere_asr_runtime(runtime, root / "export")
+            reloaded = load_cohere_asr_runtime(
+                destination,
+                device="cpu",
+                compute_dtype="float32",
+            )
+
+            self.assertFalse([
+                name for name, value in (*reloaded.model.named_parameters(), *reloaded.model.named_buffers())
+                if value.is_meta
+            ])
+            prepared = runtime.processor(
+                torch.linspace(-0.3, 0.3, 96),
+                language="en",
+                sampling_rate=16_000,
+            )
+            arguments = (
+                prepared["input_features"],
+                prepared["attention_mask"],
+                prepared["decoder_input_ids"],
+            )
+            expected = runtime.model.generate(*arguments, max_new_tokens=3)
+            actual = reloaded.model.generate(*arguments, max_new_tokens=3)
+            self.assertEqual(actual.sequences.tolist(), expected.sequences.tolist())
+            torch.testing.assert_close(
+                reloaded.model(
+                    input_features=arguments[0],
+                    attention_mask=arguments[1],
+                    decoder_input_ids=arguments[2],
+                ).logits,
+                runtime.model(
+                    input_features=arguments[0],
+                    attention_mask=arguments[1],
+                    decoder_input_ids=arguments[2],
+                ).logits,
+                rtol=0,
+                atol=0,
             )
 
     def test_malformed_exports_leave_no_partial_destination(self):

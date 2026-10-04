@@ -10,7 +10,12 @@ from typing import Any
 import torch
 
 from voicehub.architectures.cohere_asr.configuration import SUPPORTED_LANGUAGES, CohereAsrConfig
-from voicehub.architectures.cohere_asr.modeling import LOG_ZERO_GUARD, NORMALIZATION_EPSILON, FilterbankFeatures
+from voicehub.architectures.cohere_asr.modeling import (
+    LOG_ZERO_GUARD,
+    NORMALIZATION_EPSILON,
+    FilterbankFeatures,
+    frontend_window_and_filters,
+)
 from voicehub.architectures.cohere_asr.tokenization import CohereAsrTokenizer
 
 _NO_SPACE_LANGUAGES = frozenset({"ja", "zh"})
@@ -40,6 +45,9 @@ class CohereAsrFeatureExtractor:
         self.max_audio_clip_s = self.config.max_audio_clip_s
         self.overlap_chunk_second = self.config.overlap_chunk_second
         self.min_energy_window_samples = (self.config.min_energy_window_samples)
+        # The checkpoint's ``preprocessor.featurizer`` buffers are bfloat16
+        # roundings; the reference frontend uses exact float32 tensors.
+        self.window, self.mel_filters = frontend_window_and_filters(self.config)
 
     @staticmethod
     def _waveforms(
@@ -186,16 +194,17 @@ class CohereAsrFeatureExtractor:
             padded[index, :waveform.numel()] = waveform
         sample_mask = (torch.arange(maximum, device=padded.device)[None, :] < lengths[:, None])
         if self.dither > 0.0:
+            # The reference draws the length-seeded noise from a CPU
+            # generator; CUDA generators yield a different sequence.
             padded = padded.clone()
-            generator = torch.Generator(device=padded.device)
+            generator = torch.Generator(device="cpu")
             for index, length in enumerate(lengths.tolist()):
                 generator.manual_seed(int(length))
                 padded[index, :length] += self.dither * torch.randn(
                     length,
-                    device=padded.device,
                     dtype=padded.dtype,
                     generator=generator,
-                )
+                ).to(padded.device)
         emphasized = torch.cat(
             (
                 padded[:, :1],
@@ -209,16 +218,14 @@ class CohereAsrFeatureExtractor:
             n_fft=self.n_fft,
             hop_length=self.hop_length,
             win_length=self.win_length,
-            window=self.featurizer.window.to(
-                device=padded.device,
-                dtype=torch.float32,
-            ),
+            window=self.window.to(padded.device),
             center=True,
             pad_mode="constant",
             return_complex=True,
         )
-        power = spectrum.abs().square()
-        filters = self.featurizer.fb.to(
+        # Reference magnitude formula (not ``abs()``, which rounds differently).
+        power = torch.sqrt(torch.view_as_real(spectrum).pow(2).sum(-1)).pow(2)
+        filters = self.mel_filters.to(
             device=padded.device,
             dtype=power.dtype,
         )
@@ -254,7 +261,10 @@ class CohereAsrFeatureExtractor:
             raise ValueError(
                 f"Cohere ASR expects {self.sampling_rate} Hz audio; received "
                 f"{sampling_rate} Hz.")
-        waveforms = self._waveforms(audio, device=device)
+        # Like the reference processor, extract on CPU and only then move
+        # the features: CUDA FFTs round differently (up to ~3e-4 after
+        # normalization), which flips near-tied bfloat16 decoder steps.
+        waveforms = self._waveforms(audio, device="cpu")
         if chunk_long_audio:
             waveforms, chunk_index = self._chunk(waveforms)
         else:
@@ -263,7 +273,7 @@ class CohereAsrFeatureExtractor:
                 raise ValueError("Cohere ASR waveform exceeds the verified single-clip "
                                  "duration.")
             chunk_index = tuple((index, None) for index in range(len(waveforms)))
-        result: dict[str, Any] = self._features(waveforms)
+        result: dict[str, Any] = {name: value.to(device) for name, value in self._features(waveforms).items()}
         result["audio_chunk_index"] = chunk_index
         return result
 
