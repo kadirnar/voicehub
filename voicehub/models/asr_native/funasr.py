@@ -491,8 +491,13 @@ class FunASRForSpeechRecognition(PreTrainedASRModel):
             filtered = tuple((token_id, piece) for token_id, piece in zip(content_ids, pieces)
                              if not (piece.startswith("<|") and piece.endswith("|>")))
             if filtered:
+                # FunASR aligns fresh CTC posteriors, without the optional
+                # `ban_emo_unk` mask used for greedy decoding.
+                with torch.inference_mode():
+                    speech_log_probabilities = self.model.ctc.log_softmax(
+                        output.hidden_states[0, 4:encoded_length])
                 words = sensevoice_word_timestamps(
-                    log_probabilities[4:],
+                    speech_log_probabilities,
                     tuple(item[0] for item in filtered),
                     tuple(item[1] for item in filtered),
                     duration=materialized.duration,
