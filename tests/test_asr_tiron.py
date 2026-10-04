@@ -449,6 +449,95 @@ class TironNativeRuntimeTests(unittest.TestCase):
             }],
         )
 
+    def test_auto_dtype_follows_reference_harness(self):
+        # The harness runs the bfloat16 checkpoint in bfloat16 on CUDA.
+        expected = {
+            "cuda": torch.bfloat16,
+            "mps": torch.float16,
+            "cpu": torch.float32,
+        }
+        for device, dtype in expected.items():
+            with self.subTest(device=device):
+                self.assertIs(
+                    TironForSpeechRecognition(device=device)._model_dtype(),
+                    dtype,
+                )
+        self.assertIs(
+            TironForSpeechRecognition(
+                device="cuda",
+                torch_dtype="float16",
+            )._model_dtype(),
+            torch.float16,
+        )
+
+    def test_window_parsing_matches_reference_harness(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_tiron_artifact(root)
+            wrapper = TironForSpeechRecognition(
+                TironASRConfig(name_or_path=root),
+                device="cpu",
+            )
+            wrapper.load()
+
+        def parse(token_ids, duration=1.0):
+            text, segments = wrapper._parse_generated_tokens(
+                token_ids,
+                language="en",
+                chunk_duration=duration,
+            )
+            return text, [(
+                segment.speaker,
+                segment.start,
+                segment.end,
+                segment.text,
+            ) for segment in segments]
+
+        hello, period = 259, ord(".")
+        # Punctuation-only segments are dropped, and timestamps carry the
+        # harness's two-decimal values (35 * 0.02 is not exactly 0.7).
+        self.assertEqual(
+            parse([
+                51_866,
+                50_365,
+                period,
+                50_366,
+                50_367,
+                hello,
+                50_400,
+                50_257,
+            ]),
+            ("hello", [("SPEAKER_00", 0.04, 0.7, "hello")]),
+        )
+        # Text before any speaker belongs to speaker 1 and starts where the
+        # previous segment ended; a speaker tag closes open text at its
+        # start; trailing text ends at the window duration.
+        self.assertEqual(
+            parse([hello, 50_370, hello, 51_867, 50_380, hello]),
+            (
+                "hello hello hello",
+                [
+                    ("SPEAKER_00", 0.0, 0.1, "hello"),
+                    ("SPEAKER_00", 0.1, 0.1, "hello"),
+                    ("SPEAKER_01", 0.3, 1.0, "hello"),
+                ],
+            ),
+        )
+        # A whitespace-only run does not close a segment.
+        self.assertEqual(
+            parse([51_866, 50_370, ord(" "), 50_375, hello, 50_380]),
+            ("hello", [("SPEAKER_00", 0.2, 0.3, "hello")]),
+        )
+        # `<|nospeech|>` anywhere before end-of-text silences the window.
+        self.assertEqual(
+            parse([51_866, 50_370, hello, 50_380, 50_363, 50_257]),
+            ("", []),
+        )
+        self.assertEqual(
+            parse([51_866, 50_370, hello, 50_380, 50_257, 50_363]),
+            ("hello", [("SPEAKER_00", 0.1, 0.3, "hello")]),
+        )
+
     def test_invalid_inference_controls_fail_before_generation(self):
         wrapper = TironForSpeechRecognition(device="cpu")
         cases = (
