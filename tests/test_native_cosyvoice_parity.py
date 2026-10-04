@@ -279,6 +279,39 @@ class CosyVoiceFlowParityTests(unittest.TestCase):
                 prompt_features=features,
             )
 
+    def test_synthesis_requires_prompt_tokens_and_features_together(self):
+        torch.manual_seed(0)
+        model = CosyVoiceNativeModel(CosyVoiceArchitectureConfig.tiny()).eval()
+        config = model.config.flow
+        text = torch.tensor([[1, 2, 3]])
+        instruction = torch.tensor([[4]])
+        prompt = torch.tensor([[5, 6, 7]])
+        features = torch.randn(1, prompt.shape[1] * config.token_mel_ratio, config.mel_channels)
+        speaker = torch.randn(1, config.speaker_embedding_dim)
+        generated = torch.tensor([[1, 2, 3, 4]])
+        for name, inputs in (
+            ("tokens only", {"prompt_speech_tokens": prompt}),
+            ("features only", {"prompt_features": features}),
+        ):
+            with self.subTest(name), mock.patch.object(model.llm, "generate", return_value=generated) as llm:
+                with self.assertRaisesRegex(ValueError, "must be supplied together"):
+                    model.synthesize(text, instruction, speaker, flow_steps=2, **inputs)
+                llm.assert_not_called()
+        flow_generate = model.flow.generate
+        with mock.patch.object(model.llm, "generate", return_value=generated) as llm:
+            with mock.patch.object(model.flow, "generate", side_effect=flow_generate) as flow:
+                model.synthesize(
+                    text,
+                    instruction,
+                    speaker,
+                    prompt_speech_tokens=prompt,
+                    prompt_features=features,
+                    flow_steps=2,
+                )
+        self.assertIs(llm.call_args.kwargs["prompt_speech_tokens"], prompt)
+        self.assertIs(flow.call_args.kwargs["prompt_speech_tokens"], prompt)
+        self.assertIs(flow.call_args.kwargs["prompt_features"], features)
+
 
 class CosyVoiceVocoderParityTests(unittest.TestCase):
 
