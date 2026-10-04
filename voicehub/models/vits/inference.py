@@ -351,7 +351,9 @@ class VitsForTextToSpeech(PreTrainedTTSModel):
 
         configured = self.config.torch_dtype
         if configured == "auto":
-            return (torch.float16 if torch.device(self.device).type == "cuda" else torch.float32)
+            # Released VITS/MMS checkpoints run in float32 upstream and in
+            # Transformers; float16 shifts the predicted durations.
+            return torch.float32
         dtype = {
             "bfloat16": torch.bfloat16,
             "float16": torch.float16,

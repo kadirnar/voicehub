@@ -302,6 +302,19 @@ class NativeVitsProviderRuntimeTests(unittest.TestCase):
                     lazy_load=False,
                 )
 
+    def test_auto_dtype_matches_upstream_float32_on_every_device(self):
+        import torch
+
+        for device in ("cpu", "cuda"):
+            with self.subTest(device=device):
+                model = VitsForTextToSpeech(device=device)
+                self.assertEqual(model.config.torch_dtype, "auto")
+                self.assertIs(model._model_dtype(), torch.float32)
+        self.assertIs(
+            VitsForTextToSpeech(device="cuda", torch_dtype="float16")._model_dtype(),
+            torch.float16,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
