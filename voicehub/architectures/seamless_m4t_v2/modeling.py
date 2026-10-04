@@ -532,6 +532,9 @@ class SeamlessM4Tv2ScaledWordEmbedding(nn.Embedding):
         return super().forward(input_ids) * self.embed_scale
 
 
+_FAIRSEQ_LEGACY_PAD_INDEX = 1
+
+
 class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Module):
     """Non-persistent fairseq-style sinusoidal decoder positions."""
 
@@ -572,9 +575,19 @@ class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Module):
         result[self.padding_idx] = 0
         return result
 
+    def materialize(self, device: str | torch.device) -> None:
+        """Rebuild the derived table on ``device`` (e.g. after meta init)."""
+        self.weights = self._weights(self.weights.shape[0]).to(device=device)
+
     def forward(self, input_ids: Tensor) -> Tensor:
-        visible = input_ids.ne(self.padding_idx).to(dtype=torch.long)
-        positions = torch.cumsum(visible, dim=1) * visible + self.padding_idx
+        visible = input_ids.ne(self.padding_idx)
+        # fairseq2 builds the NLLB decoder position encoder with `_legacy_pad_idx=1`
+        # (fairseq's pad index), so the first token uses sinusoid step 2.
+        positions = torch.where(
+            visible,
+            torch.cumsum(visible.to(dtype=torch.long), dim=1) + _FAIRSEQ_LEGACY_PAD_INDEX,
+            self.padding_idx,
+        )
         maximum = int(positions.max().item()) if positions.numel() else 0
         if maximum >= self.weights.shape[0]:
             self.weights = self._weights(maximum + self.offset + 1, ).to(
@@ -866,6 +879,10 @@ class SeamlessM4Tv2ForSpeechToText(nn.Module):
         self.text_decoder.embed_tokens.weight = self.shared.weight
         self.lm_head.weight = self.shared.weight
 
+    def materialize_derived_buffers(self, device: str | torch.device) -> None:
+        """Recompute non-persistent buffers that checkpoints never carry."""
+        self.text_decoder.embed_positions.materialize(device)
+
     @torch.no_grad()
     def _initialize_weights(self) -> None:
         for module in self.modules():
@@ -1001,12 +1018,13 @@ class SeamlessM4Tv2ForSpeechToText(nn.Module):
             input_features,
             attention_mask=attention_mask,
         )
-        sequences = torch.full(
-            (input_features.shape[0], 1),
-            language_token_id,
+        # The released model decodes from ``</s> __lang__`` (fairseq2's
+        # target prefix; Transformers prepends ``decoder_start_token_id``).
+        sequences = torch.tensor(
+            [[self.config.decoder_start_token_id, language_token_id]],
             dtype=torch.long,
             device=input_features.device,
-        )
+        ).expand(input_features.shape[0], -1)
         finished = torch.zeros(
             input_features.shape[0],
             dtype=torch.bool,

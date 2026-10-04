@@ -7,6 +7,8 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
+from types import MappingProxyType
+from unittest import mock
 
 import torch
 
@@ -19,11 +21,15 @@ from voicehub.architectures.seamless_m4t_v2.checkpoint import (
     SeamlessM4Tv2S2TCheckpointAdapter,
     native_seamless_m4t_v2_tensor_shapes,
     seamless_m4t_v2_header_fingerprint,
+    validate_published_seamless_m4t_v2_inventory,
 )
 from voicehub.architectures.seamless_m4t_v2.configuration import SeamlessM4Tv2S2TConfig
 from voicehub.architectures.seamless_m4t_v2.frontend import SeamlessM4Tv2FeatureExtractor
 from voicehub.architectures.seamless_m4t_v2.metadata import SEAMLESS_M4T_V2_CHECKPOINTS
-from voicehub.architectures.seamless_m4t_v2.modeling import SeamlessM4Tv2ForSpeechToText
+from voicehub.architectures.seamless_m4t_v2.modeling import (
+    SeamlessM4Tv2ForSpeechToText,
+    SeamlessM4Tv2SinusoidalPositionalEmbedding,
+)
 from voicehub.architectures.seamless_m4t_v2.processing import SeamlessM4Tv2Processor
 from voicehub.architectures.seamless_m4t_v2.registration import register_seamless_m4t_v2_architecture
 from voicehub.architectures.seamless_m4t_v2.runtime import (
@@ -32,6 +38,7 @@ from voicehub.architectures.seamless_m4t_v2.runtime import (
     save_seamless_m4t_v2_runtime,
 )
 from voicehub.architectures.seamless_m4t_v2.tokenization import SEAMLESS_M4T_V2_LANGUAGE_TO_ID, SeamlessM4Tv2Tokenizer
+from voicehub.checkpointing import SafeTensorReader, save_safetensors
 from voicehub.models.asr_seamless_m4t_v2 import SeamlessM4Tv2ASRConfig, SeamlessM4Tv2ForSpeechRecognition
 from voicehub.models.asr_seamless_m4t_v2.training_asr_seamless_m4t_v2 import NativeSeamlessM4Tv2TrainingAdapter
 from voicehub.training import AutoTrainingAdapter
@@ -248,7 +255,7 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
         self.assertEqual(tokenizer.decode(target), "hello")
         self.assertEqual(
             tokenizer.generation_prompt("cmn_hant"),
-            (SEAMLESS_M4T_V2_LANGUAGE_TO_ID["cmn_Hant"], ),
+            (3, SEAMLESS_M4T_V2_LANGUAGE_TO_ID["cmn_Hant"]),
         )
         with self.assertRaisesRegex(ValueError, "Unsupported"):
             tokenizer.language_token_id("zzz")
@@ -298,6 +305,135 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
                 device="cpu",
                 strict=True,
             )
+
+    def test_meta_initialized_checkpoint_load_materializes_decoder_positions(self):
+        # Regression: the decoder's non-persistent sinusoidal table stayed a
+        # meta tensor after streaming assignment, so every real-checkpoint
+        # transcription failed with "Cannot copy out of meta tensor".
+        config = _custom_config(vocab_size=32)
+        source_model = SeamlessM4Tv2ForSpeechToText(config).eval()
+        source = {
+            name: value.detach().clone()
+            for name, value in source_model.state_dict().items() if name not in {
+                "lm_head.weight",
+                "text_decoder.embed_tokens.weight",
+            }
+        }
+        with torch.device("meta"):
+            target = SeamlessM4Tv2ForSpeechToText(
+                config,
+                initialize=False,
+            )
+
+        SeamlessM4Tv2S2TCheckpointAdapter().load_assign_streaming(
+            target,
+            source,
+            config,
+            device="cpu",
+            dtype=torch.float32,
+            strict=True,
+        )
+        target.eval()
+        features = torch.randn(1, 6, 8)
+        mask = torch.ones(1, 6, dtype=torch.long)
+        decoder_ids = torch.tensor([[3, 5, 6]])
+
+        self.assertFalse(any(buffer.is_meta for buffer in target.buffers()))
+        self.assertTrue(
+            torch.equal(
+                target.text_decoder.embed_positions.weights,
+                source_model.text_decoder.embed_positions.weights,
+            ))
+        self.assertTrue(
+            torch.allclose(
+                target(features, attention_mask=mask, decoder_input_ids=decoder_ids).logits,
+                source_model(features, attention_mask=mask, decoder_input_ids=decoder_ids).logits,
+            ))
+
+    def test_generation_decodes_from_eos_and_language_prefix(self):
+        # Regression: generation started from ``__lang__`` alone, while the
+        # released model (fairseq2 target prefix) decodes from ``</s> __lang__``;
+        # real transcripts collapsed to a single word.
+        config = _custom_config(vocab_size=32)
+        model = SeamlessM4Tv2ForSpeechToText(config).eval()
+        features = torch.randn(2, 6, 8)
+        mask = torch.ones(2, 6, dtype=torch.long)
+        prompts = []
+        decode = model.decode
+
+        def recording_decode(decoder_input_ids, **kwargs):
+            prompts.append(decoder_input_ids.clone())
+            return decode(decoder_input_ids, **kwargs)
+
+        model.decode = recording_decode
+        generated = model.generate(
+            features,
+            attention_mask=mask,
+            language_token_id=7,
+            max_new_tokens=2,
+        )
+
+        self.assertEqual(prompts[0].tolist(), [[3, 7], [3, 7]])
+        self.assertEqual(generated[:, :2].tolist(), [[3, 7], [3, 7]])
+        self.assertLessEqual(generated.shape[1], 4)
+
+    def test_decoder_positions_follow_fairseq2_legacy_pad_offset(self):
+        # Regression: positions started at sinusoid step 1; the released
+        # fairseq2 NLLB decoder (`_legacy_pad_idx=1`) starts at step 2.
+        embedding = SeamlessM4Tv2SinusoidalPositionalEmbedding(16, 8, padding_idx=0)
+        input_ids = torch.tensor([[3, 7, 9, 0], [3, 7, 0, 0]])
+
+        encoded = embedding(input_ids)
+
+        frequencies = torch.exp(torch.arange(4, dtype=torch.float32) * -math.log(10_000.0) / 3)
+        steps = torch.arange(2, 5, dtype=torch.float32).unsqueeze(1) * frequencies
+        reference = torch.cat((steps.sin(), steps.cos()), dim=1)
+        self.assertTrue(torch.allclose(encoded[0, :3], reference))
+        self.assertTrue(torch.allclose(encoded[1, :2], reference[:2]))
+        self.assertTrue(torch.equal(encoded[0, 3], torch.zeros(8)))
+        self.assertTrue(torch.equal(encoded[1, 2:], torch.zeros(2, 8)))
+
+    def test_local_copy_of_published_checkpoint_is_recognized_by_header(self):
+        # Regression: a downloaded snapshot directory has no Hub revision, so
+        # the audited full checkpoint was rejected for its non-S2T tensors.
+        tensors = {
+            "shared.weight": torch.zeros(4, 2),
+            "speech_encoder.inner_layer_norm.weight": torch.ones(2),
+            "t2u_model.unused.weight": torch.zeros(3),
+        }
+        inventory = {name: ("F32", tuple(value.shape)) for name, value in tensors.items()}
+        subset = {name: record for name, record in inventory.items() if not name.startswith("t2u_model.")}
+        facts = {
+            "revision": "0" * 40,
+            "full_tensor_count": 3,
+            "full_parameter_count": 13,
+            "full_tensor_bytes": 52,
+            "full_header_fingerprint": seamless_m4t_v2_header_fingerprint(inventory),
+            "s2t_tensor_count": 2,
+            "s2t_parameter_count": 10,
+            "s2t_tensor_bytes": 40,
+            "s2t_header_fingerprint": seamless_m4t_v2_header_fingerprint(subset),
+            "dtype": "F32",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = save_safetensors(tensors, Path(directory) / "model.safetensors")
+            with mock.patch(
+                    "voicehub.architectures.seamless_m4t_v2.checkpoint.SEAMLESS_M4T_V2_CHECKPOINTS",
+                    MappingProxyType({"facebook/seamless-m4t-v2-large": facts}),
+            ), SafeTensorReader(path) as reader:
+                local = validate_published_seamless_m4t_v2_inventory(reader, source=directory, revision=None)
+                other_revision = validate_published_seamless_m4t_v2_inventory(
+                    reader,
+                    source="facebook/seamless-m4t-v2-large",
+                    revision="1" * 40,
+                )
+            with SafeTensorReader(path) as reader:
+                unknown = validate_published_seamless_m4t_v2_inventory(
+                    reader, source=directory, revision=None)
+
+        self.assertTrue(local)
+        self.assertFalse(other_revision)
+        self.assertFalse(unknown)
 
     def test_local_artifact_resolution_rejects_unsafe_shard_paths(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -425,14 +561,18 @@ class NativeSeamlessM4Tv2Tests(unittest.TestCase):
                     phase="full",
                 )
 
+        # Upstream fine-tuning layout: decoder reads `</s> __eng__ text`,
+        # predicts `text </s>`; the language-token target is not scored.
         self.assertEqual(
-            prepared["labels"][0, :2].tolist(),
-            [3, SEAMLESS_M4T_V2_LANGUAGE_TO_ID["eng"]],
+            prepared["decoder_input_ids"].tolist(),
+            [[3, SEAMLESS_M4T_V2_LANGUAGE_TO_ID["eng"], 13]],
         )
+        self.assertEqual(prepared["labels"].tolist(), [[-100, 13, 3]])
+        self.assertEqual(prepared["decoder_attention_mask"].tolist(), [[True, True, True]])
         self.assertEqual(batched["labels"].shape[0], 2)
         self.assertEqual(
-            batched["labels"][:, 1].tolist(),
-            [SEAMLESS_M4T_V2_LANGUAGE_TO_ID["eng"]] * 2,
+            batched["decoder_input_ids"][:, :2].tolist(),
+            [[3, SEAMLESS_M4T_V2_LANGUAGE_TO_ID["eng"]]] * 2,
         )
         self.assertTrue(torch.isfinite(output.loss))
         self.assertIsInstance(

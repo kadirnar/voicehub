@@ -347,13 +347,25 @@ class SeamlessM4Tv2ForSpeechRecognition(PreTrainedASRModel):
             waveforms,
             sampling_rate=16_000,
         )
-        labels = self.seamless_processor.encode_labels(
+        # Rows are `</s> __lang__ text </s>`. Like the upstream fine-tuning
+        # recipe, the decoder reads every token but the last and predicts
+        # every token but the first; the language-token target is not scored
+        # (seamless_communication uses `ignore_prefix_size=1`).
+        sequences = self.seamless_processor.encode_labels(
             texts,
             target_language=requested_language,
         )
+        decoder_attention_mask = sequences[:, :-1].ne(-100)
+        decoder_input_ids = sequences[:, :-1].masked_fill(
+            ~decoder_attention_mask,
+            self.seamless_processor.tokenizer.pad_token_id,
+        )
+        labels = sequences[:, 1:].clone()
+        labels[:, 0] = -100
         prepared = {
             "attention_mask": feature_batch.attention_mask,
-            "decoder_attention_mask": labels.ne(-100),
+            "decoder_attention_mask": decoder_attention_mask,
+            "decoder_input_ids": decoder_input_ids,
             "input_features": feature_batch.input_features,
             "labels": labels,
         }

@@ -142,7 +142,7 @@ class SeamlessM4Tv2Tokenizer:
         )
 
     def generation_prompt(self, language: str) -> tuple[int, ...]:
-        return (self.language_token_id(language), )
+        return (self.eos_token_id, self.language_token_id(language))
 
     def batch_encode_targets(
         self,
