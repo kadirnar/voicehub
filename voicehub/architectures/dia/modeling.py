@@ -114,6 +114,35 @@ def _padding_attention_bias(
     return bias.masked_fill(~allowed, torch.finfo(dtype).min)
 
 
+class DiaDecoderCache:
+    """Decoder key/value state reused across incremental generation steps.
+
+    Self-attention keys and values (after rotary, before grouped-query
+    expansion) are written into buffers sized for ``max_length`` decoder
+    positions. Cross-attention keys and values depend only on the
+    encoder states, so they are projected on the first call and reused
+    afterwards.
+    """
+
+    def __init__(self, max_length: int) -> None:
+        self.max_length = _positive_integer("max_length", max_length)
+        self.length = 0
+        self.self_attention: dict[int, tuple[Tensor, Tensor]] = {}
+        self.cross_attention: dict[int, tuple[Tensor, Tensor]] = {}
+
+    def update(self, layer_idx: int, key: Tensor, value: Tensor) -> tuple[Tensor, Tensor]:
+        end = self.length + key.shape[2]
+        if end > self.max_length:
+            raise ValueError("Dia decoder cache exceeds its allocated length.")
+        if layer_idx not in self.self_attention:
+            shape = (*key.shape[:2], self.max_length, key.shape[3])
+            self.self_attention[layer_idx] = (key.new_empty(shape), value.new_empty(shape))
+        keys, values = self.self_attention[layer_idx]
+        keys[:, :, self.length:end] = key
+        values[:, :, self.length:end] = value
+        return keys[:, :, :end], values[:, :, :end]
+
+
 @dataclass
 class DiaEncoderOutput:
     last_hidden_state: Tensor
@@ -300,6 +329,7 @@ class DiaSelfAttention(nn.Module):
         hidden_states: Tensor,
         position_embeddings: tuple[Tensor, Tensor],
         attention_mask: Tensor | None,
+        cache: DiaDecoderCache | None = None,
     ) -> Tensor:
         batch, sequence, _ = hidden_states.shape
         query = self.q_proj(hidden_states).view(
@@ -325,6 +355,8 @@ class DiaSelfAttention(nn.Module):
             key,
             *position_embeddings,
         )
+        if cache is not None:
+            key, value = cache.update(self.layer_idx, key, value)
         key = _repeat_key_values(key, self.num_key_value_groups)
         value = _repeat_key_values(value, self.num_key_value_groups)
         scores = torch.matmul(query, key.transpose(-1, -2))
@@ -377,6 +409,7 @@ class DiaCrossAttention(nn.Module):
         hidden_states: Tensor,
         encoder_hidden_states: Tensor,
         attention_mask: Tensor | None,
+        cache: DiaDecoderCache | None = None,
     ) -> Tensor:
         batch, query_length, _ = hidden_states.shape
         key_length = encoder_hidden_states.shape[1]
@@ -386,18 +419,24 @@ class DiaCrossAttention(nn.Module):
             self.num_heads,
             self.head_dim,
         ).transpose(1, 2)
-        key = self.k_proj(encoder_hidden_states).view(
-            batch,
-            key_length,
-            self.num_key_value_heads,
-            self.head_dim,
-        ).transpose(1, 2)
-        value = self.v_proj(encoder_hidden_states).view(
-            batch,
-            key_length,
-            self.num_key_value_heads,
-            self.head_dim,
-        ).transpose(1, 2)
+        cached = None if cache is None else cache.cross_attention.get(self.layer_idx)
+        if cached is None:
+            key = self.k_proj(encoder_hidden_states).view(
+                batch,
+                key_length,
+                self.num_key_value_heads,
+                self.head_dim,
+            ).transpose(1, 2)
+            value = self.v_proj(encoder_hidden_states).view(
+                batch,
+                key_length,
+                self.num_key_value_heads,
+                self.head_dim,
+            ).transpose(1, 2)
+            if cache is not None:
+                cache.cross_attention[self.layer_idx] = (key, value)
+        else:
+            key, value = cached
         key = _repeat_key_values(key, self.num_key_value_groups)
         value = _repeat_key_values(value, self.num_key_value_groups)
         scores = torch.matmul(query, key.transpose(-1, -2))
@@ -506,16 +545,19 @@ class DiaDecoderLayer(nn.Module):
         attention_mask: Tensor | None,
         encoder_hidden_states: Tensor,
         encoder_attention_mask: Tensor | None,
+        cache: DiaDecoderCache | None = None,
     ) -> Tensor:
         hidden_states = hidden_states + self.self_attention(
             self.pre_sa_norm(hidden_states),
             position_embeddings,
             attention_mask,
+            cache,
         )
         hidden_states = hidden_states + self.cross_attention(
             self.pre_ca_norm(hidden_states),
             encoder_hidden_states,
             encoder_attention_mask,
+            cache,
         )
         return hidden_states + self.mlp(self.pre_mlp_norm(hidden_states))
 
@@ -541,23 +583,26 @@ class DiaDecoder(nn.Module):
         attention_mask: Tensor | None = None,
         encoder_attention_mask: Tensor | None = None,
         position_ids: Tensor | None = None,
+        cache: DiaDecoderCache | None = None,
     ) -> Tensor:
         if input_ids.ndim != 3:
             raise ValueError("Dia decoder IDs must have shape [batch, sequence, channels].")
         batch, sequence, _ = input_ids.shape
-        if sequence > self.config.max_position_embeddings:
+        past_length = 0 if cache is None else cache.length
+        if past_length + sequence > self.config.max_position_embeddings:
             raise ValueError("Dia audio tokens exceed the configured decoder length.")
         hidden_states = self.embeddings(input_ids)
         if position_ids is None:
             position_ids = torch.arange(
-                sequence,
+                past_length,
+                past_length + sequence,
                 device=input_ids.device,
             )[None].expand(batch, -1)
         self_bias = _padding_attention_bias(
             attention_mask,
             batch_size=batch,
             query_length=sequence,
-            key_length=sequence,
+            key_length=past_length + sequence,
             dtype=hidden_states.dtype,
             device=hidden_states.device,
             causal=True,
@@ -579,7 +624,10 @@ class DiaDecoder(nn.Module):
                 self_bias,
                 encoder_hidden_states,
                 cross_bias,
+                cache,
             )
+        if cache is not None:
+            cache.length += sequence
         return self.norm(hidden_states)
 
 
@@ -603,6 +651,7 @@ class DiaModel(nn.Module):
         decoder_position_ids: Tensor | None = None,
         decoder_attention_mask: Tensor | None = None,
         encoder_outputs: DiaEncoderOutput | Tensor | tuple[Tensor, ...] | None = None,
+        decoder_cache: DiaDecoderCache | None = None,
         **_: Any,
     ) -> DiaModelOutput:
         if encoder_outputs is None:
@@ -640,6 +689,7 @@ class DiaModel(nn.Module):
             attention_mask=decoder_attention_mask,
             encoder_attention_mask=attention_mask,
             position_ids=decoder_position_ids,
+            cache=decoder_cache,
         )
         return DiaModelOutput(decoded, encoder_hidden_states)
 
@@ -728,6 +778,7 @@ class DiaForConditionalGeneration(nn.Module):
         decoder_attention_mask: Tensor | None = None,
         encoder_outputs: DiaEncoderOutput | Tensor | tuple[Tensor, ...] | None = None,
         labels: Tensor | None = None,
+        decoder_cache: DiaDecoderCache | None = None,
         **kwargs: Any,
     ) -> DiaConditionalGenerationOutput:
         outputs = self.model(
@@ -737,6 +788,7 @@ class DiaForConditionalGeneration(nn.Module):
             decoder_position_ids=decoder_position_ids,
             decoder_attention_mask=decoder_attention_mask,
             encoder_outputs=encoder_outputs,
+            decoder_cache=decoder_cache,
             **kwargs,
         )
         hidden = outputs.last_hidden_state
@@ -803,14 +855,16 @@ class DiaForConditionalGeneration(nn.Module):
         top_k: int | None = 50,
         top_p: float = 0.9,
         guidance_scale: float | None = 3.0,
+        use_cache: bool = True,
         **kwargs: Any,
     ) -> Tensor:
         """Generate delayed DAC tokens using the released Dia sampling rules.
 
-        The native implementation intentionally recomputes the decoder
-        prefix instead of depending on a framework cache object.  This
-        preserves exact logits and keeps cache optimisation an optional
-        runtime strategy.
+        Like the released runtime, the conditional and unconditional
+        guidance rows share one batched decoder call, and with
+        ``use_cache`` each step decodes only the newest frame against
+        cached keys and values. ``use_cache=False`` recomputes the whole
+        decoder prefix.
         """
         if kwargs:
             names = ", ".join(sorted(kwargs))
@@ -818,6 +872,8 @@ class DiaForConditionalGeneration(nn.Module):
         max_new_tokens = _positive_integer("max_new_tokens", max_new_tokens)
         if not isinstance(do_sample, bool):
             raise TypeError("`do_sample` must be a boolean.")
+        if not isinstance(use_cache, bool):
+            raise TypeError("`use_cache` must be a boolean.")
         # The released runtime divides by any positive temperature and
         # treats zero as greedy decoding; it never clamps values below one.
         temperature = _finite_number("temperature", temperature, minimum=0.0)
@@ -884,17 +940,15 @@ class DiaForConditionalGeneration(nn.Module):
             delay_mask,
         )
 
-        conditioned = self.model.encoder(
+        # Conditional rows come first, then the zero-text unconditional rows.
+        if use_cfg:
+            input_ids = torch.cat((input_ids, torch.zeros_like(input_ids)))
+            if attention_mask is not None:
+                attention_mask = attention_mask.repeat(2, 1)
+        encoder_hidden_states = self.model.encoder(
             input_ids,
             attention_mask,
         ).last_hidden_state
-        if use_cfg:
-            unconditioned = self.model.encoder(
-                torch.zeros_like(input_ids),
-                attention_mask,
-            ).last_hidden_state
-        else:
-            unconditioned = None
 
         active = torch.zeros(batch_size, dtype=torch.bool, device=device)
         remaining_delays = torch.tensor(
@@ -918,6 +972,7 @@ class DiaForConditionalGeneration(nn.Module):
         # The generation budget includes the delayed channels' EOS tail,
         # just as the upstream EOS delay processor's max_length does.
         force_eos_length = sequences.shape[1] + maximum_steps - max(self.config.delay_pattern) - 1
+        cache = DiaDecoderCache(sequences.shape[1] + maximum_steps) if use_cache else None
 
         for step in range(maximum_steps):
             forced_sequence = self.apply_delay_mask(
@@ -925,34 +980,27 @@ class DiaForConditionalGeneration(nn.Module):
                 decoder.pad_token_id,
                 delay_mask,
             )
-            sequence_mask = torch.ones(
-                batch_size,
-                forced_sequence.shape[1],
-                dtype=torch.long,
-                device=device,
-            )
-            conditional_output = self(
+            if cache is not None:
+                # Earlier frames are already in the cache; their forced
+                # prompt values never change between steps.
+                forced_sequence = forced_sequence[:, cache.length:]
+            if use_cfg:
+                forced_sequence = forced_sequence.repeat(2, 1, 1)
+            output = self(
                 attention_mask=attention_mask,
                 decoder_input_ids=forced_sequence,
-                decoder_attention_mask=sequence_mask,
-                encoder_outputs=conditioned,
+                encoder_outputs=encoder_hidden_states,
+                decoder_cache=cache,
             )
-            conditional_scores = conditional_output.logits[:, -1]
-            conditional_scores = conditional_scores.reshape(
-                batch_size,
+            step_scores = output.logits[:, -1].reshape(
+                -1,
                 self.num_channels,
                 self.vocab_size,
             )
+            conditional_scores = step_scores[:batch_size]
 
             if use_cfg:
-                unconditional_output = self(
-                    attention_mask=attention_mask,
-                    decoder_input_ids=forced_sequence,
-                    decoder_attention_mask=sequence_mask,
-                    encoder_outputs=unconditioned,
-                )
-                unconditional_scores = unconditional_output.logits[:, -1]
-                unconditional_scores = unconditional_scores.reshape_as(conditional_scores)
+                unconditional_scores = step_scores[batch_size:]
                 guided = conditional_scores + (conditional_scores - unconditional_scores) * guidance_scale
                 if top_k is not None:
                     guided_flat = guided.reshape(-1, self.vocab_size)
@@ -1024,6 +1072,7 @@ class DiaForConditionalGeneration(nn.Module):
 __all__ = [
     "DiaConditionalGenerationOutput",
     "DiaDecoder",
+    "DiaDecoderCache",
     "DiaDecoderLayer",
     "DiaEncoder",
     "DiaEncoderLayer",
