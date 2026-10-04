@@ -459,7 +459,7 @@ class NativeSupertonicRuntime(
         source_noise: Tensor | None = None,
         latent_mask: Tensor | None = None,
         current_step: Tensor | None = None,
-        total_steps: int = 5,
+        total_steps: int = 8,
         target_audio: Tensor | None = None,
         duration_weight: float = 1.0,
         flow_weight: float = 1.0,
@@ -469,7 +469,9 @@ class NativeSupertonicRuntime(
 
         This objective is reconstructed from the released iterative
         graph; it is not presented as Supertone's unpublished original
-        training recipe.
+        training recipe. ``total_steps`` defaults to the inference
+        schedule length so the sampled ``current_step / total_steps``
+        points and the ``total_step`` conditioning match ``synthesize``.
         """
         if text_ids.ndim != 2 or text_ids.dtype != torch.int64:
             raise ValueError("`text_ids` must have shape [batch, text].")

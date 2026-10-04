@@ -296,6 +296,29 @@ class NativeSupertonicRuntimeTests(unittest.TestCase):
         self.assertEqual(maximum, 1)
         torch.testing.assert_close(mask, torch.ones(1, 1, 1))
 
+    def test_fine_tuning_default_schedule_matches_inference(self):
+        # The estimator is conditioned on ``total_step``; training it on a
+        # different default schedule than ``synthesize`` uses (8) teaches
+        # step points the default sampler never visits.
+        runtime = _runtime()
+        seen = {}
+
+        def record(module, args, kwargs):
+            seen.update(kwargs)
+
+        runtime.vector_estimator.register_forward_pre_hook(record, with_kwargs=True)
+        target_latent = torch.randn(2, runtime.architecture.latent_channels, 4)
+        runtime.fine_tuning_loss(
+            text_ids=torch.tensor([[1, 2, 3], [1, 2, 3]], dtype=torch.int64),
+            text_mask=torch.ones(2, 1, 3),
+            style_ttl=torch.zeros(1, 50, 256),
+            style_dp=torch.zeros(1, 8, 16),
+            target_latent=target_latent,
+            current_step=torch.tensor([0.0, 7.0]),
+        )
+
+        torch.testing.assert_close(seen["total_step"], torch.full((2, ), 8.0))
+
     def test_published_graph_objective_backpropagates_through_all_components(self, ):
         runtime = _runtime()
         text_ids = torch.tensor([[1, 2, 3]], dtype=torch.int64)
