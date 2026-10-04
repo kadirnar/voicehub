@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import torch
 
@@ -27,6 +28,7 @@ from voicehub.hub import write_json_file
 from voicehub.modeling_outputs import SpeechSegment
 from voicehub.models.vad_funasr import FSMNVADTrainingDataset, FunASRVADConfig, FunASRVADForVoiceActivityDetection
 from voicehub.models.vad_funasr.modeling_vad_funasr import _postprocess_segments
+from voicehub.processing.waveform import resample_waveform_hann
 from voicehub.registry import get_model_spec
 from voicehub.training import get_training_spec
 
@@ -208,6 +210,33 @@ print(json.dumps({
         self.assertGreater(boundaries[0].end_ms, 400)
         self.assertLessEqual(boundaries[0].end_ms, 700)
 
+    def test_endpoint_decoder_never_rewinds_behind_a_completed_segment(self):
+        # Expected boundaries come from FunASR 16cd165 FsmnVADStreaming
+        # DetectLastFrames on the same frame scores: its data buffer only
+        # advances, so a new start never precedes the previous end.
+        config = FSMNVADConfig()
+        maximum_cut = [0.99] * 100
+        quick_restart = [0.01] * 10 + [0.99] * 30 + [0.01] * 20 + [0.99] * 30 + [0.01] * 30
+        cases = (
+            (maximum_cut, 0.6, 800, 500, [(0, 510), (510, 1000)]),
+            (quick_restart, 0.5, 100, None, [(0, 460), (460, 960)]),
+        )
+        for values, threshold, silence_ms, maximum_ms, expected in cases:
+            speech = torch.tensor(values)
+            decoder = FSMNVADDecoder(
+                config,
+                speech_noise_threshold=threshold,
+                max_end_silence_ms=silence_ms,
+                max_single_segment_ms=maximum_ms,
+            )
+            boundaries = decoder.process(
+                speech,
+                silence_probabilities=1.0 - speech,
+                decibels=torch.zeros_like(speech),
+                final=True,
+            )
+            self.assertEqual([(item.start_ms, item.end_ms) for item in boundaries], expected)
+
     def test_pickle_conversion_is_trust_gated_and_strict(self):
         config = FSMNVADConfig()
         model = FSMNVADModel(config)
@@ -265,7 +294,6 @@ class NativeFSMNVADProviderTests(unittest.TestCase):
             duration=29.4,
             min_speech_duration_ms=0,
             speech_pad_ms=0,
-            max_speech_duration_s=60,
         )
         self.assertEqual(output, segments)
         padded = _postprocess_segments(
@@ -273,9 +301,65 @@ class NativeFSMNVADProviderTests(unittest.TestCase):
             duration=29.4,
             min_speech_duration_ms=0,
             speech_pad_ms=200,
-            max_speech_duration_s=60,
         )
         self.assertEqual(len(padded), 2)
+
+    def test_touching_decoder_boundaries_stay_separate_and_are_not_resplit(self):
+        # FunASR fsmn-vad (max_single_segment_time=5000) cuts libri-004 into
+        # touching regions. They are separate upstream segments; the 5.01 s
+        # region is the decoder's own maximum-duration cut, not re-split.
+        segments = tuple(
+            SpeechSegment(start=a, end=b)
+            for a, b in ((0.19, 5.2), (5.2, 10.21), (11.24, 16.25), (16.25, 18.78)))
+        output = _postprocess_segments(
+            segments,
+            duration=29.4,
+            min_speech_duration_ms=0,
+            speech_pad_ms=0,
+        )
+        self.assertEqual(output, segments)
+        padded = _postprocess_segments(
+            segments,
+            duration=29.4,
+            min_speech_duration_ms=0,
+            speech_pad_ms=30,
+        )
+        # Padding must not join the maximum-duration pieces again.
+        expected = ((0.16, 5.2), (5.2, 10.24), (11.21, 16.25), (16.25, 18.81))
+        self.assertEqual(len(padded), len(expected))
+        for segment, (start, end) in zip(padded, expected):
+            self.assertAlmostEqual(segment.start, start, places=9)
+            self.assertAlmostEqual(segment.end, end, places=9)
+
+    def test_other_sampling_rates_are_resampled_like_torchaudio_transform(self):
+        # FunASR resamples with torchaudio.transforms.Resample(audio_fs, 16000).
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _native_artifact(root / "artifact")
+            wrapper = FunASRVADForVoiceActivityDetection(
+                FunASRVADConfig(name_or_path=root / "artifact"),
+                device="cpu",
+            ).load()
+            audio = 0.1 * torch.randn(8_000, generator=torch.Generator().manual_seed(0))
+            captured = []
+            original = wrapper._native_inference
+
+            def capture(waveform, **kwargs):
+                captured.append(waveform)
+                return original(waveform, **kwargs)
+
+            with mock.patch.object(wrapper, "_native_inference", side_effect=capture):
+                output = wrapper.detect(
+                    audio,
+                    sampling_rate=8_000,
+                    min_speech_duration_ms=0,
+                    speech_pad_ms=0,
+                )
+            expected = resample_waveform_hann(audio, 8_000, 16_000, match="transform")
+            self.assertEqual(len(captured), 1)
+            self.assertTrue(torch.equal(captured[0], expected))
+            self.assertEqual(output.sample_rate, 16_000)
+            self.assertAlmostEqual(output.duration, 1.0)
 
     def test_load_detect_train_export_and_reload(self):
         with tempfile.TemporaryDirectory() as directory:

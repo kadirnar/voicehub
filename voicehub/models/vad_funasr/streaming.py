@@ -182,7 +182,6 @@ class FSMNVADStreamingSession:
                 duration=duration,
                 min_speech_duration_ms=self.min_speech_duration_ms,
                 speech_pad_ms=self.speech_pad_ms,
-                max_speech_duration_s=self.max_speech_duration_s,
             )
             probabilities = torch.cat(self._probabilities, ) if self._probabilities else torch.empty(0)
             self._result = VADOutput(

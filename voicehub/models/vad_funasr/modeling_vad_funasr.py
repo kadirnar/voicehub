@@ -11,7 +11,6 @@ from voicehub.hub import read_json_file, write_json_file
 from voicehub.modeling_outputs import SpeechSegment, VADOutput
 from voicehub.models.native_utils import resolve_native_device
 from voicehub.models.vad_funasr.configuration_vad_funasr import FunASRVADConfig
-from voicehub.vad_utils import merge_speech_segments
 
 
 def _postprocess_segments(
@@ -20,41 +19,56 @@ def _postprocess_segments(
     duration: float,
     min_speech_duration_ms: int,
     speech_pad_ms: int,
-    max_speech_duration_s: float | None,
 ) -> tuple[SpeechSegment, ...]:
+    """Apply VoiceHub's optional filter and padding to FSMN boundaries.
+
+    With ``min_speech_duration_ms=0`` and ``speech_pad_ms=0`` the
+    decoder boundaries are returned unchanged, exactly as FunASR emits
+    them. The decoder already applies the end silence and FunASR's
+    ``max_single_segment_time``, so neither is applied a second time.
+    """
     minimum_speech = min_speech_duration_ms / 1_000.0
     retained = tuple(segment for segment in segments if segment.end - segment.start >= minimum_speech)
     # The FSMN endpoint decoder already applies the silence duration. Its
     # lookback/lookahead can leave a shorter gap between completed regions;
     # applying the duration again would erase valid upstream boundaries.
     padding = speech_pad_ms / 1_000.0
-    padded = tuple(
-        SpeechSegment(
-            start=max(0.0, segment.start - padding),
-            end=min(duration, segment.end + padding),
-            score=segment.score,
-        ) for segment in retained if min(duration, segment.end + padding) > max(0.0, segment.start - padding))
-    merged = merge_speech_segments(padded)
-    if max_speech_duration_s is None:
-        return merged
-    split = []
-    for segment in merged:
-        cursor = segment.start
-        while segment.end - cursor > max_speech_duration_s + 1e-12:
-            end = round(cursor + max_speech_duration_s, 12)
-            split.append(SpeechSegment(
-                start=cursor,
-                end=end,
-                score=segment.score,
-            ), )
-            cursor = end
-        if segment.end - cursor > 1e-12:
-            split.append(SpeechSegment(
-                start=cursor,
+    merged: list[SpeechSegment] = []
+    previous_end = None
+    for region in retained:
+        segment = SpeechSegment(
+            start=max(0.0, region.start - padding),
+            end=min(duration, region.end + padding),
+            score=region.score,
+        )
+        touching = previous_end is not None and region.start <= previous_end
+        previous_end = region.end
+        if segment.end <= segment.start:
+            continue
+        # Regions that touch before padding (e.g. after a maximum-duration
+        # cut) are separate upstream segments; padding must not join them,
+        # so they keep their shared decoder boundary.
+        if merged and touching:
+            merged[-1] = SpeechSegment(
+                start=merged[-1].start,
+                end=region.start,
+                score=merged[-1].score,
+            )
+            merged.append(SpeechSegment(
+                start=region.start,
                 end=segment.end,
                 score=segment.score,
-            ), )
-    return tuple(split)
+            ))
+        # Otherwise only padding can make FSMN regions overlap.
+        elif merged and segment.start < merged[-1].end:
+            merged[-1] = SpeechSegment(
+                start=merged[-1].start,
+                end=max(merged[-1].end, segment.end),
+                score=merged[-1].score,
+            )
+        else:
+            merged.append(segment)
+    return tuple(merged)
 
 
 class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
@@ -209,7 +223,7 @@ class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
         window_size_samples: int | None = None,
         return_frames: bool = False,
     ) -> VADOutput:
-        from voicehub.processing.waveform import load_native_audio
+        from voicehub.processing.waveform import NativeAudio, load_native_audio, resample_waveform_hann
 
         if window_size_samples is not None:
             expected = (None if self.native_config is None else self.native_config.frame_length_samples)
@@ -227,11 +241,20 @@ class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
             raise ValueError(
                 "FSMN VAD exposes one speech/noise threshold and cannot "
                 "apply independent `onset` and `offset` values.")
-        materialized = load_native_audio(
-            audio,
-            sampling_rate=sampling_rate,
-            target_sampling_rate=self.sample_rate,
-        )
+        materialized = load_native_audio(audio, sampling_rate=sampling_rate)
+        if materialized.sampling_rate != self.sample_rate:
+            # FunASR load_audio_text_image_video converts other rates with
+            # torchaudio.transforms.Resample(audio_fs, 16000).
+            materialized = NativeAudio(
+                waveform=resample_waveform_hann(
+                    materialized.waveform,
+                    materialized.sampling_rate,
+                    self.sample_rate,
+                    match="transform",
+                ),
+                sampling_rate=self.sample_rate,
+                path=materialized.path,
+            )
         if materialized.waveform.numel() < 400:
             raise ValueError("Native FSMN VAD requires at least 25 ms (400 samples) of audio.")
         speech, boundaries = self._native_inference(
@@ -256,7 +279,6 @@ class FunASRVADForVoiceActivityDetection(PreTrainedVADModel):
             duration=materialized.duration,
             min_speech_duration_ms=min_speech_duration_ms,
             speech_pad_ms=speech_pad_ms,
-            max_speech_duration_s=max_speech_duration_s,
         )
         return VADOutput(
             segments=segments,
