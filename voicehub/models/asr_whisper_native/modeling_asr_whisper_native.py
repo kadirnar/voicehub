@@ -40,6 +40,11 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
     config_class = WhisperASRConfig
     default_model_name_or_path = "openai/whisper-large-v3-turbo"
     architecture_family = "speech-seq2seq"
+    # Transformers Whisper ``generate`` resumes timestamped windows anywhere
+    # in the 30-second padded feature window of a short input. OpenAI
+    # ``transcribe`` seeks over the content frames only (see
+    # :class:`OpenAIWhisperForSpeechRecognition`).
+    seek_content_frames_only = False
 
     def __init__(
         self,
@@ -456,9 +461,15 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
             unit = 160
             limit = sequence_features.shape[-1]
             chunk_samples = self.native_config.expected_input_frames * unit
+        # The first window always covers the padded input. With
+        # ``seek_content_frames_only``, resumed windows of a short input
+        # start and end within its content frames and are zero-padded.
+        resume_limit = limit
+        if sequence_features is not None and self.seek_content_frames_only:
+            resume_limit = min(limit, materialized.waveform.numel() // unit)
         start = 0
-        while start < limit:
-            stop = min(start + chunk_samples // unit, limit)
+        while start < (limit if start == 0 else resume_limit):
+            stop = min(start + chunk_samples // unit, limit if start == 0 else resume_limit)
             if sequence_features is None:
                 features = self._chunk_features(materialized.waveform[start:stop])
             else:

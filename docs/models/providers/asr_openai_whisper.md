@@ -12,7 +12,7 @@ hide:
 
 # OpenAIWhisper {.vh-model-title}
 
-<p class="vh-model-detail__summary">Runs the original OpenAI Whisper backend with deterministic beam decoding.</p>
+<p class="vh-model-detail__summary">Runs OpenAI Whisper checkpoints on VoiceHub&#x27;s native Whisper graph with greedy decoding.</p>
 <div class="vh-model-detail__tags" aria-label="Model metadata"><span class="vh-model-detail__chip" data-chip-kind="task">Automatic speech recognition</span><span class="vh-model-detail__chip" data-chip-kind="runtime">VoiceHub-native</span><span class="vh-model-detail__chip" data-chip-kind="architecture">whisper</span><span class="vh-model-detail__chip" data-chip-kind="parameters" aria-describedby="vh-model-parameters-note-asr_openai_whisper">Parameters: 241.7M</span><span class="vh-model-detail__chip" data-chip-kind="language">Languages: en, zh +97</span><span class="vh-model-detail__chip" data-chip-kind="training">Training: native</span><span class="vh-model-detail__chip" data-chip-kind="license">License: Checkpoint-specific</span></div>
 <p class="vh-model-detail__parameter-note" id="vh-model-parameters-note-asr_openai_whisper"><strong>Parameter metadata:</strong> Exact Safetensors total reported by the Hugging Face model API for the registered default checkpoint, retrieved 2026-08-13.</p>
 <div class="vh-model-detail__actions" aria-label="Model actions">
@@ -47,9 +47,9 @@ package-install command.
 
 This example is maintained against VoiceHub's public API; it is not copied from an upstream demo or package README.
 
-**Model-specific path:** Runs the original OpenAI Whisper backend with deterministic beam decoding.
+**Model-specific path:** Runs OpenAI Whisper checkpoints on VoiceHub's native Whisper graph with greedy decoding.
 
-**Inputs and controls:** This integration is distinct from native Whisper and faster-whisper even when they share an HF checkpoint ID.
+**Inputs and controls:** OpenAI size aliases such as "small" resolve to the official HF Safetensors repositories; only greedy decoding (num_beams=1) is available.
 
 ```python
 from pathlib import Path
@@ -70,7 +70,7 @@ output = model.transcribe(
     AUDIO_FILE,
     language="en",
     task="transcribe",
-    num_beams=5,
+    return_timestamps=True,
 )
 print(output.text)
 for segment in output.segments:

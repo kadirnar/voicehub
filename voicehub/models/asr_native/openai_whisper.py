@@ -21,6 +21,11 @@ class OpenAIWhisperForSpeechRecognition(WhisperForSpeechRecognition):
 
     config_class = OpenAIWhisperConfig
     default_model_name_or_path = "openai/whisper-small"
+    # OpenAI ``transcribe`` seeks only while ``seek < content_frames`` and
+    # decodes ``mel[:, seek:seek + min(N_FRAMES, content_frames - seek)]``
+    # zero-padded to N_FRAMES, so a resumed window of a short input never
+    # covers its 30-second padding.
+    seek_content_frames_only = True
 
     def __init__(
         self,

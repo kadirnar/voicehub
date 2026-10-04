@@ -811,9 +811,10 @@ INFERENCE_PROFILES = {
     ),
     "asr_openai_whisper":
     _asr(
-        "Runs the original OpenAI Whisper backend with deterministic beam decoding.",
-        "This integration is distinct from native Whisper and faster-whisper even when they share an HF checkpoint ID.",
-        arguments=('language="en"', 'task="transcribe"', "num_beams=5"),
+        "Runs OpenAI Whisper checkpoints on VoiceHub's native Whisper graph with greedy decoding.",
+        "OpenAI size aliases such as \"small\" resolve to the official HF Safetensors repositories; "
+        "only greedy decoding (num_beams=1) is available.",
+        arguments=('language="en"', 'task="transcribe"', "return_timestamps=True"),
     ),
     "asr_nemo":
     _asr(
