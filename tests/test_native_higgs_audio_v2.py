@@ -34,7 +34,10 @@ from voicehub.architectures.higgs_audio_v2.metadata import (
     HIGGS_AUDIO_V2_SOURCE_REVISION,
     HIGGS_AUDIO_V2_TOKENIZER_REVISION,
 )
-from voicehub.architectures.higgs_audio_v2.modeling import HiggsAudioV2ForConditionalGeneration
+from voicehub.architectures.higgs_audio_v2.modeling import (
+    HiggsAudioV2DecoderLayer,
+    HiggsAudioV2ForConditionalGeneration,
+)
 from voicehub.architectures.higgs_audio_v2.processing import (
     HIGGS_SPECIAL_TOKEN_IDS,
     HiggsAudioV2Processor,
@@ -627,6 +630,57 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
             )
         self.assertEqual(result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 17]])
         self.assertEqual(result.audio_codes[0].tolist(), [[3], [5]])
+
+    def test_decode_steps_route_audio_frames_without_a_token_mask(self):
+        # A text/audio token mask makes every decoder layer select its norms
+        # and MLPs with host-synchronizing boolean indexing. Decode steps only
+        # ever feed one audio frame, so they must not pass such a mask.
+
+        class Stop(Exception):
+            pass
+
+        masks = []
+        select = HiggsAudioV2DecoderLayer._select
+
+        def record(hidden_states, audio_token_mask, **kwargs):
+            masks.append((hidden_states.shape[1], audio_token_mask))
+            return select(hidden_states, audio_token_mask, **kwargs)
+
+        def stop(generator, delayed):
+            raise Stop
+
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            generator = HiggsAudioV2Generator(runtime.model, runtime.processor)
+            batch = runtime.processor.generation_batch("hi")
+            # Stop before the codec: the random model may not finish its EOS.
+            select_patch = patch.object(HiggsAudioV2DecoderLayer, "_select", staticmethod(record))
+            codec_patch = patch.object(HiggsAudioV2Generator, "_decode_completed", stop)
+            with select_patch, codec_patch, self.assertRaises(Stop):
+                generator.generate(batch, max_new_tokens=5, temperature=0.0, ras_window=None)
+        decode_masks = [mask for length, mask in masks if length == 1]
+        self.assertTrue(decode_masks)
+        self.assertTrue(all(mask is None for mask in decode_masks))
+
+    def test_audio_frame_input_matches_the_placeholder_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+        model = runtime.model.eval()
+        config = model.config
+        batch = runtime.processor.generation_batch("hi")
+        frame = torch.tensor([[[3, 9]]])
+        with torch.no_grad():
+            prefill = model(batch.input_ids, attention_mask=batch.attention_mask, use_cache=True)
+            expected_frame = model(audio_input_ids=frame, past_key_values=prefill.past_key_values.clone())
+            for placeholder in (config.audio_token_id, config.audio_delay_token_id):
+                placeholder_frame = model(
+                    torch.tensor([[placeholder]]),
+                    audio_input_ids=frame,
+                    audio_input_ids_mask=torch.ones(1, 1, dtype=torch.bool),
+                    past_key_values=prefill.past_key_values.clone(),
+                )
+                torch.testing.assert_close(
+                    expected_frame.logits, placeholder_frame.logits, rtol=0.0, atol=0.0)
 
     def test_public_wrapper_routes_native_generation_options(self):
         response = HiggsAudioV2GenerationOutput(
