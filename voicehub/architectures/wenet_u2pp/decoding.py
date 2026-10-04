@@ -113,7 +113,8 @@ def ctc_prefix_beam_search(
                         target = next_scores[prefix]
                         target.blank = _log_add(
                             target.blank,
-                            source.total + probability,
+                            source.blank + probability,
+                            source.nonblank + probability,
                         )
                         candidate = source.viterbi + probability
                         if candidate > target.viterbi_blank:
@@ -148,7 +149,8 @@ def ctc_prefix_beam_search(
                         extended = next_scores[prefix + (token, )]
                         extended.nonblank = _log_add(
                             extended.nonblank,
-                            source.total + probability,
+                            source.blank + probability,
+                            source.nonblank + probability,
                         )
                         candidate = source.viterbi + probability
                         if candidate > extended.viterbi_nonblank:
@@ -200,6 +202,10 @@ def attention_rescore(
         encoder_output,
         reverse_weight,
     )
+    # Score on the host like WeNet (``decoder_out.cpu().numpy()``): one copy
+    # instead of a device synchronization per scored token.
+    forward = forward.cpu()
+    reverse = reverse.cpu()
     best_index = 0
     best_score = -float("inf")
     confidences: list[float] = []

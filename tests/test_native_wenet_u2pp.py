@@ -281,6 +281,61 @@ class NativeWeNetArchitectureTests(unittest.TestCase):
         self.assertIsInstance(greedy.token_ids, tuple)
         self.assertIn(rescored.token_ids, {item.token_ids for item in nbest})
 
+    def test_ctc_prefix_beam_search_matches_wenet_reference_bit_for_bit(self):
+        # Reference: ASRModel._ctc_prefix_beam_search at the pinned revision.
+        # Its scores feed attention rescoring through `ctc_weight`.
+        def log_add(values):
+            if all(value == -math.inf for value in values):
+                return -math.inf
+            maximum = max(values)
+            return maximum + math.log(sum(math.exp(value - maximum) for value in values))
+
+        def reference(probabilities, beam_size):
+            current = [((), (0.0, -math.inf))]
+            for row in probabilities:
+                following = {}
+                for token in row.topk(beam_size).indices.tolist():
+                    probability = row[token].item()
+                    for prefix, (blank, nonblank) in current:
+                        last = prefix[-1] if prefix else None
+                        if token == 0:
+                            old_blank, old_nonblank = following.get(prefix, (-math.inf, -math.inf))
+                            following[prefix] = (
+                                log_add([old_blank, blank + probability, nonblank + probability]),
+                                old_nonblank,
+                            )
+                        elif token == last:
+                            old_blank, old_nonblank = following.get(prefix, (-math.inf, -math.inf))
+                            following[prefix] = (old_blank, log_add([old_nonblank, nonblank + probability]))
+                            extended = prefix + (token, )
+                            old_blank, old_nonblank = following.get(extended, (-math.inf, -math.inf))
+                            following[extended] = (old_blank, log_add([old_nonblank, blank + probability]))
+                        else:
+                            extended = prefix + (token, )
+                            old_blank, old_nonblank = following.get(extended, (-math.inf, -math.inf))
+                            following[extended] = (
+                                old_blank,
+                                log_add([old_nonblank, blank + probability, nonblank + probability]),
+                            )
+                current = sorted(
+                    following.items(), key=lambda item: log_add(list(item[1])), reverse=True)[:beam_size]
+            return [(prefix, log_add(list(scores))) for prefix, scores in current]
+
+        for seed in range(40):
+            generator = torch.Generator().manual_seed(seed)
+            probabilities = torch.log_softmax(torch.randn(30, 8, generator=generator) * 2, dim=-1)
+            expected = reference(probabilities, 4)
+            actual = ctc_prefix_beam_search(
+                probabilities.unsqueeze(0),
+                torch.tensor([30]),
+                beam_size=4,
+            )[0]
+            self.assertEqual(
+                [(item.token_ids, item.score) for item in actual],
+                expected,
+                msg=f"seed {seed}",
+            )
+
     def test_attention_rescoring_replaces_padding_with_eos(self):
         model = WeNetU2PPForASR(_tiny_config()).eval()
         nbest = (
@@ -425,6 +480,127 @@ class NativeWeNetProviderTests(unittest.TestCase):
         )
         self.assertEqual(tuple(prepared["input_signal"].shape), (2, 8_000))
         self.assertEqual(tuple(prepared["labels"].shape), (2, 2))
+
+    def test_transcription_resamples_with_wenet_torchaudio_kernel(self):
+        # WeNet's processor.resample uses torchaudio.transforms.Resample;
+        # VoiceHub's generic Kaiser resampler changed every log-mel frame.
+        from voicehub.processing.waveform import resample_waveform, resample_waveform_hann
+
+        class RecordingModel(torch.nn.Module):
+
+            def __init__(self) -> None:
+                super().__init__()
+                self.weight = torch.nn.Parameter(torch.zeros(1))
+                self.signals: list[torch.Tensor] = []
+
+            def forward(self, *, input_signal, input_signal_length, decoding_chunk_size):
+                del input_signal_length, decoding_chunk_size
+                self.signals.append(input_signal.detach().clone())
+                return SimpleNamespace(
+                    log_probabilities=torch.zeros(1, 1, 24),
+                    encoded_lengths=torch.tensor([1]),
+                    encoder_output=torch.zeros(1, 1, 16),
+                )
+
+        wrapper = WeNetASRForSpeechRecognition(
+            WeNetASRConfig(decoding_strategy="ctc_greedy_search"),
+            device="cpu",
+        )
+        wrapper.native_config = _tiny_config()
+        wrapper.model = RecordingModel()
+        wrapper.tokenizer = SimpleNamespace(decode_ids=lambda token_ids: "")
+        waveform = torch.rand(8_000, generator=torch.Generator().manual_seed(3)) - 0.5
+
+        wrapper._transcribe(waveform, sampling_rate=8_000)
+
+        expected = resample_waveform_hann(waveform, 8_000, 16_000, match="transform")
+        self.assertTrue(torch.equal(wrapper.model.signals[0][0], expected))
+        self.assertFalse(torch.equal(expected, resample_waveform(waveform, 8_000, 16_000)))
+        try:
+            import torchaudio
+        except ImportError:
+            return
+        reference = torchaudio.transforms.Resample(8_000, 16_000)(waveform.unsqueeze(0))[0]
+        self.assertTrue(torch.equal(wrapper.model.signals[0][0], reference))
+
+    def test_training_inputs_resample_with_wenet_torchaudio_kernel(self):
+        from voicehub.processing.waveform import resample_waveform_hann
+
+        wrapper = WeNetASRForSpeechRecognition(
+            WeNetASRConfig(),
+            device="cpu",
+        )
+        wrapper.native_config = _tiny_config()
+        wrapper.model = WeNetU2PPForASR(wrapper.native_config).train()
+        wrapper.tokenizer = SimpleNamespace(encode_as_ids=lambda text: [5, 6], )
+        waveform = torch.rand(4_410, generator=torch.Generator().manual_seed(5)) - 0.5
+
+        prepared = wrapper.prepare_training_inputs(
+            {
+                "audio": waveform,
+                "sampling_rate": 22_050,
+                "text": "HELLO",
+            },
+            phase="speech_recognition",
+        )
+
+        expected = resample_waveform_hann(waveform, 22_050, 16_000, match="transform")
+        self.assertTrue(torch.equal(prepared["input_signal"], expected))
+
+    def test_attention_rescoring_matches_wenet_reference_scoring(self):
+        # Reference: ASRModel.attention_rescoring at the pinned revision.
+        torch.manual_seed(11)
+        model = WeNetU2PPForASR(_tiny_config()).eval()
+        encoder_output = torch.randn(1, 6, 16)
+        nbest = (
+            WeNetDecodeHypothesis((2, 3, 4), -1.5),
+            WeNetDecodeHypothesis((5, ), -0.5),
+            WeNetDecodeHypothesis((6, 7), -3.0),
+        )
+        ctc_weight, reverse_weight = 0.3, 0.5
+        hypotheses = [list(item.token_ids) for item in nbest]
+        padded = torch.nn.utils.rnn.pad_sequence(
+            [torch.tensor([model.sos] + tokens) for tokens in hypotheses],
+            batch_first=True,
+            padding_value=model.eos,
+        )
+        reverse_padded = torch.nn.utils.rnn.pad_sequence(
+            [torch.tensor([model.sos] + tokens[::-1]) for tokens in hypotheses],
+            batch_first=True,
+            padding_value=model.eos,
+        )
+        lengths = torch.tensor([len(tokens) + 1 for tokens in hypotheses])
+        with torch.inference_mode():
+            forward, reverse, _ = model.decoder(
+                encoder_output.repeat(len(nbest), 1, 1),
+                torch.ones(len(nbest), 1, 6, dtype=torch.bool),
+                padded,
+                lengths,
+                reverse_padded,
+                reverse_weight,
+            )
+            result = attention_rescore(
+                model,
+                nbest,
+                encoder_output,
+                ctc_weight=ctc_weight,
+                reverse_weight=reverse_weight,
+            )
+        forward = torch.log_softmax(forward, dim=-1).numpy()
+        reverse = torch.log_softmax(reverse, dim=-1).numpy()
+        expected_scores = []
+        for index, tokens in enumerate(hypotheses):
+            score = sum(float(forward[index][offset][token]) for offset, token in enumerate(tokens))
+            score += float(forward[index][len(tokens)][model.eos])
+            reverse_score = sum(
+                float(reverse[index][len(tokens) - offset - 1][token]) for offset, token in enumerate(tokens))
+            reverse_score += float(reverse[index][len(tokens)][model.eos])
+            score = score * (1 - reverse_weight) + reverse_score * reverse_weight
+            expected_scores.append(score + nbest[index].score * ctc_weight)
+        best = max(range(len(nbest)), key=expected_scores.__getitem__)
+
+        self.assertEqual(result.token_ids, nbest[best].token_ids)
+        self.assertAlmostEqual(result.score, expected_scores[best], places=4)
 
     def test_configuration_rejects_upstream_loader_controls(self):
         with self.assertRaisesRegex(ValueError, "model_kwargs"):
