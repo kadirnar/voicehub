@@ -16,7 +16,14 @@ def is_explicit_local_path(value: str | Path) -> bool:
 
 
 def normalize_model_source(value: str | Path) -> str:
-    """Normalize an explicit local source while preserving Hub identifiers."""
+    """Normalize an explicit local source while preserving Hub identifiers.
+
+    Local paths are made absolute without following symlinks. Hub-cache
+    snapshot entries are symlinks to suffix-less content blobs, so
+    resolving them would lose the filename and the sibling files of the
+    snapshot. Resolve explicitly where a containment or identity check
+    needs it.
+    """
     if not isinstance(value, (str, Path)):
         raise TypeError("A model source must be a string or pathlib.Path.")
     source = Path(value).expanduser()
@@ -24,7 +31,7 @@ def normalize_model_source(value: str | Path) -> str:
         return str(value)
     if not source.exists():
         raise FileNotFoundError(f"Local model path was not found: {source}.")
-    return str(source.resolve())
+    return str(source.absolute())
 
 
 def voicehub_cache_root(cache_dir: str | os.PathLike[str] | None = None) -> Path:

@@ -489,7 +489,7 @@ class SharedInferenceHelperTests(unittest.TestCase):
 
             model = LifecycleModel(model_path)
 
-        self.assertEqual(model.config.name_or_path, str(model_path.resolve()))
+        self.assertEqual(model.config.name_or_path, str(model_path.absolute()))
 
     def test_model_constructor_rejects_missing_path_checkpoint(self):
         with self.assertRaisesRegex(FileNotFoundError, "was not found"):
@@ -510,7 +510,7 @@ class SharedInferenceHelperTests(unittest.TestCase):
             with self.assertRaisesRegex(FileNotFoundError, "was not found"):
                 LifecycleModel(str(missing))
 
-        self.assertEqual(model.config.name_or_path, str(model_path.resolve()))
+        self.assertEqual(model.config.name_or_path, str(model_path.absolute()))
         hub_model = LifecycleModel("organization/model")
         self.assertEqual(
             hub_model.config.name_or_path,
@@ -524,7 +524,7 @@ class SharedInferenceHelperTests(unittest.TestCase):
 
             model = LifecycleModel.from_pretrained(model_path)
 
-        self.assertEqual(model.config.name_or_path, str(model_path.resolve()))
+        self.assertEqual(model.config.name_or_path, str(model_path.absolute()))
 
     def test_from_pretrained_routes_weight_files_without_json_parsing(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -533,7 +533,7 @@ class SharedInferenceHelperTests(unittest.TestCase):
 
             model = LifecycleModel.from_pretrained(model_path)
 
-        self.assertEqual(model.config.name_or_path, str(model_path.resolve()))
+        self.assertEqual(model.config.name_or_path, str(model_path.absolute()))
         self.assertFalse(model.is_loaded)
 
     def test_auto_config_requires_model_type_for_raw_weight_files(self):
@@ -548,7 +548,7 @@ class SharedInferenceHelperTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "model_type"):
                 AutoConfig.from_pretrained(model_path)
 
-        self.assertEqual(config.name_or_path, str(model_path.resolve()))
+        self.assertEqual(config.name_or_path, str(model_path.absolute()))
         self.assertEqual(config.model_type, "echo")
 
     def test_model_config_serializes_nested_paths(self):
@@ -615,7 +615,7 @@ class SharedInferenceHelperTests(unittest.TestCase):
 
         self.assertEqual(
             resolved_paths,
-            (str(config_path.resolve()), str(checkpoint_path.resolve())),
+            (str(config_path.resolve()), str(checkpoint_path.absolute())),
         )
 
     def test_generation_config_update_recognizes_unset_common_fields(self):

@@ -436,7 +436,7 @@ class BaseApiTests(unittest.TestCase):
                         config=DummyConfig(name_or_path="caller/model"),
                     )
 
-                self.assertIn(str(config_path.resolve()), str(raised.exception))
+                self.assertIn(str(config_path.absolute()), str(raised.exception))
                 self.assertNotIn("discarded-secret-value", str(raised.exception))
 
         with tempfile.TemporaryDirectory() as directory:
