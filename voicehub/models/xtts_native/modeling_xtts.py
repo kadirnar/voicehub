@@ -231,13 +231,13 @@ class XTTSForTextToSpeech(PreTrainedTTSModel):
             _NATIVE_CHECKPOINT,
             namespace="xtts2/checkpoints",
         )
-        if destination.is_file():
-            return destination
-        return convert_trusted_legacy_xtts2_checkpoint(
-            legacy_path,
-            destination,
-            trust_legacy_pickle=True,
-        )
+        if not destination.is_file():
+            convert_trusted_legacy_xtts2_checkpoint(
+                legacy_path,
+                destination,
+                trust_legacy_pickle=True,
+            )
+        return destination
 
     def _load_pretrained_model(self) -> None:
         directory = self._resolve_artifact_directory()
