@@ -535,6 +535,12 @@ class NativeESPnetArtifactTests(unittest.TestCase):
 
         self.assertEqual(tokenizer.encode_as_ids("a b"), (5, 6))
         self.assertEqual(tokenizer.decode_ids((5, 6)), "A B")
+        # SentencePiece DecodePieces (ESPnet tokens2text) emits the model's
+        # unk_surface verbatim, keeping an unknown piece a separate word, and
+        # drops the boundary marker only from the first non-empty piece.
+        self.assertEqual(tokenizer.decode_ids((5, 1, 6)), "A <unk>  B")
+        self.assertEqual(tokenizer.decode_ids((1, 5)), "<unk>  A")
+        self.assertEqual(tokenizer.decode_ids((0, 5, 7, 3)), "AA")
 
 
 class NativeESPnetWrapperTests(unittest.TestCase):

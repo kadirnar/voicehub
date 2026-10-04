@@ -97,7 +97,7 @@ class ESPnetLibriSpeechTransformerConfig:
     language_model_weight: float = 0.6
     length_bonus: float = 0.0
     minimum_decode_ratio: float = 0.0
-    maximum_decode_ratio: float = 1.0
+    maximum_decode_ratio: float = 0.0
     ctc_candidate_ratio: float | None = None
     extra_config: Mapping[str, Any] = field(
         default_factory=dict,
@@ -214,8 +214,10 @@ class ESPnetLibriSpeechTransformerConfig:
             )
         if not 0.0 <= self.f_min < self.f_max <= self.sampling_rate / 2:
             raise ValueError("Mel bounds must satisfy 0 <= f_min < f_max <= Nyquist.")
-        if self.maximum_decode_ratio <= self.minimum_decode_ratio:
-            raise ValueError("`maximum_decode_ratio` must exceed `minimum_decode_ratio`.")
+        # ``maximum_decode_ratio == 0`` is ESPnet's ``maxlenratio=0``: up to
+        # one token per encoder frame, stopped by end detection.
+        if (self.maximum_decode_ratio != 0.0 and self.maximum_decode_ratio <= self.minimum_decode_ratio):
+            raise ValueError("A non-zero `maximum_decode_ratio` must exceed `minimum_decode_ratio`.")
         for name in (
                 "blank_token_id",
                 "unknown_token_id",
