@@ -21,6 +21,7 @@ from voicehub.architectures.kokoro.checkpoint import (
     load_native_kokoro_voice,
 )
 from voicehub.hub import resolve_pretrained_file
+from voicehub.path_utils import derived_artifact_path
 
 from .artifacts import KokoroArtifacts, resolve_kokoro_artifacts
 from .model import KModel
@@ -326,6 +327,14 @@ class KPipeline:
         if artifacts.legacy_pytorch:
             native_checkpoint = checkpoint.with_suffix(".voicehub.safetensors")
             if not native_checkpoint.is_file():
+                # Older releases wrote the conversion next to the source;
+                # new conversions never modify the (Hub) source directory.
+                native_checkpoint = derived_artifact_path(
+                    checkpoint,
+                    native_checkpoint.name,
+                    namespace="kokoro/checkpoints",
+                )
+            if not native_checkpoint.is_file():
                 if (not artifacts.official_legacy_checkpoint and not self.allow_legacy_checkpoint_conversion):
                     raise ValueError(
                         "A local/custom Kokoro .pth requires explicit "
@@ -393,6 +402,12 @@ class KPipeline:
             if legacy_path is None:  # pragma: no cover - invariant
                 raise RuntimeError("Kokoro voice resolver returned no file.")
             native_path = legacy_path.with_suffix(".voicehub.safetensors")
+            if not native_path.is_file():
+                native_path = derived_artifact_path(
+                    legacy_path,
+                    native_path.name,
+                    namespace="kokoro/voices",
+                )
             if not native_path.is_file():
                 source_is_official = (
                     str(self.repo_id) in KModel.MODEL_NAMES and self.revision == KOKORO_CHECKPOINT_REVISION)

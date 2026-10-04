@@ -25,7 +25,7 @@ from voicehub.architectures.wenet_u2pp.metadata import (
     GIGASPEECH_MODEL_VERSION,
 )
 from voicehub.hub import resolve_pretrained_file
-from voicehub.path_utils import is_explicit_local_path
+from voicehub.path_utils import is_explicit_local_path, voicehub_cache_root
 
 _OFFICIAL_ALIASES = frozenset({
     "english",
@@ -55,11 +55,7 @@ class WeNetU2PPArtifacts:
 
 
 def _cache_root(cache_dir: str | Path | None) -> Path:
-    if cache_dir is not None:
-        root = Path(cache_dir).expanduser()
-    else:
-        configured = os.environ.get("VOICEHUB_CACHE")
-        root = (Path(configured).expanduser() if configured else Path.home() / ".cache" / "voicehub")
+    root = voicehub_cache_root(cache_dir)
     root.mkdir(parents=True, exist_ok=True)
     return root
 

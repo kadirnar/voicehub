@@ -10,6 +10,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+from voicehub.path_utils import voicehub_cache_root
+
 from .metadata import EncodecRelease, encodec_release
 
 _DOWNLOAD_CHUNK_SIZE = 1024 * 1024
@@ -48,14 +50,7 @@ def verify_official_checkpoint(
 
 
 def _cache_root(cache_dir: str | Path | None) -> Path:
-    if cache_dir is not None:
-        return Path(cache_dir).expanduser().resolve()
-    configured = os.environ.get("VOICEHUB_CACHE_DIR")
-    if configured:
-        return Path(configured).expanduser().resolve()
-    xdg_cache = os.environ.get("XDG_CACHE_HOME")
-    base = Path(xdg_cache).expanduser() if xdg_cache else Path.home() / ".cache"
-    return (base / "voicehub").resolve()
+    return voicehub_cache_root(cache_dir).resolve()
 
 
 def _repository_candidate(
