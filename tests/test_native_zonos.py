@@ -328,6 +328,39 @@ class NativeZonosModelTests(unittest.TestCase):
         self.assertTrue(torch.equal(token, torch.argmax(probabilities / noise, dim=-1, keepdim=True)))
         self.assertTrue(bool((token < 1_025).all()))
 
+    def test_decode_reuses_rotary_table_without_host_sync(self):
+        from voicehub.architectures.zonos import modeling
+
+        torch.manual_seed(0)
+        model = ZonosForCausalLM(_tiny_config()).eval()
+        prefix = torch.cat((_tiny_prefix(model, batch_size=1), _tiny_prefix(model, batch_size=1)))
+        codes = torch.full((1, 9, 1), model.masked_token_id)
+        cache = model.setup_cache(batch_size=2, max_sequence_length=prefix.shape[1] + 4)
+        build = modeling.precompute_rotary_frequencies
+        with torch.inference_mode(), patch.object(
+                modeling,
+                "precompute_rotary_frequencies",
+                side_effect=build,
+        ) as precompute:
+            model.prefill(prefix, codes, cache, cfg_scale=2.0)
+            cache.sequence_offset += prefix.shape[1] + 1
+            cache.lengths_per_sample.add_(prefix.shape[1] + 1)
+            # Decode steps must not read device values back to the host.
+            with patch.object(torch.Tensor, "item", side_effect=AssertionError("host sync")):
+                while cache.sequence_offset < cache.max_sequence_length:
+                    logits = model.decode_step(codes, cache, cfg_scale=2.0)
+                    cache.sequence_offset += 1
+                    cache.lengths_per_sample.add_(1)
+        self.assertEqual(precompute.call_count, 1)
+        self.assertTrue(
+            torch.equal(
+                cache.rotary_frequencies,
+                build(cache.max_sequence_length, model.config.backbone.head_dim, device="cpu"),
+            ))
+        self.assertTrue(torch.isfinite(logits[..., :1_025]).all())
+        with self.assertRaisesRegex(RuntimeError, "rotary position exceeds"):
+            model.decode_step(codes, cache, cfg_scale=2.0)
+
     def test_seeded_sampling_is_request_local(self):
         logits = torch.randn(1, 9, 1_025)
         options = ZonosSamplingOptions(min_p=0.1)
