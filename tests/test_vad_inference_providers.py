@@ -1,7 +1,9 @@
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
+import wave
 from contextlib import contextmanager
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -265,13 +267,14 @@ class WebRTCVADInferenceTests(unittest.TestCase):
                 -np.inf,
                 -2.0,
                 -1.0,
-                -2.5 / 32767,
-                -1.5 / 32767,
-                -0.5 / 32767,
+                -2.5 / 32768,
+                -1.5 / 32768,
+                -0.5 / 32768,
                 0.0,
-                0.5 / 32767,
-                1.5 / 32767,
-                2.5 / 32767,
+                0.5 / 32768,
+                1.5 / 32768,
+                2.5 / 32768,
+                32766.5 / 32768,
                 1.0,
                 2.0,
                 np.inf,
@@ -284,13 +287,50 @@ class WebRTCVADInferenceTests(unittest.TestCase):
             normalized = float(value)
             if not np.isfinite(normalized):
                 normalized = 0.0
-            normalized = max(-1.0, min(1.0, normalized))
-            expected.append(round(normalized * 32767.0))
+            expected.append(max(-32768, min(32767, round(normalized * 32768.0))))
 
         self.assertEqual(
             _pcm16_samples(torch.from_numpy(values)),
             expected,
         )
+
+    def test_webrtc_pcm16_wave_reaches_the_detector_with_its_original_samples(self):
+        # py-webrtcvad's example feeds 16-bit WAVE frames unchanged; VoiceHub
+        # decodes PCM16 as x / 32768, so the conversion back must be exact.
+        original = [
+            -32768, -32767, -20000, -16385, -16384, -1, 0, 1, 16383, 16384, 16385, 20000, 32766, 32767
+        ]
+        samples = (original * 12)[:160]
+        frames = []
+
+        class NativeRuntime:
+
+            def __init__(self, aggressiveness):
+                pass
+
+            def is_speech(self, frame, sample_rate):
+                frames.append(list(frame))
+                return False
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "pcm16.wav"
+            with wave.open(str(path), "wb") as stream:
+                stream.setnchannels(1)
+                stream.setsampwidth(2)
+                stream.setframerate(16_000)
+                stream.writeframes(np.asarray(samples, dtype="<i2").tobytes())
+            with (
+                    patch("voicehub.models.vad_webrtc.modeling_vad_webrtc.NativeWebRTCVAD", NativeRuntime),
+                    patch("voicehub.architectures.webrtc_vad.acceleration.get_accelerator",
+                          return_value=(None, "python: test fallback")),
+            ):
+                model = WebRTCVADForVoiceActivityDetection(
+                    WebRTCVADConfig(frame_duration_ms=10),
+                    device="cpu",
+                )
+                model.detect(path)
+
+        self.assertEqual(frames, [samples])
 
     def test_webrtc_frames_pcm_and_uses_request_local_native_runtime(self):
         instances = []
