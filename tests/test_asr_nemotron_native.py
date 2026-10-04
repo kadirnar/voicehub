@@ -424,6 +424,124 @@ class NemotronTokenizerAndProviderTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "reserved token"):
                 tokenizer.encode("<en-US>hi")
 
+    def test_transcript_rendering_matches_nemo_strip_lang_tags(self):
+        from voicehub.architectures.nemotron_asr.processing import NemotronASRProcessor
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = _write_tokenizer(Path(directory) / "tokenizer.json")
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["model"]["vocab"].update({",": 8, "▁,": 9, ".": 10, "?": 11})
+            path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+            tokenizer = NemotronASRTokenizer.from_tokenizer_json(path)
+        config = _tiny_config(vocab_size=13088, blank_token_id=13087)
+        processor = NemotronASRProcessor(
+            config,
+            tokenizer,
+            processor_config={
+                "processor_class": "Nemotron3_5AsrProcessor",
+                "blank_token": "<blank>",
+                "num_prompts": 4,
+                "prompt_dictionary": {
+                    "en-US": 0,
+                    "auto": 1,
+                },
+                "supported_num_lookahead_tokens": [0],
+                "default_num_lookahead_tokens": 0,
+                "feature_extractor": {
+                    "feature_size": 8
+                },
+            },
+        )
+        blank = config.blank_token_id
+        # Golden strings from NeMo `decode_tokens_to_str_with_strip_punctuation`
+        # with strip_lang_tags=True, which removes one space before a
+        # vocabulary punctuation mark and `\s*<xx-XX>` (no double spaces).
+        cases = {
+            (5, 10, 1, 7, 5): "hi. hi",  # NeMo: "Mr. <en-US> Quilter" -> "Mr. Quilter"
+            (5, 9, 5, 1, 11, 1, 7): "hi, hi?",
+            (5, 1, 1, 11, 7): "hi ?",  # only one space is removed
+            (1, 7, 5, 0, 13087): "hi",
+        }
+        for token_ids, expected in cases.items():
+            with self.subTest(token_ids=token_ids):
+                self.assertEqual(processor.decode((blank, ) + token_ids), expected)
+        self.assertEqual(
+            processor.decode((5, 10, 1, 7, 5), skip_special_tokens=False),
+            "hi. <en-US> hi",
+        )
+
+    def test_word_timestamps_split_on_standalone_metaspace_tokens(self):
+        # Offsets as rendered by the processor: the model emits the word
+        # boundary as a lone "▁" token before "Q", "apostle", ... and a
+        # metaspace-prefixed "▁," that belongs to the previous word.
+        offsets = [
+            {
+                "token": " M",
+                "start": 0.88,
+                "end": 0.96
+            },
+            {
+                "token": "r",
+                "start": 0.96,
+                "end": 1.04
+            },
+            {
+                "token": ".",
+                "start": 1.04,
+                "end": 1.12
+            },
+            {
+                "token": " ",
+                "start": 1.04,
+                "end": 1.12
+            },
+            {
+                "token": " ",
+                "start": 1.20,
+                "end": 1.28
+            },
+            {
+                "token": "Qu",
+                "start": 1.20,
+                "end": 1.28
+            },
+            {
+                "token": "ilter",
+                "start": 1.44,
+                "end": 1.52
+            },
+            {
+                "token": " ",
+                "start": 1.84,
+                "end": 1.92
+            },
+            {
+                "token": "apostle",
+                "start": 1.92,
+                "end": 2.40
+            },
+            {
+                "token": " ,",
+                "start": 2.40,
+                "end": 2.48
+            },
+            {
+                "token": " ",
+                "start": 2.56,
+                "end": 2.64
+            },
+            {
+                "token": "?",
+                "start": 2.64,
+                "end": 2.72
+            },
+        ]
+        words = NemotronForSpeechRecognition._timestamp_words(offsets, duration=2.70)
+        self.assertEqual(
+            [(word.text, word.start, word.end) for word in words],
+            [("Mr.", 0.88, 1.12), ("Quilter", 1.20, 1.52), ("apostle,?", 1.92, 2.70)],
+        )
+
     def test_provider_configuration_rejects_external_runtime_options(self):
         config = NemotronASRConfig(
             target_language=" de-DE ",
@@ -573,6 +691,50 @@ class NemotronTokenizerAndProviderTests(unittest.TestCase):
                     invalid,
                     config,
                 )
+
+    def test_published_transformers_generation_configuration_loads(self):
+        from voicehub.architectures.nemotron_asr.runtime import resolve_nemotron_asr_generation_config
+
+        config = _tiny_config()
+        # generation_config.json as published at the pinned revision: the
+        # Transformers file, without the native RNN-T settings.
+        published = {
+            "_from_model_config": True,
+            "decoder_start_token_id": config.blank_token_id,
+            "pad_token_id": 0,
+            "transformers_version": "5.13.0.dev0",
+        }
+        resolved = resolve_nemotron_asr_generation_config(published, config)
+        self.assertEqual(resolved["blank_token_id"], config.blank_token_id)
+        self.assertEqual(resolved["max_symbols_per_step"], config.max_symbols_per_step)
+        self.assertEqual(
+            resolved["num_lookahead_tokens"],
+            config.encoder_config.default_num_lookahead_tokens,
+        )
+        self.assertEqual(
+            resolve_nemotron_asr_generation_config(None, config),
+            {
+                "blank_token_id": config.blank_token_id,
+                "max_symbols_per_step": config.max_symbols_per_step,
+                "num_lookahead_tokens": 0,
+            },
+        )
+        with self.assertRaisesRegex(ValueError, "decoder_start_token_id"):
+            resolve_nemotron_asr_generation_config(
+                {
+                    **published,
+                    "decoder_start_token_id": 0,
+                },
+                config,
+            )
+        with self.assertRaisesRegex(ValueError, "max_symbols_per_step"):
+            resolve_nemotron_asr_generation_config(
+                {
+                    **published,
+                    "max_symbols_per_step": 99,
+                },
+                config,
+            )
 
     def test_registration_does_not_claim_unverified_optimizations(self):
         from voicehub.architectures.nemotron_asr.registration import create_nemotron_asr_architecture_spec

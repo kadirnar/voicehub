@@ -46,6 +46,12 @@ def validate_nemotron_asr_generation_config(
             raise ValueError(
                 f"Nemotron generation setting `{name}` is {value}; "
                 f"the model graph requires {expected}.")
+    decoder_start = validated.get("decoder_start_token_id")
+    if decoder_start is not None and decoder_start != config.blank_token_id:
+        raise ValueError(
+            f"Nemotron generation setting `decoder_start_token_id` is "
+            f"{decoder_start!r}; the RNN-T prediction network starts from "
+            f"blank {config.blank_token_id}.")
 
     lookahead = validated.get("num_lookahead_tokens")
     supported = config.encoder_config.supported_num_lookahead_tokens
@@ -73,6 +79,30 @@ def validate_nemotron_asr_generation_config(
                 "`default_num_lookahead_tokens` does not match the "
                 "model graph.")
     return validated
+
+
+def resolve_nemotron_asr_generation_config(
+    values: Mapping[str, Any] | None,
+    config: NemotronASRArchitectureConfig,
+) -> dict[str, Any]:
+    """Complete and validate a checkpoint's generation settings.
+
+    The published ``generation_config.json`` is the Transformers one and
+    only declares ``decoder_start_token_id``/``pad_token_id``; the
+    native RNN-T settings default to the model graph and are validated
+    whenever a file (such as a VoiceHub export) declares them.
+    """
+    if values is not None and not isinstance(values, Mapping):
+        raise TypeError("Nemotron generation configuration must be a mapping.")
+    return validate_nemotron_asr_generation_config(
+        {
+            "blank_token_id": config.blank_token_id,
+            "max_symbols_per_step": config.max_symbols_per_step,
+            "num_lookahead_tokens": config.encoder_config.default_num_lookahead_tokens,
+            **(values or {}),
+        },
+        config,
+    )
 
 
 def resolve_nemotron_asr_dtype(
@@ -173,13 +203,8 @@ def load_nemotron_asr_runtime(
             dtype=dtype,
             strict=True,
         )
-    generation_config = validate_nemotron_asr_generation_config(
-        (
-            read_json_file(artifacts.generation_config) if artifacts.generation_config is not None else {
-                "blank_token_id": config.blank_token_id,
-                "max_symbols_per_step": config.max_symbols_per_step,
-                "num_lookahead_tokens": config.encoder_config.default_num_lookahead_tokens,
-            }),
+    generation_config = resolve_nemotron_asr_generation_config(
+        (read_json_file(artifacts.generation_config) if artifacts.generation_config is not None else None),
         config,
     )
     processor.set_num_lookahead_tokens(generation_config["num_lookahead_tokens"], )
@@ -265,6 +290,7 @@ __all__ = [
     "NemotronASRRuntime",
     "load_nemotron_asr_runtime",
     "resolve_nemotron_asr_dtype",
+    "resolve_nemotron_asr_generation_config",
     "save_nemotron_asr_runtime",
     "validate_nemotron_asr_generation_config",
 ]

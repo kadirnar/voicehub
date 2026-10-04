@@ -190,16 +190,21 @@ class NemotronForSpeechRecognition(PreTrainedASRModel):
             current_start = None
             current_end = None
 
+        # The model often emits the word-boundary metaspace as its own
+        # token ("▁", "apostle"); carry that boundary to the next token.
+        pending_boundary = False
         for offset in offsets:
             token = str(offset.get("token", ""))
             if not token:
                 continue
             start = min(duration, float(offset["start"]))
             end = min(duration, float(offset["end"]))
-            boundary = token[:1].isspace()
+            boundary = pending_boundary or token[:1].isspace()
             rendered = token.strip()
             if not rendered:
+                pending_boundary = boundary
                 continue
+            pending_boundary = False
             punctuation = all(not character.isalnum() for character in rendered)
             if boundary and current_text and not punctuation:
                 flush()
