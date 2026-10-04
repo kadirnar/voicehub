@@ -245,7 +245,9 @@ class NativeDiaUpstreamParityTests(unittest.TestCase):
                 ).logits for start, end in ((0, 4), (4, 5), (5, 6), (6, 9))
             ]
         self.assertEqual(cache.length, decoder_ids.shape[1])
-        torch.testing.assert_close(torch.cat(steps, dim=1), full.logits, rtol=1e-12, atol=1e-12)
+        # RoPE and softmax run in float32 like the reference, over different
+        # key lengths here, so some CPUs differ by an ulp (up to ~8e-7).
+        torch.testing.assert_close(torch.cat(steps, dim=1), full.logits, rtol=1e-5, atol=1e-5)
 
     def test_codec_stays_float32_for_half_precision_compute(self):
         import torch
