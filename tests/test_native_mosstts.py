@@ -326,6 +326,44 @@ class NativeMossCodecTests(unittest.TestCase):
             )
 
 
+class NativeMossTokenizerTests(unittest.TestCase):
+
+    def test_tokenizer_applies_qwen2_nfc_normalization(self):
+        # MOSS ships a Qwen2 tokenizer.json whose normalizer is NFC, so a
+        # decomposed accent must tokenize exactly like the composed spelling.
+        import json
+
+        from voicehub.tokenization.assets import encode_gpt2_token
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            vocabulary = {encode_gpt2_token(bytes((value, ))): value for value in range(256)}
+            vocabulary[encode_gpt2_token(b"ab")] = 257
+            (root / "vocab.json").write_text(json.dumps(vocabulary), encoding="utf-8")
+            (root / "merges.txt").write_text("#version: 0.2\na b\n", encoding="utf-8")
+            (root / "tokenizer_config.json").write_text(
+                json.dumps({
+                    "add_prefix_space": False,
+                    "added_tokens_decoder": {
+                        "256": {
+                            "content": "<|endoftext|>",
+                            "special": True,
+                        },
+                    },
+                }),
+                encoding="utf-8",
+            )
+            tokenizer = MossTextTokenizer.from_files(
+                root / "vocab.json",
+                root / "merges.txt",
+                root / "tokenizer_config.json",
+            )
+        composed = tokenizer.encode_ids("Caf\u00e9")
+        decomposed = tokenizer.encode_ids("Cafe\u0301")
+        self.assertEqual(decomposed, composed)
+        self.assertEqual(composed[-2:], [0xC3, 0xA9])
+
+
 class NativeMossTrainingTests(unittest.TestCase):
 
     def test_shared_training_profile_uses_the_native_adapter(self):

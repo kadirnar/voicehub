@@ -130,6 +130,16 @@ def _runtime(directory: Path) -> Qwen3ASRRuntime:
 
 class NativeQwen3ASRTests(unittest.TestCase):
 
+    def test_tokenizer_applies_qwen2_nfc_normalization(self):
+        # Upstream's Qwen2 tokenizer normalizes text to NFC before BPE, so a
+        # decomposed accent must tokenize exactly like the composed spelling.
+        with tempfile.TemporaryDirectory() as directory:
+            tokenizer = _write_tokenizer_assets(Path(directory))
+        composed = tokenizer.encode("Caf\u00e9").input_ids
+        decomposed = tokenizer.encode("Cafe\u0301").input_ids
+        self.assertEqual(decomposed, composed)
+        self.assertEqual(list(composed[-2:]), [0xC3, 0xA9])
+
     def test_official_namespace_is_exact_for_both_public_shapes(self):
         root = Path(__file__).resolve().parents[1]
         source = (root / "voicehub" / "architectures" / "qwen3_asr" / "SOURCE.json")

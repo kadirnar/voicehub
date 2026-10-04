@@ -172,6 +172,9 @@ class CosyVoiceTextTokenizer:
             use_regex=True,
             pretokenizer=qwen2_pretokenize,
             padding_side="left",
+            # Qwen2's tokenizer applies NFC before byte-level BPE (the slow
+            # tokenizer's prepare step and the fast tokenizer's normalizer).
+            normalization="NFC",
         )
         return cls(
             tokenizer,
