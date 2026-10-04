@@ -99,8 +99,9 @@ def resolve_cosyvoice_artifacts(
             raise FileNotFoundError(
                 "The official CosyVoice3 snapshot publishes audited legacy "
                 "llm.pt/flow.pt/hift.pt files, not native Safetensors. Run "
-                "`convert_audited_cosyvoice_legacy_checkpoint` explicitly "
-                "once, then load the resulting local artifact.") from error
+                "`python -m voicehub.converters.cosyvoice OUTPUT_DIR` once "
+                "(install `voicehub[conversion]` for the optional speech "
+                "tokenizer), then load OUTPUT_DIR.") from error
         raise
     return CosyVoiceArtifacts(
         source=repo_id,

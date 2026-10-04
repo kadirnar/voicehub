@@ -24,7 +24,17 @@ published ONNX graph.
 
 ## One-time conversion
 
-Install the optional `onnx` parser in the conversion environment, then run:
+Install the optional `onnx` parser (`voicehub[conversion]`) in the
+conversion environment, then build the complete native artifact, including
+`speech_tokenizer.safetensors`, from the pinned official snapshot:
+
+```bash
+python -m voicehub.converters.cosyvoice OUTPUT_DIR
+```
+
+The same command without the speech tokenizer (no `onnx` needed) is
+`python -m voicehub.converters.cosyvoice OUTPUT_DIR --skip-speech-tokenizer`.
+To convert only the tokenizer:
 
 ```python
 from voicehub.converters.cosyvoice_speech_tokenizer import (
