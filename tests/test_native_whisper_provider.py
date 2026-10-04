@@ -309,6 +309,193 @@ print(json.dumps({name: name in sys.modules for name in names}))
         self.assertEqual(tuple(fake.features.shape), (1, 4, 8))
         self.assertTrue(fake.config.return_timestamps)
 
+    def test_timestamped_transcription_resumes_after_the_last_complete_segment(self):
+        # OpenAI ``transcribe``: a window that does not end with a single
+        # closing timestamp is decoded again from its last timestamp pair.
+        # Before the fix, speech after ``<|0.04|><|0.04|>`` was dropped.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = WhisperForSpeechRecognition(
+                WhisperASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+            )
+            wrapper.load()
+            token_set = wrapper.generation_adapter.token_set
+            outputs = [
+                # <|0.00|> hello <|0.04|><|0.04|> hel <eot>: the unclosed
+                # trailing text belongs to the next window.
+                [272, 259, 274, 274, 257, 261],
+                # <|0.00|> hello <|0.04|> <eot>: single closing timestamp.
+                [272, 259, 274, 261],
+            ]
+
+            class FakeGenerationAdapter:
+
+                def __init__(self):
+                    self.token_set = token_set
+                    self.calls = []
+
+                def generate(self, features, *, config):
+                    self.calls.append((features, config))
+                    return SimpleNamespace(
+                        generated_sequences=torch.tensor([outputs[len(self.calls) - 1]]),
+                        language_token_ids=torch.tensor([263]),
+                    )
+
+            fake = FakeGenerationAdapter()
+            wrapper.generation_adapter = fake
+            waveform = torch.sin(torch.linspace(0.0, 300.0, 1_280)) * 0.1
+            result = wrapper.transcribe(
+                waveform,
+                sampling_rate=16_000,
+                return_timestamps=True,
+            )
+
+        self.assertEqual(len(fake.calls), 2)
+        # The resumed window is a frame slice of the log-mel computed once for
+        # the whole input, zero-padded to the window length, as upstream
+        # Whisper ``generate``/``transcribe`` decode it.
+        full = wrapper._chunk_features(waveform)
+        torch.testing.assert_close(
+            fake.calls[1][0],
+            torch.nn.functional.pad(full[..., 4:], (0, 4)),
+            rtol=0,
+            atol=0,
+        )
+        self.assertIsNone(fake.calls[0][1].language)
+        # The language detected in the first window is reused afterwards.
+        self.assertEqual(fake.calls[1][1].language, "en")
+        self.assertEqual(result.text, "hello hello")
+        self.assertEqual(
+            [(segment.start, segment.end, segment.text) for segment in result.segments],
+            [(0.0, 0.04, "hello"), (0.04, 0.08, "hello")],
+        )
+
+    def test_untimestamped_transcription_keeps_fixed_windows(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = WhisperForSpeechRecognition(
+                WhisperASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+            )
+            wrapper.load()
+            token_set = wrapper.generation_adapter.token_set
+
+            class FakeGenerationAdapter:
+
+                def __init__(self):
+                    self.token_set = token_set
+                    self.calls = []
+
+                def generate(self, features, *, config):
+                    self.calls.append(config)
+                    return SimpleNamespace(
+                        generated_sequences=torch.tensor([[259, 261]]),
+                        language_token_ids=torch.tensor([265 if self.calls[1:] else 263]),
+                    )
+
+            fake = FakeGenerationAdapter()
+            wrapper.generation_adapter = fake
+            result = wrapper.transcribe(torch.zeros(2_000), sampling_rate=16_000)
+
+        self.assertEqual(len(fake.calls), 2)
+        self.assertEqual([config.language for config in fake.calls], [None, "en"])
+        self.assertEqual(result.text, "hello hello")
+        self.assertEqual(result.language, "en")
+
+    def test_long_inputs_decode_slices_of_one_log_mel_like_transformers(self):
+        # Transformers Whisper long-form ``generate`` computes the log-mel
+        # (including its max-8 normalization) once for the whole input and
+        # decodes zero-padded 30 s frame slices. Featurizing every window
+        # separately re-normalized quiet windows against their own maximum.
+        from voicehub.processing.audio import mel_filter_bank
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = WhisperForSpeechRecognition(
+                WhisperASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+            )
+            wrapper.load()
+            token_set = wrapper.generation_adapter.token_set
+
+            class FakeGenerationAdapter:
+
+                def __init__(self):
+                    self.token_set = token_set
+                    self.features = []
+
+                def generate(self, features, *, config):
+                    self.features.append(features)
+                    return SimpleNamespace(
+                        generated_sequences=torch.tensor([[259, 261]]),
+                        language_token_ids=torch.tensor([263]),
+                    )
+
+            fake = FakeGenerationAdapter()
+            wrapper.generation_adapter = fake
+            # A loud first window followed by 1.5 quieter windows (8 frames each).
+            waveform = torch.sin(torch.linspace(0.0, 900.0, 3_200))
+            waveform[1_280:] *= 1e-3
+            result = wrapper.transcribe(waveform, sampling_rate=16_000)
+
+            power = torch.stft(
+                waveform,
+                n_fft=400,
+                hop_length=160,
+                window=torch.hann_window(400),
+                center=True,
+                return_complex=True,
+            )[..., :-1].abs()**2
+            # Native Whisper uses OpenAI's librosa float32 Slaney bank.
+            filters = mel_filter_bank(sample_rate=16_000, n_fft=400, n_mels=4, match_librosa=True)
+            expected = torch.clamp(filters @ power, min=1e-10).log10()
+            expected = (torch.maximum(expected, expected.max() - 8.0) + 4.0) / 4.0
+            self.assertEqual(tuple(expected.shape), (4, 20))
+
+        self.assertEqual(len(fake.features), 3)
+        windows = (expected[:, :8], expected[:, 8:16], torch.nn.functional.pad(expected[:, 16:], (0, 4)))
+        for actual, window in zip(fake.features, windows):
+            torch.testing.assert_close(actual, window.unsqueeze(0), rtol=0, atol=0)
+        self.assertFalse(torch.equal(fake.features[1], wrapper._chunk_features(waveform[1_280:2_560])))
+        self.assertEqual(result.text, "hello hello hello")
+
+    def test_explicit_chunks_are_featurized_independently(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = WhisperForSpeechRecognition(
+                WhisperASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+            )
+            wrapper.load()
+            token_set = wrapper.generation_adapter.token_set
+
+            class FakeGenerationAdapter:
+
+                def __init__(self):
+                    self.token_set = token_set
+                    self.features = []
+
+                def generate(self, features, *, config):
+                    self.features.append(features)
+                    return SimpleNamespace(
+                        generated_sequences=torch.tensor([[259, 261]]),
+                        language_token_ids=torch.tensor([263]),
+                    )
+
+            fake = FakeGenerationAdapter()
+            wrapper.generation_adapter = fake
+            waveform = torch.sin(torch.linspace(0.0, 300.0, 1_280)) * 0.1
+            wrapper.transcribe(waveform, sampling_rate=16_000, chunk_length_s=0.04)
+
+        self.assertEqual(len(fake.features), 2)
+        for actual, chunk in zip(fake.features, (waveform[:640], waveform[640:])):
+            torch.testing.assert_close(actual, wrapper._chunk_features(chunk), rtol=0, atol=0)
+
     def test_training_prepares_collated_paths_waveforms_and_row_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
