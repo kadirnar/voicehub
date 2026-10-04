@@ -325,6 +325,44 @@ class Text2SemanticDecoder(nn.Module):
             "logits": logits,
         }
 
+    def _decode(
+        self,
+        hidden: Tensor,
+        attention: Tensor | None,
+        cache: list[tuple[Tensor, Tensor]],
+    ) -> Tensor:
+        """Run ``self.h`` over new positions, reusing cached keys and values.
+
+        Mirrors the released ``T2SBlock`` inference graph on the same
+        post-norm ``nn.TransformerEncoderLayer`` weights. ``attention``
+        uses the encoder convention (``True`` blocks a position) and is
+        only needed for the prompt step; an empty ``cache`` is filled in
+        place with one key/value pair per layer.
+        """
+        heads = self.config.attention_heads
+        batch, steps, width = hidden.shape
+        mask = None if attention is None else ~attention
+        for index, layer in enumerate(self.h.layers):
+            block = layer.self_attn
+            projected = functional.linear(hidden, block.in_proj_weight, block.in_proj_bias)
+            query, key, value = projected.chunk(3, dim=-1)
+            if index < len(cache):
+                key = torch.cat([cache[index][0], key], dim=1)
+                value = torch.cat([cache[index][1], value], dim=1)
+                cache[index] = (key, value)
+            else:
+                cache.append((key, value))
+            attended = functional.scaled_dot_product_attention(
+                query.view(batch, steps, heads, -1).transpose(1, 2),
+                key.view(batch, key.shape[1], heads, -1).transpose(1, 2),
+                value.view(batch, value.shape[1], heads, -1).transpose(1, 2),
+                attn_mask=mask,
+            )
+            attended = attended.transpose(1, 2).reshape(batch, steps, width)
+            hidden = layer.norm1(hidden + block.out_proj(attended))
+            hidden = layer.norm2(hidden + layer.linear2(layer.activation(layer.linear1(hidden))))
+        return hidden
+
     @torch.no_grad()
     def generate(
         self,
@@ -391,36 +429,41 @@ class Text2SemanticDecoder(nn.Module):
             raise ValueError("`top_p` must be in [0, 1].")
         if temperature < 0 or repetition_penalty <= 0:
             raise ValueError("Temperature must be non-negative and repetition penalty positive.")
-        for step in range(limit):
-            semantic_hidden = self.ar_audio_position(self.ar_audio_embedding(generated), )
-            hidden = torch.cat([text, semantic_hidden], dim=1)
-            text_steps = text.shape[1]
-            semantic_steps = generated.shape[1]
-            text_attention = functional.pad(
-                torch.zeros(
-                    text_steps,
-                    text_steps,
+        # Step 0 encodes text + prompt once and fills the per-layer key/value
+        # cache; later steps feed only the newest semantic token, like the
+        # released ``infer_panel_naive`` / ``T2STransformer.decode_next_token``.
+        semantic_hidden = self.ar_audio_position(self.ar_audio_embedding(generated))
+        hidden = torch.cat([text, semantic_hidden], dim=1)
+        text_steps = text.shape[1]
+        semantic_steps = generated.shape[1]
+        text_attention = functional.pad(
+            torch.zeros(
+                text_steps,
+                text_steps,
+                dtype=torch.bool,
+                device=text.device,
+            ),
+            (0, semantic_steps),
+            value=True,
+        )
+        semantic_attention = functional.pad(
+            torch.triu(
+                torch.ones(
+                    semantic_steps,
+                    semantic_steps,
                     dtype=torch.bool,
                     device=text.device,
                 ),
-                (0, semantic_steps),
-                value=True,
-            )
-            semantic_attention = functional.pad(
-                torch.triu(
-                    torch.ones(
-                        semantic_steps,
-                        semantic_steps,
-                        dtype=torch.bool,
-                        device=text.device,
-                    ),
-                    diagonal=1,
-                ),
-                (text_steps, 0),
-            )
-            attention = torch.cat([text_attention, semantic_attention])
-            decoded = self.h(hidden, mask=attention)
-            logits = self.ar_predict_layer(decoded[:, -1])
+                diagonal=1,
+            ),
+            (text_steps, 0),
+        )
+        attention: Tensor | None = torch.cat([text_attention, semantic_attention])
+        cache: list[tuple[Tensor, Tensor]] = []
+        for step in range(limit):
+            hidden = self._decode(hidden, attention, cache)
+            attention = None
+            logits = self.ar_predict_layer(hidden[:, -1])
             if step < 11:
                 logits = logits[:, :-1]
             sample = _sample_next_token(
@@ -435,6 +478,10 @@ class Text2SemanticDecoder(nn.Module):
             if (sample == self.config.eos_token_id).any() or (greedy == self.config.eos_token_id).any():
                 break
             generated = torch.cat([generated, sample], dim=1)
+            hidden = self.ar_audio_position(
+                self.ar_audio_embedding(sample),
+                offset=generated.shape[1] - 1,
+            )
         result = generated[:, prefix_length:]
         if result.shape[1] == 0:
             raise RuntimeError("GPT-SoVITS S1 generated no semantic tokens.")
