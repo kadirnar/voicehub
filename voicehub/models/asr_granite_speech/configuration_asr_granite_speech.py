@@ -9,7 +9,8 @@ from typing import Any
 from voicehub.configuration_utils import VoiceHubConfig, reject_serialized_secrets
 from voicehub.inference_configuration import ASRInferenceConfig
 
-DEFAULT_TRANSCRIPTION_PROMPT = ("Please transcribe the following audio to text<|audio|>")
+# The model card's preferred raw-transcript ASR prompt.
+DEFAULT_TRANSCRIPTION_PROMPT = ("<|audio|>can you transcribe the speech into a written format?")
 
 _DTYPE_ALIASES = {
     "auto": "auto",

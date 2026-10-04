@@ -15,7 +15,8 @@ from voicehub.architectures.granite_speech.frontend import SAMPLE_RATE, GraniteS
 from voicehub.architectures.granite_speech.tokenization import AUDIO_TOKEN, GraniteSpeechTokenizer
 from voicehub.hub import write_json_file
 
-DEFAULT_TRANSCRIPTION_PROMPT = ("Please transcribe the following audio to text<|audio|>")
+# The model card's preferred raw-transcript ASR prompt.
+DEFAULT_TRANSCRIPTION_PROMPT = ("<|audio|>can you transcribe the speech into a written format?")
 
 
 def _broadcast(

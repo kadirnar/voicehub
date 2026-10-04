@@ -734,9 +734,13 @@ INFERENCE_PROFILES = {
     ),
     "asr_granite_speech":
     _asr(
-        "Uses Granite Speech's instruction prompt with deterministic generation.",
-        "Medical or regulated recordings still require domain review; model output is not a verified record.",
-        arguments=('prompt="Transcribe the recording faithfully in English."', "do_sample=False"),
+        "Uses a Granite Speech model-card instruction prompt with deterministic generation.",
+        "Without `prompt`, the model card's raw-transcript prompt "
+        "`<|audio|>can you transcribe the speech into a written format?` is used; "
+        "`<|audio|>` is prepended when a prompt omits it. Medical or regulated recordings "
+        "still require domain review; model output is not a verified record.",
+        arguments=(
+            'prompt="transcribe the speech with proper punctuation and capitalization."', "do_sample=False"),
     ),
     "asr_parakeet_tdt":
     _asr(
