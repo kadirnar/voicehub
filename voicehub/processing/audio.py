@@ -60,8 +60,18 @@ def mel_filter_bank(
     maximum_frequency: float | None = None,
     dtype: Any = None,
     device: Any = None,
+    match_librosa: bool = False,
 ):
-    """Build a Slaney-normalized triangular mel bank using PyTorch only."""
+    """Build a Slaney-normalized triangular mel bank using PyTorch only.
+
+    With ``match_librosa=True`` the bank is evaluated in float64 on the
+    CPU and rounded exactly like
+    ``librosa.filters.mel(dtype=np.float32)`` (the triangles are stored
+    as float32 before the float64 Slaney normalization is applied and
+    rounded again). This reproduces, bit for bit, the
+    ``mel_filters.npz`` asset shipped with OpenAI Whisper. The result is
+    then cast to ``dtype`` and moved to ``device``.
+    """
     torch = _torch()
     sample_rate = _positive_integer(sample_rate, name="sample_rate")
     n_fft = _positive_integer(n_fft, name="n_fft")
@@ -70,7 +80,14 @@ def mel_filter_bank(
     minimum_frequency = float(minimum_frequency)
     if not 0.0 <= minimum_frequency < maximum_frequency <= sample_rate / 2.0:
         raise ValueError("Mel frequency bounds must satisfy 0 <= min < max <= Nyquist.")
-    dtype = dtype or torch.float32
+    if not isinstance(match_librosa, bool):
+        raise TypeError("`match_librosa` must be a boolean.")
+    output_dtype = dtype or torch.float32
+    output_device = device
+    if match_librosa:
+        dtype, device = torch.float64, "cpu"
+    else:
+        dtype = output_dtype
     frequency_bins = torch.linspace(
         0.0,
         sample_rate / 2.0,
@@ -91,7 +108,11 @@ def mel_filter_bank(
     lower = -ramps[:-2] / edge_widths[:-1].unsqueeze(1)
     upper = ramps[2:] / edge_widths[1:].unsqueeze(1)
     filters = torch.clamp(torch.minimum(lower, upper), min=0.0)
+    if match_librosa:
+        filters = filters.float().double()
     filters *= (2.0 / (frequency_edges[2:] - frequency_edges[:-2])).unsqueeze(1)
+    if match_librosa:
+        filters = filters.float().to(dtype=output_dtype, device=output_device)
     return filters
 
 
@@ -227,6 +248,7 @@ class LogMelSpectrogram(ProcessingOperation):
     whisper_scaling: bool = False
     input_key: str = "waveform"
     output_key: str = "input_features"
+    librosa_filters: bool = False
 
     def __post_init__(self) -> None:
         for name in ("sample_rate", "n_fft", "hop_length", "n_mels"):
@@ -238,6 +260,8 @@ class LogMelSpectrogram(ProcessingOperation):
             raise ValueError("`dynamic_range` must be positive.")
         if not isinstance(self.whisper_scaling, bool):
             raise TypeError("`whisper_scaling` must be a boolean.")
+        if not isinstance(self.librosa_filters, bool):
+            raise TypeError("`librosa_filters` must be a boolean.")
 
     @property
     def inputs(self) -> tuple[str, ...]:
@@ -275,6 +299,7 @@ class LogMelSpectrogram(ProcessingOperation):
             n_mels=self.n_mels,
             dtype=power.dtype,
             device=power.device,
+            match_librosa=self.librosa_filters,
         )
         mel = torch.matmul(filters, power)
         log_mel = torch.clamp(mel, min=1e-10).log10()
@@ -294,6 +319,7 @@ class LogMelSpectrogram(ProcessingOperation):
             "whisper_scaling": self.whisper_scaling,
             "input_key": self.input_key,
             "output_key": self.output_key,
+            "librosa_filters": self.librosa_filters,
         }
 
 
