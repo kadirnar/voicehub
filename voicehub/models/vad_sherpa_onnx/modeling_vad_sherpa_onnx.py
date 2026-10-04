@@ -56,8 +56,17 @@ def _finalize_segments(
     *,
     duration: float,
     speech_pad_ms: int,
-    max_speech_duration_s: float | None,
 ) -> tuple[SpeechSegment, ...]:
+    """Apply VoiceHub's optional speech padding to Sherpa segments.
+
+    Sherpa emits ordered, non-overlapping segments and has no padding or
+    hard length split: ``max_speech_duration`` only raises the decision
+    threshold inside the detector. Without padding the segments are
+    returned unchanged (Sherpa can emit touching segments); with padding,
+    regions that now overlap or touch are merged.
+    """
+    if speech_pad_ms == 0:
+        return tuple(values)
     padding = speech_pad_ms / 1_000
     padded = []
     for segment in values:
@@ -73,35 +82,7 @@ def _finalize_segments(
                     channel=segment.channel,
                     metadata=dict(segment.metadata),
                 ))
-    merged = merge_speech_segments(padded)
-    if max_speech_duration_s is None:
-        return merged
-    split = []
-    for segment in merged:
-        cursor = segment.start
-        while segment.end - cursor > max_speech_duration_s + 1e-12:
-            end = round(cursor + max_speech_duration_s, 12)
-            split.append(
-                SpeechSegment(
-                    start=cursor,
-                    end=end,
-                    score=segment.score,
-                    label=segment.label,
-                    channel=segment.channel,
-                    metadata=dict(segment.metadata),
-                ))
-            cursor = end
-        if segment.end - cursor > 1e-12:
-            split.append(
-                SpeechSegment(
-                    start=cursor,
-                    end=segment.end,
-                    score=segment.score,
-                    label=segment.label,
-                    channel=segment.channel,
-                    metadata=dict(segment.metadata),
-                ))
-    return tuple(split)
+    return merge_speech_segments(padded)
 
 
 class SherpaONNXVADSession:
@@ -197,9 +178,11 @@ class SherpaONNXVADSession:
             return self._feed(chunk.waveform)
 
     def flush(self) -> VADOutput:
-        """Pad the final shift, finalize once, and cache the result."""
-        import torch
+        """Finalize once, like Sherpa's ``Flush()``, and cache the result.
 
+        Like the Sherpa detector, only complete windows are scored: a
+        trailing partial shift is not zero-padded into an extra window.
+        """
         with self._lock:
             if self._closed:
                 raise RuntimeError("Cannot flush a closed stream.")
@@ -207,13 +190,7 @@ class SherpaONNXVADSession:
                 return self._result
             if self._sample_count == 0:
                 raise ValueError("Cannot flush a stream that has no audio.")
-            if self._pending is not None and self._pending.numel():
-                padded = torch.nn.functional.pad(
-                    self._pending,
-                    (0, self._window_shift - self._pending.numel()),
-                )
-                self._probabilities.extend(self._detector.accept_waveform(padded))
-                self._pending = None
+            self._pending = None
             self._detector.flush()
             self._segments.extend(_drain_segments(
                 self._detector,
@@ -224,7 +201,6 @@ class SherpaONNXVADSession:
                 self._segments,
                 duration=duration,
                 speech_pad_ms=self.inference_kwargs["speech_pad_ms"],
-                max_speech_duration_s=self.inference_kwargs.get("max_speech_duration_s"),
             )
             self._result = VADOutput(
                 segments=segments,

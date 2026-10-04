@@ -2,9 +2,24 @@
 
 from __future__ import annotations
 
+import struct
 from dataclasses import dataclass
 from threading import RLock
 from typing import Any
+
+
+def _float32(value: float) -> float:
+    """Round to the nearest IEEE float32, the type Sherpa stores options in."""
+    return struct.unpack("f", struct.pack("f", value))[0]
+
+
+def _duration_samples(sample_rate: int, seconds: float) -> int:
+    """Return Sherpa's ``int32_t(sample_rate * float_seconds)``.
+
+    The C++ product is evaluated in float32 and truncated, so e.g. 251
+    ms is 4015 samples upstream while double arithmetic gives 4016.
+    """
+    return int(_float32(_float32(sample_rate) * _float32(seconds)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,12 +175,13 @@ class _SpeechDecision:
         self.family = family
         self.sample_rate = sample_rate
         self.window_shift = window_shift
-        self.original_threshold = threshold
-        self.threshold = threshold
-        self.negative_threshold = negative_threshold
+        # Sherpa keeps thresholds and durations as float32 config fields.
+        self.original_threshold = _float32(threshold)
+        self.threshold = self.original_threshold
+        self.negative_threshold = (None if negative_threshold is None else _float32(negative_threshold))
         self.original_min_silence = min_silence_duration
-        self.min_silence_samples = int(sample_rate * min_silence_duration)
-        self.min_speech_samples = int(sample_rate * min_speech_duration)
+        self.min_silence_samples = _duration_samples(sample_rate, min_silence_duration)
+        self.min_speech_samples = _duration_samples(sample_rate, min_speech_duration)
         self.reset()
 
     def reset(self) -> None:
@@ -174,14 +190,14 @@ class _SpeechDecision:
         self.temp_start = 0
         self.temp_end = 0
         self.threshold = self.original_threshold
-        self.min_silence_samples = int(self.sample_rate * self.original_min_silence)
+        self.min_silence_samples = _duration_samples(self.sample_rate, self.original_min_silence)
 
     def configure_long_utterance(self, enabled: bool) -> None:
         if enabled:
-            self.min_silence_samples = int(self.sample_rate * 0.1)
-            self.threshold = 0.9
+            self.min_silence_samples = _duration_samples(self.sample_rate, 0.1)
+            self.threshold = _float32(0.9)
         else:
-            self.min_silence_samples = int(self.sample_rate * self.original_min_silence)
+            self.min_silence_samples = _duration_samples(self.sample_rate, self.original_min_silence)
             self.threshold = self.original_threshold
 
     def update(self, probability: float) -> bool:
@@ -202,10 +218,12 @@ class _SpeechDecision:
             self.temp_end = 0
             return False
         if self.family == "silero":
+            # std::max(threshold - 0.15f, 0.01f) in float32 arithmetic.
             negative = (
-                max(threshold -
-                    0.15, 0.01) if self.negative_threshold is None else max(self.negative_threshold, 0.01))
+                max(_float32(threshold - _float32(0.15)), _float32(0.01))
+                if self.negative_threshold is None else max(self.negative_threshold, _float32(0.01)))
         else:
+            # TEN compares against `threshold - 0.15` promoted to double.
             negative = threshold - 0.15
         if probability > negative and self.triggered:
             return True
@@ -244,7 +262,7 @@ class NativeSherpaVoiceActivityDetector:
         self.scorer = scorer
         self.family = family
         self.sample_rate = sample_rate
-        self.max_utterance_length = int(sample_rate * max_speech_duration)
+        self.max_utterance_length = _duration_samples(sample_rate, max_speech_duration)
         self.decision = _SpeechDecision(
             family=family,
             sample_rate=sample_rate,
