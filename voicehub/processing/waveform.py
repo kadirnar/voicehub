@@ -11,6 +11,7 @@ the processor contract.
 from __future__ import annotations
 
 import sys
+import warnings
 import wave
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -69,16 +70,21 @@ def _decode_pcm(payload: bytes, *, sample_width: int) -> Tensor:
         f"PCM; received {sample_width * 8}-bit samples.")
 
 
+_WAVE_FORMAT_PCM = 0x0001
 _WAVE_FORMAT_IEEE_FLOAT = 0x0003
 _WAVE_FORMAT_EXTENSIBLE = 0xFFFE
 
 
-def _read_float_wave(source) -> tuple[Tensor, int, int, int] | None:
-    """Decode an IEEE-float WAVE container, or return ``None`` for others.
+def _read_wave_frames(source) -> tuple[Tensor, int, int, int] | None:
+    """Decode a PCM or IEEE-float WAVE container like libsndfile.
 
-    The standard-library ``wave`` module only reads integer PCM, while
-    32-bit float WAVE is the default output of common writers such as
-    SoundFile. Returns ``(samples, channels, sample_rate, frames)``.
+    Chunks are walked independently of the RIFF size, so a container
+    whose RIFF header under-reports its length, which Python's ``wave``
+    module silently truncates, still yields every frame of its data
+    chunk. A data chunk that ends before its declared size keeps the
+    complete frames that are present and emits a warning. Returns
+    ``(samples, channels, sample_rate, frames)``, or ``None`` for other
+    layouts so the caller can report the ``wave`` module's error.
     """
     stream = open(source, "rb") if isinstance(source, str) else source
     try:
@@ -100,9 +106,10 @@ def _read_float_wave(source) -> tuple[Tensor, int, int, int] | None:
                 tag = int.from_bytes(fmt[0:2], "little")
                 if tag == _WAVE_FORMAT_EXTENSIBLE and len(fmt) >= 26:
                     tag = int.from_bytes(fmt[24:26], "little")
-                if tag != _WAVE_FORMAT_IEEE_FLOAT:
+                if tag not in (_WAVE_FORMAT_PCM, _WAVE_FORMAT_IEEE_FLOAT):
                     return None
                 layout = (
+                    tag,
                     int.from_bytes(fmt[2:4], "little"),
                     int.from_bytes(fmt[4:8], "little"),
                     int.from_bytes(fmt[14:16], "little"),
@@ -110,19 +117,31 @@ def _read_float_wave(source) -> tuple[Tensor, int, int, int] | None:
             elif name == b"data":
                 if layout is None:
                     return None
-                channels, sample_rate, bits = layout
-                if bits not in (32, 64):
+                tag, channels, sample_rate, bits = layout
+                if tag == _WAVE_FORMAT_IEEE_FLOAT and bits not in (32, 64):
                     raise ValueError(
                         f"IEEE-float WAVE input must use 32- or 64-bit samples; received {bits}-bit.")
                 if not 1 <= channels <= 8:
                     raise ValueError("WAVE input must contain between one and eight channels.")
+                sample_width = (bits + 7) // 8
+                if sample_width == 0:
+                    return None
                 payload = stream.read(size)
-                frame_bytes = channels * bits // 8
+                frame_bytes = channels * sample_width
+                if len(payload) < size:
+                    warnings.warn(
+                        f"WAVE data chunk declares {size} bytes but only {len(payload)} are present; "
+                        f"decoding the {len(payload) // frame_bytes} complete frames.",
+                        stacklevel=4,
+                    )
                 payload = payload[:len(payload) - len(payload) % frame_bytes]
-                if sys.byteorder != "little":  # pragma: no cover - uncommon platform
-                    raise RuntimeError("Native float WAVE decoding requires a little-endian host.")
-                dtype = torch.float32 if bits == 32 else torch.float64
-                values = torch.frombuffer(bytearray(payload), dtype=dtype).float()
+                if tag == _WAVE_FORMAT_PCM:
+                    values = _decode_pcm(payload, sample_width=sample_width)
+                else:
+                    if sys.byteorder != "little":  # pragma: no cover - uncommon platform
+                        raise RuntimeError("Native float WAVE decoding requires a little-endian host.")
+                    dtype = torch.float32 if bits == 32 else torch.float64
+                    values = torch.frombuffer(bytearray(payload), dtype=dtype).float()
                 return values, channels, sample_rate, len(payload) // frame_bytes
             else:
                 stream.seek(size + (size & 1), 1)
@@ -139,36 +158,17 @@ def _read_pcm_wave(
     preserve_channels: bool,
     source_label: str,
 ) -> tuple[Tensor, int]:
-    floating = _read_float_wave(source)
-    if floating is not None:
-        values, channels, sample_rate, frame_count = floating
-        if channels > 1:
-            values = values.reshape(frame_count, channels).transpose(0, 1)
-            if not preserve_channels:
-                values = values.mean(dim=0)
-        elif preserve_channels:
-            values = values.unsqueeze(0)
-        return values.contiguous(), _positive_rate(sample_rate, name="sample_rate")
-    try:
-        with wave.open(source, "rb") as stream:
-            if stream.getcomptype() != "NONE":
-                raise ValueError("Compressed WAVE input is not supported by the native "
-                                 "PCM decoder.")
-            channels = stream.getnchannels()
-            if not 1 <= channels <= 8:
-                raise ValueError("WAVE input must contain between one and eight channels.")
-            sample_rate = stream.getframerate()
-            sample_width = stream.getsampwidth()
-            frame_count = stream.getnframes()
-            payload = stream.readframes(frame_count)
-    except wave.Error as error:
-        raise ValueError(f"Invalid PCM WAVE {source_label}: {error}.") from error
-
-    values = _decode_pcm(payload, sample_width=sample_width)
-    expected_samples = frame_count * channels
-    if values.numel() != expected_samples:
-        raise ValueError(f"WAVE payload contains {values.numel()} samples; expected "
-                         f"{expected_samples}.")
+    decoded = _read_wave_frames(source)
+    if decoded is None:
+        # Not a layout the chunk reader decodes: let the standard-library
+        # parser report why (missing chunks, compression, unknown format).
+        try:
+            with wave.open(source, "rb"):
+                pass
+        except wave.Error as error:
+            raise ValueError(f"Invalid PCM WAVE {source_label}: {error}.") from error
+        raise ValueError(f"Invalid PCM WAVE {source_label}: unsupported layout.")
+    values, channels, sample_rate, frame_count = decoded
     if channels > 1:
         values = values.reshape(frame_count, channels).transpose(0, 1)
         if not preserve_channels:
@@ -183,7 +183,7 @@ def load_pcm_wave(
     *,
     preserve_channels: bool = False,
 ) -> tuple[Tensor, int]:
-    """Decode an uncompressed PCM WAVE file with the standard library.
+    """Decode an uncompressed PCM or IEEE-float WAVE file natively.
 
     Args:
         path: File to decode.

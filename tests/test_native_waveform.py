@@ -4,6 +4,7 @@ import importlib.util
 import itertools
 import tempfile
 import unittest
+import warnings
 import wave
 from pathlib import Path
 
@@ -439,6 +440,31 @@ class NativeWaveformTests(unittest.TestCase):
         restored, rate = decode_pcm_wave(float_wave(mono, channels=1, rate=24_000, extensible=True))
         self.assertEqual(rate, 24_000)
         torch.testing.assert_close(restored, torch.tensor(mono), rtol=0, atol=0)
+
+    def test_pcm_wave_with_inconsistent_chunk_sizes_is_read_like_libsndfile(self):
+        import struct
+
+        samples = [0, 16_384, -16_384, 32_767, -32_768]
+        data = struct.pack(f"<{len(samples)}h", *samples)
+        fmt = struct.pack("<HHIIHH", 1, 1, 24_000, 48_000, 2, 16)
+        fmt_chunk = b"fmt " + struct.pack("<I", len(fmt)) + fmt
+        body = b"WAVE" + fmt_chunk + b"data" + struct.pack("<I", len(data)) + data
+        expected = torch.tensor(samples, dtype=torch.float32) / 32768.0
+
+        # The RIFF size is 4 bytes too small (as in neutts samples/greta.wav).
+        # libsndfile still reads every frame of the complete data chunk.
+        short_riff = b"RIFF" + struct.pack("<I", len(body) - 4) + body
+        restored, rate = decode_pcm_wave(short_riff)
+        self.assertEqual(rate, 24_000)
+        torch.testing.assert_close(restored, expected, rtol=0, atol=0)
+
+        # A data chunk cut mid-frame keeps the complete frames, with a warning.
+        truncated = b"RIFF" + struct.pack("<I", len(body)) + body[:-3]
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            restored, _ = decode_pcm_wave(truncated)
+        self.assertTrue(any("data chunk" in str(warning.message) for warning in caught))
+        torch.testing.assert_close(restored, expected[:3], rtol=0, atol=0)
 
     def test_in_memory_pcm_wave_decoder_is_bounded(self):
         source = torch.linspace(-0.75, 0.75, 12)
