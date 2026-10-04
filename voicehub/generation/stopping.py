@@ -22,14 +22,15 @@ def tokens_match_any(token_ids: Tensor, candidates: Sequence[int]) -> Tensor:
     """Return a mask indicating which tokens match any candidate ID."""
     if token_ids.ndim != 1:
         raise ValueError("`token_ids` must have shape [batch].")
+    candidates = tuple(candidates)
     if not candidates:
         return torch.zeros_like(token_ids, dtype=torch.bool)
-    candidate_tensor = torch.tensor(
-        tuple(candidates),
-        dtype=token_ids.dtype,
-        device=token_ids.device,
-    )
-    return (token_ids[:, None] == candidate_tensor[None, :]).any(dim=-1)
+    # Compare against Python scalars: building a candidate tensor would copy
+    # it from host memory on every decoding step, which synchronizes CUDA.
+    matches = token_ids == candidates[0]
+    for candidate in candidates[1:]:
+        matches |= token_ids == candidate
+    return matches
 
 
 @dataclass(frozen=True, slots=True)

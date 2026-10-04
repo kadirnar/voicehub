@@ -10,7 +10,8 @@ import torch
 from torch import Tensor
 
 from voicehub.generation.config import GenerationConfig
-from voicehub.generation.sampling import create_generator, sample_next_token
+from voicehub.generation.logits import _raise_processing_error
+from voicehub.generation.sampling import _sample_next_token, create_generator
 from voicehub.generation.stopping import EosStoppingCriterion, StoppingCriterion, evaluate_stopping_criteria
 
 
@@ -120,7 +121,7 @@ class AutoregressiveGenerator:
             if config.do_sample and generator is None:
                 generator = create_generator(logits.device, config.seed)
 
-            next_tokens = sample_next_token(
+            next_tokens, processed, violation = _sample_next_token(
                 logits,
                 sequences,
                 config,
@@ -129,16 +130,15 @@ class AutoregressiveGenerator:
             if next_tokens.device != sequences.device:
                 raise ValueError("Decoder logits and input IDs must be on the same device.")
 
-            pad_token_id = config.effective_pad_token_id
-            if finished.any():
-                next_tokens = torch.where(
-                    finished,
-                    torch.full_like(next_tokens, pad_token_id),
-                    next_tokens,
-                )
+            if criteria:
+                # Finished rows emit padding; masking is a no-op for the other
+                # rows, so no host-side `finished.any()` is needed.
+                next_tokens = next_tokens.masked_fill(finished, config.effective_pad_token_id)
 
+            history = sequences
             sequences = torch.cat((sequences, next_tokens[:, None]), dim=-1)
             generated_lengths += (~finished).long()
+            done = None
             if criteria:
                 newly_finished = evaluate_stopping_criteria(
                     criteria,
@@ -147,11 +147,24 @@ class AutoregressiveGenerator:
                     step_index,
                 )
                 finished |= newly_finished
-                if finished.all():
-                    cache = step_output.cache if config.use_cache else None
-                    break
+                done = finished.all()
 
+            # The only host synchronization of a step: logit validation and
+            # the stop decision are read back together.
+            if done is None:
+                invalid, stop = bool(violation), False
+            else:
+                invalid, stop = torch.stack((violation, done)).tolist()
+            if invalid:
+                _raise_processing_error(
+                    logits,
+                    history,
+                    processed,
+                    repetition_penalty=config.repetition_penalty,
+                )
             cache = step_output.cache if config.use_cache else None
+            if stop:
+                break
             decoder_tokens = next_tokens[:, None] if cache is not None else sequences
 
         return GenerationOutput(

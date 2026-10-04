@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 
 from voicehub.generation.config import GenerationConfig
-from voicehub.generation.logits import process_logits
+from voicehub.generation.logits import _process_logits, _raise_processing_error
 
 _TORCH_SEED_MIN = -(2**63)
 _TORCH_SEED_MAX = 2**64 - 1
@@ -41,7 +41,38 @@ def sample_next_token(
     generator: torch.Generator | None = None,
 ) -> Tensor:
     """Select one token per row according to a validated configuration."""
-    processed = process_logits(
+    next_tokens, processed, violation = _sample_next_token(
+        logits,
+        token_ids,
+        config,
+        generator=generator,
+    )
+    if violation:
+        _raise_processing_error(
+            logits,
+            token_ids,
+            processed,
+            repetition_penalty=config.repetition_penalty,
+        )
+    return next_tokens
+
+
+def _sample_next_token(
+    logits: Tensor,
+    token_ids: Tensor,
+    config: GenerationConfig,
+    *,
+    generator: torch.Generator | None = None,
+) -> tuple[Tensor, Tensor, Tensor]:
+    """Select tokens without reading device values.
+
+    Returns the tokens, the processed logits and the deferred validity
+    flag of :func:`voicehub.generation.logits._process_logits`; the
+    caller must raise through ``_raise_processing_error`` when the flag
+    is true. Keeping the flag on the device lets a decoding loop combine
+    it with its stop decision into one host synchronization per step.
+    """
+    processed, violation = _process_logits(
         logits,
         token_ids,
         do_sample=config.do_sample,
@@ -52,21 +83,22 @@ def sample_next_token(
         repetition_penalty=config.repetition_penalty,
     )
     if not config.do_sample:
-        return processed.argmax(dim=-1)
+        return processed.argmax(dim=-1), processed, violation
     if generator is None:
         generator = create_generator(processed.device, config.seed)
     elif generator.device != processed.device:
         raise ValueError("The request generator and logits must use the same device.")
 
-    probabilities = torch.softmax(processed.float(), dim=-1)
-    if not torch.isfinite(probabilities).all():
-        raise RuntimeError("Sampling probabilities are not finite.")
-    probability_sums = probabilities.sum(dim=-1)
-    if (probability_sums <= 0).any():
-        raise RuntimeError("Sampling requires at least one positive-probability token per row.")
-    return torch.multinomial(
+    # Valid logits (no NaN/+inf, a finite score in every row) always give
+    # finite probabilities with a positive row sum. Until the caller reads
+    # the flag, invalid logits draw from a uniform distribution instead, so
+    # they surface as a ValueError rather than a device-side multinomial
+    # assertion.
+    probabilities = torch.softmax(processed.float(), dim=-1).masked_fill(violation, 1.0)
+    next_tokens = torch.multinomial(
         probabilities,
         num_samples=1,
         replacement=True,
         generator=generator,
     ).squeeze(-1)
+    return next_tokens, processed, violation
