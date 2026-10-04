@@ -119,11 +119,10 @@ class BarkSelfAttention(nn.Module):
             value = torch.cat((past_key_value[1], value), dim=-2)
         present = (key, value) if use_cache else None
 
-        weights = torch.matmul(query, key.transpose(-1, -2))
-        weights = weights * (1.0 / math.sqrt(self.head_dim))
+        query_length = query.shape[-2]
+        key_length = key.shape[-2]
+        causal = None
         if self.is_causal:
-            query_length = query.shape[-2]
-            key_length = key.shape[-2]
             if key_length > self.bias.shape[-1]:
                 raise ValueError("Bark sequence length exceeds the configured block size.")
             causal = self.bias[
@@ -132,6 +131,29 @@ class BarkSelfAttention(nn.Module):
                 key_length - query_length:key_length,
                 :key_length,
             ]
+        if attention_mask is None and not output_attentions:
+            # Upstream Bark runs fused SDPA whenever PyTorch provides it. An
+            # uncached prefill is the ordinary top-left causal case and a
+            # cached one-token decode may attend to every stored key; only a
+            # multi-token chunk on top of a cache needs the explicit slice.
+            masked = causal is not None and query_length > 1
+            attended = F.scaled_dot_product_attention(
+                query,
+                key,
+                value,
+                attn_mask=(causal if masked and query_length < key_length else None),
+                dropout_p=self.dropout if self.training else 0.0,
+                is_causal=masked and query_length == key_length,
+            )
+            attended = self._merge_heads(attended)
+            attended = self.resid_dropout(self.out_proj(attended))
+            return attended, present, None
+
+        # Keep the explicit float32 softmax for padding masks and whenever
+        # callers request attention weights.
+        weights = torch.matmul(query, key.transpose(-1, -2))
+        weights = weights * (1.0 / math.sqrt(self.head_dim))
+        if causal is not None:
             weights = weights.masked_fill(
                 ~causal,
                 torch.finfo(weights.dtype).min,
