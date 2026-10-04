@@ -256,9 +256,11 @@ class TransformersVADForVoiceActivityDetection(PreTrainedVADModel):
             normalized = str(label).strip().lower()
             tokens = frozenset(findall(r"[a-z0-9]+", normalized))
             exact = normalized in self.config.speech_labels
+            # Numeric speech labels such as "1" match only exactly; as a
+            # token they would select "LABEL_1" or "speaker_1" silently.
             positive = (
                 not tokens.intersection(_NEGATIVE_SPEECH_LABEL_TOKENS) and
-                any(token in tokens for token in self.config.speech_labels))
+                any(token in tokens for token in self.config.speech_labels if not token.isdigit()))
             if exact or positive:
                 resolved = int(class_id)
                 if not 0 <= resolved < class_count:
