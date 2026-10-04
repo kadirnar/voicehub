@@ -38,6 +38,7 @@ from voicehub.architectures.gptsovits.registration import create_gptsovits_archi
 from voicehub.architectures.gptsovits.runtime import TTS, GPTSoVITSRuntime, TTS_Config
 from voicehub.architectures.gptsovits.semantic import GPTSoVITSSemanticModel
 from voicehub.architectures.gptsovits.training import GPTSoVITSS2TrainingModel, build_staged_training_model
+from voicehub.models.gptsovits.inference import GPTSoVITSForTextToSpeech
 from voicehub.models.gptsovits.training import GPTSoVITSTrainingAdapter
 from voicehub.training.contracts import TrainingPhaseSpec, TrainingSupport
 from voicehub.training.specs import ModelTrainingSpec, TrainingFamily
@@ -285,6 +286,44 @@ class NativeGPTSoVITSTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(ValueError, "requires prepared IDs/features/spectrograms"):
             next(TTS.run(SimpleNamespace(), request))
+
+    def test_prepared_request_rejects_ignored_raw_frontend_options(self):
+        prepared = {
+            "s1_phoneme_ids": [1, 2],
+            "s1_bert_features": torch.zeros(1, 1_024, 2),
+            "s2_phoneme_ids": [3, 4],
+            "reference_spectrogram": torch.zeros(1_025, 3),
+        }
+        requests = []
+        model = GPTSoVITSForTextToSpeech(device="cpu")
+        model.model = SimpleNamespace(
+            run=lambda request: requests.append(request) or [(32_000, torch.ones(4))])
+        ignored_options = {
+            "text_language": "en",
+            "speaker_audio_path": "reference.wav",
+            "prompt_language": "en",
+            "prompt_text": "Reference.",
+            "text_split_method": "cut0",
+            "batch_size": 4,
+            "parallel_inference": False,
+        }
+        for name, value in ignored_options.items():
+            with self.subTest(option=name):
+                with self.assertRaisesRegex(ValueError, f"frontend options.*Remove: {name}$"):
+                    model.generate("Hello.", seed=0, **prepared, **{name: value})
+        self.assertEqual(requests, [])
+        # Unset and default-valued options stay accepted.
+        output = model.generate(
+            "Hello.",
+            seed=0,
+            **prepared,
+            speaker_audio_path="",
+            text_split_method="cut5",
+            batch_size=1,
+            parallel_inference=True,
+        )
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(output.metadata["frontend"], "prepared-native")
 
     def test_pro_frontend_requires_exact_prepared_speaker_embedding(self):
         s1_config = GPTSoVITSS1Config.for_variant("v2Pro")
