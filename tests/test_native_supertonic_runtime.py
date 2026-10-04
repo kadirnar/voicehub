@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +27,8 @@ from voicehub.models.supertonic.inference import SupertonicForTextToSpeech
 from voicehub.models.supertonic.training import SupertonicTrainingAdapter
 from voicehub.training.contracts import TrainingSupport
 from voicehub.training.specs import get_training_spec
+
+VENDORED_SOURCE = (Path(__file__).resolve().parents[1] / "voicehub" / "models" / "supertonic" / "source")
 
 
 def _value(name: str, shape: tuple[int | str | None, ...]) -> ONNXValueInfo:
@@ -443,6 +447,29 @@ class NativeSupertonicRuntimeTests(unittest.TestCase):
             output.metadata["training_phase"],
             "published_graph",
         )
+
+    def test_vendored_source_matches_the_recorded_upstream_revision(self):
+        source = json.loads((VENDORED_SOURCE / "SOURCE.json").read_text(encoding="utf-8"))
+        vendored = source["architecture_source"]["vendored_files"]
+        recorded = vendored["upstream_git_blob_sha1"]
+        present = {
+            path.relative_to(VENDORED_SOURCE).as_posix()
+            for path in VENDORED_SOURCE.rglob("*") if path.is_file() and "__pycache__" not in path.parts
+        }
+
+        self.assertEqual(
+            present - {"SOURCE.json", "THIRD_PARTY_LICENSE"},
+            set(recorded) | set(vendored["voicehub_added"]),
+        )
+        for relative_path, expected in recorded.items():
+            # Git blob ids hash LF content; undo a Windows autocrlf checkout
+            # and the import rewrites applied by scripts/vendor_tts_sources.py.
+            data = (VENDORED_SOURCE / relative_path).read_bytes().replace(b"\r\n", b"\n")
+            for upstream_root, vendored_root in vendored["import_rewrites"].items():
+                data = data.replace(vendored_root.encode(), upstream_root.encode())
+            digest = hashlib.sha1(b"blob %d\0" % len(data) + data, usedforsecurity=False).hexdigest()
+            with self.subTest(path=relative_path):
+                self.assertEqual(digest, expected)
 
 
 if __name__ == "__main__":

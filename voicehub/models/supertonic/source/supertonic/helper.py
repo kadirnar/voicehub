@@ -232,20 +232,6 @@ class TextToSpeech:
         dur_cat = None
         for text in text_list:
             wav, dur_onnx = self._infer([text], [lang], style, total_step, speed)
-            duration_seconds = float(dur_onnx[0])
-            if not np.isfinite(duration_seconds) or duration_seconds <= 0:
-                raise RuntimeError(
-                    f"Supertonic returned an invalid chunk duration: {duration_seconds}."
-                )
-            valid_samples = min(
-                wav.shape[-1],
-                max(1, round(duration_seconds * self.sample_rate)),
-            )
-            # The vocoder pads each chunk independently to its latent frame
-            # size. Remove that padding before concatenation; trimming only the
-            # final aggregate would otherwise cut real samples from later
-            # chunks by the amount of padding retained in earlier chunks.
-            wav = wav[..., :valid_samples]
             if wav_cat is None:
                 wav_cat = wav
                 dur_cat = dur_onnx
@@ -253,7 +239,7 @@ class TextToSpeech:
                 silence = np.zeros(
                     (1, int(silence_duration * self.sample_rate)), dtype=np.float32
                 )
-                wav_cat = np.concatenate([wav_cat, silence, wav], axis=-1)
+                wav_cat = np.concatenate([wav_cat, silence, wav], axis=1)
                 dur_cat += dur_onnx + silence_duration
         return wav_cat, dur_cat
 
