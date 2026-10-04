@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -519,10 +520,12 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         torch.testing.assert_close(actual, expected, rtol=0.0, atol=0.0)
 
     @staticmethod
-    def _scripted_generation(runtime, frames):
+    def _scripted_generation(runtime, frames, max_new_tokens=16):
         """Greedy-generate with logits whose argmax follows ``frames``."""
         config = runtime.model.config
-        steps = iter(frames)
+        # The loop feeds back the frame produced at the last step, so a
+        # capped run makes one forward pass past ``frames``.
+        steps = iter((*frames, (0, ) * config.num_codebooks))
 
         def forward(*args, **kwargs):
             codes = next(steps)
@@ -538,7 +541,7 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         batch = runtime.processor.generation_batch("hi")
         return HiggsAudioV2Generator(runtime.model, runtime.processor).generate(
             batch,
-            max_new_tokens=16,
+            max_new_tokens=max_new_tokens,
             temperature=0.0,
             ras_window=None,
         )
@@ -556,6 +559,46 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         self.assertEqual(
             result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [17, 6], [17, 7], [17, 17]])
         self.assertEqual(result.audio_codes[0].tolist(), [[3, 4], [5, 6]])
+        self.assertEqual(result.finish_reason, "stop")
+
+    def test_generation_returns_truncated_audio_at_max_new_tokens(self):
+        # The stream never reaches EOS: like the source, return the audio
+        # generated so far instead of raising. Codebook 0 of the last
+        # delayed frame (6) has no codebook-1 partner yet, so it is dropped.
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            # ``assertWarns`` walks ``sys.modules``; record warnings directly.
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                result = self._scripted_generation(
+                    runtime,
+                    [(16, 16), (3, 9), (4, 5), (6, 7)],
+                    max_new_tokens=4,
+                )
+        self.assertTrue(any("max_new_tokens" in str(item.message) for item in caught))
+        self.assertEqual(result.delayed_audio_codes[0].tolist(), [[16, 16], [3, 16], [4, 5], [6, 7]])
+        self.assertEqual(result.audio_codes[0].tolist(), [[3, 4], [5, 7]])
+        self.assertEqual(result.finish_reason, "length")
+        self.assertEqual(result.generated_steps, 4)
+
+    def test_generation_cut_inside_the_eos_diagonal_keeps_complete_audio(self):
+        # Codebook 0 already ended, so every audio frame is complete even
+        # though ``max_new_tokens`` stops the EOS diagonal early.
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            result = self._scripted_generation(
+                runtime,
+                [(16, 16), (3, 9), (4, 5), (17, 6), (1, 7)],
+                max_new_tokens=5,
+            )
+        self.assertEqual(result.audio_codes[0].tolist(), [[3, 4], [5, 6]])
+        self.assertEqual(result.finish_reason, "stop")
+
+    def test_generation_without_one_complete_frame_still_raises(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = _small_runtime(Path(directory))
+            with self.assertRaisesRegex(RuntimeError, "max_new_tokens"):
+                self._scripted_generation(runtime, [(16, 16), (3, 9)], max_new_tokens=2)
 
     def test_generation_draws_nothing_for_the_opening_bos_frame(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -615,6 +658,7 @@ class NativeHiggsProcessingAndTrainingTests(unittest.TestCase):
         self.assertEqual(output.audio.tolist(), [0.25, -0.25])
         self.assertEqual(output.metadata["backend"], "voicehub-native")
         self.assertEqual(output.metadata["seed"], 41)
+        self.assertEqual(output.metadata["finish_reason"], "stop")
 
     def test_public_generate_can_disable_top_k_and_repetition_aware_sampling(self):
         response = HiggsAudioV2GenerationOutput(

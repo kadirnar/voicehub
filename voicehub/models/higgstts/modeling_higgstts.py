@@ -252,6 +252,7 @@ class HiggsTTSForTextToSpeech(PreTrainedTTSModel):
                 "architecture": "higgs_audio_v2",
                 "backend": "voicehub-native",
                 "checkpoint_format": "safetensors",
+                "finish_reason": result.finish_reason,
                 "generated_steps": result.generated_steps,
                 "reference_audio": reference is not None,
                 "requested_seed": seed,
