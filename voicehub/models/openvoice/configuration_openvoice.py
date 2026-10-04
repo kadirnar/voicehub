@@ -25,6 +25,7 @@ class OpenVoiceConfig(VoiceHubConfig):
         trust_pickle_checkpoint: bool = False,
         dtype: str = "float32",
         base_model_name_or_path: str | Path | None = None,
+        base_model_revision: str | None = None,
         reference_segment_seconds: float = 10.0,
         watermark: str | None = None,
         enable_reconstructed_finetuning: bool = False,
@@ -44,6 +45,9 @@ class OpenVoiceConfig(VoiceHubConfig):
         if base_model_name_or_path is not None and (not isinstance(base_model_name_or_path, (str, Path)) or
                                                     not str(base_model_name_or_path).strip()):
             raise ValueError("`base_model_name_or_path` must be a non-empty path/ID or None.")
+        if base_model_revision is not None and (not isinstance(base_model_revision, str) or
+                                                not base_model_revision.strip()):
+            raise ValueError("`base_model_revision` must be non-empty or None.")
         if (isinstance(reference_segment_seconds, bool) or not isinstance(reference_segment_seconds,
                                                                           (int, float)) or
                 not math.isfinite(float(reference_segment_seconds)) or reference_segment_seconds <= 0):
@@ -62,6 +66,7 @@ class OpenVoiceConfig(VoiceHubConfig):
         self.dtype = dtype.strip().lower()
         self.base_model_name_or_path = (
             None if base_model_name_or_path is None else str(base_model_name_or_path))
+        self.base_model_revision = (None if base_model_revision is None else base_model_revision.strip())
         self.reference_segment_seconds = float(reference_segment_seconds)
         self.watermark = watermark
         self.enable_reconstructed_finetuning = (enable_reconstructed_finetuning)

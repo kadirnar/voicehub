@@ -588,8 +588,16 @@ class NativeMeloTTSTests(unittest.TestCase):
                 },
             )
 
-            def resolve_pretrained_file(repository, filename, *, revision):
+            def resolve_pretrained_file(repository, filename, *, revision, **hub_options):
                 self.assertEqual((repository, revision), pinned[:2])
+                self.assertEqual(
+                    hub_options,
+                    {
+                        "cache_dir": directory,
+                        "token": "hf_secret",
+                        "local_files_only": True,
+                    },
+                )
                 return snapshot / filename
 
             with (
@@ -602,7 +610,14 @@ class NativeMeloTTSTests(unittest.TestCase):
                         side_effect=resolve_pretrained_file,
                     ),
             ):
-                runtime = MeloTTSRuntime("EN", device="cpu", trust_pickle_checkpoint=True)
+                runtime = MeloTTSRuntime(
+                    "EN",
+                    cache_dir=directory,
+                    token="hf_secret",
+                    local_files_only=True,
+                    device="cpu",
+                    trust_pickle_checkpoint=True,
+                )
 
         self.assertTrue(runtime.artifacts.legacy_checkpoint)
         self.assertEqual(runtime.artifacts.release_alias, "EN")

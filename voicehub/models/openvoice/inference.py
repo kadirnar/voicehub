@@ -244,7 +244,6 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
         self,
         text: str,
         *,
-        language: str,
         speaker: str | int | None,
         speed: float,
         input_ids: Any,
@@ -254,18 +253,28 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
         ja_bert_features: Any,
         seed: int | None,
     ):
+        """Synthesize base speech with the configured native MeloTTS model.
+
+        ``base_model_name_or_path`` alone selects the base checkpoint;
+        the language of each request is carried by its ``language_ids``
+        features, so one cached base model serves every language.
+        """
         from voicehub.models.melotts import MeloTTSConfig, MeloTTSForTextToSpeech
 
         if self._base_model is None:
             config = MeloTTSConfig(
                 name_or_path=self.config.base_model_name_or_path,
-                language=language,
+                revision=self.config.base_model_revision,
+                cache_dir=self.config.cache_dir,
+                local_files_only=self.config.local_files_only,
                 trust_pickle_checkpoint=self.config.trust_pickle_checkpoint,
+                dtype=self.config.dtype,
             )
             self._base_model = MeloTTSForTextToSpeech(
                 config,
                 device=self.device,
                 lazy_load=True,
+                token=self._hub_token,
             )
         return self._base_model.generate(
             text,
@@ -313,7 +322,6 @@ class OpenVoiceForTextToSpeech(PreTrainedTTSModel):
             if base_audio is None:
                 generated = self._native_base_audio(
                     text,
-                    language=language,
                     speaker=speaker,
                     speed=speed,
                     input_ids=input_ids,

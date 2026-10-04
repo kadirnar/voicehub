@@ -26,8 +26,14 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
         model_path: str | Path | None = None,
         device: str = "auto",
         lazy_load: bool = True,
+        token: str | bool | None = None,
         **config_overrides: Any,
     ) -> None:
+        if token is not None and not isinstance(token, (str, bool)):
+            raise TypeError("`token` must be a string, boolean, or None.")
+        if isinstance(token, str) and not token.strip():
+            raise ValueError("String `token` values must be non-empty.")
+        self._hub_token = token
         explicit_model_source = (
             model_path is not None or isinstance(config, (str, Path)) or
             (isinstance(config, MeloTTSConfig) and bool(config.name_or_path)))
@@ -75,6 +81,10 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
             model_directory = resolve_model_directory(
                 self.config.name_or_path,
                 model_type="melotts",
+                revision=self.config.revision,
+                cache_dir=self.config.cache_dir,
+                token=self._hub_token,
+                local_files_only=self.config.local_files_only,
             )
         if config_path is None:
             candidate = model_directory / "config.json"
@@ -109,6 +119,9 @@ class MeloTTSForTextToSpeech(PreTrainedTTSModel):
             checkpoint_path=checkpoint_path,
             checkpoint_filename=self.config.checkpoint_filename,
             revision=self.config.revision,
+            cache_dir=self.config.cache_dir,
+            token=self._hub_token,
+            local_files_only=self.config.local_files_only,
             device=self.device,
             dtype=dtype,
             trust_pickle_checkpoint=self.config.trust_pickle_checkpoint,

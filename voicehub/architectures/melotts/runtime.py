@@ -31,6 +31,9 @@ class MeloTTSRuntime:
         checkpoint_path: str | Path | None = None,
         checkpoint_filename: str | None = None,
         revision: str | None = None,
+        cache_dir: str | Path | None = None,
+        token: str | bool | None = None,
+        local_files_only: bool = False,
         device: str | torch.device = "cpu",
         dtype: torch.dtype | None = None,
         trust_pickle_checkpoint: bool = False,
@@ -42,6 +45,9 @@ class MeloTTSRuntime:
             checkpoint_path=checkpoint_path,
             checkpoint_filename=checkpoint_filename,
             revision=revision,
+            cache_dir=cache_dir,
+            token=token,
+            local_files_only=local_files_only,
         )
         self.config = self.artifacts.config
         self.sample_rate = self.config.data.sample_rate

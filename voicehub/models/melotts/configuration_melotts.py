@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from voicehub.configuration_utils import VoiceHubConfig
@@ -20,6 +21,8 @@ class MeloTTSConfig(VoiceHubConfig):
         checkpoint_path: str | None = None,
         checkpoint_filename: str | None = None,
         revision: str | None = None,
+        cache_dir: str | Path | None = None,
+        local_files_only: bool = False,
         use_huggingface: bool = True,
         sample_rate: int = 44_100,
         trust_pickle_checkpoint: bool = False,
@@ -40,6 +43,10 @@ class MeloTTSConfig(VoiceHubConfig):
                 raise ValueError(f"`{name}` must be non-empty or None.")
         if checkpoint_filename is not None and ("/" in checkpoint_filename or "\\" in checkpoint_filename):
             raise ValueError("`checkpoint_filename` must be one plain file name.")
+        if cache_dir is not None and not isinstance(cache_dir, (str, Path)):
+            raise TypeError("`cache_dir` must be path-like or None.")
+        if not isinstance(local_files_only, bool):
+            raise TypeError("`local_files_only` must be a boolean.")
         if not isinstance(use_huggingface, bool):
             raise TypeError("`use_huggingface` must be a boolean.")
         if use_huggingface is not True:
@@ -60,6 +67,8 @@ class MeloTTSConfig(VoiceHubConfig):
         self.checkpoint_path = (None if checkpoint_path is None else checkpoint_path.strip())
         self.checkpoint_filename = (None if checkpoint_filename is None else checkpoint_filename.strip())
         self.revision = None if revision is None else revision.strip()
+        self.cache_dir = (None if cache_dir is None else str(Path(cache_dir).expanduser()))
+        self.local_files_only = local_files_only
         self.use_huggingface = use_huggingface
         self.trust_pickle_checkpoint = trust_pickle_checkpoint
         self.dtype = dtype.strip()

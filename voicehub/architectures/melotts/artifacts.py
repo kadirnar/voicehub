@@ -51,6 +51,9 @@ def resolve_melotts_artifacts(
     checkpoint_path: str | Path | None = None,
     checkpoint_filename: str | None = None,
     revision: str | None = None,
+    cache_dir: str | Path | None = None,
+    token: str | bool | None = None,
+    local_files_only: bool = False,
 ) -> MeloTTSArtifacts:
     """Resolve a local artifact, Hub repository, or pinned language alias."""
     if not isinstance(source, (str, Path)) or not str(source).strip():
@@ -67,6 +70,11 @@ def resolve_melotts_artifacts(
     repository: str | None = None
     expected_checkpoint: str | None = None
     resolved_revision = revision
+    hub_options = {
+        "cache_dir": None if cache_dir is None else str(cache_dir),
+        "token": token,
+        "local_files_only": local_files_only,
+    }
     if alias is not None:
         (
             repository,
@@ -84,12 +92,14 @@ def resolve_melotts_artifacts(
                 repository,
                 "config.json",
                 revision=resolved_revision,
+                **hub_options,
             )
         if checkpoint_path is None:
             checkpoint_path = resolve_pretrained_file(
                 repository,
                 checkpoint_filename or "checkpoint.pth",
                 revision=resolved_revision,
+                **hub_options,
             )
         actual_config = file_sha256(config_path)
         if actual_config != expected_config:
@@ -126,6 +136,7 @@ def resolve_melotts_artifacts(
                     repository,
                     "config.json",
                     revision=resolved_revision,
+                    **hub_options,
                 )
             if checkpoint_path is None:
                 filename = checkpoint_filename or "model.safetensors"
@@ -133,6 +144,7 @@ def resolve_melotts_artifacts(
                     repository,
                     filename,
                     revision=resolved_revision,
+                    **hub_options,
                 )
 
     # Keep link names: Hugging Face caches expose snapshot symlinks to
