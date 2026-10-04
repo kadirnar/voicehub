@@ -25,7 +25,7 @@ from voicehub.architectures.zonos2.metadata import (
     ZONOS2_SOURCE_REVISION,
     ZONOS2_TENSOR_COUNT,
 )
-from voicehub.architectures.zonos2.modeling import Zonos2ForCausalLM
+from voicehub.architectures.zonos2.modeling import Zonos2ForCausalLM, Zonos2SonicExperts
 from voicehub.architectures.zonos2.objective import zonos2_causal_cross_entropy
 from voicehub.architectures.zonos2.prompting import (
     build_zonos2_prompt,
@@ -178,6 +178,58 @@ class NativeZonos2ModelTests(unittest.TestCase):
         ).logits
         actual = torch.cat((first, second), dim=1)
         torch.testing.assert_close(actual, expected, atol=3e-6, rtol=3e-6)
+
+    @staticmethod
+    def _routed_reference(experts, hidden_states, route_probabilities, expert_indices):
+        rows = []
+        for token, routes, weights in zip(hidden_states, expert_indices, route_probabilities):
+            row = torch.zeros_like(token)
+            for expert, weight in zip(routes.tolist(), weights):
+                projected = experts.w13[expert] @ token
+                activated = F.silu(projected[0::2]) * projected[1::2]
+                row = row + weight * (experts.w2[expert] @ activated)
+            rows.append(row)
+        return torch.stack(rows)
+
+    def test_moe_decode_and_prompt_dispatch_match_per_token_reference(self):
+        experts = Zonos2SonicExperts(SimpleNamespace(moe_n_experts=5, intermediate_size=6, dim=4))
+        for tokens in (1, 2, 11):
+            for top_k in (1, 2):
+                with self.subTest(tokens=tokens, top_k=top_k):
+                    hidden_states = torch.randn(tokens, 4, requires_grad=True)
+                    probabilities = torch.rand(tokens, 5).softmax(dim=-1)
+                    route_probabilities, expert_indices = probabilities.topk(top_k, dim=-1)
+                    actual = experts(hidden_states, route_probabilities, expert_indices)
+                    expected = self._routed_reference(
+                        experts,
+                        hidden_states,
+                        route_probabilities,
+                        expert_indices,
+                    )
+                    torch.testing.assert_close(actual, expected)
+                    actual_gradients = torch.autograd.grad(
+                        actual.square().sum(),
+                        (hidden_states, experts.w13, experts.w2),
+                    )
+                    expected_gradients = torch.autograd.grad(
+                        expected.square().sum(),
+                        (hidden_states, experts.w13, experts.w2),
+                    )
+                    for actual_gradient, expected_gradient in zip(actual_gradients, expected_gradients):
+                        torch.testing.assert_close(actual_gradient, expected_gradient)
+
+    def test_moe_decode_step_routes_without_host_sync(self):
+        # Meta tensors have no data, so any data-dependent dispatch such as
+        # ``nonzero`` or ``tolist`` fails instead of silently syncing a GPU.
+        with torch.device("meta"):
+            experts = Zonos2SonicExperts(SimpleNamespace(moe_n_experts=16, intermediate_size=6, dim=4))
+            for top_k in (1, 2):
+                output = experts(
+                    torch.randn(1, 4),
+                    torch.rand(1, top_k),
+                    torch.zeros(1, top_k, dtype=torch.long),
+                )
+                self.assertEqual(output.shape, (1, 4))
 
     def test_speaker_projection_is_part_of_the_gradient_graph(self):
         config = tiny_config(speaker_enabled=True)
