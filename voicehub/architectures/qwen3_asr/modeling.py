@@ -625,6 +625,11 @@ class Qwen3ASRThinkerForConditionalGeneration(nn.Module):
             device=input_ids.device,
             dtype=torch.bool,
         )
+        # Without padding every step attends causally to the whole cache,
+        # exactly what the decoder does for `attention_mask=None`. Passing
+        # no mask keeps it on fused SDPA instead of the explicit float32
+        # path that rebuilds a bias and repeats grouped K/V heads per layer.
+        unpadded = bool(prompt_mask.all().item())
 
         def decoder_step(step: GenerationStepInput) -> GenerationStepOutput:
             past_length = (step.cache.sequence_length() if isinstance(step.cache, DynamicKVCache) else 0)
@@ -632,8 +637,8 @@ class Qwen3ASRThinkerForConditionalGeneration(nn.Module):
             generated = key_length - prompt_mask.shape[1]
             if generated < 0:
                 raise RuntimeError("Decoder cache length is shorter than the prompt.")
-            step_mask = prompt_mask
-            if generated:
+            step_mask = None if unpadded else prompt_mask
+            if generated and not unpadded:
                 step_mask = torch.cat(
                     (
                         prompt_mask,

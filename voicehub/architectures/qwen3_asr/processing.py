@@ -176,9 +176,11 @@ class Qwen3ASRProcessor:
     ) -> str:
         if context is not None and not isinstance(context, str):
             raise TypeError("`context` must be a string or None.")
-        normalized = context.strip() if context else ""
         if hotwords is None:
-            return normalized
+            # The official prompt (and VoiceHub training) inserts the system
+            # context verbatim.
+            return context or ""
+        normalized = context.strip() if context else ""
         words = (hotwords, ) if isinstance(hotwords, str) else tuple(hotwords)
         if any(not isinstance(word, str) or not word.strip() for word in words):
             raise ValueError("`hotwords` must contain non-empty strings.")
