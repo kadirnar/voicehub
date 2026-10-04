@@ -15,7 +15,6 @@ from torch import Tensor, nn
 from torch.nn import functional
 
 from voicehub.architectures.qwen3_tts.configuration import Qwen3TTSDecoderConfig
-from voicehub.architectures.qwen3_tts.modeling import qwen3_tts_rope_inverse_frequency
 from voicehub.kernels.codecs import CodecSnakeBetaKernelOptimizable
 from voicehub.neural.normalization import RMSNorm
 from voicehub.neural.rotary import RotaryEmbedding, apply_rotary_embedding
@@ -811,11 +810,7 @@ def materialize_qwen3_tts_decoder_buffers(
 ) -> None:
     for module in decoder.modules():
         if isinstance(module, RotaryEmbedding):
-            module.inverse_frequency = qwen3_tts_rope_inverse_frequency(
-                module.base,
-                module.dimension,
-                device=device,
-            )
+            module.reset_inverse_frequency(device)
 
 
 __all__ = [

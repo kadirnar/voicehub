@@ -19,11 +19,7 @@ from tests.test_native_qwen3_tts import _tiny_architecture, _tiny_decoder
 from voicehub.architectures.qwen3_tts import codec as qwen3_tts_codec
 from voicehub.architectures.qwen3_tts import modeling as qwen3_tts_modeling
 from voicehub.architectures.qwen3_tts.codec import Qwen3TTSSpeechDecoder, materialize_qwen3_tts_decoder_buffers
-from voicehub.architectures.qwen3_tts.modeling import (
-    Qwen3TTSForConditionalGeneration,
-    materialize_qwen3_tts_buffers,
-    qwen3_tts_rope_inverse_frequency,
-)
+from voicehub.architectures.qwen3_tts.modeling import Qwen3TTSForConditionalGeneration, materialize_qwen3_tts_buffers
 
 
 def _transformers_inverse_frequency(base: float, dimension: int) -> torch.Tensor:
@@ -163,9 +159,11 @@ class Qwen3TTSUpstreamNumericsTests(unittest.TestCase):
     def test_rope_inverse_frequency_matches_transformers_cpu_init(self):
         for base, dimension in ((10_000.0, 64), (1_000_000.0, 128), (10_000.0, 4)):
             with self.subTest(base=base, dimension=dimension):
+                rotary = qwen3_tts_modeling.RotaryEmbedding(dimension, base=base, device="meta")
+                materialize_qwen3_tts_buffers(rotary, device="cpu")
                 self.assertTrue(
                     torch.equal(
-                        qwen3_tts_rope_inverse_frequency(base, dimension, device="cpu"),
+                        rotary.inverse_frequency,
                         _transformers_inverse_frequency(base, dimension),
                     ))
 

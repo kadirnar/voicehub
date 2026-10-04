@@ -370,19 +370,7 @@ def _materialize_runtime_buffers(
     resolved_device = torch.device(device)
     for module in model.modules():
         if isinstance(module, RotaryEmbedding):
-            # Evaluate on the host like the reference Transformers rotary
-            # initializer: CUDA `pow` differs by ULPs, which shifts bf16
-            # cos/sin at long positions and changes long-form audio.
-            module.inverse_frequency = (
-                1.0 / (
-                    module.base**(
-                        torch.arange(
-                            0,
-                            module.dimension,
-                            2,
-                            dtype=torch.int64,
-                            device="cpu",
-                        ).float() / module.dimension))).to(resolved_device)
+            module.reset_inverse_frequency(resolved_device)
         elif isinstance(module, VibeVoiceAcousticTokenizer):
             module.fix_std = torch.tensor(
                 module.config.fix_std,

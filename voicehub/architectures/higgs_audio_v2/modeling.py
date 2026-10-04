@@ -245,13 +245,7 @@ class HiggsAudioV2Model(nn.Module):
         target = torch.device(device)
         for module in self.modules():
             if isinstance(module, RotaryEmbedding):
-                replacement = RotaryEmbedding(
-                    module.dimension,
-                    base=module.base,
-                    scaling=dict(self.config.rope_parameters),
-                    device=target,
-                )
-                module.inverse_frequency = replacement.inverse_frequency
+                module.reset_inverse_frequency(target)
             elif isinstance(module, HiggsAudioV2Embeddings):
                 module.audio_tokens_offsets = (
                     torch.arange(

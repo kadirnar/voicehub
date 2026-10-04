@@ -45,9 +45,11 @@ class LinearScalingRotaryEmbedding(RotaryEmbedding):
         if (isinstance(factor, bool) or not isinstance(factor, (int, float)) or
                 not math.isfinite(float(factor)) or factor < 1.0):
             raise ValueError("Linear RoPE factor must be finite and at least one.")
-        super().__init__(dimension, base=base, device=device)
         self.factor = float(factor)
-        self.inverse_frequency.div_(self.factor)
+        super().__init__(dimension, base=base, device=device)
+
+    def _compute_inverse_frequency(self) -> Tensor:
+        return super()._compute_inverse_frequency() / self.factor
 
 
 class NeuTTSBackbone(CausalLMForCausalLM):
@@ -70,25 +72,15 @@ class NeuTTSBackbone(CausalLMForCausalLM):
             device=device,
             dtype=dtype,
         )
-        # The published runtime builds its rotary frequencies on the CPU and
-        # moves the model afterwards. CUDA's float32 ``pow`` differs from the
-        # CPU result in the last bit for some frequencies, which changes
-        # bf16 query/key rotations and therefore sampled tokens.
         factor = config.linear_rope_factor
-        for layer in self.model.layers:
-            if factor is None:
-                rotary = RotaryEmbedding(
-                    self.config.head_dim,
-                    base=self.config.rope_theta,
-                    scaling=self.config.rope_scaling,
-                )
-            else:
-                rotary = LinearScalingRotaryEmbedding(
+        if factor is not None:
+            for layer in self.model.layers:
+                layer.self_attn.rotary = LinearScalingRotaryEmbedding(
                     self.config.head_dim,
                     base=self.config.rope_theta,
                     factor=factor,
+                    device=device,
                 )
-            layer.self_attn.rotary = rotary if device is None else rotary.to(device)
 
     def next_token_logits(
         self,

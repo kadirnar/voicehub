@@ -1423,23 +1423,6 @@ class Qwen3TTSForConditionalGeneration(nn.Module):
         )
 
 
-def qwen3_tts_rope_inverse_frequency(
-    base: float,
-    dimension: int,
-    *,
-    device: str | torch.device,
-) -> Tensor:
-    """RoPE inverse frequencies computed exactly like upstream.
-
-    Transformers evaluates ``base ** (arange / dim)`` on the CPU before
-    the buffer is moved; the CUDA ``pow`` differs from it by one ulp for
-    some frequencies, which changes bf16 rotary tables and therefore
-    outputs.
-    """
-    exponent = torch.arange(0, dimension, 2, dtype=torch.int64).float() / dimension
-    return (1.0 / (base**exponent)).to(device=device)
-
-
 def materialize_qwen3_tts_buffers(
     model: nn.Module,
     *,
@@ -1448,11 +1431,7 @@ def materialize_qwen3_tts_buffers(
     """Move non-persistent RoPE buffers off ``meta`` after assign loading."""
     for module in model.modules():
         if isinstance(module, RotaryEmbedding):
-            module.inverse_frequency = qwen3_tts_rope_inverse_frequency(
-                module.base,
-                module.dimension,
-                device=device,
-            )
+            module.reset_inverse_frequency(device)
 
 
 __all__ = [
@@ -1462,5 +1441,4 @@ __all__ = [
     "Qwen3TTSTalker",
     "Qwen3TTSTalkerOutput",
     "materialize_qwen3_tts_buffers",
-    "qwen3_tts_rope_inverse_frequency",
 ]
