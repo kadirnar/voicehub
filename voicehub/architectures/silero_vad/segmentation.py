@@ -154,9 +154,9 @@ def _pad_segments(
         next_segment = padded[index + 1]
         silence = next_segment[0] - segment[1]
         if silence < 2 * padding_samples:
-            left_padding = silence // 2
-            segment[1] += left_padding
-            next_segment[0] -= silence - left_padding
+            # Upstream moves both boundaries by `silence // 2`.
+            segment[1] += silence // 2
+            next_segment[0] = max(0, next_segment[0] - silence // 2)
         else:
             segment[1] = min(audio_length_samples, segment[1] + padding_samples)
             next_segment[0] = max(0, next_segment[0] - padding_samples)
@@ -204,57 +204,82 @@ def segment_speech_probabilities(
                 "`max_speech_duration_s` is too short for one frame and "
                 "the configured speech padding.")
 
+    # This loop mirrors upstream `get_speech_timestamps` statement by
+    # statement, including its strict comparisons, the frame skipped after a
+    # forced cut, and the legacy `prev_end` cut when
+    # `use_max_possible_silence` is False.
     triggered = False
-    speech_start = 0
-    pending_silence: int | None = None
+    speech_start: int | None = None
+    temp_end = 0
+    previous_end = next_start = 0
     possible_ends: list[tuple[int, int]] = []
     raw_segments: list[tuple[int, int]] = []
-
-    def append_if_long_enough(start: int, end: int) -> None:
-        if end - start >= min_speech_samples:
-            raw_segments.append((start, min(end, audio_length_samples)))
 
     for index, probability in enumerate(values):
         current_sample = frame_size * index
 
-        if probability >= config.threshold and pending_silence is not None:
-            silence_duration = current_sample - pending_silence
-            if silence_duration >= min_silence_at_max:
-                possible_ends.append((pending_silence, silence_duration))
-            pending_silence = None
+        if probability >= config.threshold and temp_end:
+            silence_duration = current_sample - temp_end
+            if silence_duration > min_silence_at_max:
+                possible_ends.append((temp_end, silence_duration))
+            temp_end = 0
+            if next_start < previous_end:
+                next_start = current_sample
 
         if probability >= config.threshold and not triggered:
             triggered = True
             speech_start = current_sample
+            continue
 
-        if (triggered and current_sample - speech_start >= max_speech_samples):
+        if triggered and current_sample - speech_start > max_speech_samples:
             if config.use_max_possible_silence and possible_ends:
-                segment_end, silence_duration = max(
+                previous_end, silence_duration = max(
                     possible_ends,
                     key=lambda item: item[1],
                 )
-                append_if_long_enough(speech_start, segment_end)
-                speech_start = segment_end + silence_duration
-                triggered = True
+                raw_segments.append((speech_start, previous_end))
+                speech_start = None
+                next_start = previous_end + silence_duration
+                if next_start < previous_end + current_sample:
+                    speech_start = next_start
+                else:
+                    triggered = False
+                previous_end = next_start = temp_end = 0
+                possible_ends = []
+            elif previous_end:
+                raw_segments.append((speech_start, previous_end))
+                speech_start = None
+                if next_start < previous_end:
+                    triggered = False
+                else:
+                    speech_start = next_start
+                previous_end = next_start = temp_end = 0
+                possible_ends = []
             else:
-                append_if_long_enough(speech_start, current_sample)
-                triggered = probability >= config.threshold
-                speech_start = current_sample
-            pending_silence = None
-            possible_ends = []
-            continue
+                raw_segments.append((speech_start, current_sample))
+                speech_start = None
+                previous_end = next_start = temp_end = 0
+                triggered = False
+                possible_ends = []
+                continue
 
         if probability < config.exit_threshold and triggered:
-            if pending_silence is None:
-                pending_silence = current_sample
-            if current_sample - pending_silence >= min_silence_samples:
-                append_if_long_enough(speech_start, pending_silence)
-                triggered = False
-                pending_silence = None
-                possible_ends = []
+            if not temp_end:
+                temp_end = current_sample
+            silence_duration = current_sample - temp_end
+            if (not config.use_max_possible_silence and silence_duration > min_silence_at_max):
+                previous_end = temp_end
+            if silence_duration < min_silence_samples:
+                continue
+            if temp_end - speech_start > min_speech_samples:
+                raw_segments.append((speech_start, temp_end))
+            speech_start = None
+            previous_end = next_start = temp_end = 0
+            triggered = False
+            possible_ends = []
 
-    if triggered:
-        append_if_long_enough(speech_start, audio_length_samples)
+    if (speech_start is not None and audio_length_samples - speech_start > min_speech_samples):
+        raw_segments.append((speech_start, audio_length_samples))
 
     return _pad_segments(
         raw_segments,
