@@ -280,6 +280,78 @@ print(json.dumps({name: name in sys.modules for name in names}))
                 "hubert",
             )
 
+    def test_other_input_rates_resample_like_the_transformers_pipeline(self):
+        # The reference Transformers CTC pipeline resamples non-16 kHz input
+        # with torchaudio.functional.resample defaults. The generic native
+        # resampler changed 8 kHz LibriSpeech transcripts.
+        from voicehub.processing import resample_waveform_hann
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = HubertForSpeechRecognition(
+                HubertASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+                lazy_load=False,
+            )
+            waveform = torch.randn(
+                1_201,
+                generator=torch.Generator().manual_seed(11),
+            )
+            captured = []
+
+            def capture(module, args, kwargs):
+                del module, kwargs
+                captured.append(args[0].clone())
+
+            handle = wrapper.model.register_forward_pre_hook(capture, with_kwargs=True)
+            try:
+                for rate in (8_000, 22_050):
+                    with self.subTest(rate=rate):
+                        captured.clear()
+                        wrapper.transcribe(waveform, sampling_rate=rate)
+                        resampled = resample_waveform_hann(waveform, rate, 16_000)
+                        expected = wrapper.ctc_processor.prepare_audio_batch((resampled, ))["input_values"]
+                        torch.testing.assert_close(captured[0], expected, rtol=0, atol=0)
+                        try:
+                            import torchaudio
+                        except ImportError:
+                            continue
+                        torch.testing.assert_close(
+                            resampled,
+                            torchaudio.functional.resample(waveform, rate, 16_000),
+                            rtol=0,
+                            atol=0,
+                        )
+            finally:
+                handle.remove()
+
+    def test_documented_transcription_arguments_are_accepted(self):
+        # The generated model page and notebook passed `language="en"`, which
+        # the single-vocabulary CTC runtime rejects, so the example raised.
+        import ast
+        import runpy
+
+        documentation = runpy.run_path(str(PROJECT_ROOT / "scripts" / "model_documentation.py"))
+        arguments = {}
+        for argument in documentation["INFERENCE_PROFILES"]["asr_hubert"].arguments:
+            keyword = ast.parse(f"f({argument})", mode="eval").body.keywords[0]
+            arguments[keyword.arg] = ast.literal_eval(keyword.value)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = HubertForSpeechRecognition(
+                HubertASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+                lazy_load=False,
+            )
+            output = wrapper.transcribe(
+                torch.randn(1_600, generator=torch.Generator().manual_seed(5)),
+                sampling_rate=16_000,
+                **arguments,
+            )
+        self.assertIsInstance(output.text, str)
+
     def test_local_sharded_checkpoint_loads_strictly(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
