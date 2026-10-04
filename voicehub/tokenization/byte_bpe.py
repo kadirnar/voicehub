@@ -381,13 +381,23 @@ class ByteBPETokenizer:
         token_ids: list[int] = list(self._prefix_token_ids)
         special_mask: list[int] = [1] * len(self._prefix_token_ids)
         cursor = 0
+        # A leftmost match found from an earlier cursor stays the leftmost
+        # match until the cursor passes it, and a miss stays a miss. Reusing
+        # them keeps long placeholder runs linear instead of quadratic.
+        special_match: tuple[int, str] | None = None
+        added_match: tuple[int, str] | None = None
+        special_exhausted = added_exhausted = False
         while cursor < len(normalized):
-            special_match = self._first_special_match(
-                normalized,
-                allowed,
-                start=cursor,
-            )
-            added_match = self._first_added_match(normalized, start=cursor)
+            if not special_exhausted and (special_match is None or special_match[0] < cursor):
+                special_match = self._first_special_match(
+                    normalized,
+                    allowed,
+                    start=cursor,
+                )
+                special_exhausted = special_match is None
+            if not added_exhausted and (added_match is None or added_match[0] < cursor):
+                added_match = self._first_added_match(normalized, start=cursor)
+                added_exhausted = added_match is None
             match, is_special = _first_token_match(
                 special_match,
                 added_match,
