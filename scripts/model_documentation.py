@@ -766,7 +766,7 @@ INFERENCE_PROFILES = {
     _asr(
         "Runs the native Wav2Vec2 CTC path and requests word-level alignment where supported.",
         "CTC decoding is checkpoint-vocabulary specific; do not reuse this ID for arbitrary languages.",
-        arguments=('language="en"', 'return_timestamps="word"'),
+        arguments=('return_timestamps="word"', ),
     ),
     "asr_hubert":
     _asr(
