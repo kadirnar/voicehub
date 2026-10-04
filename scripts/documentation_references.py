@@ -77,7 +77,7 @@ MODEL_REFERENCES = {
     "llasa": ModelReferences(_github("LLaSA training", "zhenye234/LLaSA_training")),
     "cosyvoice": ModelReferences(
         _github("CosyVoice", "FunAudioLLM/CosyVoice"),
-        (_paper("CosyVoice: Multi-Lingual Large Voice Generation Model", "2407.05407"), ),
+        (_paper("CosyVoice 3: Towards In-the-wild Speech Generation via Scaling-up and Post-training", "2505.17589"), ),
     ),
     "f5tts": ModelReferences(
         _github("F5-TTS", "SWivid/F5-TTS"),
