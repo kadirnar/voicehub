@@ -7,7 +7,7 @@ import pytest
 import torch
 
 from scripts.benchmark_upstream_parity import compare_results, latency_comparison, run_side
-from scripts.upstream_parity_worker import json_safe, load_tensor_inputs, tts_inputs
+from scripts.upstream_parity_worker import asr_result, json_safe, load_tensor_inputs, tts_inputs
 
 
 def result(task, **sample):
@@ -126,6 +126,50 @@ def test_worker_metadata_is_json_safe():
     assert safe["nested"] == [{"shape": [2], "dtype": "float32"}, [1, "a"]]
     assert safe["path"] == str(Path("/tmp/x.wav")) and safe["missing"] is None
     json.dumps(safe, allow_nan=False)
+
+
+def test_worker_asr_result_reports_optional_fields_only_when_present():
+    from voicehub.modeling_outputs import ASROutput, ASRSegment, ASRWord
+
+    plain = ASROutput(text="hello world")
+    assert asr_result(plain, "HELLO WORLD") == {"text": "hello world", "reference": "HELLO WORLD"}
+
+    # Whisper-style output: language and timestamped segments, no words.
+    timed = ASROutput(
+        text="hello world",
+        language="en",
+        segments=(ASRSegment("hello", 0.0, 0.5), ASRSegment("world", 0.5, 0.9)),
+    )
+    assert asr_result(timed, "HELLO WORLD") == {
+        "text": "hello world",
+        "reference": "HELLO WORLD",
+        "language": "en",
+        "segments": [[0.0, 0.5, "hello"], [0.5, 0.9, "world"]],
+    }
+
+    # CTC word timings (return_timestamps="word") without scores.
+    words = (ASRWord("hello", 0.1, 0.4), ASRWord("world", 0.5, 0.9))
+    ctc = asr_result(
+        ASROutput(text="hello world", segments=(ASRSegment("hello world", 0.1, 0.9, words=words), )),
+        "HELLO WORLD")
+    assert ctc["words"] == [["hello", 0.1, 0.4], ["world", 0.5, 0.9]]
+    assert "word_confidences" not in ctc and "segment_speakers" not in ctc
+
+    # Aligned words with scores and diarized segments with speakers.
+    scored = (ASRWord("hello", 0.1, 0.4, confidence=0.75), ASRWord("world", 0.5, 0.9))
+    diarized = ASROutput(
+        text="hello world",
+        segments=(
+            ASRSegment("hello", 0.1, 0.4, speaker="SPEAKER_00", words=scored[:1]),
+            ASRSegment("world", 0.5, 0.9, words=scored[1:]),
+        ),
+    )
+    report = asr_result(diarized, "HELLO WORLD")
+    assert report["segments"] == [[0.1, 0.4, "hello"], [0.5, 0.9, "world"]]
+    assert report["segment_speakers"] == ["SPEAKER_00", None]
+    assert report["words"] == [["hello", 0.1, 0.4], ["world", 0.5, 0.9]]
+    assert report["word_confidences"] == [0.75, None]
+    json.dumps(report, allow_nan=False)
 
 
 def test_transcript_agreement_is_distinct_from_accuracy():
