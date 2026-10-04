@@ -20,7 +20,7 @@ from voicehub.architectures.marblenet_vad.metadata import (
     MARBLENET_VAD_SHA256,
     NEMO_SOURCE_REVISION,
 )
-from voicehub.architectures.marblenet_vad.modeling import MarbleNetVADModel
+from voicehub.architectures.marblenet_vad.modeling import MarbleNetVADModel, MarbleNetVADOutput
 from voicehub.checkpointing import SafeTensorReader, save_safetensors
 from voicehub.hub import write_json_file
 from voicehub.models.vad_nemo import NeMoVADConfig, NeMoVADForVoiceActivityDetection
@@ -237,6 +237,51 @@ class NativeMarbleNetProviderTests(unittest.TestCase):
                 lazy_load=False,
             )
             self.assertEqual(len(restored.model.state_dict()), 84)
+
+    def test_detect_segments_follow_nemo_frame_vad_binarization(self):
+        # Expected spans come from NeMo r2.1.0 ``binarization``/``filtering``
+        # (frame_length_in_sec=0.02, onset=offset=0.5, no padding or
+        # minimum durations); the final span is VoiceHub's deliberate
+        # end-of-audio boundary (NeMo stops at the last frame start, 0.14 s).
+        scores = torch.tensor([0.1, 0.6, 0.7, 0.2, 0.9, 0.4, 0.8, 0.8])
+
+        class FixedScores(torch.nn.Module):
+
+            def __init__(self):
+                super().__init__()
+                self.anchor = torch.nn.Parameter(torch.zeros(()))
+
+            def forward(self, *, waveforms, waveform_lengths):
+                return MarbleNetVADOutput(
+                    logits=torch.zeros(1, scores.numel(), 2),
+                    probabilities=torch.zeros(1, scores.numel(), 2),
+                    speech_probabilities=scores.unsqueeze(0),
+                    frame_lengths=torch.tensor([scores.numel()]),
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            _write_native_artifact(directory)
+            wrapper = NeMoVADForVoiceActivityDetection(
+                NeMoVADConfig(name_or_path=directory),
+                device="cpu",
+                lazy_load=False,
+            )
+            wrapper.model = FixedScores()
+            output = wrapper.detect(
+                torch.zeros(scores.numel() * 320),
+                sampling_rate=16_000,
+                threshold=0.5,
+                min_speech_duration_ms=0,
+                min_silence_duration_ms=0,
+                speech_pad_ms=0,
+                return_frames=True,
+            )
+        self.assertEqual(wrapper.native_config.output_frame_hop_samples, 320)
+        self.assertEqual(
+            [(round(item.start, 6), round(item.end, 6)) for item in output.segments],
+            [(0.02, 0.06), (0.08, 0.1), (0.12, 0.16)],
+        )
+        self.assertEqual(len(output.probabilities), scores.numel())
 
     def test_official_pickle_boundary_is_explicit(self):
         wrapper = NeMoVADForVoiceActivityDetection(
