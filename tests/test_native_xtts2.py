@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import ast
 import json
+import os
+import stat
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import torch
 from torch import nn
@@ -21,6 +24,7 @@ from voicehub.architectures.xtts2.checkpoint import (
 from voicehub.architectures.xtts2.configuration import XTTS2Config
 from voicehub.architectures.xtts2.gpt import XTTS2GPT
 from voicehub.architectures.xtts2.tokenizer import XTTS2Tokenizer
+from voicehub.models.xtts import XTTSForTextToSpeech
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_ROOTS = (
@@ -474,6 +478,141 @@ class NativeXTTS2Tests(unittest.TestCase):
         self.assertEqual(source["implementation_license"], "MPL-2.0")
         self.assertEqual(source["model_license"], "Coqui Public Model License")
         self.assertTrue((root / "THIRD_PARTY_LICENSE").is_file())
+
+
+class XTTSLegacyCheckpointLoadingTests(unittest.TestCase):
+    """The published repository ships only a legacy ``model.pth``."""
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.voicehub_cache = self.root / "voicehub-cache"
+        environment = patch.dict(os.environ, {"VOICEHUB_CACHE": str(self.voicehub_cache)})
+        environment.start()
+        self.addCleanup(environment.stop)
+        self.state = {"gpt.text_head.weight": torch.randn(3, 2)}
+        self.repository = self.root / "repository"
+        self.repository.mkdir()
+        (self.repository / "config.json").write_text("{}", encoding="utf-8")
+        (self.repository / "vocab.json").write_text("{}", encoding="utf-8")
+        torch.save(
+            {"model": {
+                "xtts." + name: value
+                for name, value in self.state.items()
+            }},
+            self.repository / "model.pth",
+        )
+        (self.repository / "dvae.pth").write_bytes(b"unused by inference")
+
+    def _mock_hub(self):
+        """Serve ``self.repository`` as a Hub repository, recording fetches."""
+        fetched = []
+
+        def download_file(repo_id, filename, *, subfolder="", **kwargs):
+            del repo_id, kwargs
+            path = self.repository / subfolder / filename
+            if not path.is_file():
+                raise FileNotFoundError(f"Could not find the requested Hub file: {filename}.")
+            fetched.append(f"{subfolder}/{filename}" if subfolder else filename)
+            return path
+
+        def download_snapshot(repo_id, **kwargs):
+            del repo_id, kwargs
+            fetched.extend(path.name for path in self.repository.iterdir())
+            return self.repository
+
+        file_patch = patch("voicehub.hub.download_hugging_face_file", side_effect=download_file)
+        snapshot_patch = patch(
+            "voicehub.models._shared.download_hugging_face_snapshot",
+            side_effect=download_snapshot,
+        )
+        file_patch.start()
+        snapshot_patch.start()
+        self.addCleanup(file_patch.stop)
+        self.addCleanup(snapshot_patch.stop)
+        return fetched
+
+    def _make_read_only(self):
+        paths = [self.repository, *self.repository.iterdir()]
+        for path in paths:
+            path.chmod(path.stat().st_mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+        self.addCleanup(lambda: [path.chmod(path.stat().st_mode | stat.S_IWUSR) for path in paths])
+
+    def test_untrusted_hub_checkpoint_fails_before_downloading_pickles(self):
+        fetched = self._mock_hub()
+        model = XTTSForTextToSpeech(model_path="acme/xtts", device="cpu")
+
+        with self.assertRaises(PermissionError) as raised:
+            model._load_pretrained_model()
+
+        message = str(raised.exception)
+        self.assertIn("convert_trusted_legacy_xtts2_checkpoint", message)
+        self.assertIn("trust_pickle_checkpoint=True", message)
+        self.assertNotIn("model.pth", fetched)
+        self.assertNotIn("dvae.pth", fetched)
+
+    def test_untrusted_local_checkpoint_names_the_conversion_options(self):
+        model = XTTSForTextToSpeech(model_path=self.repository, device="cpu")
+
+        with self.assertRaisesRegex(PermissionError, "convert_trusted_legacy_xtts2_checkpoint"):
+            model._load_pretrained_model()
+        self.assertFalse(self.voicehub_cache.exists())
+
+    def test_trusted_hub_checkpoint_converts_outside_the_snapshot(self):
+        fetched = self._mock_hub()
+        self._make_read_only()
+        before = sorted(path.name for path in self.repository.iterdir())
+        model = XTTSForTextToSpeech(
+            model_path="acme/xtts",
+            device="cpu",
+            trust_pickle_checkpoint=True,
+        )
+
+        directory = model._resolve_artifact_directory()
+        converted = model._convert_legacy_checkpoint(directory / "model.pth")
+
+        self.assertEqual(directory, self.repository)
+        self.assertIn("model.pth", fetched)
+        self.assertNotIn("dvae.pth", fetched)
+        self.assertEqual(sorted(path.name for path in self.repository.iterdir()), before)
+        self.assertTrue(converted.resolve().is_relative_to(self.voicehub_cache.resolve()))
+        self.assertEqual(converted, model._convert_legacy_checkpoint(directory / "model.pth"))
+        target = nn.Linear(2, 3, bias=False)
+        target.weight.data.zero_()
+        load_xtts2_checkpoint(nn.ModuleDict({"gpt": nn.ModuleDict({"text_head": target})}), converted)
+        torch.testing.assert_close(target.weight, self.state["gpt.text_head.weight"])
+
+    def test_trusted_hub_checkpoint_uses_one_complete_cache_snapshot(self):
+        # Offline, config.json may come from VoiceHub's cache while the
+        # other files come from a huggingface_hub snapshot.
+        partial = self.root / "partial"
+        partial.mkdir()
+        (partial / "config.json").write_text("{}", encoding="utf-8")
+        self._mock_hub()
+
+        def download_file(repo_id, filename, *, subfolder="", **kwargs):
+            if filename == "config.json":
+                return partial / filename
+            path = self.repository / subfolder / filename
+            if not path.is_file():
+                raise FileNotFoundError(f"Could not find the requested Hub file: {filename}.")
+            return path
+
+        model = XTTSForTextToSpeech(
+            model_path="acme/xtts",
+            device="cpu",
+            trust_pickle_checkpoint=True,
+        )
+        with patch("voicehub.hub.download_hugging_face_file", side_effect=download_file):
+            self.assertEqual(model._resolve_artifact_directory(), self.repository)
+            (self.repository / "config.json").unlink()
+            with self.assertRaisesRegex(FileNotFoundError, "different cache snapshots"):
+                model._resolve_artifact_directory()
+
+    def test_configuration_rejects_non_boolean_trust(self):
+        with self.assertRaisesRegex(TypeError, "trust_pickle_checkpoint"):
+            XTTSForTextToSpeech(device="cpu", trust_pickle_checkpoint="yes")
 
 
 if __name__ == "__main__":

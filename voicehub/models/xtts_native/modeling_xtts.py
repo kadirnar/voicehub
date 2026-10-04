@@ -11,7 +11,13 @@ from pathlib import Path
 
 import torch
 
-from voicehub.architectures.xtts2 import XTTS2Config, XTTS2Model, XTTS2Tokenizer, load_xtts2_checkpoint
+from voicehub.architectures.xtts2 import (
+    XTTS2Config,
+    XTTS2Model,
+    XTTS2Tokenizer,
+    convert_trusted_legacy_xtts2_checkpoint,
+    load_xtts2_checkpoint,
+)
 from voicehub.architectures.xtts2.configuration import XTTS2_LANGUAGES
 from voicehub.architectures.xtts2.metadata import (
     XTTS2_CHECKPOINT_REPOSITORY,
@@ -19,12 +25,17 @@ from voicehub.architectures.xtts2.metadata import (
     XTTS2_CONFIG_SHA256,
     XTTS2_VOCAB_SHA256,
 )
+from voicehub.hub import resolve_pretrained_file
 from voicehub.modeling_outputs import TTSOutput
 from voicehub.modeling_utils import PreTrainedTTSModel
 from voicehub.models._shared import finish_audio_output, resolve_model_directory, resolve_torch_dtype, seeded_inference
 from voicehub.models.xtts_native.configuration_xtts import XTTSConfig
+from voicehub.path_utils import derived_artifact_path, is_explicit_local_path
 from voicehub.tokenization.assets import read_bounded_asset
 from voicehub.trainer_utils import NATIVE_EXPORT_DIR
+
+_NATIVE_CHECKPOINT = "model.safetensors"
+_LEGACY_CHECKPOINT = "model.pth"
 
 
 def _verify_asset_digest(
@@ -38,6 +49,19 @@ def _verify_asset_digest(
         raise ValueError(
             f"XTTS published asset digest mismatch for {path.name}: "
             f"expected {expected}, found {digest}.")
+
+
+def _legacy_checkpoint_error(source: str | Path) -> PermissionError:
+    return PermissionError(
+        f"XTTS v2 source {str(source)!r} provides only the legacy pickle "
+        f"checkpoint {_LEGACY_CHECKPOINT}; native XTTS v2 loads "
+        f"{_NATIVE_CHECKPOINT} and runtime loading never deserializes pickle. "
+        "After reviewing the checkpoint's origin, either pass "
+        "`trust_pickle_checkpoint=True` to convert it once into the VoiceHub "
+        "cache, or run `voicehub.architectures.xtts2."
+        "convert_trusted_legacy_xtts2_checkpoint(\"model.pth\", "
+        "\"model.safetensors\", trust_legacy_pickle=True)` and load the "
+        "directory holding model.safetensors, config.json and vocab.json.")
 
 
 class XTTSForTextToSpeech(PreTrainedTTSModel):
@@ -156,31 +180,79 @@ class XTTSForTextToSpeech(PreTrainedTTSModel):
         )
         return self._training_audio_encoder
 
-    def _load_pretrained_model(self) -> None:
-        directory = resolve_model_directory(
-            self.config.name_or_path,
-            model_type="xtts",
-            revision=self.config.revision,
-            cache_dir=self.config.cache_dir,
-            local_files_only=self.config.local_files_only,
+    def _resolve_artifact_directory(self) -> Path:
+        source = self.config.name_or_path
+        download = {
+            "revision": self.config.revision,
+            "cache_dir": self.config.cache_dir,
+            "local_files_only": self.config.local_files_only,
+        }
+        if is_explicit_local_path(source) or Path(source).expanduser().exists():
+            return resolve_model_directory(source, model_type="xtts", **download)
+        # Decide before fetching the snapshot: the published repository has
+        # no native checkpoint, and its legacy pickles are gigabytes that
+        # are useless without an explicit trust decision.
+        config_path = resolve_pretrained_file(source, "config.json", **download)
+        for subfolder in (NATIVE_EXPORT_DIR, ""):
+            try:
+                resolve_pretrained_file(
+                    source,
+                    _NATIVE_CHECKPOINT,
+                    subfolder=subfolder,
+                    **download,
+                )
+            except FileNotFoundError:
+                continue
+            return resolve_model_directory(source, model_type="xtts", **download)
+        if not self.config.trust_pickle_checkpoint:
+            raise _legacy_checkpoint_error(source)
+        # Fetch only what inference reads (not dvae.pth, speakers, samples).
+        paths = [config_path]
+        for filename in ("vocab.json", _LEGACY_CHECKPOINT):
+            paths.append(resolve_pretrained_file(source, filename, **download))
+        # Offline resolution may serve each file from a different cache
+        # (VoiceHub's or huggingface_hub's); load from one complete copy.
+        for directory in dict.fromkeys(path.parent for path in paths):
+            if all((directory / path.name).is_file() for path in paths):
+                return directory
+        raise FileNotFoundError(
+            f"XTTS v2 files for {str(source)!r} were resolved from different "
+            f"cache snapshots: {', '.join(str(path) for path in paths)}.")
+
+    def _convert_legacy_checkpoint(self, legacy_path: Path) -> Path:
+        if not legacy_path.is_file():
+            raise FileNotFoundError(
+                f"XTTS v2 artifact was not found: {legacy_path.with_name(_NATIVE_CHECKPOINT)}.")
+        if not self.config.trust_pickle_checkpoint:
+            raise _legacy_checkpoint_error(self.config.name_or_path)
+        # Never write into the (possibly read-only) source or Hub snapshot.
+        destination = derived_artifact_path(
+            legacy_path,
+            _NATIVE_CHECKPOINT,
+            namespace="xtts2/checkpoints",
         )
+        if not destination.is_file():
+            convert_trusted_legacy_xtts2_checkpoint(
+                legacy_path,
+                destination,
+                trust_legacy_pickle=True,
+            )
+        return destination
+
+    def _load_pretrained_model(self) -> None:
+        directory = self._resolve_artifact_directory()
         native_directory = directory / NATIVE_EXPORT_DIR
         if all((native_directory / filename).is_file()
-               for filename in ("config.json", "vocab.json", "model.safetensors")):
+               for filename in ("config.json", "vocab.json", _NATIVE_CHECKPOINT)):
             directory = native_directory
         config_path = directory / "config.json"
         vocabulary_path = directory / "vocab.json"
-        checkpoint_path = directory / "model.safetensors"
+        checkpoint_path = directory / _NATIVE_CHECKPOINT
         for path in (config_path, vocabulary_path):
             if not path.is_file():
                 raise FileNotFoundError(f"XTTS v2 artifact was not found: {path}.")
         if not checkpoint_path.is_file():
-            legacy = directory / "model.pth"
-            detail = f" Found legacy {legacy.name}." if legacy.is_file() else ""
-            raise PermissionError(
-                "Native XTTS v2 requires model.safetensors." + detail +
-                " Run the explicit trusted conversion utility once; runtime "
-                "loading never deserializes pickle.", )
+            checkpoint_path = self._convert_legacy_checkpoint(directory / _LEGACY_CHECKPOINT)
         is_published_checkpoint = (
             str(self.config.name_or_path).strip() == XTTS2_CHECKPOINT_REPOSITORY and
             self.config.revision == XTTS2_CHECKPOINT_REVISION)
