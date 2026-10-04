@@ -171,9 +171,11 @@ print(json.dumps({
             [False, True, True, True, False, True, False],
         )
         boundaries = inference.boundaries(decisions, probabilities=probabilities)
+        # SpeechBrain's get_boundaries keeps the single active frame as a
+        # zero-length interval; only the length filter removes it.
         self.assertEqual(
             [(item.start, item.end) for item in boundaries],
-            [(0.01, 0.03)],
+            [(0.01, 0.03), (0.05, 0.05)],
         )
         self.assertEqual(
             inference.remove_short(
@@ -181,6 +183,61 @@ print(json.dumps({
                 minimum_duration=0.02,
             ),
             (),
+        )
+
+    def test_single_frame_activity_bridges_close_segments_like_speechbrain(self):
+        model = SpeechBrainCRDNNVADModel(SpeechBrainCRDNNVADConfig()).eval()
+        inference = SpeechBrainVADInference(model)
+        # 30 active frames, 20 silent, one active, 20 silent, 30 active.
+        probabilities = torch.tensor([0.9] * 30 + [0.1] * 20 + [0.9] + [0.1] * 20 + [0.9] * 30)
+        decisions = inference.threshold(
+            probabilities,
+            activation_threshold=0.5,
+            deactivation_threshold=0.25,
+        )
+        boundaries = inference.boundaries(decisions)
+        self.assertEqual(len(boundaries), 3)
+        self.assertEqual(boundaries[1].start, boundaries[1].end)
+        merged = inference.merge_close(boundaries, maximum_gap=0.25)
+        # Upstream (e5cb1f65) returns [[0.0, 0.99]]: both 0.21 s gaps merge
+        # through the zero-length interval at 0.50 s.
+        self.assertEqual(len(merged), 1)
+        self.assertAlmostEqual(merged[0].start, 0.0)
+        self.assertAlmostEqual(merged[0].end, 0.99)
+
+    def test_frontend_clips_top_db_per_sequence_independent_of_batch(self):
+        frontend = SpeechBrainCRDNNVADModel(SpeechBrainCRDNNVADConfig()).frontend
+        generator = torch.Generator().manual_seed(5)
+        quiet = 1e-2 * torch.randn(16_000, generator=generator)
+        quiet[:8_000] = 0.0
+        loud = torch.randn(16_000, generator=generator)
+        alone = frontend._features(quiet.unsqueeze(0))
+        batched = frontend._features(torch.stack((quiet, loud)))
+        torch.testing.assert_close(batched[0], alone[0], rtol=0, atol=0)
+        self.assertAlmostEqual(
+            float(alone.amax() - alone.amin()),
+            SpeechBrainCRDNNVADConfig().top_db,
+            places=3,
+        )
+        normalized, _ = frontend(quiet.unsqueeze(0))
+        alone_normalized, _ = frontend(torch.stack((quiet, loud)))
+        torch.testing.assert_close(alone_normalized[0], normalized[0], rtol=0, atol=0)
+
+    def test_sentence_normalization_uses_population_statistics_and_padding_mask(self):
+        frontend = SpeechBrainCRDNNVADModel(SpeechBrainCRDNNVADConfig()).frontend
+        waveforms = torch.randn(2, 3_200, generator=torch.Generator().manual_seed(3))
+        normalized, frame_lengths = frontend(waveforms, torch.tensor([3_200, 1_700]))
+        # 1700 / 3200 * 21 frames = 11.16; make_padding_mask keeps index < 11.16.
+        self.assertEqual(frame_lengths.tolist(), [21, 12])
+        features = frontend._features(waveforms)
+        valid = features[1, :12]
+        expected = (features[1] - valid.mean(dim=0)) / valid.std(dim=0, correction=0)
+        torch.testing.assert_close(normalized[1], expected, rtol=1e-5, atol=1e-5)
+        torch.testing.assert_close(
+            normalized[0].std(dim=0, correction=0),
+            torch.ones(40),
+            rtol=1e-4,
+            atol=1e-4,
         )
 
     def test_provenance_and_registry_are_explicit(self):

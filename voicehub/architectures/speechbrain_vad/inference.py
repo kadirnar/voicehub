@@ -161,8 +161,9 @@ class SpeechBrainVADInference:
         intervals[:, 1] -= 1
         output = []
         for start_index, end_index in intervals.tolist():
-            if end_index <= start_index:
-                continue
+            # Single-frame activity yields start == end.  SpeechBrain keeps
+            # these zero-length intervals: they can still bridge a merge and
+            # are only removed later by the minimum-duration filter.
             score = None
             if probabilities is not None:
                 score = float(probabilities[start_index:end_index + 1].mean())
