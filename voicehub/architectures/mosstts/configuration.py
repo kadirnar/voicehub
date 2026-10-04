@@ -350,6 +350,7 @@ class MossTTSConfig:
             "tie_word_embeddings",
             "transformers_version",
             "vocab_size",
+            "voicehub_text_normalizer",
             "voicehub_variant",
         }
         return cls(

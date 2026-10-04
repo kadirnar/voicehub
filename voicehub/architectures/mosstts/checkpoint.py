@@ -13,7 +13,11 @@ import torch
 from torch import Tensor, nn
 
 from voicehub.architectures.mosstts.configuration import MossTTSConfig
-from voicehub.architectures.mosstts.metadata import MOSS_TTS_CHECKPOINTS, OPENMOSS_LICENSE
+from voicehub.architectures.mosstts.metadata import (
+    MOSS_TTS_CHECKPOINTS,
+    MOSS_TTS_TEXT_NORMALIZER_CONFIG_KEY,
+    OPENMOSS_LICENSE,
+)
 from voicehub.architectures.mosstts.modeling import MossLocalV15Model, MossTTSModel
 from voicehub.checkpointing import SafeTensorReader, ShardedSafeTensorReader, save_safetensors
 from voicehub.checkpointing.errors import CheckpointCompatibilityError, CheckpointIntegrityError
@@ -350,7 +354,10 @@ def save_mosstts_pretrained(
     directory: str | Path,
     *,
     state_override: Mapping[str, Tensor] | None = None,
+    normalize_text: bool | None = None,
 ) -> Path:
+    if normalize_text is not None and not isinstance(normalize_text, bool):
+        raise TypeError("`normalize_text` must be a boolean or None.")
     destination = Path(directory).expanduser()
     destination.mkdir(parents=True, exist_ok=True)
     export_mosstts_checkpoint(
@@ -358,9 +365,12 @@ def save_mosstts_pretrained(
         destination / "model.safetensors",
         state_override=state_override,
     )
+    config = model.config.to_dict()
+    if normalize_text is not None:
+        config[MOSS_TTS_TEXT_NORMALIZER_CONFIG_KEY] = normalize_text
     write_json_file(
         destination / "config.json",
-        model.config.to_dict(),
+        config,
     )
     write_mosstts_license_files(destination)
     return destination.resolve()

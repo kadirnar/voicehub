@@ -3,8 +3,10 @@ processors and ``MossTTSDelayModel.generate``."""
 
 import dataclasses
 import importlib.util
+import json
 import math
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -22,11 +24,13 @@ from voicehub.architectures.mosstts.runtime import (  # noqa: E402
     SOURCE_DECODE_CHUNK_SECONDS,
     MossTTSRuntime,
     default_mosstts_codec_config,
+    load_mosstts_runtime,
     loudness_normalize,
     uses_source_text_normalizer,
 )
 from voicehub.architectures.mosstts.sampling import sample_delay_token  # noqa: E402
 from voicehub.architectures.mosstts.text_normalization import normalize_tts_text  # noqa: E402
+from voicehub.architectures.mosstts.tokenization import MossTextTokenizer  # noqa: E402
 from voicehub.processing.waveform import resample_waveform_hann  # noqa: E402
 
 TORCHAUDIO_AVAILABLE = importlib.util.find_spec("torchaudio") is not None
@@ -219,6 +223,73 @@ class DelayPromptTests(unittest.TestCase):
         self.assertTrue(uses_source_text_normalizer(artifacts))
         artifacts = SimpleNamespace(source="OpenMOSS-Team/MOSS-TTS", root=Path("/nonexistent"))
         self.assertFalse(uses_source_text_normalizer(artifacts))
+
+    def test_recorded_normalizer_flag_takes_precedence(self):
+        v15 = SimpleNamespace(source="OpenMOSS-Team/MOSS-TTS-v1.5", root=Path("/nonexistent"))
+        local = SimpleNamespace(source="/exported", root=Path("/nonexistent"))
+        self.assertTrue(uses_source_text_normalizer(local, {"voicehub_text_normalizer": True}))
+        self.assertFalse(uses_source_text_normalizer(v15, {"voicehub_text_normalizer": False}))
+        self.assertTrue(uses_source_text_normalizer(v15, {}))
+        with self.assertRaises(TypeError):
+            uses_source_text_normalizer(local, {"voicehub_text_normalizer": "yes"})
+
+    def test_save_pretrained_round_trip_keeps_text_normalizer(self):
+        config = _tiny_tts_config("delay")
+        codec_config = dataclasses.replace(
+            default_mosstts_codec_config(config),
+            codebook_size=config.audio_vocab_size,
+        )
+        control_tokens = {
+            "<|endoftext|>": config.pad_token_id,
+            "<|im_start|>": config.im_start_token_id,
+            "<|im_end|>": config.im_end_token_id,
+            "<|audio_start|>": config.audio_start_token_id,
+            "<|audio_end|>": config.audio_end_token_id,
+            "<|audio_user_slot|>": config.audio_user_slot_token_id,
+            "<|audio_assistant_gen_slot|>": config.audio_assistant_slot_token_id,
+            "<|audio_assistant_delay_slot|>": config.audio_assistant_delay_slot_token_id,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source"
+            source.mkdir()
+            (source / "vocab.json").write_text(json.dumps({"a": 10, "b": 11, "ab": 12}))
+            (source / "merges.txt").write_text("#version: 0.2\na b\n")
+            (source / "tokenizer_config.json").write_text(
+                json.dumps({
+                    "added_tokens_decoder": {
+                        str(token_id): {
+                            "content": spelling,
+                            "special": True
+                        }
+                        for spelling, token_id in control_tokens.items()
+                    }
+                }))
+            tokenizer = MossTextTokenizer.from_files(
+                source / "vocab.json",
+                source / "merges.txt",
+                source / "tokenizer_config.json",
+                model_config=config,
+            )
+            for normalize_text in (True, False):
+                with self.subTest(normalize_text=normalize_text):
+                    runtime = MossTTSRuntime(
+                        model=build_mosstts_model(config, initialize=True, dtype=torch.float32),
+                        tokenizer=tokenizer,
+                        processor=MossTTSProcessor(config, tokenizer, normalize_text=normalize_text),
+                        codec=_RecordingCodec(codec_config),
+                    )
+                    # The export carries no normalizer script and its local
+                    # path is not a known release, so only config.json can
+                    # preserve the processor behavior.
+                    exported = runtime.save_pretrained(Path(directory) / f"export-{normalize_text}")
+                    self.assertFalse((exported / "tts_robust_normalizer_single_script.py").exists())
+                    reloaded = load_mosstts_runtime(
+                        exported,
+                        compute_dtype="float32",
+                        codec=_RecordingCodec(codec_config),
+                    )
+                    self.assertIs(reloaded.processor.normalize_text, normalize_text)
+                    self.assertNotIn("voicehub_text_normalizer", reloaded.model.config.extra_config)
 
 
 class LocalPromptTests(unittest.TestCase):
