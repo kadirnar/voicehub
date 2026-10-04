@@ -110,21 +110,22 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
 
         if (runtime.model is None or runtime.native_config is None or runtime.ctc_processor is None):
             raise RuntimeError("Native Wav2Vec2 alignment runtime is not loaded.")
-        prepared = runtime.ctc_processor.prepare_audio_batch((waveform, ))
-        input_values = prepared["input_values"]
-        attention_mask = prepared["attention_mask"]
+        if (not isinstance(waveform, torch.Tensor) or waveform.ndim != 1 or waveform.numel() == 0 or
+                not waveform.is_floating_point()):
+            raise ValueError("Alignment audio must be a non-empty floating-point mono tensor.")
+        # WhisperX feeds the alignment model the raw segment samples: neither
+        # its torchaudio bundles nor its Transformers path apply the
+        # processor's zero-mean/unit-variance normalization.
+        input_values = waveform.float().reshape(1, -1)
         minimum = runtime.native_config.minimum_input_samples
         if input_values.shape[-1] < minimum:
-            padding = minimum - input_values.shape[-1]
+            # Like WhisperX, zero-pad segments shorter than the convolutional
+            # receptive field and align against every emitted frame.
             input_values = torch.nn.functional.pad(
                 input_values,
-                (0, padding),
+                (0, minimum - input_values.shape[-1]),
             )
-            attention_mask = torch.nn.functional.pad(
-                attention_mask,
-                (0, padding),
-                value=0,
-            )
+        attention_mask = torch.ones_like(input_values, dtype=torch.bool)
         parameter = next(runtime.model.parameters())
         with torch.inference_mode():
             result = runtime.model(
@@ -134,10 +135,7 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
                 ),
                 attention_mask=attention_mask.to(parameter.device),
             )
-        frames = int(result.input_lengths[0].item())
-        if frames <= 0:
-            raise RuntimeError("Native Wav2Vec2 produced no valid alignment frames.")
-        return result.logits[0, :frames].float().log_softmax(dim=-1)
+        return result.logits[0].float().log_softmax(dim=-1)
 
     def _align_segments(
         self,
@@ -156,10 +154,11 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
                     segment.end <= segment.start):
                 segments.append(segment)
                 continue
-            start_sample = max(0, round(segment.start * 16_000))
+            # WhisperX truncates segment times to sample indices.
+            start_sample = max(0, int(segment.start * 16_000))
             end_sample = min(
                 waveform.numel(),
-                round(segment.end * 16_000),
+                int(segment.end * 16_000),
             )
             if end_sample <= start_sample:
                 segments.append(segment)
@@ -187,11 +186,13 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
                 ) for word in alignment.words)
             metadata = dict(segment.metadata)
             metadata["ctc_aligned"] = bool(words)
+            # WhisperX reports aligned segments from their first aligned
+            # character to their last one.
             segments.append(
                 ASRSegment(
                     text=segment.text,
-                    start=segment.start,
-                    end=segment.end,
+                    start=words[0].start if words else segment.start,
+                    end=words[-1].end if words else segment.end,
                     confidence=segment.confidence,
                     language=segment.language,
                     speaker=segment.speaker,
@@ -199,6 +200,61 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
                     metadata=metadata,
                 ))
         return tuple(segments)
+
+    def _transcribe_alignment_windows(
+        self,
+        materialized: Any,
+        **options: Any,
+    ) -> ASROutput:
+        """Decode Whisper windows the way WhisperX does before alignment.
+
+        WhisperX transcribes each speech chunk of at most 30 seconds
+        without timestamp tokens and aligns the decoded text against the
+        whole chunk; Whisper's own timestamps are never used. Without a
+        VAD, each decoding window is one such chunk, so requesting word
+        alignment does not change the transcript.
+        """
+        if self.native_config is None:
+            raise RuntimeError("Whisper runtime is not loaded.")
+        maximum_chunk_seconds = (self.native_config.expected_input_frames * 160 / 16_000)
+        chunk_length_s = options.get("chunk_length_s")
+        resolved_chunk_seconds = (maximum_chunk_seconds if chunk_length_s is None else float(chunk_length_s))
+        if resolved_chunk_seconds > maximum_chunk_seconds:
+            raise ValueError(f"Whisper chunks cannot exceed {maximum_chunk_seconds:g} "
+                             "seconds.")
+        chunk_samples = max(1, round(resolved_chunk_seconds * 16_000))
+        waveform = materialized.waveform
+        texts: list[str] = []
+        segments: list[ASRSegment] = []
+        detected_language: str | None = None
+        metadata: dict[str, Any] = {}
+        for start in range(0, waveform.numel(), chunk_samples):
+            stop = min(start + chunk_samples, waveform.numel())
+            window = super()._transcribe(
+                waveform[start:stop],
+                sampling_rate=16_000,
+                return_timestamps=False,
+                **options,
+            )
+            if detected_language is None:
+                detected_language = window.language
+            metadata = metadata or dict(window.metadata)
+            texts.append(window.text)
+            if window.text.strip():
+                segments.append(
+                    ASRSegment(
+                        text=window.text.strip(),
+                        start=start / 16_000,
+                        end=stop / 16_000,
+                        language=window.language,
+                    ))
+        return ASROutput(
+            text=self._join_chunk_text(texts),
+            segments=tuple(segments),
+            language=detected_language,
+            duration=materialized.duration,
+            metadata=metadata,
+        )
 
     def _transcribe(
         self,
@@ -219,19 +275,33 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
         from voicehub.processing.waveform import load_native_audio
 
         should_align = self.config.align_output or return_timestamps == "word"
-        base_output = super()._transcribe(
-            audio,
-            sampling_rate=sampling_rate,
-            language=language,
-            task=task,
-            return_timestamps=(True if should_align else return_timestamps),
-            chunk_length_s=chunk_length_s,
-            stride_length_s=stride_length_s,
-            batch_size=batch_size,
-            num_beams=num_beams,
-            max_new_tokens=max_new_tokens,
-            hotwords=hotwords,
-        )
+        options = {
+            "language": language,
+            "task": task,
+            "chunk_length_s": chunk_length_s,
+            "stride_length_s": stride_length_s,
+            "batch_size": batch_size,
+            "num_beams": num_beams,
+            "max_new_tokens": max_new_tokens,
+            "hotwords": hotwords,
+        }
+        if should_align:
+            materialized = load_native_audio(
+                audio,
+                sampling_rate=sampling_rate,
+                target_sampling_rate=16_000,
+            )
+            base_output = self._transcribe_alignment_windows(
+                materialized,
+                **options,
+            )
+        else:
+            base_output = super()._transcribe(
+                audio,
+                sampling_rate=sampling_rate,
+                return_timestamps=return_timestamps,
+                **options,
+            )
         metadata = dict(base_output.metadata)
         metadata.update({
             "alignment_requested": should_align,
@@ -253,11 +323,6 @@ class WhisperXForSpeechRecognition(WhisperForSpeechRecognition):
             base_output,
             language,
             multilingual=self.generation_adapter.token_set.is_multilingual,
-        )
-        materialized = load_native_audio(
-            audio,
-            sampling_rate=sampling_rate,
-            target_sampling_rate=16_000,
         )
         segments = self._align_segments(
             base_output,

@@ -202,11 +202,14 @@ def _folded_vocabulary(
         if (isinstance(token_id, bool) or not isinstance(token_id, Integral) or
                 not 0 <= int(token_id) < vocabulary_size):
             raise ValueError(f"CTC vocabulary token {token!r} has an invalid ID.")
-        key = token.casefold()
+        # WhisperX lower-cases (rather than case-folds) labels and
+        # transcript characters, so e.g. a Greek final sigma stays distinct
+        # and takes the wildcard column when the vocabulary lacks it.
+        key = token.lower()
         existing = folded.get(key)
         if existing is not None and existing != int(token_id):
             raise ValueError(
-                "CTC alignment cannot case-fold vocabulary tokens "
+                "CTC alignment cannot lower-case vocabulary tokens "
                 f"unambiguously: {token!r}.")
         folded[key] = int(token_id)
     return folded
@@ -270,7 +273,7 @@ def align_ctc_transcript(
         vocabulary,
         vocabulary_size=emission.shape[1],
     )
-    delimiter = word_delimiter_token.casefold()
+    delimiter = word_delimiter_token.lower()
     clean: list[tuple[int, str]] = []
     stripped_start = len(text) - len(text.lstrip())
     stripped_stop = len(text.rstrip())
@@ -281,7 +284,7 @@ def align_ctc_transcript(
             continue
         token = (
             delimiter
-            if character.isspace() and language not in LANGUAGES_WITHOUT_SPACES else character.casefold())
+            if character.isspace() and language not in LANGUAGES_WITHOUT_SPACES else character.lower())
         clean.append((index, token))
     if not clean:
         return CTCAlignment(words=(), characters=())

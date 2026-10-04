@@ -154,7 +154,8 @@ class WhisperXConfig(WhisperASRConfig):
     ``compute_type`` remains a compatibility alias for older WhisperX
     configurations.  It selects the dtype of VoiceHub's native Whisper
     graph; CTranslate2 execution and arbitrary upstream loader kwargs
-    are deliberately not retained.
+    are deliberately not retained.  The alignment model runs in float32
+    by default, as WhisperX's alignment models always do.
     """
 
     model_type = "asr_whisperx"
@@ -168,7 +169,7 @@ class WhisperXConfig(WhisperASRConfig):
         alignment_revision: str | None = None,
         alignment_cache_dir: str | Path | None = None,
         alignment_local_files_only: bool = False,
-        alignment_torch_dtype: str = "auto",
+        alignment_torch_dtype: str = "float32",
         model_kwargs: Mapping | None = None,
         torch_dtype: str | None = None,
         **kwargs,
