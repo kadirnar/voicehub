@@ -560,7 +560,7 @@ class MossTTSProcessor:
                     [
                         self.config.audio_end_token_id,
                         self.config.im_end_token_id,
-                    ],
+                    ] + self.tokenizer.encode_ids("\n"),
                     device=audio_codes.device,
                 ),
             ])
@@ -574,7 +574,7 @@ class MossTTSProcessor:
                     [
                         self.config.audio_end_token_id,
                         self.config.im_end_token_id,
-                    ],
+                    ] + self.tokenizer.encode_ids("\n"),
                     device=audio_codes.device,
                 ),
             ])
