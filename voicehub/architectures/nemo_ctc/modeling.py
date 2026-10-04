@@ -383,8 +383,9 @@ class NeMoQuartzNetForCTC(nn.Module):
                 processed_signal,
                 processed_signal_length,
             )
+        encoder_dtype = next(self.encoder.parameters()).dtype
         encoded, encoded_lengths = self.encoder(
-            processed_signal,
+            processed_signal.to(dtype=encoder_dtype),
             processed_signal_length,
         )
         logits = self.decoder.raw_logits(encoded)
