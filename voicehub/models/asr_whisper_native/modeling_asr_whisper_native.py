@@ -199,6 +199,9 @@ class WhisperForSpeechRecognition(PreTrainedASRModel):
             n_mels=self.native_config.num_mel_bins,
             dynamic_range=8.0,
             whisper_scaling=True,
+            # OpenAI Whisper ships librosa's float32 Slaney bank
+            # (``assets/mel_filters.npz``); reproduce it bit for bit.
+            librosa_filters=True,
         )
 
     def _chunk_features(self, waveform: Any) -> Any:

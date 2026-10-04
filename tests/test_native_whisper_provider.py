@@ -202,6 +202,44 @@ print(json.dumps({name: name in sys.modules for name in names}))
             },
         )
 
+    def test_features_use_openai_whisper_librosa_mel_filters(self):
+        from voicehub.processing.audio import mel_filter_bank
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _tiny_artifact(root)
+            wrapper = WhisperForSpeechRecognition(
+                WhisperASRConfig(name_or_path=root, torch_dtype="float32"),
+                device="cpu",
+            )
+            wrapper.load()
+            operation = wrapper._feature_operation()
+            # OpenAI Whisper's log-mel uses librosa's float32 Slaney bank
+            # (assets/mel_filters.npz); the float32 torch evaluation
+            # differs by up to ~2e-7 per weight (~2e-5 in log-mel).
+            self.assertTrue(operation.librosa_filters)
+            waveform = torch.sin(torch.linspace(0.0, 800.0, 4_000)) * 0.1
+            features = wrapper._chunk_features(waveform)[0]
+            padded = torch.nn.functional.pad(
+                waveform, (0, wrapper.native_config.expected_input_frames * 160 - 4_000))
+            power = torch.stft(
+                padded,
+                n_fft=400,
+                hop_length=160,
+                window=torch.hann_window(400),
+                center=True,
+                return_complex=True,
+            )[..., :-1].abs()**2
+            filters = mel_filter_bank(
+                sample_rate=16_000,
+                n_fft=400,
+                n_mels=4,
+                match_librosa=True,
+            )
+            expected = torch.clamp(filters @ power, min=1e-10).log10()
+            expected = (torch.maximum(expected, expected.max() - 8.0) + 4.0) / 4.0
+            torch.testing.assert_close(features, expected, rtol=0, atol=0)
+
     def test_safetensors_load_training_and_segment_inference(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
