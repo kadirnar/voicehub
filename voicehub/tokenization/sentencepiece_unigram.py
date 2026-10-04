@@ -685,6 +685,13 @@ class SentencePieceUnigramTokenizer:
         skip_special_tokens: bool = True,
     ) -> str:
         pieces: list[str] = []
+        # Like SentencePiece, drop the leading whitespace marker of the
+        # first non-control piece when the normalizer adds a dummy prefix or
+        # removes extra whitespace; with extra-whitespace removal, keep doing
+        # so while the text is still empty. The unknown surface is never
+        # stripped.
+        strip_leading = (self._assets.add_dummy_prefix or self._assets.remove_extra_whitespaces)
+        marker = _WHITESPACE_MARKER if self._assets.escape_whitespaces else " "
         for raw_id in token_ids:
             if isinstance(raw_id, bool) or not isinstance(raw_id, int):
                 raise TypeError("Token IDs must be integers.")
@@ -694,13 +701,16 @@ class SentencePieceUnigramTokenizer:
                 continue
             if raw_id == self._unknown_id:
                 pieces.append(self._assets.unk_surface)
+                strip_leading = False
             elif raw_id not in self._unused_ids:
-                pieces.append(self._id_to_piece[raw_id])
+                piece = self._id_to_piece[raw_id]
+                if strip_leading and piece.startswith(marker):
+                    piece = piece[len(marker):]
+                pieces.append(piece)
+                strip_leading = (strip_leading and self._assets.remove_extra_whitespaces and not any(pieces))
         decoded = "".join(pieces)
         if self._assets.escape_whitespaces:
             decoded = decoded.replace(_WHITESPACE_MARKER, " ")
-        if self._assets.add_dummy_prefix and decoded.startswith(" "):
-            decoded = decoded[1:]
         return decoded
 
     def decode_ids(self, token_ids: Iterable[int]) -> str:
