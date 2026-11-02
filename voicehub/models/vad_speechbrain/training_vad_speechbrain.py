@@ -54,7 +54,7 @@ def _audio_batch(value: Any) -> list[Any]:
         if value.ndim == 1:
             return [value]
         if value.ndim == 2:
-            return [row for row in value]
+            return [*value]
         raise ValueError("SpeechBrain VAD audio must have shape [samples] or [batch, samples].")
     if _numeric_sequence(value):
         return [value]

@@ -74,7 +74,7 @@ def _audio_batch(value: Any, *, frame_size: int) -> list[Any]:
         if value.ndim <= 1:
             return [value]
         if value.ndim == 2:
-            return [row for row in value]
+            return [*value]
         if value.ndim == 3 and value.shape[-1] == frame_size:
             return [row.reshape(-1) for row in value]
         raise ValueError(

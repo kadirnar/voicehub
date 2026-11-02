@@ -28,13 +28,13 @@ repos:
           - --allow-missing-credentials
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.2
+    rev: v3.22.0
     hooks:
       - id: pyupgrade
         name: Upgrade code
 
   - repo: https://github.com/PyCQA/isort
-    rev: 9.0.1
+    rev: 10.0.0b2
     hooks:
       - id: isort
         name: Sort imports
@@ -58,7 +58,7 @@ repos:
         exclude: '^(?:docs/.*\.md|notebooks/models/README\.md|\.ai/skills/[^/]+/SKILL\.md)$'
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.3.0
+    rev: 7.5.0
     hooks:
       - id: flake8
         name: Flake8 linting

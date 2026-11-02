@@ -387,7 +387,7 @@ class CosyVoiceNativeRuntime:
     def save_pretrained(self, directory: str | Path) -> Path:
         target = Path(directory).expanduser()
         target.mkdir(parents=True, exist_ok=True)
-        occupied = [path for path in target.iterdir()]
+        occupied = [*target.iterdir()]
         if occupied:
             raise FileExistsError("CosyVoice export destination must be empty: "
                                   f"{target}.")
