@@ -55,7 +55,7 @@ def _audio_batch(value: Any) -> list[Any]:
         if value.ndim == 1:
             return [value]
         if value.ndim == 2:
-            return [row for row in value]
+            return [*value]
         raise ValueError("FSMN VAD audio must have shape [samples] or [batch, samples].")
     if _is_numeric_sequence(value):
         return [value]

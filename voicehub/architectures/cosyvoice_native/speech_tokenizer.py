@@ -126,7 +126,7 @@ class CosyVoiceSpeechTokenizerConfig:
     ) -> CosyVoiceSpeechTokenizerConfig:
         if not isinstance(values, Mapping):
             raise TypeError("Speech-tokenizer configuration must be a mapping.")
-        unknown = set(values) - {field_name for field_name in cls.__dataclass_fields__}
+        unknown = set(values) - {*cls.__dataclass_fields__}
         if unknown:
             raise ValueError("Unknown speech-tokenizer configuration fields: " + ", ".join(sorted(unknown)))
         return cls(**dict(values))
